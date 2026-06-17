@@ -11,7 +11,7 @@ export default function RootRedirect() {
     // 2) 否则按浏览器首选语言顺序匹配支持的语言（zh/ja/ko/en），都不匹配 → en。
     let lang = "";
     try {
-      const saved = localStorage.getItem("redditalpha:lang");
+      const saved = localStorage.getItem("prismo:lang");
       if (saved && isLocale(saved)) lang = saved;
     } catch {
       /* ignore */
@@ -40,11 +40,11 @@ export default function RootRedirect() {
     <main style={{ display: "grid", placeItems: "center", minHeight: "70vh", color: "#8A8A99" }}>
       <noscript>
         <a href={`/${defaultLocale}/`} style={{ color: "#FC3E02" }}>
-          进入 redditalpha / Enter
+          进入 Prismo / Enter
         </a>
       </noscript>
       <span style={{ fontFamily: "system-ui", letterSpacing: ".3px" }}>
-        reddit<span style={{ color: "#FC3E02" }}>alpha</span> …
+        <span style={{ color: "#FC3E02" }}>Prismo</span> …
       </span>
     </main>
   );

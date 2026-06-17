@@ -1,10 +1,10 @@
 import type { Dictionary } from "./zh";
 
-// Korean mirror of zh.ts. Proper nouns (tickers, redditalpha, r/subreddits, people) stay verbatim.
+// Korean mirror of zh.ts. Proper nouns (tickers, Prismo, r/subreddits, people) stay verbatim.
 // Post content has no KO translation, so it falls back to the English original at render time.
 export const ko: Dictionary = {
   meta: {
-    title: "redditalpha · Reddit 미국 주식 심리 인텔리전스",
+    title: "Prismo · Reddit 미국 주식 심리 인텔리전스",
     description:
       "Reddit 금융 커뮤니티를 전문적으로 분석: 마인드셰어, 투자 심리, 모멘텀 급등, 내러티브 클러스터링, 데일리 브리핑.",
   },
@@ -90,7 +90,7 @@ export const ko: Dictionary = {
     empty: "데이터가 없습니다.",
   },
   searchHero: {
-    eyebrow: "redditalpha · 종목 인텔",
+    eyebrow: "Prismo · 종목 인텔",
     title: "어떤 종목이든 검색, Reddit의 강세 vs 약세 논점 보기",
     subPre: "커뮤니티의 진짜 DD(심층 리서치)를 ",
     subBull: "강세론",
@@ -254,11 +254,11 @@ export const ko: Dictionary = {
     label: "공유",
     copy: "링크 복사",
     copied: "복사됨 ✓",
-    tickerText: "{s} — Reddit의 강세 vs 약세 논점 · redditalpha",
-    postText: "{s} · Reddit 토론 · redditalpha",
+    tickerText: "{s} — Reddit의 강세 vs 약세 논점 · Prismo",
+    postText: "{s} · Reddit 토론 · Prismo",
   },
   install: {
-    title: "redditalpha 설치",
+    title: "Prismo 설치",
     subtitle: "앱처럼 전체 화면으로 열기——대시보드로 바로",
     installBtn: "설치",
     howBtn: "방법",
@@ -303,7 +303,7 @@ export const ko: Dictionary = {
     statPosts: "라이브 게시물",
     statTickers: "추적 종목",
     statAuthors: "활성 작성자",
-    enterTitle: "redditalpha 입장",
+    enterTitle: "Prismo 입장",
     enterDesc:
       "Reddit 금융 커뮤니티의 마인드셰어, 투자 심리, 내러티브를 실시간 추적. 가입 불필요——열기만 하면 됩니다.",
     enterCta: "라이브 대시보드로",
@@ -435,11 +435,11 @@ export const ko: Dictionary = {
     topBadge: "인기",
   },
   auth: {
-    loginTitle: "redditalpha 로그인",
+    loginTitle: "Prismo 로그인",
     loginSubtitle: "마인드셰어, 투자 심리, 데일리 브리핑",
     noAccount: "아직 계정이 없으신가요?",
     signupLink: "가입",
-    signupTitle: "redditalpha 가입",
+    signupTitle: "Prismo 가입",
     signupSubtitle: "무료 계정을 만들어 개인화 기능을 잠금 해제",
     haveAccount: "이미 계정이 있으신가요?",
     loginLink: "로그인",
@@ -561,14 +561,14 @@ export const ko: Dictionary = {
     trust: "연구 목적이며 투자 조언이 아닙니다",
   },
   onboarding: {
-    metaTitle: "redditalpha · 맞춤 온보딩",
-    metaDesc: "몇 번의 선택으로 redditalpha가 당신만의 Reddit 미국 주식 인텔을 구축.",
+    metaTitle: "Prismo · 맞춤 온보딩",
+    metaDesc: "몇 번의 선택으로 Prismo가 당신만의 Reddit 미국 주식 인텔을 구축.",
     exit: "종료",
     stepPre: "단계 ",
     stepMid: " / ",
     stepPost: "",
     prev: "← 이전",
-    step1Eyebrow: "redditalpha에서 무엇을 하고 싶으신가요",
+    step1Eyebrow: "Prismo에서 무엇을 하고 싶으신가요",
     step1Title: "먼저, 목표를 알려주세요",
     step2Eyebrow: "당신의 경험",
     step2Title: "어느 단계에 계신가요",
@@ -625,7 +625,7 @@ export const ko: Dictionary = {
   },
   bookmark: {
     tip: "이 페이지 북마크",
-    sub: "{combo}를 눌러 redditalpha를 저장하면 다음에 원클릭으로 접속.",
+    sub: "{combo}를 눌러 Prismo를 저장하면 다음에 원클릭으로 접속.",
     dismiss: "확인",
     close: "닫기",
   },

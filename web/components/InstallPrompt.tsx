@@ -8,7 +8,7 @@ import { track } from "@/lib/analytics";
 //  • Android/桌面 Chrome：拦截 beforeinstallprompt → 提供原生「安装」按钮。
 //  • iOS（无安装 API）：弹出分步教程（分享 → 添加到主屏幕）。
 // 关闭后写 localStorage 不再提示；已是独立窗口(已安装)则不显示。桌面端用 BookmarkHint，本组件仅移动端。
-const KEY = "redditalpha:a2hs";
+const KEY = "prismo:a2hs";
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
 type BIPEvent = Event & {

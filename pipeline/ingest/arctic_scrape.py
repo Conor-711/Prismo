@@ -21,7 +21,7 @@ from .ticker_extract import load_ticker_dict
 
 BASE = "https://arctic-shift.photon-reddit.com/api/posts/search"
 COMMENTS_BASE = "https://arctic-shift.photon-reddit.com/api/comments/search"
-UA = settings.reddit_user_agent or "RedditAlpha/0.1 (research)"
+UA = settings.reddit_user_agent or "Prismo/0.1 (research)"
 
 
 def fetch_subreddit(name: str, days: int, max_count: int) -> list[dict]:

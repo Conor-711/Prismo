@@ -18,7 +18,7 @@ export function LanguageSwitcher() {
   const go = (target: Locale) => {
     if (target === lang) return;
     try {
-      localStorage.setItem("redditalpha:lang", target);
+      localStorage.setItem("prismo:lang", target);
     } catch {
       /* ignore */
     }

@@ -4,11 +4,11 @@
 // 后端 schema 见 supabase/migrations/20260611000001_analytics.sql。
 import { supabase } from "./supabase";
 
-const VKEY = "redditalpha:vid"; // 持久访客 id（localStorage）
-const SKEY = "redditalpha:sid"; // 会话 id（sessionStorage）
-const DNT = "redditalpha:dnt"; // 「不记录本设备」标记（管理员/自己），排除自有访问
-const FKEY = "redditalpha:fseen"; // 首次访问时间戳 ms（localStorage）→ 新/回访判定 + 同期群
-const SSTART = "redditalpha:sstart"; // 本会话是否已发过 session_start（sessionStorage）
+const VKEY = "prismo:vid"; // 持久访客 id（localStorage）
+const SKEY = "prismo:sid"; // 会话 id（sessionStorage）
+const DNT = "prismo:dnt"; // 「不记录本设备」标记（管理员/自己），排除自有访问
+const FKEY = "prismo:fseen"; // 首次访问时间戳 ms（localStorage）→ 新/回访判定 + 同期群
+const SSTART = "prismo:sstart"; // 本会话是否已发过 session_start（sessionStorage）
 
 // 本设备是否已选择「排除我的访问」。开启后 track() 直接静默返回，事件根本不写入。
 export function isTrackingDisabled(): boolean {
@@ -111,7 +111,7 @@ function classifyChannel(host: string | null, utmMedium: string | null, utmSourc
   }
   const h = (host || "").toLowerCase();
   if (!h) return utmSource ? "campaign" : "direct";
-  if (/(^|\.)redditalpha\.xyz$/.test(h)) return "internal";
+  if (/(^|\.)Prismo\.xyz$/.test(h)) return "internal";
   if (/(google|bing|yahoo|duckduckgo|baidu|yandex|ecosia|sogou|so\.com)\./.test(h)) return "organic";
   if (/(reddit|t\.co|twitter|x\.com|facebook|fb\.com|lnkd\.in|linkedin|youtu|instagram|tiktok|weibo|telegram|t\.me|discord|pinterest|threads)/.test(h)) return "social";
   return "referral";

@@ -5,7 +5,7 @@ import { RoutineStatus } from "@/components/RoutineStatus";
 
 // 运维看板：无导航入口、noindex（仅 URL 直达，给运营自查 routine 是否正常）。
 export const metadata: Metadata = {
-  title: "Routine 状态 · redditalpha",
+  title: "Routine 状态 · Prismo",
   robots: { index: false, follow: false },
 };
 

@@ -1,6 +1,6 @@
 # 账号系统配置（Supabase Auth）
 
-redditalpha 是**静态站点**，账号系统用 **Supabase Auth**（客户端 SDK）实现，支持 **Google**、**Apple** 与**邮箱密码**注册/登录。登录页主推 Google（大按钮）+ Apple，邮箱入口默认折叠成小按钮、点开才展开。本文是一次性配置步骤（约 10 分钟）。
+Prismo 是**静态站点**，账号系统用 **Supabase Auth**（客户端 SDK）实现，支持 **Google**、**Apple** 与**邮箱密码**注册/登录。登录页主推 Google（大按钮）+ Apple，邮箱入口默认折叠成小按钮、点开才展开。本文是一次性配置步骤（约 10 分钟）。
 
 > 不配也能跑：缺少环境变量时，登录/注册页会提示"未配置"，站点其余部分照常工作。
 
@@ -29,7 +29,7 @@ redditalpha 是**静态站点**，账号系统用 **Supabase Auth**（客户端 
 
 **Authentication → Email Templates → Confirm signup**，把正文改成包含 `{{ .Token }}`，例如：
 ```html
-<h2>确认注册 redditalpha</h2>
+<h2>确认注册 Prismo</h2>
 <p>你的验证码：</p>
 <p style="font-size:28px;font-weight:bold;letter-spacing:6px">{{ .Token }}</p>
 <p>回到注册页输入此验证码完成注册（1 小时内有效）。</p>

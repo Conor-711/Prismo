@@ -6,8 +6,8 @@ export const dynamic = "force-static";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "redditalpha · Reddit 美股舆情情报",
-    short_name: "redditalpha",
+    name: "Prismo · Reddit 美股舆情情报",
+    short_name: "Prismo",
     description: "Reddit 美股 + 中概股舆情情报看板：声量 / 情绪 / 异动 / 主导叙事 / 每日简报。",
     start_url: "/",
     scope: "/",

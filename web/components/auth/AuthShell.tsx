@@ -34,10 +34,10 @@ export function AuthShell({
           <LocaleLink href="/" className="relative z-10 flex items-center gap-2.5">
             <span className="h-9 w-9 overflow-hidden rounded-xl bg-white ring-1 ring-white/10">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={`${BASE}/logo.png`} alt="redditalpha" className="h-full w-full rounded-xl object-contain" />
+              <img src={`${BASE}/logo.png`} alt="Prismo" className="h-full w-full rounded-xl object-contain" />
             </span>
             <span className="font-display text-xl font-extrabold text-white">
-              reddit<span className="text-reddit">alpha</span>
+              Prismo
             </span>
           </LocaleLink>
 
@@ -69,10 +69,10 @@ export function AuthShell({
             <LocaleLink href="/" className="mb-6 flex items-center justify-center gap-2 lg:hidden">
               <span className="h-8 w-8 overflow-hidden rounded-xl bg-white ring-1 ring-white/10">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={`${BASE}/logo.png`} alt="redditalpha" className="h-full w-full rounded-xl object-contain" />
+                <img src={`${BASE}/logo.png`} alt="Prismo" className="h-full w-full rounded-xl object-contain" />
               </span>
               <span className="font-display text-xl font-extrabold text-cream">
-                reddit<span className="text-reddit">alpha</span>
+                Prismo
               </span>
             </LocaleLink>
 

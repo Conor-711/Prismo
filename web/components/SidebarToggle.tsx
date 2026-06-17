@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-const KEY = "redditalpha:sidebar";
+const KEY = "prismo:sidebar";
 
 // 折叠 / 展开桌面侧边栏：切 <html data-sb>（CSS 在 globals.css 处理位移），并记忆到 localStorage。
 export function SidebarToggle() {

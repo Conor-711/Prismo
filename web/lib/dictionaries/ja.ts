@@ -1,10 +1,10 @@
 import type { Dictionary } from "./zh";
 
-// Japanese mirror of zh.ts. Proper nouns (tickers, redditalpha, r/subreddits, people) stay verbatim.
+// Japanese mirror of zh.ts. Proper nouns (tickers, Prismo, r/subreddits, people) stay verbatim.
 // Post content has no JA translation, so it falls back to the English original at render time.
 export const ja: Dictionary = {
   meta: {
-    title: "redditalpha · Reddit 米国株センチメント・インテリジェンス",
+    title: "Prismo · Reddit 米国株センチメント・インテリジェンス",
     description:
       "Reddit の金融コミュニティをプロの視点で分析：マインドシェア、センチメント、モメンタムの急騰、ナラティブのクラスタリング、デイリーブリーフ。",
   },
@@ -90,7 +90,7 @@ export const ja: Dictionary = {
     empty: "データがありません。",
   },
   searchHero: {
-    eyebrow: "redditalpha · 銘柄インテル",
+    eyebrow: "Prismo · 銘柄インテル",
     title: "どんな銘柄でも検索、Reddit の強気・弱気の論点を見る",
     subPre: "コミュニティの本物の DD（詳細調査）を凝縮して ",
     subBull: "強気派",
@@ -254,11 +254,11 @@ export const ja: Dictionary = {
     label: "シェア",
     copy: "リンクをコピー",
     copied: "コピーしました ✓",
-    tickerText: "{s} — Reddit の強気 vs 弱気の論点 · redditalpha",
-    postText: "{s} · Reddit ディスカッション · redditalpha",
+    tickerText: "{s} — Reddit の強気 vs 弱気の論点 · Prismo",
+    postText: "{s} · Reddit ディスカッション · Prismo",
   },
   install: {
-    title: "redditalpha をインストール",
+    title: "Prismo をインストール",
     subtitle: "アプリのように全画面で開く——ダッシュボードへ直行",
     installBtn: "インストール",
     howBtn: "方法",
@@ -303,7 +303,7 @@ export const ja: Dictionary = {
     statPosts: "ライブ投稿",
     statTickers: "追跡銘柄",
     statAuthors: "アクティブ作者",
-    enterTitle: "redditalpha に入る",
+    enterTitle: "Prismo に入る",
     enterDesc:
       "Reddit の金融コミュニティのマインドシェア、センチメント、ナラティブをリアルタイムで追跡。登録不要——開くだけ。",
     enterCta: "ライブダッシュボードへ",
@@ -435,11 +435,11 @@ export const ja: Dictionary = {
     topBadge: "高評価",
   },
   auth: {
-    loginTitle: "redditalpha にログイン",
+    loginTitle: "Prismo にログイン",
     loginSubtitle: "マインドシェア、センチメント、デイリーブリーフ",
     noAccount: "アカウントをお持ちでない方は",
     signupLink: "登録",
-    signupTitle: "redditalpha に登録",
+    signupTitle: "Prismo に登録",
     signupSubtitle: "無料アカウントを作成してパーソナライズを解放",
     haveAccount: "すでにアカウントをお持ちですか？",
     loginLink: "ログイン",
@@ -561,14 +561,14 @@ export const ja: Dictionary = {
     trust: "研究目的のみ、投資助言ではありません",
   },
   onboarding: {
-    metaTitle: "redditalpha · パーソナライズド・オンボーディング",
-    metaDesc: "いくつかの選択で、redditalpha があなた専用の Reddit 米国株インテルを構築。",
+    metaTitle: "Prismo · パーソナライズド・オンボーディング",
+    metaDesc: "いくつかの選択で、Prismo があなた専用の Reddit 米国株インテルを構築。",
     exit: "終了",
     stepPre: "ステップ ",
     stepMid: " / ",
     stepPost: "",
     prev: "← 戻る",
-    step1Eyebrow: "redditalpha で何をしたいですか",
+    step1Eyebrow: "Prismo で何をしたいですか",
     step1Title: "まず、目標を教えてください",
     step2Eyebrow: "あなたの経験",
     step2Title: "今どの段階ですか",
@@ -625,7 +625,7 @@ export const ja: Dictionary = {
   },
   bookmark: {
     tip: "このページをブックマーク",
-    sub: "{combo} を押して redditalpha を保存、次回ワンクリックでアクセス。",
+    sub: "{combo} を押して Prismo を保存、次回ワンクリックでアクセス。",
     dismiss: "了解",
     close: "閉じる",
   },

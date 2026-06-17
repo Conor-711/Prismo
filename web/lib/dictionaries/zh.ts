@@ -1,8 +1,8 @@
 // 中文字典 = 结构真源。en.ts 必须满足 `Dictionary = typeof zh`。
-// 专有名词（ticker、redditalpha、r/子版、人名）不放进字典，保持原样。
+// 专有名词（ticker、Prismo、r/子版、人名）不放进字典，保持原样。
 export const zh = {
   meta: {
-    title: "redditalpha · Reddit 美股舆情情报",
+    title: "Prismo · Reddit 美股舆情情报",
     description:
       "以专业方式分析 Reddit 财经板块的帖子数据：声量份额、情绪、异动、热门叙事与每日简报。",
   },
@@ -88,7 +88,7 @@ export const zh = {
     empty: "暂无数据。",
   },
   searchHero: {
-    eyebrow: "redditalpha · 个股情报",
+    eyebrow: "Prismo · 个股情报",
     title: "查任意股票，看 Reddit 的多空论点",
     subPre: "把社区真实 DD（深度研究）蒸馏成 ",
     subBull: "多头",
@@ -254,11 +254,11 @@ export const zh = {
     label: "分享",
     copy: "复制链接",
     copied: "已复制 ✓",
-    tickerText: "{s} 在 Reddit 的多空论点 — redditalpha",
-    postText: "{s} · Reddit 讨论 — redditalpha",
+    tickerText: "{s} 在 Reddit 的多空论点 — Prismo",
+    postText: "{s} · Reddit 讨论 — Prismo",
   },
   install: {
-    title: "把 redditalpha 装到手机",
+    title: "把 Prismo 装到手机",
     subtitle: "像 App 一样全屏秒开，直达看板",
     installBtn: "安装",
     howBtn: "怎么装",
@@ -303,7 +303,7 @@ export const zh = {
     statPosts: "实时帖子",
     statTickers: "追踪标的",
     statAuthors: "活跃作者",
-    enterTitle: "进入 redditalpha",
+    enterTitle: "进入 Prismo",
     enterDesc: "实时追踪 Reddit 财经社区的声量、情绪与叙事。无需注册，点开即用。",
     enterCta: "进入实时看板",
     footer: "数据来自 Reddit 社区",
@@ -435,11 +435,11 @@ export const zh = {
     topBadge: "高赞",
   },
   auth: {
-    loginTitle: "登录 redditalpha",
+    loginTitle: "登录 Prismo",
     loginSubtitle: "查看声量份额、情绪与每日简报",
     noAccount: "还没有账号？",
     signupLink: "注册",
-    signupTitle: "注册 redditalpha",
+    signupTitle: "注册 Prismo",
     signupSubtitle: "免费创建账号，解锁个性化体验",
     haveAccount: "已有账号？",
     loginLink: "登录",
@@ -561,14 +561,14 @@ export const zh = {
     trust: "",
   },
   onboarding: {
-    metaTitle: "redditalpha · 个性化引导",
-    metaDesc: "几步选择，让 redditalpha 为你生成专属的 Reddit 美股情报。",
+    metaTitle: "Prismo · 个性化引导",
+    metaDesc: "几步选择，让 Prismo 为你生成专属的 Reddit 美股情报。",
     exit: "退出",
     stepPre: "第 ",
     stepMid: " / ",
     stepPost: " 步",
     prev: "← 上一步",
-    step1Eyebrow: "你来 redditalpha 想做什么",
+    step1Eyebrow: "你来 Prismo 想做什么",
     step1Title: "先告诉我们你的目标",
     step2Eyebrow: "你的投资经验",
     step2Title: "你处在哪个阶段",
@@ -625,7 +625,7 @@ export const zh = {
   },
   bookmark: {
     tip: "收藏本页",
-    sub: "按 {combo} 把 redditalpha 加入书签，下次一键直达。",
+    sub: "按 {combo} 把 Prismo 加入书签，下次一键直达。",
     dismiss: "知道了",
     close: "关闭",
   },

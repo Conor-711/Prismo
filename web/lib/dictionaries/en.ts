@@ -1,9 +1,9 @@
 import type { Dictionary } from "./zh";
 
-// English mirror of zh.ts. Proper nouns (tickers, redditalpha, r/subreddits, people) stay verbatim.
+// English mirror of zh.ts. Proper nouns (tickers, Prismo, r/subreddits, people) stay verbatim.
 export const en: Dictionary = {
   meta: {
-    title: "redditalpha · Reddit US-stock sentiment intelligence",
+    title: "Prismo · Reddit US-stock sentiment intelligence",
     description:
       "Professional analysis of Reddit's finance communities: mindshare, sentiment, momentum spikes, narrative clusters and a daily brief.",
   },
@@ -89,7 +89,7 @@ export const en: Dictionary = {
     empty: "No data yet.",
   },
   searchHero: {
-    eyebrow: "redditalpha · ticker intel",
+    eyebrow: "Prismo · ticker intel",
     title: "Search any stock, see Reddit's bull vs bear case",
     subPre: "We distill the community's real DD into ",
     subBull: "bulls",
@@ -253,11 +253,11 @@ export const en: Dictionary = {
     label: "Share",
     copy: "Copy link",
     copied: "Copied ✓",
-    tickerText: "{s} — the Reddit bull vs bear case · redditalpha",
-    postText: "{s} · Reddit discussion · redditalpha",
+    tickerText: "{s} — the Reddit bull vs bear case · Prismo",
+    postText: "{s} · Reddit discussion · Prismo",
   },
   install: {
-    title: "Install redditalpha",
+    title: "Install Prismo",
     subtitle: "Open full-screen like an app — straight to the dashboard",
     installBtn: "Install",
     howBtn: "How",
@@ -302,7 +302,7 @@ export const en: Dictionary = {
     statPosts: "live posts",
     statTickers: "tracked tickers",
     statAuthors: "active authors",
-    enterTitle: "Enter redditalpha",
+    enterTitle: "Enter Prismo",
     enterDesc:
       "Track mindshare, sentiment and narratives across Reddit's finance communities in real time. No signup — just open and go.",
     enterCta: "Enter live dashboard",
@@ -434,11 +434,11 @@ export const en: Dictionary = {
     topBadge: "Top",
   },
   auth: {
-    loginTitle: "Log in to redditalpha",
+    loginTitle: "Log in to Prismo",
     loginSubtitle: "Mindshare, sentiment and a daily brief",
     noAccount: "No account yet?",
     signupLink: "Sign up",
-    signupTitle: "Sign up for redditalpha",
+    signupTitle: "Sign up for Prismo",
     signupSubtitle: "Create a free account to unlock personalization",
     haveAccount: "Already have an account?",
     loginLink: "Log in",
@@ -560,14 +560,14 @@ export const en: Dictionary = {
     trust: "For research only, not investment advice",
   },
   onboarding: {
-    metaTitle: "redditalpha · personalized onboarding",
-    metaDesc: "A few choices and redditalpha builds your own Reddit US-stock intel.",
+    metaTitle: "Prismo · personalized onboarding",
+    metaDesc: "A few choices and Prismo builds your own Reddit US-stock intel.",
     exit: "Exit",
     stepPre: "Step ",
     stepMid: " / ",
     stepPost: "",
     prev: "← Back",
-    step1Eyebrow: "What brings you to redditalpha",
+    step1Eyebrow: "What brings you to Prismo",
     step1Title: "First, tell us your goal",
     step2Eyebrow: "Your experience",
     step2Title: "Where are you at",
@@ -624,7 +624,7 @@ export const en: Dictionary = {
   },
   bookmark: {
     tip: "Bookmark this page",
-    sub: "Press {combo} to save redditalpha for one-click access next time.",
+    sub: "Press {combo} to save Prismo for one-click access next time.",
     dismiss: "Got it",
     close: "Dismiss",
   },

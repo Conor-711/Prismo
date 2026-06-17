@@ -19,10 +19,10 @@ export function Sidebar({ dict }: { lang: Locale; dict: Dictionary }) {
       <LocaleLink href="/" className="sb-row flex items-center gap-2.5 px-4 h-16 border-b border-line shrink-0">
         <span className="w-11 h-11 rounded-xl overflow-hidden bg-white shrink-0 ring-1 ring-white/10">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={`${BASE}/logo.png`} alt="RedditAlpha logo" className="w-full h-full object-contain rounded-xl" />
+          <img src={`${BASE}/logo.png`} alt="Prismo logo" className="w-full h-full object-contain rounded-xl" />
         </span>
         <span className="sb-label font-display font-extrabold text-cream text-[22px] tracking-tight">
-          reddit<span className="text-reddit">alpha</span>
+          Prismo
         </span>
       </LocaleLink>
 

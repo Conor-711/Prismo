@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useLocale } from "./i18n/LocaleProvider";
 
-const KEY = "redditalpha:bookmark-hint";
+const KEY = "prismo:bookmark-hint";
 
 // 首次进入站点时，指向浏览器右上角「收藏/书签」星标的引导箭头。
 // 用户点关闭或「知道了」后写入 localStorage，不再显示。

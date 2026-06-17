@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useLocale } from "./i18n/LocaleProvider";
 
-const KEY = "redditalpha:theme";
+const KEY = "prismo:theme";
 
 // variant="fab"：右下角悬浮按钮（仅移动端显示，桌面端用侧边栏内的 inline）
 // variant="inline"：嵌入侧边栏下半部分的行内按钮

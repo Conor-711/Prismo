@@ -8,7 +8,7 @@ export default function NotFound() {
     <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center bg-ink">
       <span className="w-16 h-16 rounded-2xl overflow-hidden bg-white ring-1 ring-white/10 mb-6">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={`${BASE}/logo.png`} alt="redditalpha" className="w-full h-full object-contain" />
+        <img src={`${BASE}/logo.png`} alt="Prismo" className="w-full h-full object-contain" />
       </span>
       <div className="font-display font-extrabold text-reddit text-[64px] leading-none tracking-tight">404</div>
       <h1 className="mt-3 font-display font-bold text-cream text-xl">页面走丢了 · Page not found</h1>

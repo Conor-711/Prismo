@@ -1,11 +1,11 @@
 <div align="center">
-  <img src="web/public/logo.png" alt="redditalpha" width="96" />
-  <h1>redditalpha</h1>
+  <img src="web/public/logo.png" alt="Prismo" width="96" />
+  <h1>Prismo</h1>
   <p>Reddit 美股舆情情报 Dashboard</p>
 </div>
 
 > **品牌 / 命名（正式确定）**
-> - **名称**：`redditalpha`（小写 wordmark，呼应 Reddit 自身的小写风格）。即原“Reddit 版 Kaito Pro”。
+> - **名称**：`Prismo`（小写 wordmark，呼应 Reddit 自身的小写风格）。即原“Reddit 版 Kaito Pro”。
 > - **Logo**：深藏青字母「A」+ 橙色波浪（波浪 = 舆情信号）。文件 `web/public/logo.png`，并作为站点 favicon（`web/app/icon.png`）。
 > - **主题色（取自 logo）**：品牌橙 `#FC3E02`（主色 / CTA / 热度 / upvote）、藏青 `#13212C`（界面底色家族），辅以 bull 绿 `#24B47E` / bear 红 `#F0556E` 作多空语义色。
 

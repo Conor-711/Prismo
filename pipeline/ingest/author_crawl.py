@@ -26,7 +26,7 @@ from .reddit_ingest import store_mentions, upsert_author, upsert_post
 from .ticker_extract import extract_mentions, load_ticker_dict
 
 BASE = "https://arctic-shift.photon-reddit.com/api/posts/search"
-UA = settings.reddit_user_agent or "RedditAlpha/0.1 (research)"
+UA = settings.reddit_user_agent or "Prismo/0.1 (research)"
 
 QUALITY_GATE = 0.55       # 粗筛过线阈值（0–1）
 MAX_FETCH_PER = 120       # 每位作者最多拉多少历史帖

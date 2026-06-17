@@ -1,6 +1,6 @@
-# redditalpha 产品策略：aha moment 与主打功能
+# Prismo 产品策略：aha moment 与主打功能
 
-> 目的：综合调研主流美股网站，定位 redditalpha 作为「Reddit 美股垂类分析站」的**独有价值**，据此优化 UX 并确定主打功能。核心原则：**最大化利用 Reddit 社区信息**去满足投资者的真实需求。
+> 目的：综合调研主流美股网站，定位 Prismo 作为「Reddit 美股垂类分析站」的**独有价值**，据此优化 UX 并确定主打功能。核心原则：**最大化利用 Reddit 社区信息**去满足投资者的真实需求。
 
 ## 一、竞品全景（19 个美股站归类）
 
@@ -12,7 +12,7 @@
 | 分析师聚合 & 可信度 | TipRanks（分析师排名 + Smart Score + 目标价）、Seeking Alpha（众包文章） | 把"谁说的、准不准"量化 |
 | 聪明钱 / 机构 / 国会 | WhaleWisdom、Dataroma、InsiderMonkey（13F）、StockCircle（guru+国会）、QuiverQuant（国会交易=招牌） | 跟踪机构/名人/议员持仓 |
 | 宏观 | FRED | 美联储宏观数据 |
-| **社交 / 散户情绪（redditalpha 的赛道）** | StockTwits、QuiverQuant（WSB 提及分）、**ApeWisdom / SwaggyStocks / YoloStocks** | **Reddit/WSB 提及量 + 简单词袋情绪** |
+| **社交 / 散户情绪（Prismo 的赛道）** | StockTwits、QuiverQuant（WSB 提及分）、**ApeWisdom / SwaggyStocks / YoloStocks** | **Reddit/WSB 提及量 + 简单词袋情绪** |
 
 - trackserenity.xyz：未检索到公开信息（疑似新/小众），暂存疑、不作为参照。
 

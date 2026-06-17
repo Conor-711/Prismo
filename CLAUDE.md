@@ -12,7 +12,7 @@
 小改动（改文案、修 bug、调样式）不必更新；**结构性/流程性改动必须更新**。更新要简洁，跟随既有格式。
 
 ## 项目速记
-- **redditalpha**：双语（zh 默认 / en）Reddit 美股 + 中概股舆情看板。三系统：① Python 管线 `pipeline/` ② Supabase 云端 Postgres（数据的家）③ Next.js 静态站 `web/`。
+- **Prismo**：双语（zh 默认 / en）Reddit 美股 + 中概股舆情看板。三系统：① Python 管线 `pipeline/` ② Supabase 云端 Postgres（数据的家）③ Next.js 静态站 `web/`。
 - 线上：https://www.redditalpha.xyz（纯静态，根域名）。
 
 ## 硬性约定

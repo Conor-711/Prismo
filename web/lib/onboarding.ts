@@ -13,9 +13,9 @@ export interface OnboardingState {
   completedAt: number | null;
 }
 
-const KEY = "redditalpha:onboarding";
-const GUEST_KEY = "redditalpha:guest";
-export const ONBOARDING_EVENT = "redditalpha:onboarding-changed";
+const KEY = "prismo:onboarding";
+const GUEST_KEY = "prismo:guest";
+export const ONBOARDING_EVENT = "prismo:onboarding-changed";
 
 export const EMPTY_ONBOARDING: OnboardingState = {
   intent: null,

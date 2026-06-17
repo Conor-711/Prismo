@@ -31,10 +31,10 @@ export function Topbar({ lang, dict }: { lang: Locale; dict: Dictionary }) {
           <LocaleLink href="/" className="lg:hidden flex items-center gap-2">
             <span className="w-7 h-7 rounded-xl overflow-hidden bg-white shrink-0 ring-1 ring-white/10">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={`${BASE}/logo.png`} alt="redditalpha logo" className="w-full h-full object-contain rounded-xl" />
+              <img src={`${BASE}/logo.png`} alt="Prismo logo" className="w-full h-full object-contain rounded-xl" />
             </span>
             <span className="font-display font-extrabold text-cream">
-              reddit<span className="text-reddit">alpha</span>
+              Prismo
             </span>
           </LocaleLink>
           {/* 依据模块（替代原 tagline）：基于真实数据 · N 帖 · N 评论 · … */}
