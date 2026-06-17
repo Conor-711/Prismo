@@ -186,3 +186,27 @@ export function getGrRegionDetail(region: string): GrRegionTickerRow[] {
     []
   );
 }
+
+// 最新行情（构建期由 pipeline `gr-quote` 从 Yahoo 抓 → gr_quote 表；纯静态站随构建刷新）。
+export interface GrQuoteRow {
+  ticker: string;
+  price: number;
+  prev_close: number;
+  change_pct: number;
+  asof: string | null;
+}
+export function getGrQuotes(): GrQuoteRow[] {
+  return safe(
+    () => all<GrQuoteRow>("SELECT ticker, price, prev_close, change_pct, asof FROM gr_quote"),
+    []
+  );
+}
+export function getGrQuote(ticker: string): GrQuoteRow | null {
+  return safe(
+    () => get<GrQuoteRow>(
+      "SELECT ticker, price, prev_close, change_pct, asof FROM gr_quote WHERE ticker = ?",
+      ticker
+    ) ?? null,
+    null
+  );
+}

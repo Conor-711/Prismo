@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { LocaleLink } from "@/components/i18n/LocaleLink";
 import { SentScore, Consensus } from "./Bits";
+import { TickerLogo } from "./TickerLogo";
 import { fmtCompact } from "@/lib/format";
 import type { Locale } from "@/lib/i18n";
 import type { GrTickerRow } from "@/lib/globalQueries";
@@ -65,8 +66,9 @@ export function TickerTable({ rows, lang }: { rows: GrTickerRow[]; lang: Locale 
             {sorted.map((t) => (
               <tr key={t.ticker} className="border-t border-line hover:bg-white/[.03] transition">
                 <td className="px-3 py-2.5">
-                  <LocaleLink href={`/tickers/${t.ticker}`} className="font-mono font-bold text-cream hover:text-reddit transition">
-                    {t.ticker}
+                  <LocaleLink href={`/tickers/${t.ticker}`} className="inline-flex items-center gap-2.5 hover:text-reddit transition">
+                    <TickerLogo ticker={t.ticker} size={24} />
+                    <span className="font-mono font-bold text-cream">{t.ticker}</span>
                   </LocaleLink>
                 </td>
                 <td className="px-3 py-2.5 text-neutral-400 truncate max-w-[220px] hidden sm:table-cell">{name(t)}</td>

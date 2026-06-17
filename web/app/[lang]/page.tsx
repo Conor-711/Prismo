@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { LocaleLink } from "@/components/i18n/LocaleLink";
 import { Panel, PageHeader, SectionTitle } from "@/components/ui";
 import { Kpi, SentScore, Consensus, RegionBadge, StanceBar } from "@/components/prismo/Bits";
+import { TickerLogo } from "@/components/prismo/TickerLogo";
 import { AsiaHeatmap } from "@/components/asia/AsiaCharts";
 import {
   getGrMeta, getGrTickers, getGrTickerRegions, getGrRegionSummary,
@@ -135,7 +136,7 @@ export default function Overview({ params }: { params: { lang: string } }) {
               <Panel className="p-2">
                 {consensusList.length ? consensusList.map((t) => (
                   <LocaleLink key={t.ticker} href={`/tickers/${t.ticker}`} className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/[.04] transition">
-                    <span className="font-mono font-bold text-cream text-[15px] w-16 shrink-0">{t.ticker}</span>
+                    <TickerLogo ticker={t.ticker} size={22} /><span className="font-mono font-bold text-cream text-[15px] shrink-0">{t.ticker}</span>
                     <span className="text-xs text-neutral-500 truncate flex-1">{name(t)}</span>
                     <Consensus value={t.consensus} lang={lang} />
                     <SentScore score={t.avg_sentiment} className="w-14 text-right" />
@@ -148,7 +149,7 @@ export default function Overview({ params }: { params: { lang: string } }) {
               <Panel className="p-2">
                 {divergentList.length ? divergentList.map((t) => (
                   <LocaleLink key={t.ticker} href={`/tickers/${t.ticker}`} className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/[.04] transition">
-                    <span className="font-mono font-bold text-cream text-[15px] w-16 shrink-0">{t.ticker}</span>
+                    <TickerLogo ticker={t.ticker} size={22} /><span className="font-mono font-bold text-cream text-[15px] shrink-0">{t.ticker}</span>
                     <span className="text-xs text-neutral-500 truncate flex-1">
                       {t.divergent_region ? <RegionBadge region={t.divergent_region} lang={lang} /> : name(t)}
                     </span>
@@ -166,7 +167,7 @@ export default function Overview({ params }: { params: { lang: string } }) {
               {byPosts.slice(0, 10).map((t, i) => (
                 <LocaleLink key={t.ticker} href={`/tickers/${t.ticker}`} className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/[.04] transition">
                   <span className="w-5 text-right text-xs text-neutral-600 tabular">{i + 1}</span>
-                  <span className="font-mono font-bold text-cream text-[15px] w-16 shrink-0">{t.ticker}</span>
+                  <TickerLogo ticker={t.ticker} size={22} /><span className="font-mono font-bold text-cream text-[15px] shrink-0">{t.ticker}</span>
                   <span className="text-xs text-neutral-500 truncate flex-1">{name(t)}</span>
                   <span className="text-[11px] text-neutral-500 tabular">{t.regions_present} {zh ? "区" : "rgn"}</span>
                   <span className="text-[12px] text-neutral-400 tabular w-16 text-right">{fmtCompact(t.total_posts)}</span>

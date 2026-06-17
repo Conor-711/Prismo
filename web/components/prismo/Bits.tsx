@@ -64,3 +64,17 @@ export function StanceBar({ bull, bear, neutral, className = "" }: { bull: numbe
     </div>
   );
 }
+
+// 最新价 + 涨跌额/幅（来自数据层 gr_quote；纯静态站随构建刷新）。
+export function PriceTag({ price, change, changePct, className = "" }: { price: number; change: number; changePct: number; className?: string }) {
+  const up = changePct >= 0;
+  const c = up ? "text-bull" : "text-bear";
+  return (
+    <div className={`text-right ${className}`}>
+      <div className="font-display font-extrabold text-cream text-[28px] sm:text-3xl leading-none tabular">{price.toFixed(2)}</div>
+      <div className={`mt-1 font-mono text-sm tabular ${c}`}>
+        {up ? "+" : ""}{change.toFixed(2)} ({up ? "+" : ""}{changePct.toFixed(2)}%)
+      </div>
+    </div>
+  );
+}

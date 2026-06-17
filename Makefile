@@ -143,7 +143,13 @@ gr:
 	$(MANAGE) gr-crawl --per-board 120 --since-days 14
 	$(MANAGE) gr-tag
 	$(MANAGE) gr-rollup
+	$(MANAGE) gr-quote
 	@echo "" && echo "✅ 全球散户看板完成。出站：make site（读 dev.db 渲染隐藏页 /lab/global-retail）。"
+
+# 仅刷新各标的最新价（Yahoo 15m chart → gr_quote），供标的页展示最新价/涨跌幅。
+# 本地：DATABASE_URL='sqlite:///./data/dev.db' make gr-quote
+gr-quote:
+	$(MANAGE) gr-quote
 
 # 零成本版（mock 启发式，无需 AI key）
 asia-mock:

@@ -237,6 +237,12 @@ def cmd_gr_xueqiu(args):
     ingest(path=args.path, since_days=args.since_days)
 
 
+def cmd_gr_quote(args):
+    # 各 gr 标的最新价（Yahoo 15m chart）→ gr_quote，供标的页展示最新价/涨跌幅。
+    from .ingest.gr_quote import fetch_quotes
+    fetch_quotes()
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="pipeline.manage")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -280,6 +286,7 @@ def build_parser() -> argparse.ArgumentParser:
     sp = sub.add_parser("gr-tag"); sp.add_argument("--batch", type=int, default=15); sp.add_argument("--workers", type=int, default=8); sp.add_argument("--force", action="store_true", help="重打全部（默认只打未打的）"); sp.set_defaults(func=cmd_gr_tag)
     sp = sub.add_parser("gr-rollup"); sp.add_argument("--window-days", type=int, default=14); sp.set_defaults(func=cmd_gr_rollup)
     sp = sub.add_parser("gr-xueqiu"); sp.add_argument("--path", type=str, default="data/exports/gr_cn_xueqiu.json", help="浏览器导出的雪球帖 JSON"); sp.add_argument("--since-days", type=int, default=14); sp.set_defaults(func=cmd_gr_xueqiu)
+    sub.add_parser("gr-quote").set_defaults(func=cmd_gr_quote)
     return p
 
 

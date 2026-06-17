@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { LocaleLink } from "@/components/i18n/LocaleLink";
 import { SentScore, Consensus } from "./Bits";
+import { TickerLogo } from "./TickerLogo";
 import { fmtCompact } from "@/lib/format";
 import type { Locale } from "@/lib/i18n";
 import type { GrTickerRow } from "@/lib/globalQueries";
@@ -44,7 +45,8 @@ export function TickerSearch({ rows, lang }: { rows: GrTickerRow[]; lang: Locale
           {results.length ? (
             results.map((t) => (
               <LocaleLink key={t.ticker} href={`/tickers/${t.ticker}`} className="flex items-center gap-3 px-4 py-3 border-b border-line last:border-0 hover:bg-white/[.04] transition">
-                <span className="font-mono font-bold text-cream text-[15px] w-20 shrink-0">{t.ticker}</span>
+                <TickerLogo ticker={t.ticker} size={26} />
+                <span className="font-mono font-bold text-cream text-[15px] shrink-0">{t.ticker}</span>
                 <span className="text-sm text-neutral-400 truncate flex-1">{name(t)}</span>
                 <Consensus value={t.consensus} lang={lang} />
                 <span className="text-[11px] text-neutral-600 tabular hidden sm:inline">{fmtCompact(t.total_posts)} {zh ? "帖" : "posts"}</span>
@@ -67,6 +69,7 @@ export function TickerSearch({ rows, lang }: { rows: GrTickerRow[]; lang: Locale
                 href={`/tickers/${t.ticker}`}
                 className="inline-flex items-center gap-2 rounded-full bg-card ring-1 ring-inset ring-line px-3 py-1.5 hover:ring-reddit/40 transition"
               >
+                <TickerLogo ticker={t.ticker} size={16} />
                 <span className="font-mono font-bold text-cream text-[13px]">{t.ticker}</span>
                 <SentScore score={t.avg_sentiment} className="text-[11px]" />
               </LocaleLink>

@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { LocaleLink } from "@/components/i18n/LocaleLink";
 import { Panel, SectionTitle } from "@/components/ui";
-import { Kpi, SentScore, Consensus, RegionBadge, StanceBar } from "@/components/prismo/Bits";
+import { Kpi, SentScore, Consensus, RegionBadge, StanceBar, PriceTag } from "@/components/prismo/Bits";
 import { AsiaRadar } from "@/components/asia/AsiaCharts";
-import { getGrTickerSymbols, getGrTickerDetail, getGrPosts, getGrUsPosts, type GrPostRow } from "@/lib/globalQueries";
+import { getGrTickerSymbols, getGrTickerDetail, getGrQuote, getGrPosts, getGrUsPosts, type GrPostRow } from "@/lib/globalQueries";
 import { regionLabel, regionSource, regionColor } from "@/lib/regions";
+import { TickerLogo } from "@/components/prismo/TickerLogo";
+import { tickerExchange } from "@/lib/tickerMeta";
 import { fmtCompact, timeAgo } from "@/lib/format";
 import { isLocale, defaultLocale, type Locale } from "@/lib/i18n";
 
@@ -49,6 +51,7 @@ export default function TickerDetail({ params }: { params: { lang: string; symbo
 
   const name = zh ? ticker.name_zh || ticker.name_en : ticker.name_en || ticker.name_zh;
   const ordered = [...regions].sort((a, b) => b.post_count - a.post_count);
+  const quote = getGrQuote(ticker.ticker);
 
   // 各区代表帖
   const posts: GrPostRow[] = [];
@@ -68,20 +71,34 @@ export default function TickerDetail({ params }: { params: { lang: string; symbo
         ← {zh ? "标的总览" : "All tickers"}
       </LocaleLink>
 
-      {/* 头部 */}
-      <div className="flex flex-wrap items-start justify-between gap-4 pb-4 border-b border-line">
-        <div className="flex items-center gap-3">
-          <span className="font-display font-extrabold text-cream text-3xl tracking-tight">{ticker.ticker}</span>
-          <div>
-            <div className="text-sm text-neutral-400">{name}</div>
-            <div className="mt-1"><Consensus value={ticker.consensus} lang={lang} /></div>
+      {/* 金融基本信息头部：logo + 全称 + 代码·交易所 + 实时价/涨跌幅 */}
+      <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-line">
+        <div className="flex items-center gap-3.5 min-w-0">
+          <TickerLogo ticker={ticker.ticker} size={52} />
+          <div className="min-w-0">
+            <h1 className="font-display font-extrabold text-cream text-2xl sm:text-3xl tracking-tight leading-none truncate">{name}</h1>
+            <div className="mt-1.5 flex flex-wrap items-center gap-2 text-sm">
+              <span className="font-mono font-semibold text-neutral-300">{ticker.ticker}</span>
+              {tickerExchange(ticker.ticker) && <span className="text-neutral-600">· {tickerExchange(ticker.ticker)}</span>}
+              <Consensus value={ticker.consensus} lang={lang} />
+            </div>
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-2">
-          <Kpi label={zh ? "平均情绪" : "Avg sentiment"} value={(ticker.avg_sentiment > 0 ? "+" : "") + ticker.avg_sentiment.toFixed(2)} />
-          <Kpi label={zh ? "覆盖地区" : "Regions"} value={`${ticker.regions_present}/5`} />
-          <Kpi label={zh ? "讨论帖" : "Posts"} value={fmtCompact(ticker.total_posts)} />
-        </div>
+        {quote ? (
+          <div className="shrink-0">
+            <PriceTag price={quote.price} change={quote.price - quote.prev_close} changePct={quote.change_pct} />
+            {quote.asof && (
+              <div className="mt-1 text-[10px] text-neutral-600 text-right">{zh ? "截至 " : "As of "}{quote.asof} · {zh ? "约 15 分钟延迟" : "~15-min delayed"}</div>
+            )}
+          </div>
+        ) : null}
+      </div>
+
+      {/* 情绪聚合 KPI */}
+      <div className="grid grid-cols-3 gap-2 sm:max-w-md">
+        <Kpi label={zh ? "平均情绪" : "Avg sentiment"} value={(ticker.avg_sentiment > 0 ? "+" : "") + ticker.avg_sentiment.toFixed(2)} />
+        <Kpi label={zh ? "覆盖地区" : "Regions"} value={`${ticker.regions_present}/5`} />
+        <Kpi label={zh ? "讨论帖" : "Posts"} value={fmtCompact(ticker.total_posts)} />
       </div>
 
       {/* 逐区分解 + 雷达 */}

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { LocaleLink } from "@/components/i18n/LocaleLink";
 import { Panel, SectionTitle } from "@/components/ui";
 import { Kpi, SentScore, StanceBar, RegionBadge } from "@/components/prismo/Bits";
+import { TickerLogo } from "@/components/prismo/TickerLogo";
 import { getGrRegionSummary, getGrRegionDetail, getGrPosts, getGrUsPosts, type GrPostRow } from "@/lib/globalQueries";
 import { REGION_ORDER, regionLabel, regionSource, regionColor, isRegion } from "@/lib/regions";
 import { fmtCompact, timeAgo } from "@/lib/format";
@@ -70,7 +71,7 @@ export default function RegionDetail({ params }: { params: { lang: string; regio
             <Panel className="p-2">
               {col.list.map((t) => (
                 <LocaleLink key={t.ticker} href={`/tickers/${t.ticker}`} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/[.04] transition">
-                  <span className="font-mono font-bold text-cream text-[15px] w-16 shrink-0">{t.ticker}</span>
+                  <TickerLogo ticker={t.ticker} size={22} /><span className="font-mono font-bold text-cream text-[15px] shrink-0">{t.ticker}</span>
                   <span className="text-xs text-neutral-500 truncate flex-1">{name(t)}</span>
                   <span className="text-[11px] text-neutral-600 tabular">{fmtCompact(t.post_count)}</span>
                   <SentScore score={t.sentiment_avg} className="w-14 text-right" />
@@ -98,7 +99,7 @@ export default function RegionDetail({ params }: { params: { lang: string; regio
             <tbody>
               {byPosts.map((t) => (
                 <tr key={t.ticker} className="border-t border-line hover:bg-white/[.03] transition">
-                  <td className="px-3 py-2.5"><LocaleLink href={`/tickers/${t.ticker}`} className="font-mono font-bold text-cream hover:text-reddit transition">{t.ticker}</LocaleLink></td>
+                  <td className="px-3 py-2.5"><LocaleLink href={`/tickers/${t.ticker}`} className="inline-flex items-center gap-2.5 hover:text-reddit transition"><TickerLogo ticker={t.ticker} size={22} /><span className="font-mono font-bold text-cream">{t.ticker}</span></LocaleLink></td>
                   <td className="px-3 py-2.5 text-neutral-400 truncate max-w-[200px] hidden sm:table-cell">{name(t)}</td>
                   <td className="px-3 py-2.5"><StanceBar bull={t.bull_pct} bear={t.bear_pct} neutral={Math.max(0, 1 - t.bull_pct - t.bear_pct)} /></td>
                   <td className="px-3 py-2.5 text-right text-neutral-300 tabular">{fmtCompact(t.post_count)}</td>

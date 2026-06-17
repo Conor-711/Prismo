@@ -423,6 +423,18 @@ class GrTicker(Base):
     updated_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
 
 
+class GrQuote(Base):
+    # 各 gr 标的最新行情（pipeline `gr-quote` 从 Yahoo 抓；纯静态站随构建刷新，非逐笔实时）。
+    __tablename__ = "gr_quote"
+    ticker: Mapped[str] = mapped_column(String(16), primary_key=True)
+    price: Mapped[float] = mapped_column(Float, default=0.0)  # 最新价
+    prev_close: Mapped[float] = mapped_column(Float, default=0.0)  # 前收
+    change_pct: Mapped[float] = mapped_column(Float, default=0.0)  # 涨跌幅 %
+    currency: Mapped[str] = mapped_column(String(8), default="USD")
+    asof: Mapped[str] = mapped_column(String(32), default="")  # 数据时间（交易所时区字符串）
+    updated_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+
+
 ALL_TABLES = [
     Subreddit, Author, Post, Comment, TickerMeta, Mention, ItemAnalysis,
     TickerRollup, MarketMood, Trending, Narrative, NarrativeTicker,
@@ -430,5 +442,5 @@ ALL_TABLES = [
     # 亚洲实验隔离表：进 ALL_TABLES 让 cloud-pull 能快照；不进 sync.SOURCE_TABLES。
     AsiaPost, AsiaAnalysis, AsiaTickerSummary, AsiaPrice,
     # 全球散户多区看板隔离表（同样进快照、不进 SOURCE_TABLES）。
-    GrPost, GrTickerRegion, GrTicker,
+    GrPost, GrTickerRegion, GrTicker, GrQuote,
 ]
