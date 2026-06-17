@@ -2,7 +2,7 @@
 
 > **维护约定**：本文件是项目的「活地图」。**每次对项目结构或功能有实质改动后，必须同步更新本文件对应章节**
 > （新增/删除模块、改数据流、改命令、改部署方式、改 schema 等）。详见根目录 `CLAUDE.md`。
-> 最近更新：2026-06-16。
+> 最近更新：2026-06-17。
 
 ---
 
@@ -14,6 +14,10 @@
 
 - 线上地址：**https://www.redditalpha.xyz**（根域名，静态托管）
 - 两个市场（market）：`us`（美股）、`cn`（中概股 + 港股 + A 股），互不污染，各出一套聚合。
+
+> **🚧 UI 重构中（2026-06）**：项目正从「只分析 Reddit 单站」升级为「聚合 5 个本土社区」(Reddit / Yahoo Finance Japan / Naver / 雪球 / PTT)，并重做品牌为 **Prismo**（仓库已迁至 `Conor-711/Prismo`）。
+> 第一步已删除 Reddit 单站前端页面（dashboard/ticker/post/author/leaderboard/search/cn/onboarding）及其专属组件，首页换成 Prismo 占位页；**后端 pipeline、数据层 `lib/`、账号系统、共享 UI 与 5 地区原型 `lab/*` 全部保留**。
+> 下文中描述「已删除前端页面」的小节将在重建后更新；**后端 / 数据流 / 管线 / schema 章节仍然准确**。线上 redditalpha.xyz 仍由旧 `reddit_alpha` 仓库部署、不受本次重构影响。
 
 ---
 
@@ -143,14 +147,12 @@ crypto_us/
 │   ├── app/
 │   │   ├── layout.tsx         #   根布局（主题防闪烁 + 默认 OG/metadataBase）
 │   │   ├── [lang]/            #   语言段（zh|en|ja|ko）：generateStaticParams（页面数 = locales × 各内页）
-│   │   │   ├── page.tsx       #     落地页（股神轮播）
-│   │   │   ├── dashboard/     #     美股看板    cn/ 中概看板
-│   │   │   ├── ticker/[symbol]/  个股页   cn/ticker/[symbol]/
-│   │   │   ├── post/[id]/     #     帖子详情（AI 摘要 + 多空 + 评论 + 翻译切换）
-│   │   │   ├── author/[name]/  作者聚合页（代表作/看好看空标的/基础数据；全站作者名头像可点入）
-│   │   │   ├── search/ leaderboard/ insights(管理员看板) account/ me(个人主页·私密) login/ signup/ …
-│   │   │   ├── lab/asia-pulse/ #   ★隐藏页：亚洲散户脉搏（无导航入口/不进 sitemap/noindex，仅 URL 直达）
-│   │   │   ├── lab/global-retail/ # ★隐藏页：全球散户四地区脉搏（美日韩台跨区对比；同样 noindex/无导航）
+│   │   │   ├── page.tsx       #     ★Prismo 占位首页（重构中；旧 Reddit 落地页已删）
+│   │   │   ├── lab/global-retail/ # ★5 地区原型（新产品基础：美 Reddit / 日 / 韩 / 台 / 中 跨区对比）
+│   │   │   ├── lab/asia-pulse/ #   ★亚洲散户脉搏原型（noindex / 无导航，仅 URL 直达）
+│   │   │   ├── insights(管理员看板) status(routine 运维) account/ me(个人主页·私密)
+│   │   │   ├── login/ signup/ forgot-password/ reset-password/ auth/callback/   # 账号系统（保留）
+│   │   │   └── ［已删除］dashboard/ ticker/ post/ author/ leaderboard/ search/ cn/ onboarding/  # Reddit 单站页面，重构第一步移除
 │   │   ├── sitemap.ts / robots.ts / not-found.tsx   # SEO + 404
 │   │   └── icon.png           #   favicon
 │   ├── lib/

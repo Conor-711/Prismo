@@ -159,7 +159,7 @@ export function ProfileView() {
             </span>
             <p className="text-sm text-neutral-500 max-w-xs leading-relaxed">{emptyText(kind)}</p>
             <LocaleLink
-              href="/dashboard"
+              href="/lab/global-retail"
               className="mt-1 inline-flex items-center gap-1 rounded-full bg-reddit text-white text-xs font-semibold px-3.5 py-1.5 hover:bg-reddit/90 transition"
             >
               {p.goDashboard} →

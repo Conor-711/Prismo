@@ -1,7 +1,6 @@
 import { LocaleLink } from "./i18n/LocaleLink";
 import { getMeta, getDataStats } from "@/lib/queries";
 import { timeAgo, fmtInt } from "@/lib/format";
-import { SearchBox } from "./SearchBox";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { SidebarToggle } from "./SidebarToggle";
 import type { Locale, Dictionary } from "@/lib/i18n";
@@ -60,7 +59,6 @@ export function Topbar({ lang, dict }: { lang: Locale; dict: Dictionary }) {
         </div>
 
         <div className="flex items-center gap-3 ml-auto">
-          <SearchBox />
           <div className="hidden md:flex items-center gap-1.5 text-xs text-neutral-500">
             <span className="w-1.5 h-1.5 rounded-full bg-bull animate-pulse" />
             {meta.lastUpdated ? `${dict.chrome.updatedPrefix}${timeAgo(meta.lastUpdated, lang)}` : dict.chrome.noData}

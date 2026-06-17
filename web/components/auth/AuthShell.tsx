@@ -85,7 +85,7 @@ export function AuthShell({
             {footer && <div className="mt-5 text-center text-sm text-neutral-500">{footer}</div>}
 
             <div className="mt-6 text-center">
-              <LocaleLink href="/dashboard" className="text-xs text-neutral-600 transition hover:text-neutral-400">
+              <LocaleLink href="/" className="text-xs text-neutral-600 transition hover:text-neutral-400">
                 ← {dict.common.backToDashboard}
               </LocaleLink>
             </div>

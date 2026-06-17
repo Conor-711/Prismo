@@ -4,7 +4,7 @@ import { getCommunities } from "@/lib/queries";
 import { fmtCompact } from "@/lib/format";
 import { RedditMark } from "./reddit";
 import { CommunityIcon } from "./CommunityIcon";
-import { IconChevron, IconSearch } from "./icons";
+import { IconChevron } from "./icons";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { ThemeToggle } from "./ThemeToggle";
 import { SaveButton } from "./favorites/SaveButton";
@@ -16,7 +16,7 @@ export function Sidebar({ dict }: { lang: Locale; dict: Dictionary }) {
   const communities = getCommunities();
   return (
     <aside className="app-sidebar hidden lg:flex fixed inset-y-0 left-0 w-[232px] flex-col border-r border-line bg-surface/60 backdrop-blur z-40">
-      <LocaleLink href="/dashboard" className="sb-row flex items-center gap-2.5 px-4 h-16 border-b border-line shrink-0">
+      <LocaleLink href="/" className="sb-row flex items-center gap-2.5 px-4 h-16 border-b border-line shrink-0">
         <span className="w-11 h-11 rounded-xl overflow-hidden bg-white shrink-0 ring-1 ring-white/10">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={`${BASE}/logo.png`} alt="RedditAlpha logo" className="w-full h-full object-contain rounded-xl" />
@@ -25,18 +25,6 @@ export function Sidebar({ dict }: { lang: Locale; dict: Dictionary }) {
           reddit<span className="text-reddit">alpha</span>
         </span>
       </LocaleLink>
-
-      {/* 搜索入口（侧边栏顶部）：醒目按钮，点开独立搜索页 */}
-      <div className="px-3 pt-3 shrink-0">
-        <LocaleLink
-          href="/search"
-          title={dict.nav.search}
-          className="sb-row group flex items-center gap-2.5 w-full rounded-lg bg-ink/50 ring-1 ring-inset ring-line px-3 py-2.5 hover:ring-reddit/40 hover:bg-ink/70 transition"
-        >
-          <IconSearch className="w-[18px] h-[18px] shrink-0 text-neutral-400 group-hover:text-reddit transition" />
-          <span className="sb-label text-sm text-neutral-400 group-hover:text-neutral-200 transition">{dict.nav.search}</span>
-        </LocaleLink>
-      </div>
 
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
         <NavLinks />

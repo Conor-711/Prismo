@@ -19,14 +19,14 @@ export default function NotFound() {
       </p>
       <div className="mt-7 flex items-center gap-3">
         <Link
-          href="/zh/dashboard/"
+          href="/zh/"
           className="rounded-xl px-5 py-2.5 font-display font-bold text-white text-sm shadow-lg shadow-reddit/30 ring-1 ring-inset ring-white/15 hover:brightness-110 transition"
           style={{ backgroundImage: "var(--grad-brand)" }}
         >
-          返回看板
+          返回首页
         </Link>
         <Link
-          href="/en/dashboard/"
+          href="/en/"
           className="rounded-xl px-5 py-2.5 text-sm text-neutral-300 ring-1 ring-inset ring-line hover:text-cream hover:bg-white/[.04] transition"
         >
           English

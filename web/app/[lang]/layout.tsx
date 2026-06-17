@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Sidebar } from "@/components/Sidebar";
 import { Topbar } from "@/components/Topbar";
 import { TopBanner } from "@/components/TopBanner";
-import { TickerTape } from "@/components/TickerTape";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { BookmarkHint } from "@/components/BookmarkHint";
 import { AnalyticsTracker } from "@/components/AnalyticsTracker";
@@ -36,7 +35,6 @@ export default function LangLayout({
       <div className="app-main lg:pl-[232px]">
         <TopBanner />
         <Topbar lang={lang} dict={dict} />
-        <TickerTape />
         {/* pb-24：给移动端底部 Tab 栏留出空间（桌面端无 Tab 栏，恢复常规留白）。 */}
         <main className="px-4 sm:px-6 lg:px-8 pt-5 pb-24 lg:pb-8 max-w-[1480px] mx-auto">{children}</main>
       </div>
