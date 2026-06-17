@@ -1,0 +1,77 @@
+name: Daily data refresh (Supabase → Railway)
+
+# 每天 UTC+8 07:00（= UTC 23:00）自动跑数据更新并触发线上重建：
+#   make daily     抓过去24h真实帖/评论 → 千问逐帖打标 → 双market聚合 → DeepSeek简报+中文翻译，写入 Supabase
+#   make cloud-pull 把云端最新快照覆盖本地 data/dev.db
+#   提交 data/dev.db 回 main → Railway 监听 main，自动用该快照重建静态站并上线
+#
+# 仅 schedule / 手动触发。提交 dev.db 用的是 GITHUB_TOKEN，不会再触发本工作流（无自循环）。
+# 需要在 仓库 Settings → Secrets and variables → Actions 配置 3 个 secret：
+#   DATABASE_URL（Supabase 连接串，含密码）、QWEN_API_KEY、DEEPSEEK_API_KEY
+
+on:
+  # ⏸️ 定时触发已按用户要求暂停（停掉每日自动 routine）。
+  #    恢复自动运行：取消下面 schedule 两行的注释、重新提交即可（cron 22:55 UTC = 北京 06:55）。
+  #    暂停期间仍可在 Actions 页用「Run workflow」手动跑（workflow_dispatch 保留）。
+  # schedule:
+  #   - cron: "55 22 * * *"   # 22:55 UTC = 06:55 Asia/Shanghai
+  workflow_dispatch: {}     # 手动「Run workflow」立即跑一次
+
+permissions:
+  contents: write           # 允许把刷新后的 data/dev.db 提交回 main
+
+concurrency:
+  group: daily-data
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330     # daily 全流程较久（千问逐帖打标），留足时间
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 安装管线依赖（建 venv，供 Makefile 调用）
+        run: |
+          python -m venv pipeline/.venv
+          pipeline/.venv/bin/pip install -U pip
+          pipeline/.venv/bin/pip install -r pipeline/requirements.txt
+
+      - name: 跑 daily（写 Supabase）→ 拉快照到 data/dev.db
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          REDDIT_USER_AGENT: "redditalpha/0.1 (github actions)"
+        run: |
+          set -euo pipefail
+          if [ -z "${DATABASE_URL}" ] || [ -z "${QWEN_API_KEY}" ] || [ -z "${DEEPSEEK_API_KEY}" ]; then
+            echo "::error::缺少 secret（DATABASE_URL / QWEN_API_KEY / DEEPSEEK_API_KEY），请先在仓库 Settings → Secrets 配置。"
+            exit 1
+          fi
+          make daily
+          make cloud-pull
+
+      - name: 提交 data/dev.db 回 main（触发 Railway 重建）
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/dev.db
+          if git diff --cached --quiet; then
+            echo "data/dev.db 无变化，跳过提交。"
+          else
+            # 不要加 [skip ci]：Railway 会把它当作「跳过部署」→ 数据提交了却不上线。
+            # 本工作流只在 schedule/workflow_dispatch 触发（不在 push 触发），故 push 不会自循环，无需 skip 标记。
+            git commit -m "data: 自动刷新 $(date -u +%Y-%m-%d)（GitHub Actions）"
+            git push origin HEAD:main
+            echo "已推送，Railway 将自动重建上线。"
+          fi

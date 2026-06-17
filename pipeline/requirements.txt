@@ -1,0 +1,10 @@
+SQLAlchemy>=2.0,<3.0
+praw>=7.7
+anthropic>=0.40
+PyYAML>=6.0
+python-dotenv>=1.0
+APScheduler>=3.10
+requests>=2.31
+pytest>=8.0
+# 生产用 Postgres 时启用（SQLite 开发可不装，但装上也无妨）
+psycopg[binary]>=3.1

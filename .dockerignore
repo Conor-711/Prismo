@@ -1,0 +1,14 @@
+.git
+**/node_modules
+web/.next
+web/out
+pipeline/.venv
+**/__pycache__
+data/*.db
+!data/dev.db
+data/*.db-wal
+data/*.db-shm
+*.log
+.env
+web/.env
+legacy

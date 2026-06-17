@@ -1,0 +1,340 @@
+@import url("https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap");
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===================== 主题变量：默认 = Reddit 白天 ===================== */
+:root {
+  color-scheme: light;
+  --font-sora: "Sora", ui-sans-serif, system-ui, sans-serif;
+  --font-inter: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* 底色族（空格分隔 RGB，配合 <alpha-value>）—— Reddit 浅色 */
+  --c-ink: 247 248 249; /* 页面底色 #F7F8F9 */
+  --c-surface: 255 255 255; /* 导航 / 顶栏 */
+  --c-card: 255 255 255; /* 卡片 */
+  --c-elevated: 255 255 255;
+  --c-line: 226 228 232; /* 边框 #E2E4E8 */
+  --c-navy: 255 255 255;
+  --c-cream: 26 26 27; /* 主文字 #1A1A1B（Reddit） */
+  --c-gold: 176 120 20;
+  --c-silver: 96 110 124;
+
+  /* 中性灰阶（浅色：低位=深、高位=浅，保证文字对比） */
+  --n-50: 24 24 27;
+  --n-100: 32 32 36;
+  --n-200: 42 44 48;
+  --n-300: 63 66 70;
+  --n-400: 88 91 96;
+  --n-500: 104 107 112;
+  --n-600: 135 138 142;
+  --n-700: 172 175 179;
+  --n-800: 202 205 209;
+  --n-900: 224 226 230;
+  --n-950: 238 240 242;
+
+  /* 金属渐变（浅色：转深以可读） */
+  --grad-gold: linear-gradient(149deg, #a9762a 6%, #e6c14f 45%, #9c6d1f 72%, #c79a32 92%);
+  --grad-silver: linear-gradient(140deg, #6f8090 4%, #aebcc9 45%, #8198a8 75%, #5d6e7c 96%);
+  --grad-bronze: linear-gradient(141deg, #8a6a52 5%, #c2926a 45%, #7a5a48 85%);
+  --grad-brand: linear-gradient(100deg, #ff6a3d, #ff4500 55%, #ff8b2e); /* 两套主题通用 */
+
+  /* 面板 / 滚动条 / 画布 —— 浅色 */
+  --panel-bg: linear-gradient(180deg, #ffffff, #fdfdfe);
+  --panel-shadow: inset 0 0 0 1px rgba(20, 20, 40, 0.09), 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(20, 20, 50, 0.05);
+  --panel-shadow-hover: inset 0 0 0 1px rgba(255, 69, 0, 0.42), 0 8px 22px rgba(20, 20, 50, 0.1);
+  --metal-inner: #ffffff;
+  --sb-thumb: #c9ccd2;
+  --sb-thumb-hover: #b4b8c0;
+  --canvas-bg: #f4f5f7;
+  /* 多层「蓝图纸」画布：角落品牌光晕(暖橙/冷蓝) + 顶部纸面柔光 + 细方格 */
+  --canvas-image:
+    radial-gradient(46% 42% at -2% -4%, rgba(255, 69, 0, 0.08), transparent 60%),
+    radial-gradient(44% 44% at 102% 104%, rgba(52, 90, 158, 0.07), transparent 62%),
+    radial-gradient(96% 52% at 50% -24%, rgba(255, 255, 255, 0.75), transparent 72%),
+    linear-gradient(0deg, rgba(28, 30, 56, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(28, 30, 56, 0.03) 1px, transparent 1px);
+  --canvas-size: auto, auto, auto, 76px 76px, 76px 76px;
+
+  /* 胶片颗粒（灰度噪声，两套主题共用，靠 overlay 混合出纹理） */
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --grain-opacity: 0.05;
+}
+
+/* ===================== 夜间模式：Reddit 暗色 ===================== */
+html.dark {
+  color-scheme: dark;
+
+  --c-ink: 9 9 11; /* #09090B */
+  --c-surface: 22 22 25; /* #161619 */
+  --c-card: 26 26 29; /* #1A1A1D */
+  --c-elevated: 34 34 38;
+  --c-line: 52 53 56; /* #343538 */
+  --c-navy: 22 22 25;
+  --c-cream: 215 218 220; /* #D7DADC（Reddit 暗色文字） */
+  --c-gold: 247 209 78;
+  --c-silver: 197 214 226;
+
+  --n-50: 248 248 248;
+  --n-100: 240 240 240;
+  --n-200: 224 224 224;
+  --n-300: 209 211 213;
+  --n-400: 167 169 172;
+  --n-500: 132 134 137;
+  --n-600: 107 109 112;
+  --n-700: 82 84 87;
+  --n-800: 56 57 60;
+  --n-900: 38 39 42;
+  --n-950: 20 20 22;
+
+  --grad-gold: linear-gradient(149deg, #8c5a1d 6%, #fbe67b 38%, #cd9124 52%, #f7d14e 67%, #d4a041 84%);
+  --grad-silver: linear-gradient(140deg, #6d7f8d 4%, #c5d6e2 40%, #eaeff3 52%, #9fb9ce 78%, #6d7f8d 96%);
+  --grad-bronze: linear-gradient(141deg, #7a5e50 5%, #f6d0ab 35%, #9d774e 58%, #c99b70 78%, #795f52 96%);
+
+  --panel-bg: linear-gradient(180deg, #1c1c20, #171719);
+  --panel-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06), 0 6px 22px rgba(0, 0, 0, 0.5);
+  --panel-shadow-hover: inset 0 0 0 1px rgba(255, 69, 0, 0.45), 0 10px 30px rgba(0, 0, 0, 0.6);
+  --metal-inner: #1a1a1d;
+  --sb-thumb: #303034;
+  --sb-thumb-hover: #3e3e44;
+  --canvas-bg: #09090b;
+  --canvas-image:
+    radial-gradient(48% 44% at -2% -4%, rgba(255, 69, 0, 0.10), transparent 60%),
+    radial-gradient(46% 46% at 102% 104%, rgba(96, 122, 184, 0.08), transparent 62%),
+    radial-gradient(96% 52% at 50% -24%, rgba(255, 255, 255, 0.04), transparent 72%),
+    linear-gradient(0deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
+  --grain-opacity: 0.07;
+}
+
+body {
+  background-color: var(--canvas-bg);
+  background-image: var(--canvas-image);
+  background-size: var(--canvas-size);
+  background-attachment: fixed;
+}
+
+/* 全屏覆盖层（落地页 / 引导页）共用的主题画布 */
+.theme-canvas {
+  background-color: var(--canvas-bg);
+  background-image: var(--canvas-image);
+  background-size: var(--canvas-size);
+}
+
+/* 胶片颗粒纹理层：固定铺满、置于内容之后，营造「纸面/匠心」质感 */
+body::before,
+.theme-canvas::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: var(--grain);
+  background-size: 150px 150px;
+  opacity: var(--grain-opacity);
+  mix-blend-mode: overlay;
+}
+.theme-canvas::before {
+  z-index: 0;
+}
+.theme-canvas > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* 安装提醒卡显示时隐藏右下角浮动主题按钮，避免遮挡导致无法关闭提醒卡 */
+html[data-install] .theme-fab {
+  display: none;
+}
+
+::selection {
+  background: rgba(255, 69, 0, 0.28);
+}
+
+/* 微渐变面板 + 柔阴影 + 发丝边 */
+.panel {
+  background: var(--panel-bg);
+  box-shadow: var(--panel-shadow);
+}
+
+/* 今日 Reddit Alpha 头牌底色：橙红主题，按明暗主题分别调校亮度。
+   白天=鲜亮橙；夜间=略沉的暖橙 + 柔和外发光 + 细描边，避免在深色页面上过亮刺眼。 */
+.alpha-hero {
+  background-image: linear-gradient(135deg, #ff4500 0%, #ff6314 48%, #e03d00 100%);
+  box-shadow: 0 18px 50px -18px rgba(255, 69, 0, 0.55);
+}
+html.dark .alpha-hero {
+  background-image: linear-gradient(135deg, #c9380a 0%, #e85622 47%, #9c2f08 100%);
+  box-shadow: 0 16px 42px -22px rgba(255, 69, 0, 0.30), inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+}
+/* 头牌内卡片：夜间用略亮的暖底 + 细描边，避免「近黑挖洞」观感；白天保持白卡 */
+html.dark .alpha-hero .alpha-card {
+  background-color: #201d1c;
+}
+.panel-hover {
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.panel-hover:hover {
+  box-shadow: var(--panel-shadow-hover);
+  transform: translateY(-1px);
+}
+
+/* ===== 金属渐变工具 ===== */
+.metal {
+  border: 1px solid transparent;
+  background-image: var(--panel-bg), var(--metal, var(--grad-gold));
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+}
+.metal-flat {
+  border: 1px solid transparent;
+  background-image: linear-gradient(var(--metal-inner), var(--metal-inner)), var(--metal, var(--grad-gold));
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+}
+.m-gold { --metal: var(--grad-gold); }
+.m-silver { --metal: var(--grad-silver); }
+.m-bronze { --metal: var(--grad-bronze); }
+.metal-text {
+  background-image: var(--metal, var(--grad-gold));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.metal-fill {
+  background-image: var(--metal, var(--grad-gold));
+  color: #1c1505;
+}
+
+/* 发丝分隔线（默认浅色=深线；夜间=浅线） */
+.rule {
+  height: 1px;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0));
+}
+html.dark .rule {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0));
+}
+
+/* 微标签 */
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+/* 信号条 ticker tape */
+@keyframes tape {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.tape-track {
+  display: inline-flex;
+  white-space: nowrap;
+  will-change: transform;
+  animation: tape 64s linear infinite;
+}
+.tape-mask:hover .tape-track {
+  animation-play-state: paused;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--sb-thumb);
+  border-radius: 999px;
+  border: 2px solid var(--canvas-bg);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--sb-thumb-hover);
+}
+
+/* ============= 白/透明叠色：默认(浅色)用黑色调；夜间还原成白色调 ============= */
+/* 组件里大量 white/α 是为暗色设计的微提亮，浅色默认下需反成 black/α 才可见。 */
+.bg-white\/\[\.012\],
+.bg-white\/\[\.015\],
+.bg-white\/\[\.02\] { background-color: rgba(0, 0, 0, 0.035); }
+.bg-white\/\[\.025\],
+.bg-white\/\[\.03\] { background-color: rgba(0, 0, 0, 0.04); }
+.bg-white\/\[\.04\],
+.bg-white\/\[\.06\],
+.bg-white\/5 { background-color: rgba(0, 0, 0, 0.05); }
+.bg-white\/\[\.08\],
+.bg-white\/8 { background-color: rgba(0, 0, 0, 0.06); }
+.bg-white\/10,
+.bg-white\/12 { background-color: rgba(0, 0, 0, 0.08); }
+.hover\:bg-white\/\[\.03\]:hover,
+.hover\:bg-white\/5:hover { background-color: rgba(0, 0, 0, 0.05); }
+.hover\:bg-white\/\[\.04\]:hover { background-color: rgba(0, 0, 0, 0.06); }
+.ring-white\/6,
+.ring-white\/\[\.06\] { --tw-ring-color: rgb(0 0 0 / 0.08); }
+.ring-white\/\[\.07\] { --tw-ring-color: rgb(0 0 0 / 0.09); }
+.ring-white\/8,
+.ring-white\/10 { --tw-ring-color: rgb(0 0 0 / 0.11); }
+.ring-white\/15 { --tw-ring-color: rgb(0 0 0 / 0.15); }
+.hover\:ring-white\/20:hover { --tw-ring-color: rgb(0 0 0 / 0.18); }
+.border-white\/\[\.05\] { border-color: rgb(0 0 0 / 0.09); }
+
+/* 夜间：还原为原本的白色叠色 */
+html.dark .bg-white\/\[\.012\] { background-color: rgba(255, 255, 255, 0.012); }
+html.dark .bg-white\/\[\.015\] { background-color: rgba(255, 255, 255, 0.015); }
+html.dark .bg-white\/\[\.02\] { background-color: rgba(255, 255, 255, 0.02); }
+html.dark .bg-white\/\[\.025\] { background-color: rgba(255, 255, 255, 0.025); }
+html.dark .bg-white\/\[\.03\] { background-color: rgba(255, 255, 255, 0.03); }
+html.dark .bg-white\/\[\.04\] { background-color: rgba(255, 255, 255, 0.04); }
+html.dark .bg-white\/\[\.06\] { background-color: rgba(255, 255, 255, 0.06); }
+html.dark .bg-white\/5 { background-color: rgba(255, 255, 255, 0.05); }
+html.dark .bg-white\/\[\.08\] { background-color: rgba(255, 255, 255, 0.08); }
+html.dark .bg-white\/8 { background-color: rgba(255, 255, 255, 0.08); }
+html.dark .bg-white\/10 { background-color: rgba(255, 255, 255, 0.1); }
+html.dark .bg-white\/12 { background-color: rgba(255, 255, 255, 0.12); }
+html.dark .hover\:bg-white\/\[\.03\]:hover { background-color: rgba(255, 255, 255, 0.03); }
+html.dark .hover\:bg-white\/5:hover { background-color: rgba(255, 255, 255, 0.05); }
+html.dark .hover\:bg-white\/\[\.04\]:hover { background-color: rgba(255, 255, 255, 0.04); }
+html.dark .ring-white\/6 { --tw-ring-color: rgb(255 255 255 / 0.06); }
+html.dark .ring-white\/\[\.06\] { --tw-ring-color: rgb(255 255 255 / 0.06); }
+html.dark .ring-white\/\[\.07\] { --tw-ring-color: rgb(255 255 255 / 0.07); }
+html.dark .ring-white\/8 { --tw-ring-color: rgb(255 255 255 / 0.08); }
+html.dark .ring-white\/10 { --tw-ring-color: rgb(255 255 255 / 0.1); }
+html.dark .ring-white\/15 { --tw-ring-color: rgb(255 255 255 / 0.15); }
+html.dark .hover\:ring-white\/20:hover { --tw-ring-color: rgb(255 255 255 / 0.2); }
+html.dark .border-white\/\[\.05\] { border-color: rgb(255 255 255 / 0.05); }
+
+/* ===================== 侧边栏折叠 / 展开（折叠=窄图标轨，仍可点击）===================== */
+@media (min-width: 1024px) {
+  .app-sidebar { transition: width 0.22s ease; overflow-x: hidden; }
+  .app-main { transition: padding-left 0.22s ease; }
+  html[data-sb="collapsed"] .app-sidebar { width: 64px; }
+  html[data-sb="collapsed"] .app-main { padding-left: 64px; }
+  /* 折叠时：隐藏文字标签 / 辅助块，图标行居中 */
+  html[data-sb="collapsed"] .sb-label { display: none; }
+  html[data-sb="collapsed"] .sb-hide { display: none; }
+  html[data-sb="collapsed"] .sb-row { justify-content: center; padding-left: 0; padding-right: 0; gap: 0; }
+}
+
+/* ===================== 帖子/评论正文排版（阅读优化） ===================== */
+.prose-post { color: rgb(var(--n-200)); }
+.prose-post > :first-child { margin-top: 0; }
+.prose-post p { margin: 0.9em 0; line-height: 1.78; }
+.prose-post .lead { font-size: 1.12em; line-height: 1.7; color: var(--c-cream); font-weight: 500; }
+.prose-post strong { color: var(--c-cream); font-weight: 700; }
+.prose-post em { color: rgb(var(--n-300)); }
+.prose-post h1, .prose-post h2, .prose-post h3 { color: var(--c-cream); font-family: var(--font-sora); letter-spacing: -0.01em; }
+.prose-post h2 { font-size: 1.32em; font-weight: 800; margin: 1.5em 0 0.55em; padding-bottom: 0.3em; border-bottom: 1px solid rgb(var(--c-line)); }
+.prose-post h3 { font-size: 1.12em; font-weight: 700; margin: 1.25em 0 0.4em; }
+.prose-post blockquote { margin: 1.1em 0; padding: 0.2em 0 0.2em 1em; border-left: 3px solid rgb(255 69 0 / 0.5); color: rgb(var(--n-400)); font-style: italic; }
+.prose-post ul, .prose-post ol { margin: 0.9em 0; }
+.prose-post li { margin: 0.4em 0; line-height: 1.7; }
+.prose-post hr { margin: 1.5em 0; border: 0; border-top: 1px solid rgb(var(--c-line)); }
+.prose-post .callout {
+  margin: 1.2em 0; padding: 0.85em 1em; border-radius: 12px;
+  background: rgb(255 69 0 / 0.06); box-shadow: inset 0 0 0 1px rgb(255 69 0 / 0.22);
+}
+.prose-post .callout .callout-k { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #ff4500; }

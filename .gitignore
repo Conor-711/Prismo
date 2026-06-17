@@ -1,0 +1,55 @@
+# Python
+pipeline/.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Env / secrets
+.env
+web/.env
+*.local
+# 雪球浏览器 cookie（会话 token，绝不入库）
+.xueqiu_cookie*
+# Apple Sign in 私钥（绝不入库）
+*.p8
+AuthKey_*.p8
+
+# Data / DB（仅忽略根目录 data/ 下的运行期库，pipeline/data 字典样本照常入库）
+data/*.db
+# dev.db 是可再生的数据快照（make cloud-pull / make site-cloud 从 Supabase 生成）；
+# 体积大且非源代码，故 Prismo 精简仓库不入库。部署前用 make site-cloud 生成即可；
+# 若某次部署确需把快照入库，可在网络稳定时临时 `git add -f data/dev.db` 单独提交。
+data/*.db-wal
+data/*.db-shm
+data/sec_company_tickers.json
+# 实验/管线中间产物导出（可由 make 重新生成，体积大，不入库）
+data/exports/
+*.sqlite3
+
+# Node / Next
+web/node_modules/
+web/.next/
+web/out/
+web/prisma/dev.db
+*.tsbuildinfo
+
+# Marketing 子项目（不参与线上 web 构建）
+marketing/node_modules/
+# remotion 渲染产物（帧序列/测试帧，可由 remotion 重新渲染，体积达 ~1GB，不入库）
+marketing/remotion/cap/frames/
+marketing/remotion/cap/test/
+# 误入仓库根目录的散落音频（非项目源码）
+/TICKING KYC.mp3
+
+# 历史 / 散落文件（非线上站点的一部分）
+/1/
+/legacy/
+# 注意：server.mjs 是生产静态服务入口（Dockerfile CMD 用它），必须入库——不要忽略。
+
+# 本地 agent / codex 工具
+.codex/
+
+# OS / editor
+.DS_Store
+*.log
+/tmp/

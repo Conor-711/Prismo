@@ -1,0 +1,507 @@
+tickers:
+- ticker: NVDA
+  name_en: NVIDIA
+  name_zh: 英伟达
+  yahoo_jp: NVDA
+  naver_type: foreignStock
+  naver_code: NVDA.O
+  naver_has: true
+  naver_ko: 엔비디아
+  aliases:
+  - NVDA
+  - nvidia
+  - 英伟达
+  - 輝達
+  - 黃仁勳
+- ticker: AMD
+  name_en: AMD
+  name_zh: 超威
+  yahoo_jp: AMD
+  naver_type: foreignStock
+  naver_code: AMD.O
+  naver_has: true
+  naver_ko: AMD(어드밴스드 마이크로 디바이시스)
+  aliases:
+  - AMD
+  - amd
+  - 蘇姿丰
+  - 超威
+  - 超微
+- ticker: TSLA
+  name_en: Tesla
+  name_zh: 特斯拉
+  yahoo_jp: TSLA
+  naver_type: foreignStock
+  naver_code: TSLA.O
+  naver_has: true
+  naver_ko: 테슬라
+  aliases:
+  - TSLA
+  - tesla
+  - 特斯拉
+  - 電動車
+  - 馬斯克
+- ticker: AAPL
+  name_en: Apple
+  name_zh: 苹果
+  yahoo_jp: AAPL
+  naver_type: foreignStock
+  naver_code: AAPL.O
+  naver_has: true
+  naver_ko: 애플
+  aliases:
+  - AAPL
+  - apple
+  - iphone
+  - 苹果
+  - 蘋果
+- ticker: MSFT
+  name_en: Microsoft
+  name_zh: 微软
+  yahoo_jp: MSFT
+  naver_type: foreignStock
+  naver_code: MSFT.O
+  naver_has: true
+  naver_ko: 마이크로소프트
+  aliases:
+  - MSFT
+  - microsoft
+  - 微軟
+  - 微软
+- ticker: GOOGL
+  name_en: Alphabet
+  name_zh: 谷歌
+  yahoo_jp: GOOGL
+  naver_type: foreignStock
+  naver_code: GOOGL.O
+  naver_has: true
+  naver_ko: 알파벳 Class A
+  aliases:
+  - GOOGL
+  - alphabet
+  - google
+  - 谷歌
+- ticker: AMZN
+  name_en: Amazon
+  name_zh: 亚马逊
+  yahoo_jp: AMZN
+  naver_type: foreignStock
+  naver_code: AMZN.O
+  naver_has: true
+  naver_ko: 아마존닷컴
+  aliases:
+  - AMZN
+  - amazon
+  - 亚马逊
+  - 亞馬遜
+- ticker: META
+  name_en: Meta
+  name_zh: Meta
+  yahoo_jp: META
+  naver_type: foreignStock
+  naver_code: META.O
+  naver_has: true
+  naver_ko: 메타
+  aliases:
+  - META
+  - facebook
+  - meta
+  - 臉書
+- ticker: MU
+  name_en: Micron
+  name_zh: 美光
+  yahoo_jp: MU
+  naver_type: foreignStock
+  naver_code: MU.O
+  naver_has: true
+  naver_ko: 마이크론 테크놀로지
+  aliases:
+  - MU
+  - micron
+  - 美光
+- ticker: INTC
+  name_en: Intel
+  name_zh: 英特尔
+  yahoo_jp: INTC
+  naver_type: foreignStock
+  naver_code: INTC.O
+  naver_has: true
+  naver_ko: 인텔
+  aliases:
+  - INTC
+  - intel
+  - 英特尔
+  - 英特爾
+- ticker: AVGO
+  name_en: Broadcom
+  name_zh: 博通
+  yahoo_jp: AVGO
+  naver_type: foreignStock
+  naver_code: AVGO.O
+  naver_has: true
+  naver_ko: 브로드컴
+  aliases:
+  - AVGO
+  - broadcom
+  - 博通
+- ticker: QCOM
+  name_en: Qualcomm
+  name_zh: 高通
+  yahoo_jp: QCOM
+  naver_type: foreignStock
+  naver_code: QCOM.O
+  naver_has: true
+  naver_ko: 퀄컴
+  aliases:
+  - QCOM
+  - qualcomm
+  - 高通
+- ticker: ARM
+  name_en: Arm
+  name_zh: Arm
+  yahoo_jp: ARM
+  naver_type: foreignStock
+  naver_code: ARM.O
+  naver_has: true
+  naver_ko: 암 홀딩스 ADR
+  aliases:
+  - ARM
+  - arm
+  - 安謀
+- ticker: SMCI
+  name_en: Super Micro
+  name_zh: 美超微
+  yahoo_jp: SMCI
+  naver_type: foreignStock
+  naver_code: SMCI.O
+  naver_has: true
+  naver_ko: 슈퍼 마이크로 컴퓨터
+  aliases:
+  - SMCI
+  - supermicro
+  - 美超微
+- ticker: PLTR
+  name_en: Palantir
+  name_zh: Palantir
+  yahoo_jp: PLTR
+  naver_type: foreignStock
+  naver_code: PLTR.O
+  naver_has: true
+  naver_ko: 팔란티어 테크놀로지스
+  aliases:
+  - PLTR
+  - palantir
+  - pltr
+- ticker: NFLX
+  name_en: Netflix
+  name_zh: 奈飞
+  yahoo_jp: NFLX
+  naver_type: foreignStock
+  naver_code: NFLX.O
+  naver_has: true
+  naver_ko: 넷플릭스
+  aliases:
+  - NFLX
+  - netflix
+  - 奈飛
+  - 奈飞
+  - 網飛
+- ticker: ASML
+  name_en: ASML
+  name_zh: 阿斯麦
+  yahoo_jp: ASML
+  naver_type: foreignStock
+  naver_code: ASML.O
+  naver_has: true
+  naver_ko: ASML 홀딩 ADR
+  aliases:
+  - ASML
+  - asml
+  - 艾司摩爾
+  - 艾斯摩爾
+  - 阿斯麦
+- ticker: TSM
+  name_en: TSMC ADR
+  name_zh: 台积电
+  yahoo_jp: TSM
+  naver_type: foreignStock
+  naver_code: TSM
+  naver_has: true
+  naver_ko: TSMC(타이완반도체제조) ADR
+  aliases:
+  - '2330'
+  - TSM
+  - tsmc
+  - 台积电
+  - 台積
+  - 台積電
+- ticker: COIN
+  name_en: Coinbase
+  name_zh: Coinbase
+  yahoo_jp: COIN
+  naver_type: foreignStock
+  naver_code: COIN.O
+  naver_has: true
+  naver_ko: 코인베이스 글로벌
+  aliases:
+  - COIN
+  - coin
+  - coinbase
+- ticker: MSTR
+  name_en: MicroStrategy
+  name_zh: 微策略
+  yahoo_jp: MSTR
+  naver_type: foreignStock
+  naver_code: MSTR.O
+  naver_has: true
+  naver_ko: 스트래티지
+  aliases:
+  - MSTR
+  - microstrategy
+  - mstr
+  - 微策略
+- ticker: MARA
+  name_en: Marathon
+  name_zh: Marathon
+  yahoo_jp: MARA
+  naver_type: foreignStock
+  naver_code: MARA.O
+  naver_has: true
+  naver_ko: 마라 홀딩스
+  aliases:
+  - MARA
+  - mara
+  - marathon
+- ticker: RIOT
+  name_en: Riot
+  name_zh: Riot
+  yahoo_jp: RIOT
+  naver_type: foreignStock
+  naver_code: RIOT.O
+  naver_has: true
+  naver_ko: 라이엇 플랫폼즈
+  aliases:
+  - RIOT
+  - riot
+  - riot platforms
+- ticker: GME
+  name_en: GameStop
+  name_zh: GameStop
+  yahoo_jp: GME
+  naver_type: foreignStock
+  naver_code: GME
+  naver_has: true
+  naver_ko: 게임스탑
+  aliases:
+  - GME
+  - gamestop
+  - gme
+- ticker: AMC
+  name_en: AMC
+  name_zh: AMC
+  yahoo_jp: AMC
+  naver_type: foreignStock
+  naver_code: AMC
+  naver_has: true
+  naver_ko: AMC 엔터테인먼트 홀딩스
+  aliases:
+  - AMC
+  - amc
+- ticker: SOFI
+  name_en: SoFi
+  name_zh: SoFi
+  yahoo_jp: SOFI
+  naver_type: foreignStock
+  naver_code: SOFI.O
+  naver_has: true
+  naver_ko: 소파이 테크놀로지스
+  aliases:
+  - SOFI
+  - sofi
+- ticker: HOOD
+  name_en: Robinhood
+  name_zh: Robinhood
+  yahoo_jp: HOOD
+  naver_type: foreignStock
+  naver_code: HOOD.O
+  naver_has: true
+  naver_ko: 로빈후드
+  aliases:
+  - HOOD
+  - hood
+  - robinhood
+- ticker: RIVN
+  name_en: Rivian
+  name_zh: Rivian
+  yahoo_jp: RIVN
+  naver_type: foreignStock
+  naver_code: RIVN.O
+  naver_has: true
+  naver_ko: 리비안
+  aliases:
+  - RIVN
+  - rivian
+  - rivn
+- ticker: LCID
+  name_en: Lucid
+  name_zh: Lucid
+  yahoo_jp: LCID
+  naver_type: foreignStock
+  naver_code: LCID.O
+  naver_has: true
+  naver_ko: 루시드 그룹
+  aliases:
+  - LCID
+  - lcid
+  - lucid
+- ticker: NIO
+  name_en: NIO
+  name_zh: 蔚来
+  yahoo_jp: NIO
+  naver_type: foreignStock
+  naver_code: NIO
+  naver_has: true
+  naver_ko: 니오 ADR
+  aliases:
+  - NIO
+  - nio
+  - 蔚來
+  - 蔚来
+- ticker: F
+  name_en: Ford
+  name_zh: 福特
+  yahoo_jp: F
+  naver_type: foreignStock
+  naver_code: F
+  naver_has: true
+  naver_ko: 포드 모터
+  aliases:
+  - F
+  - ford
+  - 福特
+- ticker: BA
+  name_en: Boeing
+  name_zh: 波音
+  yahoo_jp: BA
+  naver_type: foreignStock
+  naver_code: BA
+  naver_has: true
+  naver_ko: 보잉
+  aliases:
+  - BA
+  - boeing
+  - 波音
+- ticker: DIS
+  name_en: Disney
+  name_zh: 迪士尼
+  yahoo_jp: DIS
+  naver_type: foreignStock
+  naver_code: DIS
+  naver_has: true
+  naver_ko: 월트 디즈니
+  aliases:
+  - DIS
+  - disney
+  - 迪士尼
+- ticker: BABA
+  name_en: Alibaba
+  name_zh: 阿里巴巴
+  yahoo_jp: BABA
+  naver_type: foreignStock
+  naver_code: BABA.K
+  naver_has: true
+  naver_ko: 알리바바 그룹 홀딩스 ADR
+  aliases:
+  - BABA
+  - alibaba
+  - baba
+  - 阿里
+  - 阿里巴巴
+- ticker: PYPL
+  name_en: PayPal
+  name_zh: PayPal
+  yahoo_jp: PYPL
+  naver_type: foreignStock
+  naver_code: PYPL.O
+  naver_has: true
+  naver_ko: 페이팔 홀딩스
+  aliases:
+  - PYPL
+  - paypal
+  - pypl
+- ticker: UBER
+  name_en: Uber
+  name_zh: Uber
+  yahoo_jp: UBER
+  naver_type: foreignStock
+  naver_code: UBER.K
+  naver_has: true
+  naver_ko: 우버
+  aliases:
+  - UBER
+  - uber
+- ticker: ORCL
+  name_en: Oracle
+  name_zh: 甲骨文
+  yahoo_jp: ORCL
+  naver_type: foreignStock
+  naver_code: ORCL.K
+  naver_has: true
+  naver_ko: 오라클
+  aliases:
+  - ORCL
+  - oracle
+  - 甲骨文
+- ticker: AMAT
+  name_en: Applied Materials
+  name_zh: 应用材料
+  yahoo_jp: AMAT
+  naver_type: foreignStock
+  naver_code: AMAT.O
+  naver_has: true
+  naver_ko: 어플라이드 머티어리얼즈
+  aliases:
+  - AMAT
+  - applied materials
+  - 应用材料
+  - 應材
+- ticker: DELL
+  name_en: Dell
+  name_zh: 戴尔
+  yahoo_jp: DELL
+  naver_type: foreignStock
+  naver_code: DELL.K
+  naver_has: true
+  naver_ko: 델테크놀로지
+  aliases:
+  - DELL
+  - dell
+  - 戴尔
+  - 戴爾
+- ticker: PFE
+  name_en: Pfizer
+  name_zh: 辉瑞
+  yahoo_jp: PFE
+  naver_type: foreignStock
+  naver_code: PFE
+  naver_has: true
+  naver_ko: 화이자
+  aliases:
+  - PFE
+  - pfizer
+  - 輝瑞
+  - 辉瑞
+- ticker: JPM
+  name_en: JPMorgan
+  name_zh: 摩根大通
+  yahoo_jp: JPM
+  naver_type: foreignStock
+  naver_code: JPM
+  naver_has: true
+  naver_ko: 제이피모간체이스
+  aliases:
+  - JPM
+  - jpm
+  - jpmorgan
+  - 摩根
+  - 摩根大通

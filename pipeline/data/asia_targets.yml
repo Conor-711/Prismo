@@ -1,0 +1,33 @@
+# 亚洲散户舆情看板：四标的（Nvidia / 美光 / 诺基亚 / SpaceX）× 日韩本土板。
+# 日本：Yahoo Finance JP 掲示板 /quote/{yahoo_jp}/forum（SSR）。
+# 韩国：Naver 移动端 front-api discussion/list（naver_type=foreignStock，naver_code=站点代码）。
+#   - SpaceX 为未上市（pre-IPO）标的，两站均有「スペースX / 스페이스X」专板（SPCX / SPCX.O）。
+#   - Nokia 为 ADR：Yahoo=NOK，Naver=NOK（无 .N/.O 后缀）。
+tickers:
+  - ticker: NVDA
+    name_en: NVIDIA
+    name_zh: 英伟达
+    yahoo_jp: NVDA
+    naver_type: foreignStock
+    naver_code: NVDA.O
+
+  - ticker: MU
+    name_en: Micron
+    name_zh: 美光
+    yahoo_jp: MU
+    naver_type: foreignStock
+    naver_code: MU.O
+
+  - ticker: NOK
+    name_en: Nokia
+    name_zh: 诺基亚
+    yahoo_jp: NOK
+    naver_type: foreignStock
+    naver_code: NOK
+
+  - ticker: SPCX
+    name_en: SpaceX
+    name_zh: SpaceX
+    yahoo_jp: SPCX
+    naver_type: foreignStock
+    naver_code: SPCX.O

@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>redditalpha · 持仓情报简报 · NVDA / PLTR / META</title>
+<style>
+  :root{
+    --ink:#0B0B0F; --surface:#121217; --card:#16161D; --elevated:#1C1C25;
+    --line:#262630; --line-soft:#1E1E27;
+    --reddit:#FC3E02; --gold:#F7D14E; --bull:#24B47E; --bear:#F0556E;
+    --blue:#7193FF; --cream:#F4F1EA; --mut:#8A8A99; --mut2:#5E5E6B;
+    --grad-gold:linear-gradient(135deg,#F7E08A,#E9B53C,#9c6a10);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:"Inter","Helvetica Neue",-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    background:
+      radial-gradient(1200px 600px at 12% -8%, rgba(252,62,2,.10), transparent 55%),
+      radial-gradient(1000px 700px at 100% 0%, rgba(113,147,255,.07), transparent 50%),
+      var(--ink);
+    color:var(--cream); line-height:1.5; letter-spacing:.1px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1100px;margin:0 auto;padding:0 22px 80px}
+  .mono{font-family:"SF Mono",ui-monospace,"JetBrains Mono","Menlo",monospace;font-variant-numeric:tabular-nums}
+  a{color:inherit}
+  /* ---------- inline citation ---------- */
+  a.cite{display:inline-block;font-size:10px;font-weight:700;line-height:1.4;color:var(--reddit);
+    background:rgba(252,62,2,.10);border:1px solid rgba(252,62,2,.28);border-radius:5px;
+    padding:0 4px;text-decoration:none;vertical-align:super;margin-left:2px;transition:.15s;white-space:nowrap}
+  a.cite:hover{background:var(--reddit);color:#fff;border-color:var(--reddit)}
+  a.cite.s{color:var(--blue);background:rgba(113,147,255,.10);border-color:rgba(113,147,255,.28)}
+  a.cite.s:hover{background:var(--blue);color:#fff;border-color:var(--blue)}
+  /* ---------- masthead ---------- */
+  header.top{padding:30px 0 22px;border-bottom:1px solid var(--line)}
+  .brandrow{display:flex;align-items:center;gap:13px;flex-wrap:wrap}
+  .logo{width:40px;height:40px;border-radius:11px;background:linear-gradient(135deg,#16222e,#0e1822);
+    display:grid;place-items:center;position:relative;box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)}
+  .logo b{font-size:20px;font-weight:900;color:#fff;letter-spacing:-1px}
+  .logo i{position:absolute;bottom:7px;left:6px;right:6px;height:4px;border-radius:3px;
+    background:var(--reddit);transform:rotate(-8deg)}
+  .wordmark{font-weight:800;font-size:19px;letter-spacing:-.4px}
+  .wordmark span{color:var(--reddit)}
+  .live{margin-left:auto;display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--mut);
+    border:1px solid var(--line);padding:6px 11px;border-radius:999px;background:rgba(255,255,255,.02)}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--bull);position:relative}
+  .dot::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:1px solid var(--bull);opacity:.5;animation:pp 1.8s ease-out infinite}
+  @keyframes pp{0%{transform:scale(.6);opacity:.7}100%{transform:scale(1.8);opacity:0}}
+  .h1{margin-top:22px;font-size:31px;font-weight:800;letter-spacing:-.6px;line-height:1.15}
+  .h1 em{font-style:normal;background:var(--grad-gold);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{margin-top:9px;color:var(--mut);font-size:14.5px;max-width:760px}
+  .metarow{margin-top:16px;display:flex;flex-wrap:wrap;gap:8px}
+  .chip{font-size:12px;color:var(--mut);border:1px solid var(--line);padding:5px 10px;border-radius:8px;background:rgba(255,255,255,.015)}
+  .chip b{color:var(--cream);font-weight:600}
+  /* ---------- section ---------- */
+  section{margin-top:46px}
+  .sehead{display:flex;align-items:baseline;gap:12px;margin-bottom:6px}
+  .sehead .tick{width:8px;height:20px;border-radius:3px;background:var(--reddit);transform:translateY(3px)}
+  .sehead h2{font-size:21px;font-weight:800;letter-spacing:-.3px}
+  .sehead .kk{font-size:12px;color:var(--mut2);margin-left:auto;text-transform:uppercase;letter-spacing:1.2px}
+  .lead{color:var(--mut);font-size:14px;margin:8px 0 20px;max-width:840px}
+  .lead b{color:var(--cream)}
+  /* ---------- pulse cards ---------- */
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  @media(max-width:820px){.grid3{grid-template-columns:1fr}}
+  .pcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;position:relative;overflow:hidden}
+  .pcard::before{content:"";position:absolute;top:0;left:0;right:0;height:3px}
+  .pcard.nvda::before{background:var(--bull)} .pcard.meta::before{background:var(--bear)} .pcard.pltr::before{background:var(--gold)}
+  .pc-top{display:flex;align-items:center;justify-content:space-between}
+  .tk{font-size:20px;font-weight:800;letter-spacing:-.3px}
+  .tk small{font-size:11.5px;color:var(--mut2);font-weight:500;display:block;letter-spacing:0}
+  .rank{font-size:11px;color:var(--mut);border:1px solid var(--line);border-radius:7px;padding:3px 8px}
+  .pc-stats{display:flex;gap:16px;margin-top:15px}
+  .st .v{font-size:21px;font-weight:800;letter-spacing:-.4px}
+  .st .l{font-size:11px;color:var(--mut2);margin-top:1px}
+  .up{color:var(--bull)} .down{color:var(--bear)} .warn{color:var(--gold)}
+  .sentibar{margin-top:15px;height:8px;border-radius:5px;overflow:hidden;display:flex;background:var(--bear)}
+  .sentibar i{display:block;height:100%;background:var(--bull)}
+  .sentilbl{display:flex;justify-content:space-between;font-size:11px;margin-top:6px;color:var(--mut)}
+  .verdict{margin-top:14px;font-size:12.5px;color:var(--cream);background:rgba(255,255,255,.025);
+    border:1px solid var(--line-soft);border-left:3px solid var(--reddit);border-radius:7px;padding:9px 11px;line-height:1.5}
+  .kw{margin-top:11px;display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+  .kw span{font-size:11px;color:var(--mut);background:rgba(255,255,255,.04);border-radius:6px;padding:3px 7px}
+  .kw span.hot{color:var(--reddit);background:rgba(252,62,2,.10)}
+  /* ---------- risk ---------- */
+  .risk{display:flex;flex-direction:column;gap:13px}
+  .ritem{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;display:grid;
+    grid-template-columns:62px 1fr;gap:16px;align-items:start}
+  .rlev{text-align:center}
+  .rlev .b{font-size:11px;font-weight:800;letter-spacing:.5px;padding:5px 0;border-radius:7px;display:block}
+  .rlev .hi{background:rgba(240,85,110,.14);color:var(--bear)}
+  .rlev .md{background:rgba(247,209,78,.14);color:var(--gold)}
+  .rlev .lo{background:rgba(36,180,126,.14);color:var(--bull)}
+  .rlev small{display:block;font-size:10px;color:var(--mut2);margin-top:5px}
+  .rbody h4{font-size:15px;font-weight:700;margin-bottom:5px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .rbody h4 .tag{font-size:11px;font-weight:600;color:var(--mut);border:1px solid var(--line);border-radius:6px;padding:2px 7px}
+  .rbody p{font-size:13.5px;color:var(--mut);line-height:1.6}
+  .rbody p b{color:var(--cream);font-weight:600}
+  .rbody .ev{margin-top:8px;font-size:12px;color:var(--mut2)}
+  .rbody .ev b{color:var(--gold);font-weight:600}
+  /* ---------- bull/bear ---------- */
+  .bb{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:16px}
+  .bb-head{display:flex;align-items:center;gap:11px;margin-bottom:4px;flex-wrap:wrap}
+  .bb-head .tk{font-size:18px}
+  .bb-head .px{font-size:12.5px;color:var(--mut);font-family:"SF Mono",monospace}
+  .bb-head .net{margin-left:auto;font-size:12px;color:var(--mut)}
+  .bb-cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px}
+  @media(max-width:720px){.bb-cols{grid-template-columns:1fr}}
+  .col{border:1px solid var(--line-soft);border-radius:12px;padding:14px}
+  .col.bullc{background:rgba(36,180,126,.05)} .col.bearc{background:rgba(240,85,110,.05)}
+  .col h5{font-size:13px;font-weight:800;letter-spacing:.4px;margin-bottom:10px;display:flex;align-items:center;gap:7px}
+  .col.bullc h5{color:var(--bull)} .col.bearc h5{color:var(--bear)}
+  .col h5 .cnt{margin-left:auto;font-size:11px;color:var(--mut2);font-weight:500}
+  .col ul{list-style:none;display:flex;flex-direction:column;gap:9px}
+  .col li{font-size:13px;color:var(--cream);line-height:1.5;padding-left:16px;position:relative}
+  .col li::before{content:"";position:absolute;left:0;top:7px;width:6px;height:6px;border-radius:50%}
+  .col.bullc li::before{background:var(--bull)} .col.bearc li::before{background:var(--bear)}
+  .col li b{color:#fff} .col li .src{color:var(--mut2);font-size:11.5px}
+  /* ---------- catalyst heat ---------- */
+  .heatwrap{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px}
+  .heathd{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px}
+  .heathd .src{font-size:11.5px;color:var(--mut2)}
+  .heatgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:9px;margin-top:6px}
+  .hcell{border:1px solid var(--line-soft);border-radius:10px;padding:10px 12px;position:relative;overflow:hidden;background:var(--surface)}
+  .hcell.ai{border-color:rgba(252,62,2,.35);background:rgba(252,62,2,.06)}
+  .hcell.mine{border-color:rgba(247,209,78,.5);background:rgba(247,209,78,.07)}
+  .hcell .hk{display:flex;justify-content:space-between;align-items:baseline}
+  .hcell .sym{font-weight:800;font-size:14px}
+  .hcell .rk{font-size:10px;color:var(--mut2)}
+  .hcell .mt{font-size:11.5px;color:var(--mut);margin-top:3px}
+  .hcell .chg{font-size:11.5px;font-weight:700}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:16px;font-size:12px;color:var(--mut)}
+  .legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+  .insightbox{margin-top:18px;background:rgba(252,62,2,.06);border:1px solid rgba(252,62,2,.25);border-radius:12px;padding:15px 17px}
+  .insightbox h4{font-size:14px;color:var(--reddit);font-weight:800;margin-bottom:6px}
+  .insightbox p{font-size:13.5px;color:var(--cream);line-height:1.6}
+  .insightbox p b{color:#fff}
+  /* ---------- kol ---------- */
+  .divide{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:720px){.divide{grid-template-columns:1fr}}
+  .camp{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+  .camp h5{font-size:13.5px;font-weight:800;margin-bottom:4px}
+  .camp .who{font-size:11.5px;color:var(--mut2);margin-bottom:10px}
+  .camp p{font-size:13px;color:var(--mut);line-height:1.6}
+  .camp p b{color:var(--cream)}
+  .camp.wsb h5{color:var(--reddit)} .camp.val h5{color:var(--blue)}
+  /* ---------- scorecard ---------- */
+  .score{background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.005));
+    border:1px solid var(--line);border-radius:18px;padding:24px;margin-top:14px}
+  .score table{width:100%;border-collapse:collapse}
+  .score th{text-align:left;font-size:11px;color:var(--mut2);text-transform:uppercase;letter-spacing:1px;
+    padding:0 10px 12px;border-bottom:1px solid var(--line)}
+  .score td{padding:14px 10px;border-bottom:1px solid var(--line-soft);vertical-align:top;font-size:13.5px}
+  .score td:first-child{font-weight:700;color:var(--cream);white-space:nowrap}
+  .score td .g{color:var(--mut);font-size:13px;line-height:1.55}
+  .grade{font-weight:800;font-size:13px;padding:3px 9px;border-radius:7px;display:inline-block}
+  .gA{background:rgba(36,180,126,.15);color:var(--bull)}
+  .gB{background:rgba(247,209,78,.15);color:var(--gold)}
+  .gC{background:rgba(240,85,110,.13);color:var(--bear)}
+  .finalrow{display:flex;gap:18px;flex-wrap:wrap;margin-top:22px;align-items:center}
+  .bigscore{font-size:54px;font-weight:900;letter-spacing:-2px;line-height:1;background:var(--grad-gold);
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .finaltext{flex:1;min-width:260px;font-size:14px;color:var(--mut);line-height:1.65}
+  .finaltext b{color:var(--cream)}
+  /* ---------- honesty / sources ---------- */
+  .note{margin-top:46px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px}
+  .note h3{font-size:14px;font-weight:800;margin-bottom:11px;color:var(--cream)}
+  .note ul.disc{list-style:none;display:flex;flex-direction:column;gap:8px}
+  .note ul.disc li{font-size:12.5px;color:var(--mut);line-height:1.55;padding-left:18px;position:relative}
+  .note ul.disc li::before{content:"›";position:absolute;left:2px;color:var(--reddit);font-weight:800}
+  .note ul.disc li b{color:var(--cream)}
+  .reflist{margin-top:8px;list-style:none;counter-reset:r;display:grid;grid-template-columns:1fr 1fr;gap:9px 22px}
+  @media(max-width:720px){.reflist{grid-template-columns:1fr}}
+  .reflist li{font-size:12px;color:var(--mut);line-height:1.45;padding-left:30px;position:relative}
+  .reflist li::before{counter-increment:r;content:"[" counter(r) "]";position:absolute;left:0;top:0;
+    color:var(--reddit);font-weight:700;font-family:"SF Mono",monospace;font-size:11px}
+  .reflist a{color:var(--cream);text-decoration:none;border-bottom:1px solid var(--line);transition:.15s}
+  .reflist a:hover{color:var(--reddit);border-color:var(--reddit)}
+  .reflist .d{color:var(--mut2);display:block;margin-top:1px;font-size:11px}
+  footer{margin-top:34px;text-align:center;font-size:11.5px;color:var(--mut2);line-height:1.7}
+  footer b span{color:var(--reddit)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ========== MASTHEAD ========== -->
+  <header class="top">
+    <div class="brandrow">
+      <div class="logo"><b>A</b><i></i></div>
+      <div class="wordmark">reddit<span>alpha</span></div>
+      <span class="live"><span class="dot"></span> 实时舆情 · 数据截至 2026-06-09</span>
+    </div>
+    <h1 class="h1">持仓情报简报 — <em>NVDA · PLTR · META</em></h1>
+    <p class="sub">为<b style="color:var(--cream)">长期持有者</b>生成。把 Reddit 上数万条散户讨论，压缩成你这三只票当下最该知道的：<b style="color:var(--cream)">风险预警 → 多空论点 → 新催化剂 → 聪明钱分歧</b>。<b style="color:var(--cream)">每个关键数字旁的橙色角标可点击跳转到原始来源</b>，方便你逐条核验。</p>
+    <div class="metarow">
+      <span class="chip">持仓画像 · <b>长期持有 (buy &amp; hold)</b></span>
+      <span class="chip">情报维度 · <b>风险 / 多空 / 催化剂 / KOL</b></span>
+      <span class="chip">舆情样本 · <b>r/wallstreetbets · r/stocks · r/investing 等</b></span>
+      <span class="chip">数据源 · <b>ApeWisdom 实时聚合 + 财报/新闻</b></span>
+    </div>
+  </header>
+
+  <!-- ========== PORTFOLIO PULSE ========== -->
+  <section>
+    <div class="sehead"><span class="tick"></span><h2>组合脉搏 · 今日一屏</h2><span class="kk">Reddit Mindshare · 24h</span></div>
+    <p class="lead">三张卡 = 你的三只票此刻在 Reddit 的「声量 / 情绪 / 异动」。注意：<b>声量越高不等于越该买</b>——它代表「现在多少人在押注、往哪个方向押」。</p>
+    <div class="grid3">
+
+      <!-- NVDA -->
+      <div class="pcard nvda">
+        <div class="pc-top">
+          <div class="tk">NVDA<small>NVIDIA</small></div>
+          <span class="rank">舆情榜 #5<a class="cite" href="https://apewisdom.io/" target="_blank" rel="noreferrer" title="ApeWisdom · Reddit 热度榜">4</a></span>
+        </div>
+        <div class="pc-stats">
+          <div class="st"><div class="v">156 <span class="up" style="font-size:13px">▲95%</span></div><div class="l">24h 提及数<a class="cite" href="https://apewisdom.io/stocks/NVDA/" target="_blank" rel="noreferrer" title="ApeWisdom · NVDA">1</a></div></div>
+          <div class="st"><div class="v">126 <span class="up" style="font-size:13px">▲77%</span></div><div class="l">独立讨论者</div></div>
+        </div>
+        <div class="sentibar"><i style="width:70%"></i></div>
+        <div class="sentilbl"><span class="up">看多 70%</span><span class="down">看空 30%<a class="cite" href="https://apewisdom.io/stocks/NVDA/" target="_blank" rel="noreferrer" title="ApeWisdom · NVDA 情绪">1</a></span></div>
+        <div class="kw"><span class="hot">calls</span><span class="hot">pump</span><span>up</span><span>$MU</span><span>$AVGO</span><a class="cite" href="https://apewisdom.io/stocks/NVDA/" target="_blank" rel="noreferrer" title="ApeWisdom · NVDA 关键词">1</a></div>
+        <div class="verdict">舆情共识做多、且热度急升；但「calls / pump」词簇说明是<b>拥挤的期权多头</b>——趋势同向，留意 froth。</div>
+      </div>
+
+      <!-- PLTR -->
+      <div class="pcard pltr">
+        <div class="pc-top">
+          <div class="tk">PLTR<small>Palantir</small></div>
+          <span class="rank">跌出榜单<a class="cite" href="https://apewisdom.io/" target="_blank" rel="noreferrer" title="ApeWisdom · Reddit 热度榜">4</a></span>
+        </div>
+        <div class="pc-stats">
+          <div class="st"><div class="v">13 <span class="down" style="font-size:13px">▼38%</span></div><div class="l">24h 提及数<a class="cite" href="https://apewisdom.io/stocks/PLTR/" target="_blank" rel="noreferrer" title="ApeWisdom · PLTR">2</a></div></div>
+          <div class="st"><div class="v">13 <span class="down" style="font-size:13px">▼35%</span></div><div class="l">独立讨论者</div></div>
+        </div>
+        <div class="sentibar"><i style="width:78%"></i></div>
+        <div class="sentilbl"><span class="up">看多 78%</span><span class="down">看空 22%<a class="cite" href="https://apewisdom.io/stocks/PLTR/" target="_blank" rel="noreferrer" title="ApeWisdom · PLTR 情绪">2</a></span></div>
+        <div class="kw"><span>AIP</span><span>guidance</span><span>valuation</span></div>
+        <div class="verdict">情绪最暖(78%)，但<b>热度退潮最猛</b>——提及 −38%、掉出榜单。基本面在涨、散户注意力在撤，典型「叙事疲劳」。</div>
+      </div>
+
+      <!-- META -->
+      <div class="pcard meta">
+        <div class="pc-top">
+          <div class="tk">META<small>Meta Platforms</small></div>
+          <span class="rank">舆情榜 #12<a class="cite" href="https://apewisdom.io/" target="_blank" rel="noreferrer" title="ApeWisdom · Reddit 热度榜">4</a></span>
+        </div>
+        <div class="pc-stats">
+          <div class="st"><div class="v">67 <span class="up" style="font-size:13px">▲139%</span></div><div class="l">24h 提及数<a class="cite" href="https://apewisdom.io/stocks/META/" target="_blank" rel="noreferrer" title="ApeWisdom · META">3</a></div></div>
+          <div class="st"><div class="v">54 <span class="up" style="font-size:13px">▲108%</span></div><div class="l">独立讨论者</div></div>
+        </div>
+        <div class="sentibar"><i style="width:48%"></i></div>
+        <div class="sentilbl"><span class="warn">看多 48%</span><span class="down">看空 52%<a class="cite" href="https://apewisdom.io/stocks/META/" target="_blank" rel="noreferrer" title="ApeWisdom · META 情绪">3</a></span></div>
+        <div class="kw"><span class="hot">capex</span><span>$MSFT</span><span>$GOOG</span><span>calls</span><a class="cite" href="https://apewisdom.io/stocks/META/" target="_blank" rel="noreferrer" title="ApeWisdom · META 关键词">3</a></div>
+        <div class="verdict">今日情绪<b>翻空(52% 看空)</b>、且 +139% 涌入辩论 AI 烧钱——你组合里此刻<b>最该盯</b>的一只。</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ========== 1. RISK ALERTS ========== -->
+  <section>
+    <div class="sehead"><span class="tick"></span><h2>① 风险预警</h2><span class="kk">Sentiment Early-Warning</span></div>
+    <p class="lead">这是 Reddit 对长期持有者<b>最不可替代</b>的价值：在价格还没充分反应前，<b>情绪转向</b>会先在散户讨论里冒头。下面三条按紧迫度排序。</p>
+    <div class="risk">
+
+      <div class="ritem">
+        <div class="rlev"><span class="b hi">高</span><small>立即关注</small></div>
+        <div class="rbody">
+          <h4>META — 情绪当日翻空，散户开始质疑「AI 烧钱」 <span class="tag">今日触发</span></h4>
+          <p>过去 24h，META 讨论量<b>暴增 139%</b>，但情绪从中性<b>翻到 52% 看空</b><a class="cite" href="https://apewisdom.io/stocks/META/" target="_blank" rel="noreferrer" title="ApeWisdom · META">3</a>——这种「量价背离（声量涨、情绪跌）」往往是辩论升级、而非看多共识。导火索是今日新闻：<b>2026 资本开支上调至 1,250–1,450 亿美元</b>（内存涨价推动）<a class="cite" href="https://www.fxleaders.com/news/2026/06/09/meta-meta-falls-on-ai-funding-fears-despite-56-3b-revenue-surge-and-145b-capex-bet/" target="_blank" rel="noreferrer" title="FXLeaders · META 06-09">9</a>，叠加<b>数百亿美元增发股权的传闻</b>（公司否认，但 Alphabet 刚完成约 850 亿增发）<a class="cite" href="https://www.fxleaders.com/news/2026/06/09/meta-meta-falls-on-ai-funding-fears-despite-56-3b-revenue-surge-and-145b-capex-bet/" target="_blank" rel="noreferrer" title="FXLeaders · META 06-09">9</a>，以及 Reality Labs <b>2025 年亏 192 亿、Q1 又亏 40 亿</b>的「烧钱黑洞」<a class="cite" href="https://www.fool.com/investing/2026/06/03/is-metas-ai-spending-spree-reckless-or-genius/" target="_blank" rel="noreferrer" title="Motley Fool · META capex">10</a>。</p>
+          <p class="ev">Reddit 给你的增量：<b>财报数字很好（营收 +33%），但市场情绪此刻押在「ROI 何时兑现」的怀疑上</b>——价格图看不出这层分歧，舆情能。</p>
+        </div>
+      </div>
+
+      <div class="ritem">
+        <div class="rlev"><span class="b md">中</span><small>结构性</small></div>
+        <div class="rbody">
+          <h4>组合集中度 — 三只票其实是「同一笔 AI 资本开支交易」 <span class="tag">跨持仓</span></h4>
+          <p>Reddit 当前热度榜前 20 里，<b>MU①、MSFT③、MRVL④、NVDA⑤、AVGO⑧、NBIS⑬、APLD⑰、GOOG/GOOGL</b> 全是 AI 算力链<a class="cite" href="https://apewisdom.io/" target="_blank" rel="noreferrer" title="ApeWisdom · Reddit 热度榜">4</a>；而你的 <b>NVDA / PLTR / META</b> 同样全部受益于同一条「AI capex 超级周期」。这意味着你以为持有了 3 只票，<b>实际暴露在 1 个宏观因子上</b>——一旦「AI 资本开支见顶」叙事成立，三只会一起回撤。</p>
+          <p class="ev">Reddit 给你的增量：<b>不是单票信号，而是「整个散户仓位都压在同一叙事」的拥挤度画像</b>——这是分散度自检的触发器。</p>
+        </div>
+      </div>
+
+      <div class="ritem">
+        <div class="rlev"><span class="b md">中</span><small>叙事疲劳</small></div>
+        <div class="rbody">
+          <h4>PLTR — 基本面在加速，散户注意力却在撤离 <span class="tag">背离</span></h4>
+          <p>PLTR 刚交出史上最强财报之一（营收 <b>+85%</b>、指引上调到 <b>+71%</b>、Rule of 40 = <b>145%</b>）<a class="cite" href="https://www.cnbc.com/2026/05/04/palantir-pltr-q1-earnings-report-2026.html" target="_blank" rel="noreferrer" title="CNBC · PLTR Q1 2026">7</a>，但 Reddit 提及量<b>−38%、跌出热门榜</b><a class="cite" href="https://apewisdom.io/stocks/PLTR/" target="_blank" rel="noreferrer" title="ApeWisdom · PLTR">2</a>。曾经的散户头号叙事正在降温。对长期持有者这是双刃：① 热度退潮常伴随<b>估值（约 42× 市销率）成为唯一焦点</b><a class="cite" href="https://www.cnbc.com/2026/05/04/palantir-pltr-q1-earnings-report-2026.html" target="_blank" rel="noreferrer" title="CNBC · PLTR Q1 2026">7</a>，risk-off 时最脆弱；② 但「人少了、基本面还在」也可能是情绪底，而非顶。</p>
+          <p class="ev">Reddit 给你的增量：<b>「热度 vs 基本面」的背离</b>——单看股价或财报都发现不了，只有把舆情叠上去才显形。</p>
+        </div>
+      </div>
+
+      <div class="ritem">
+        <div class="rlev"><span class="b lo">低</span><small>监控即可</small></div>
+        <div class="rbody">
+          <h4>NVDA — 共识做多，但「拥挤的看涨期权」是反向温度计 <span class="tag">froth</span></h4>
+          <p>NVDA 70% 看多、声量 +95%，关键词高频出现 <b>calls / pump</b><a class="cite" href="https://apewisdom.io/stocks/NVDA/" target="_blank" rel="noreferrer" title="ApeWisdom · NVDA">1</a>——散户在大举买入<b>短期看涨期权</b>。方向上和你一致（利好），但历史上「全员 calls」常出现在<b>局部情绪高点</b>。对长期持有者无需动作，但可作为「别在此刻追加杠杆」的提示。</p>
+          <p class="ev">Reddit 给你的增量：<b>持仓结构（期权 vs 正股）信号</b>，提示拥挤度而非方向。</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ========== 2. BULL / BEAR ========== -->
+  <section>
+    <div class="sehead"><span class="tick"></span><h2>② 多空论点</h2><span class="kk">Strongest Bull vs Bear</span></div>
+    <p class="lead">把成百上千条帖子里<b>最常被提、论据最实</b>的多空观点，蒸馏成每只票的两栏对照。左看多、右看空，<b>每条论据挂上可点击来源</b>，方便你压力测试自己的持仓逻辑。</p>
+
+    <!-- NVDA -->
+    <div class="bb">
+      <div class="bb-head"><span class="tk">NVDA</span><span class="px">市值 ~$5.05T · 前瞻 P/E ~31</span><span class="net">舆情净情绪 <b class="up">+40</b></span></div>
+      <div class="bb-cols">
+        <div class="col bullc">
+          <h5>看多 BULL<span class="cnt">论据 4</span></h5>
+          <ul>
+            <li><b>需求未见顶</b>：Q1 FY27 数据中心营收 <b>$75.2B（+92% YoY）</b>，整体营收 +85%。<a class="cite" href="https://www.sec.gov/Archives/edgar/data/0001045810/000104581026000051/q1fy27pr.htm" target="_blank" rel="noreferrer" title="SEC · NVDA Q1 FY27 8-K">5</a></li>
+            <li><b>$1 万亿管线</b>：管理层指引 2027 年超大规模厂商资本开支将达 <b>~$1T</b>，再给一年高增长能见度。<a class="cite" href="https://www.sec.gov/Archives/edgar/data/0001045810/000104581026000051/q1fy27pr.htm" target="_blank" rel="noreferrer" title="SEC · NVDA Q1 FY27 8-K">5</a></li>
+            <li><b>生态绑定加深</b>：扩大与 Google Cloud 合作（Vera Rubin / Blackwell Ultra）、NVLink Fusion 联手 Marvell、光模块绑定 Coherent/Corning/Lumentum。<a class="cite" href="https://www.sec.gov/Archives/edgar/data/0001045810/000104581026000051/q1fy27pr.htm" target="_blank" rel="noreferrer" title="SEC · NVDA Q1 FY27 8-K">5</a></li>
+            <li><b>估值反而不贵</b>：前瞻 P/E 在一众 AI 大盘里偏低，「增长没溢价」。<a class="cite" href="https://www.sec.gov/Archives/edgar/data/0001045810/000104581026000052/nvda-20260426.htm" target="_blank" rel="noreferrer" title="SEC · NVDA Q1 FY27 10-Q">6</a></li>
+          </ul>
+        </div>
+        <div class="col bearc">
+          <h5>看空 BEAR<span class="cnt">论据 4</span></h5>
+          <ul>
+            <li><b>资本开支周期顶</b>：最大风险不是公司、是「客户哪天砍单」——一旦 hyperscaler capex 转向，NVDA 弹性最大。</li>
+            <li><b>拥挤交易</b>：散户「calls/pump」、机构超配，<b>定价已含完美预期</b>，意外只剩向下。<a class="cite" href="https://apewisdom.io/stocks/NVDA/" target="_blank" rel="noreferrer" title="ApeWisdom · NVDA">1</a></li>
+            <li><b>客户集中</b>：营收高度依赖少数几家云厂商，议价/自研（ASIC）是长期隐忧。</li>
+            <li><b>地缘 / 出口管制</b>：中国市场与先进制程出口政策反复。</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- META -->
+    <div class="bb">
+      <div class="bb-head"><span class="tk">META</span><span class="px">营收 $56.3B/季 · capex $125–145B/年</span><span class="net">舆情净情绪 <b class="down">−4</b></span></div>
+      <div class="bb-cols">
+        <div class="col bullc">
+          <h5>看多 BULL<span class="cnt">论据 4</span></h5>
+          <ul>
+            <li><b>广告主引擎仍在加速</b>：Q1 营收 <b>+33%</b> 至 $56.3B，广告展示量 +19%、单价 +12%。<a class="cite" href="https://www.fxleaders.com/news/2026/06/09/meta-meta-falls-on-ai-funding-fears-despite-56-3b-revenue-surge-and-145b-capex-bet/" target="_blank" rel="noreferrer" title="FXLeaders · META 06-09">9</a></li>
+            <li><b>AI 已在变现</b>：推荐 / 转化率提升直接反哺核心广告，不是纯烧钱。<a class="cite" href="https://www.fool.com/investing/2026/06/03/is-metas-ai-spending-spree-reckless-or-genius/" target="_blank" rel="noreferrer" title="Motley Fool · META capex">10</a></li>
+            <li><b>有「降本开关」</b>：分析师测算 Reality Labs 砍 30% 可释放 <b>~$56B</b> 资本——一旦动手即重定价催化剂。<a class="cite" href="https://www.fool.com/investing/2026/06/03/is-metas-ai-spending-spree-reckless-or-genius/" target="_blank" rel="noreferrer" title="Motley Fool · META capex">10</a></li>
+            <li><b>相对估值便宜</b>：对比同梯队 AI 资本开支股，META 估值更友好。</li>
+          </ul>
+        </div>
+        <div class="col bearc">
+          <h5>看空 BEAR<span class="cnt">论据 5</span></h5>
+          <ul>
+            <li><b>资本开支失控感</b>：2026 capex 上调到 <b>$125–145B</b>，且因内存涨价被动加码。<a class="cite" href="https://www.fxleaders.com/news/2026/06/09/meta-meta-falls-on-ai-funding-fears-despite-56-3b-revenue-surge-and-145b-capex-bet/" target="_blank" rel="noreferrer" title="FXLeaders · META 06-09">9</a></li>
+            <li><b>增发股权悬顶</b>：传闻数百亿美元股权融资（公司否认），稀释担忧是今日抛压主因。<a class="cite" href="https://www.fxleaders.com/news/2026/06/09/meta-meta-falls-on-ai-funding-fears-despite-56-3b-revenue-surge-and-145b-capex-bet/" target="_blank" rel="noreferrer" title="FXLeaders · META 06-09">9</a></li>
+            <li><b>Reality Labs 黑洞</b>：2025 亏 <b>$19.2B</b>、Q1 又亏 $40 亿，ROI 遥遥无期。<a class="cite" href="https://www.fool.com/investing/2026/06/03/is-metas-ai-spending-spree-reckless-or-genius/" target="_blank" rel="noreferrer" title="Motley Fool · META capex">10</a></li>
+            <li><b>ROI 不可证伪</b>：AI 投入到回报的链条市场无法证实，「信仰溢价」随时被抽。</li>
+            <li><b>情绪当日转空</b>：52% 看空 + 讨论量翻倍，散户用脚投票质疑。<a class="cite" href="https://apewisdom.io/stocks/META/" target="_blank" rel="noreferrer" title="ApeWisdom · META">3</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- PLTR -->
+    <div class="bb">
+      <div class="bb-head"><span class="tk">PLTR</span><span class="px">~$158 · 市值 $325B · ~42× P/S</span><span class="net">舆情净情绪 <b class="up">+56</b>（但样本小）</span></div>
+      <div class="bb-cols">
+        <div class="col bullc">
+          <h5>看多 BULL<span class="cnt">论据 4</span></h5>
+          <ul>
+            <li><b>增长再加速</b>：Q1 营收 <b>+85%</b>（2020 以来最快），全年指引上调到 <b>+71%</b>，净利润翻 4 倍至 $870M。<a class="cite" href="https://www.cnbc.com/2026/05/04/palantir-pltr-q1-earnings-report-2026.html" target="_blank" rel="noreferrer" title="CNBC · PLTR Q1 2026">7</a></li>
+            <li><b>商业端引爆</b>：美国商业营收 <b>+133% YoY</b>——被低估的第二增长曲线，不止吃政府订单。<a class="cite" href="https://www.cnbc.com/2026/05/04/palantir-pltr-q1-earnings-report-2026.html" target="_blank" rel="noreferrer" title="CNBC · PLTR Q1 2026">7</a></li>
+            <li><b>质量罕见</b>：Rule of 40 飙到 <b>145%</b>，与 NVDA / 美光 / SK 海力士同档。<a class="cite" href="https://capital.com/en-int/market-updates/palantir-stock-forecast-02-06-2026" target="_blank" rel="noreferrer" title="Capital.com · PLTR 指引">8</a></li>
+            <li><b>AIP 飞轮</b>：Foundry / AIP 在政企两端加速落地。<a class="cite" href="https://capital.com/en-int/market-updates/palantir-stock-forecast-02-06-2026" target="_blank" rel="noreferrer" title="Capital.com · PLTR 指引">8</a></li>
+          </ul>
+        </div>
+        <div class="col bearc">
+          <h5>看空 BEAR<span class="cnt">论据 4</span></h5>
+          <ul>
+            <li><b>估值是悬顶剑</b>：$325B 市值 / ~$7.66B 营收 ≈ <b>42× 市销率</b>，远高于同业，<b>容错极低</b>。<a class="cite" href="https://www.cnbc.com/2026/05/04/palantir-pltr-q1-earnings-report-2026.html" target="_blank" rel="noreferrer" title="CNBC · PLTR Q1 2026">7</a></li>
+            <li><b>风险偏好敏感</b>：高估值 + risk-off = 最先被砍，舆情退潮放大波动。<a class="cite" href="https://apewisdom.io/stocks/PLTR/" target="_blank" rel="noreferrer" title="ApeWisdom · PLTR">2</a></li>
+            <li><b>政府预算依赖</b>：政府端占比高，预算 / 政治周期是变量。</li>
+            <li><b>已大涨</b>：两年 +233%，「好公司 ≠ 好买点」是当前最常见的看空落脚点。<a class="cite" href="https://www.cnbc.com/2026/05/04/palantir-pltr-q1-earnings-report-2026.html" target="_blank" rel="noreferrer" title="CNBC · PLTR Q1 2026">7</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 3. CATALYSTS ========== -->
+  <section>
+    <div class="sehead"><span class="tick"></span><h2>③ 新催化剂 / 机会</h2><span class="kk">Narrative Rotation</span></div>
+    <p class="lead">Reddit 最早的价值之一，是看见<b>资金注意力正往哪里轮动</b>。下面是此刻热度榜，<b style="color:var(--reddit)">橙=AI 算力链</b>、<b style="color:var(--gold)">金=你的持仓</b>——它揭示了你三只票之外的「二阶机会」与「同向风险」。</p>
+    <div class="heatwrap">
+      <div class="heathd">
+        <span style="font-size:13px;color:var(--mut)">Reddit 24h 提及热度榜 · 前 20（节选）</span>
+        <span class="src">数据：ApeWisdom<a class="cite" href="https://apewisdom.io/" target="_blank" rel="noreferrer" title="ApeWisdom · Reddit 热度榜">4</a></span>
+      </div>
+      <div class="heatgrid">
+        <div class="hcell ai"><div class="hk"><span class="sym">MU</span><span class="rk">#1</span></div><div class="mt">370 提及 · <span class="chg up">+93%</span></div></div>
+        <div class="hcell"><div class="hk"><span class="sym">SPY</span><span class="rk">#2</span></div><div class="mt">327 提及 · <span class="chg up">+88%</span></div></div>
+        <div class="hcell ai"><div class="hk"><span class="sym">MSFT</span><span class="rk">#3</span></div><div class="mt">286 提及 · <span class="chg up">+393%</span></div></div>
+        <div class="hcell ai"><div class="hk"><span class="sym">MRVL</span><span class="rk">#4</span></div><div class="mt">159 提及 · <span class="chg up">+66%</span></div></div>
+        <div class="hcell ai mine"><div class="hk"><span class="sym">NVDA ★</span><span class="rk">#5</span></div><div class="mt">156 提及 · <span class="chg up">+95%</span></div></div>
+        <div class="hcell"><div class="hk"><span class="sym">QQQ</span><span class="rk">#6</span></div><div class="mt">143 提及 · <span class="chg up">+79%</span></div></div>
+        <div class="hcell"><div class="hk"><span class="sym">AAPL</span><span class="rk">#7</span></div><div class="mt">127 提及 · <span class="chg up">+535%</span></div></div>
+        <div class="hcell ai"><div class="hk"><span class="sym">AVGO</span><span class="rk">#8</span></div><div class="mt">112 提及 · <span class="chg up">+70%</span></div></div>
+        <div class="hcell"><div class="hk"><span class="sym">TSLA</span><span class="rk">#9</span></div><div class="mt">97 提及 · <span class="chg up">+126%</span></div></div>
+        <div class="hcell ai mine"><div class="hk"><span class="sym">META ★</span><span class="rk">#12</span></div><div class="mt">67 提及 · <span class="chg up">+139%</span></div></div>
+        <div class="hcell ai"><div class="hk"><span class="sym">NBIS</span><span class="rk">#13</span></div><div class="mt">62 提及 · <span class="chg up">+265%</span></div></div>
+        <div class="hcell ai"><div class="hk"><span class="sym">APLD</span><span class="rk">#17</span></div><div class="mt">45 提及 · <span class="chg up">+1400%</span></div></div>
+      </div>
+      <div class="legend">
+        <span><i style="background:rgba(252,62,2,.5)"></i>AI 算力 / 资本开支链</span>
+        <span><i style="background:rgba(247,209,78,.7)"></i>你的持仓</span>
+        <span><i style="background:var(--surface)"></i>其他热门</span>
+      </div>
+
+      <div class="insightbox">
+        <h4>洞察 · 这张图对你的三个意义</h4>
+        <p>
+          <b>1) 叙事在「变宽」不是「见顶」</b>——资金从 NVDA 外溢到内存（MU）、定制硅（AVGO/MRVL）、新云算力（NBIS/APLD +1400%）。其中 MSFT +393% 主要由 Build 2026 + 大摩 $650 目标价催化<a class="cite" href="https://www.techtimes.com/articles/317597/20260602/microsoft-stock-msft-surges-build-2026-morgan-stanley-eyes-52-azure-upside.htm" target="_blank" rel="noreferrer" title="TechTimes · MSFT Build 2026 / 大摩">11</a>。AI capex 故事还在扩散，对你的 NVDA/META 是基本面顺风。<br><br>
+          <b>2) 二阶机会清单</b>：若你想在不加仓三巨头的前提下延伸这条叙事，Reddit 正把 <b>HBM 内存（MU）、ASIC 定制芯片（AVGO/MRVL）、neocloud 算力租赁（NBIS）</b> 推上来<a class="cite" href="https://apewisdom.io/" target="_blank" rel="noreferrer" title="ApeWisdom · Reddit 热度榜">4</a>——这是「NVDA 的卖铲人」邻接盘。<br><br>
+          <b>3) 同向风险被量化了</b>：前 20 里至少 8 个 + 你的 3 只是同一笔交易。这条叙事一旦逆转，<b>分散度幻觉</b>会让回撤比你以为的更同步。
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 4. SMART MONEY / KOL ========== -->
+  <section>
+    <div class="sehead"><span class="tick"></span><h2>④ 聪明钱 / KOL 分歧</h2><span class="kk">Signal vs Noise</span></div>
+    <p class="lead">不是所有 Reddit 声音都等值。真正的价值在于<b>分辨「动量噪音」与「基本面信号」</b>，并看清两个阵营在哪里分歧。下面是当下最清晰的一组对立。</p>
+    <div class="divide">
+      <div class="camp wsb">
+        <h5>动量阵营 · r/wallstreetbets</h5>
+        <div class="who">特征：期权、短线、meme；情绪领先、噪音高</div>
+        <p>NVDA 词云被 <b>calls / pump</b> 主导，META 也在被买 <b>calls</b> 押财报后反弹<a class="cite" href="https://apewisdom.io/stocks/NVDA/" target="_blank" rel="noreferrer" title="ApeWisdom · NVDA / META 关键词">1</a>。这个阵营<b>给方向和时机的「热度」，但常在高点最吵</b>。对长期持有者：当作<b>反向情绪温度计</b>，不是建仓依据。</p>
+      </div>
+      <div class="camp val">
+        <h5>基本面阵营 · r/stocks · r/investing · r/ValueInvesting</h5>
+        <div class="who">特征：估值、现金流、DD 长文；情绪滞后、信号密度高</div>
+        <p>同一批票在这里的讨论是另一幅图：<b>PLTR「公司好但 42× P/S 太贵」、META「capex/增发稀释」、NVDA「客户集中 + 周期顶」</b>。这个阵营<b>给你的是风险清单和估值锚</b>，正好对冲动量阵营的乐观。</p>
+      </div>
+    </div>
+    <div class="insightbox" style="background:rgba(113,147,255,.06);border-color:rgba(113,147,255,.25)">
+      <h4 style="color:var(--blue)">这就是「聪明钱」该被产品化的地方</h4>
+      <p>真正的 KOL 价值，是<b>按作者历史命中率加权</b>——谁的 DD 长文事后被验证、谁只是喊单。本简报用聚合情绪做了第一层近似；<b>redditalpha 的作者影响力评分系统</b>会把这一层做实：给每个高质量 DD 作者打「信号分」，让你只读那 5% 真正有 alpha 的帖子，而不是 95% 的噪音。<span style="color:var(--mut2)">（注：逐作者实时评分需接入完整抓取管线 + 历史回看，本页为聚合层演示。）</span></p>
+    </div>
+  </section>
+
+  <!-- ========== VALUE SCORECARD ========== -->
+  <section>
+    <div class="sehead"><span class="tick"></span><h2>Reddit 价值验证 · 记分卡</h2><span class="kk">Does it actually deliver?</span></div>
+    <p class="lead">回到你的核心问题：<b>Reddit 真的能给长期持有者足够价值吗？</b> 逐维度诚实打分——它在哪些事上不可替代，在哪些事上必须配合其他工具。</p>
+    <div class="score">
+      <table>
+        <thead><tr><th>维度</th><th>Reddit 这次给了你什么（真实样本）</th><th style="text-align:center">评级</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>风险预警</td>
+            <td class="g">提前于价格捕捉到 <b>META 当日情绪翻空 + 讨论量 +139%</b><a class="cite" href="https://apewisdom.io/stocks/META/" target="_blank" rel="noreferrer" title="ApeWisdom · META">3</a>，并把「AI 烧钱 / 增发稀释」点成具体导火索<a class="cite" href="https://www.fxleaders.com/news/2026/06/09/meta-meta-falls-on-ai-funding-fears-despite-56-3b-revenue-surge-and-145b-capex-bet/" target="_blank" rel="noreferrer" title="FXLeaders · META 06-09">9</a>。这是价格图给不了的领先信号。</td>
+            <td style="text-align:center"><span class="grade gA">强 A</span></td>
+          </tr>
+          <tr>
+            <td>多空论点</td>
+            <td class="g">把三只票最常被提的多空论据各 4–5 条蒸馏成对照表，<b>论据都挂得上真实财报/事件</b>（见上一节每条来源角标）。适合压力测试持仓逻辑。</td>
+            <td style="text-align:center"><span class="grade gA">强 A</span></td>
+          </tr>
+          <tr>
+            <td>新催化剂 / 轮动</td>
+            <td class="g">用热度榜看见 <b>AI 算力叙事正在变宽（MU/AVGO/MRVL/NBIS/APLD）</b><a class="cite" href="https://apewisdom.io/" target="_blank" rel="noreferrer" title="ApeWisdom · Reddit 热度榜">4</a>，给出二阶机会清单，并量化了你组合的<b>隐藏集中度</b>。</td>
+            <td style="text-align:center"><span class="grade gA">强 A−</span></td>
+          </tr>
+          <tr>
+            <td>聪明钱 / KOL</td>
+            <td class="g">能清晰分出<b>动量阵营 vs 基本面阵营</b>的对立；但「逐作者命中率加权」需完整管线，聚合层只是近似。</td>
+            <td style="text-align:center"><span class="grade gB">中 B</span></td>
+          </tr>
+          <tr>
+            <td>基本面「真值」</td>
+            <td class="g">Reddit <b>不</b>提供财务真值或估值判断——它是<b>情绪与注意力</b>的传感器。必须与财报/估值工具配合，单用会被反讽和 meme 带偏。</td>
+            <td style="text-align:center"><span class="grade gC">弱 C</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="finalrow">
+        <div class="bigscore">8.2<span style="font-size:22px;color:var(--mut2);-webkit-text-fill-color:var(--mut2)"> / 10</span></div>
+        <div class="finaltext">
+          <b>结论：对长期持有者，Reddit 是一流的「情绪与叙事雷达」，不是基本面来源。</b><br>
+          它最大的不可替代价值 = <b>在价格反应前看见情绪转向（META 今天就是活例）</b>、<b>压缩多空论点</b>、<b>看清注意力轮动与隐藏集中度</b>。把它当作你既有研究的<b>领先指标层</b>——而 redditalpha 要做的，就是把上面这套「数万条噪音 → 一屏可执行情报」的压缩，<b>每天自动、按持仓为你生成一次</b>。
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== METHODOLOGY / SOURCES ========== -->
+  <div class="note">
+    <h3>方法论与诚实边界</h3>
+    <ul class="disc">
+      <li><b>数据真实性</b>：Reddit 提及量 / 情绪 / 关键词来自 <b>ApeWisdom 实时聚合</b>（覆盖 r/wallstreetbets、r/stocks、r/investing 等），数据截至 2026-06-09。催化剂数字来自各公司财报（SEC 8-K/10-Q）与当日财经新闻——<b>正文每个关键数字旁的角标即为对应来源，可点击核验</b>。</li>
+      <li><b>为什么用聚合层</b>：本演示环境无法直连 reddit.com 官方 API（爬虫被屏蔽）。正式产品在你本机用官方 PRAW 凭证抓原帖，可下钻到<b>逐帖、逐作者、可点回原链接</b>。</li>
+      <li><b>情绪 = 信号，非真值</b>：散户讨论含反讽 / meme / 拉踩，情绪分应作为「方向与拥挤度」参考，不作买卖指令。WSB 的反话需 AI 语义识别（产品内置 few-shot）。</li>
+      <li><b>本页非投资建议</b>：以上为舆情与公开信息的结构化整理，不构成个性化投资建议。</li>
+    </ul>
+
+    <h3 style="margin-top:20px">参考来源（点击跳转）</h3>
+    <ol class="reflist">
+      <li><a href="https://apewisdom.io/stocks/NVDA/" target="_blank" rel="noreferrer">ApeWisdom · NVDA 提及 / 情绪 / 关键词</a><span class="d">apewisdom.io/stocks/NVDA</span></li>
+      <li><a href="https://apewisdom.io/stocks/PLTR/" target="_blank" rel="noreferrer">ApeWisdom · PLTR 提及 / 情绪</a><span class="d">apewisdom.io/stocks/PLTR</span></li>
+      <li><a href="https://apewisdom.io/stocks/META/" target="_blank" rel="noreferrer">ApeWisdom · META 提及 / 情绪 / 关键词</a><span class="d">apewisdom.io/stocks/META</span></li>
+      <li><a href="https://apewisdom.io/" target="_blank" rel="noreferrer">ApeWisdom · Reddit 24h 提及热度榜</a><span class="d">apewisdom.io</span></li>
+      <li><a href="https://www.sec.gov/Archives/edgar/data/0001045810/000104581026000051/q1fy27pr.htm" target="_blank" rel="noreferrer">SEC · NVIDIA Q1 FY2027 业绩 8-K</a><span class="d">sec.gov · NVDA 8-K</span></li>
+      <li><a href="https://www.sec.gov/Archives/edgar/data/0001045810/000104581026000052/nvda-20260426.htm" target="_blank" rel="noreferrer">SEC · NVIDIA Q1 FY2027 10-Q</a><span class="d">sec.gov · NVDA 10-Q</span></li>
+      <li><a href="https://www.cnbc.com/2026/05/04/palantir-pltr-q1-earnings-report-2026.html" target="_blank" rel="noreferrer">CNBC · Palantir Q1 2026 财报</a><span class="d">cnbc.com · PLTR</span></li>
+      <li><a href="https://capital.com/en-int/market-updates/palantir-stock-forecast-02-06-2026" target="_blank" rel="noreferrer">Capital.com · Palantir 指引与预测</a><span class="d">capital.com · PLTR</span></li>
+      <li><a href="https://www.fxleaders.com/news/2026/06/09/meta-meta-falls-on-ai-funding-fears-despite-56-3b-revenue-surge-and-145b-capex-bet/" target="_blank" rel="noreferrer">FXLeaders · META 06-09 下跌（AI 融资担忧）</a><span class="d">fxleaders.com · META</span></li>
+      <li><a href="https://www.fool.com/investing/2026/06/03/is-metas-ai-spending-spree-reckless-or-genius/" target="_blank" rel="noreferrer">Motley Fool · Meta AI 资本开支辩论</a><span class="d">fool.com · META capex</span></li>
+      <li><a href="https://www.techtimes.com/articles/317597/20260602/microsoft-stock-msft-surges-build-2026-morgan-stanley-eyes-52-azure-upside.htm" target="_blank" rel="noreferrer">TechTimes · Microsoft Build 2026 / 大摩目标价</a><span class="d">techtimes.com · MSFT</span></li>
+    </ol>
+  </div>
+
+  <footer>
+    <b>reddit<span>alpha</span></b> · 持仓情报简报 demo · 为 NVDA · PLTR · META 长期持有者生成<br>
+    把数万条散户讨论，压缩成一屏可执行情报 — 每天，按你的持仓。
+  </footer>
+
+</div>
+</body>
+</html>

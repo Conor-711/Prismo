@@ -1,0 +1,7 @@
+# Supabase 项目配置（供 CLI / GitHub 集成识别）。
+# 迁移文件位于 supabase/migrations/，连接 GitHub 后推送到生产分支即自动应用。
+project_id = "wimipsiwtrqhizgmbxas"
+
+[db]
+# 远程为托管 Postgres；以下端口仅本地开发用，不影响线上。
+major_version = 15

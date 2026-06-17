@@ -1,0 +1,23 @@
+# 生产/可选：本地 Postgres。开发默认用 SQLite，无需启动这个。
+# 用法： docker compose up -d   然后把 .env 的 DATABASE_URL 换成 postgres 串。
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: reddit-kaito-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: kaito
+      POSTGRES_PASSWORD: kaito
+      POSTGRES_DB: redditkaito
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kaito -d redditkaito"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:

@@ -1,0 +1,66 @@
+# v1 订阅的财经板块。
+# weight：信号质量权重，用于加权声量/作者影响力（高质量板块给更高权重，WSB 噪音多略低）。
+# market：口径归属 —— us（美股，默认）| cn（中概股 + 港股，新「中概·港股」看板）。
+#         同一套爬取/抽取/分析/聚合流程按 market 分别出聚合，互不污染。
+subreddits:
+  # ---------------- 美股 ----------------
+  - name: wallstreetbets
+    weight: 0.8
+    market: us
+  - name: stocks
+    weight: 1.0
+    market: us
+  - name: investing
+    weight: 1.0
+    market: us
+  - name: StockMarket
+    weight: 0.9
+    market: us
+  - name: options
+    weight: 0.9
+    market: us
+  - name: ValueInvesting
+    weight: 1.2
+    market: us
+  - name: SecurityAnalysis
+    weight: 1.3
+    market: us
+  - name: thetagang
+    weight: 1.0
+    market: us
+  # 杠杆 ETF（YOLO 赌狗：TQQQ/SOXL/3x 海力士等 n 倍做多 ETF）。
+  # 用户说的「r/LETF」实际活跃版是 r/LETFs（复数）；r/TQQQ 为 $TQQQ 单股社区。
+  - name: LETFs
+    weight: 0.8
+    market: us
+  - name: TQQQ
+    weight: 0.7
+    market: us
+  # ---------------- 中概股 + 港股 ----------------
+  # 实测活跃（Arctic Shift）：HKstocks/ChinaStocks/InvestingChina 为综合板块，
+  # Tencent/BABA/Alibaba/NIO 为个股社区，HSI 为恒生指数。纯沪深 A 股英文社区基本已死，
+  # 故以「中概 ADR + 港股」为主体，A 股标的若出现照常归入。
+  - name: HKstocks
+    weight: 1.1
+    market: cn
+  - name: ChinaStocks
+    weight: 1.1
+    market: cn
+  - name: InvestingChina
+    weight: 1.0
+    market: cn
+  - name: Tencent
+    weight: 0.9
+    market: cn
+  - name: HSI
+    weight: 0.9
+    market: cn
+  - name: BABA
+    weight: 0.8
+    market: cn
+  - name: Alibaba
+    weight: 0.8
+    market: cn
+  - name: NIO
+    weight: 0.7
+    market: cn
