@@ -97,7 +97,7 @@ export function EmailAuthForm({ mode }: { mode: "login" | "signup" }) {
         <button
           type="submit"
           disabled={loading || code.length < 6}
-          className="w-full rounded-lg bg-reddit text-white font-semibold py-2.5 hover:brightness-110 transition disabled:opacity-60"
+          className="btn-grad w-full text-cream font-semibold py-2.5 disabled:opacity-60"
         >
           {loading ? t.verifying : t.verifyBtn}
         </button>

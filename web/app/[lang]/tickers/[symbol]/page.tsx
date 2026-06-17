@@ -60,7 +60,7 @@ export default function TickerDetail({ params }: { params: { lang: string; symbo
 
   // 雷达：各区情绪（归一化 -1..1 → 0..1）
   const radarIndicators = ordered.map((r) => ({ name: regionLabel(r.region, lang), max: 1 }));
-  const radarSeries = [{ name: ticker.ticker, color: "#3B82F6", value: ordered.map((r) => Math.round(((r.sentiment_avg + 1) / 2) * 100) / 100) }];
+  const radarSeries = [{ name: ticker.ticker, color: "#57D7BA", value: ordered.map((r) => Math.round(((r.sentiment_avg + 1) / 2) * 100) / 100) }];
 
   return (
     <div className="space-y-6">

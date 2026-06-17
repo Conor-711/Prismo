@@ -8,11 +8,11 @@ export type RegionKey = (typeof REGION_ORDER)[number];
 type RegionMeta = { zh: string; en: string; source: string; color: string };
 
 const META: Record<string, RegionMeta> = {
-  us: { zh: "美国", en: "USA", source: "Reddit", color: "#3B82F6" },
-  cn: { zh: "中国大陆", en: "China", source: "雪球 Xueqiu", color: "#EF4444" },
-  jp: { zh: "日本", en: "Japan", source: "Yahoo Finance", color: "#A855F7" },
-  kr: { zh: "韩国", en: "Korea", source: "Naver", color: "#22C55E" },
-  tw: { zh: "台湾", en: "Taiwan", source: "PTT", color: "#F59E0B" },
+  us: { zh: "美国", en: "USA", source: "Reddit", color: "#57D7BA" },
+  cn: { zh: "中国大陆", en: "China", source: "雪球 Xueqiu", color: "#ed2f55" },
+  jp: { zh: "日本", en: "Japan", source: "Yahoo Finance", color: "#B18FCF" },
+  kr: { zh: "韩国", en: "Korea", source: "Naver", color: "#87CEFA" },
+  tw: { zh: "台湾", en: "Taiwan", source: "PTT", color: "#f78948" },
 };
 
 export function regionLabel(region: string, lang: Locale): string {

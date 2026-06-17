@@ -96,7 +96,7 @@ export function AsiaMultiLine({
   return <ReactECharts option={option} style={{ height }} opts={{ renderer: "canvas" }} notMerge />;
 }
 
-const BULL = "#24B47E", BEAR = "#F0556E", NEU = "#7a8a96";
+const BULL = "#57D7BA", BEAR = "#fe5555", NEU = "#7a8a96";
 
 // 净情绪 / 声量异动 等「围绕 0 发散」的横向条形图。正=绿 负=红。
 export interface DivItem { label: string; value: number; }

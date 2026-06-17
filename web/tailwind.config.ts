@@ -22,12 +22,12 @@ const config: Config = {
         gold: v("--c-gold"), // 高信号（浅色下转深金以保可读）
         silver: v("--c-silver"),
         // 品牌 / 语义色：两套主题通用，固定值
-        reddit: "#3B82F6", // Prismo 品牌蓝（沿用 reddit 类名免大规模改名）= 强调 / CTA / 链接
-        amber: "#3B82F6", // 沿用既有 amber 类名 = Prismo 蓝
-        brand: "#3B82F6", // 语义别名：新页面优先用 brand-*
+        reddit: "#57D7BA", // QuiverQuant 青绿 = 品牌强调 / 链接 / 选中（沿用 reddit 类名免改）
+        amber: "#57D7BA", // 沿用既有 amber 类名 = QuiverQuant 青绿
+        brand: "#57D7BA", // 语义别名
         downvote: "#7193FF",
-        bull: "#24B47E", // 看多 / 上涨
-        bear: "#F0556E", // 看空 / 下跌
+        bull: "#57D7BA", // 看多 / 上涨 = QuiverQuant 青绿（绿 = 正向 = 品牌色）
+        bear: "#fe5555", // 看空 / 下跌 = QuiverQuant 红
         bronze: "#C99B70", // 金属铜
         // 中性灰阶走变量：浅色模式下整体反向，文字保持可读
         neutral: {
@@ -47,7 +47,19 @@ const config: Config = {
       fontFamily: {
         display: ["var(--font-sora)", "ui-sans-serif", "sans-serif"],
         sans: ["var(--font-inter)", "ui-sans-serif", "sans-serif"],
-        mono: ["var(--font-mono)", "ui-monospace", "monospace"],
+        mono: ["var(--font-mono)", "ui-sans-serif", "sans-serif"],
+      },
+      // QuiverQuant 圆角尺度：小圆角（卡片 2–4px）+ 胶囊（full）。flatten 掉大圆角的「AI 味」。
+      borderRadius: {
+        none: "0px",
+        sm: "2px",
+        DEFAULT: "2px",
+        md: "3px",
+        lg: "4px",
+        xl: "4px",
+        "2xl": "6px",
+        "3xl": "8px",
+        full: "9999px",
       },
     },
   },
