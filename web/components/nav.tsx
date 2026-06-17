@@ -1,4 +1,4 @@
-import { IconGrid } from "./icons";
+import { IconGrid, IconTrend, IconLayers, IconSearch } from "./icons";
 import type { Dictionary } from "@/lib/i18n";
 
 export type NavItem = {
@@ -13,23 +13,26 @@ export type NavGroup = {
   items: NavItem[];
 };
 
-// 重构期：Reddit 单站导航（看板/作者榜/中概/搜索）已移除。
-// 暂以 5 地区看板（/lab/global-retail）作为唯一主入口；围绕 5 社区重建 UI 时再扩充。
+// Prismo 主导航：总览 / 标的 / 区域 / 搜索（5 社区聚合）。
 export const NAV_GROUPS: NavGroup[] = [
   {
     id: "us",
     labelKey: "usSection",
-    items: [{ href: "/lab/global-retail", key: "dashboard", Icon: IconGrid }],
+    items: [
+      { href: "/", key: "overview", Icon: IconGrid },
+      { href: "/tickers", key: "tickers", Icon: IconTrend },
+      { href: "/regions", key: "regions", Icon: IconLayers },
+      { href: "/search", key: "search", Icon: IconSearch },
+    ],
   },
 ];
 
-// 移动端底栏：暂只保留主看板入口。
-export const NAV_MOBILE: NavItem[] = [
-  { href: "/lab/global-retail", key: "dashboard", Icon: IconGrid },
-];
+// 移动端底栏：同一批主入口。
+export const NAV_MOBILE: NavItem[] = NAV_GROUPS[0].items;
 
-// 高亮判定：精确/前缀匹配；占位首页(/)也让主看板入口高亮。
+// 高亮判定：精确/前缀匹配；首页(/) 仅在根路径高亮。
 export function navActive(rest: string, href: string): boolean {
   const r = rest.length > 1 ? rest.replace(/\/+$/, "") : rest;
-  return r === href || r.startsWith(href + "/") || (href === "/lab/global-retail" && r === "/");
+  if (href === "/") return r === "/" || r === "";
+  return r === href || r.startsWith(href + "/");
 }

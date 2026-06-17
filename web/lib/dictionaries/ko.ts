@@ -10,6 +10,9 @@ export const ko: Dictionary = {
   },
   nav: {
     dashboard: "대시보드",
+    overview: "개요",
+    tickers: "종목",
+    regions: "지역",
     cnstocks: "중국·홍콩주",
     search: "검색",
     trending: "트렌드",

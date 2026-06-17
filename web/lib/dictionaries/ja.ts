@@ -10,6 +10,9 @@ export const ja: Dictionary = {
   },
   nav: {
     dashboard: "ダッシュボード",
+    overview: "概要",
+    tickers: "銘柄",
+    regions: "地域",
     cnstocks: "中国・香港株",
     search: "検索",
     trending: "トレンド",

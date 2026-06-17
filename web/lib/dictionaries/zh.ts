@@ -8,6 +8,9 @@ export const zh = {
   },
   nav: {
     dashboard: "看板",
+    overview: "总览",
+    tickers: "标的",
+    regions: "区域",
     cnstocks: "中概·港股",
     search: "搜索",
     trending: "异动",

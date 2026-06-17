@@ -38,41 +38,37 @@
   --grad-gold: linear-gradient(149deg, #a9762a 6%, #e6c14f 45%, #9c6d1f 72%, #c79a32 92%);
   --grad-silver: linear-gradient(140deg, #6f8090 4%, #aebcc9 45%, #8198a8 75%, #5d6e7c 96%);
   --grad-bronze: linear-gradient(141deg, #8a6a52 5%, #c2926a 45%, #7a5a48 85%);
-  --grad-brand: linear-gradient(100deg, #ff6a3d, #ff4500 55%, #ff8b2e); /* 两套主题通用 */
+  --grad-brand: linear-gradient(100deg, #60a5fa, #3b82f6 55%, #2563eb); /* 两套主题通用 · Prismo 蓝 */
 
-  /* 面板 / 滚动条 / 画布 —— 浅色 */
-  --panel-bg: linear-gradient(180deg, #ffffff, #fdfdfe);
-  --panel-shadow: inset 0 0 0 1px rgba(20, 20, 40, 0.09), 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(20, 20, 50, 0.05);
-  --panel-shadow-hover: inset 0 0 0 1px rgba(255, 69, 0, 0.42), 0 8px 22px rgba(20, 20, 50, 0.1);
+  /* 面板 / 滚动条 / 画布 —— 浅色（干净白底 + 蓝光晕，参照 QuiverQuant 扁平终端感） */
+  --panel-bg: linear-gradient(180deg, #ffffff, #fbfcfe);
+  --panel-shadow: inset 0 0 0 1px rgba(20, 30, 60, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(20, 30, 70, 0.05);
+  --panel-shadow-hover: inset 0 0 0 1px rgba(59, 130, 246, 0.42), 0 8px 22px rgba(20, 30, 70, 0.1);
   --metal-inner: #ffffff;
   --sb-thumb: #c9ccd2;
   --sb-thumb-hover: #b4b8c0;
-  --canvas-bg: #f4f5f7;
-  /* 多层「蓝图纸」画布：角落品牌光晕(暖橙/冷蓝) + 顶部纸面柔光 + 细方格 */
+  --canvas-bg: #f6f8fb;
   --canvas-image:
-    radial-gradient(46% 42% at -2% -4%, rgba(255, 69, 0, 0.08), transparent 60%),
-    radial-gradient(44% 44% at 102% 104%, rgba(52, 90, 158, 0.07), transparent 62%),
-    radial-gradient(96% 52% at 50% -24%, rgba(255, 255, 255, 0.75), transparent 72%),
-    linear-gradient(0deg, rgba(28, 30, 56, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(28, 30, 56, 0.03) 1px, transparent 1px);
-  --canvas-size: auto, auto, auto, 76px 76px, 76px 76px;
+    radial-gradient(52% 46% at 0% 0%, rgba(59, 130, 246, 0.06), transparent 60%),
+    radial-gradient(48% 46% at 100% 100%, rgba(37, 99, 235, 0.05), transparent 62%);
+  --canvas-size: auto;
 
   /* 胶片颗粒（灰度噪声，两套主题共用，靠 overlay 混合出纹理） */
   --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  --grain-opacity: 0.05;
+  --grain-opacity: 0;
 }
 
 /* ===================== 夜间模式：Reddit 暗色 ===================== */
 html.dark {
   color-scheme: dark;
 
-  --c-ink: 9 9 11; /* #09090B */
-  --c-surface: 22 22 25; /* #161619 */
-  --c-card: 26 26 29; /* #1A1A1D */
-  --c-elevated: 34 34 38;
-  --c-line: 52 53 56; /* #343538 */
-  --c-navy: 22 22 25;
-  --c-cream: 215 218 220; /* #D7DADC（Reddit 暗色文字） */
+  --c-ink: 10 14 23; /* #0A0E17 QuiverQuant 深藏青 */
+  --c-surface: 15 20 32; /* #0F1420 导航 / 顶栏 */
+  --c-card: 20 26 40; /* #141A28 卡片 */
+  --c-elevated: 26 34 51; /* #1A2233 */
+  --c-line: 34 42 58; /* #222A3A 发丝边 */
+  --c-navy: 15 20 32;
+  --c-cream: 230 233 239; /* #E6E9EF 主文字 */
   --c-gold: 247 209 78;
   --c-silver: 197 214 226;
 
@@ -92,20 +88,17 @@ html.dark {
   --grad-silver: linear-gradient(140deg, #6d7f8d 4%, #c5d6e2 40%, #eaeff3 52%, #9fb9ce 78%, #6d7f8d 96%);
   --grad-bronze: linear-gradient(141deg, #7a5e50 5%, #f6d0ab 35%, #9d774e 58%, #c99b70 78%, #795f52 96%);
 
-  --panel-bg: linear-gradient(180deg, #1c1c20, #171719);
-  --panel-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06), 0 6px 22px rgba(0, 0, 0, 0.5);
-  --panel-shadow-hover: inset 0 0 0 1px rgba(255, 69, 0, 0.45), 0 10px 30px rgba(0, 0, 0, 0.6);
-  --metal-inner: #1a1a1d;
-  --sb-thumb: #303034;
-  --sb-thumb-hover: #3e3e44;
-  --canvas-bg: #09090b;
+  --panel-bg: linear-gradient(180deg, #141a28, #11161f);
+  --panel-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05), 0 6px 22px rgba(0, 0, 0, 0.5);
+  --panel-shadow-hover: inset 0 0 0 1px rgba(59, 130, 246, 0.45), 0 10px 30px rgba(0, 0, 0, 0.6);
+  --metal-inner: #141a28;
+  --sb-thumb: #243049;
+  --sb-thumb-hover: #2f3f5e;
+  --canvas-bg: #0a0e17;
   --canvas-image:
-    radial-gradient(48% 44% at -2% -4%, rgba(255, 69, 0, 0.10), transparent 60%),
-    radial-gradient(46% 46% at 102% 104%, rgba(96, 122, 184, 0.08), transparent 62%),
-    radial-gradient(96% 52% at 50% -24%, rgba(255, 255, 255, 0.04), transparent 72%),
-    linear-gradient(0deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
-  --grain-opacity: 0.07;
+    radial-gradient(52% 46% at 0% 0%, rgba(59, 130, 246, 0.10), transparent 60%),
+    radial-gradient(48% 46% at 100% 100%, rgba(37, 99, 235, 0.08), transparent 62%);
+  --grain-opacity: 0;
 }
 
 body {
@@ -149,7 +142,7 @@ html[data-install] .theme-fab {
 }
 
 ::selection {
-  background: rgba(255, 69, 0, 0.28);
+  background: rgba(59, 130, 246, 0.28);
 }
 
 /* 微渐变面板 + 柔阴影 + 发丝边 */

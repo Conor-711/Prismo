@@ -8,16 +8,15 @@
 
 ## 1. 这是什么
 
-**Prismo** —— 一个多语（中文默认 / English / 日本語 / 한국어）的 **Reddit 美股 + 中概股舆情情报看板**。
-抓取 Reddit 财经社区的真实帖子，用大模型逐帖做投资打标（情绪 / 多空 / 质量 / 主题 / 双语摘要 /
-按标的归属的多空论据），再聚合成声量榜、情绪、异动、主导叙事、每日简报，最终渲染成一个**纯静态网站**。
+**Prismo** —— 一个多语（中文默认 / English / 日本語 / 한국어）的 **多社区美股舆情聚合看板**：聚合 **Reddit / Yahoo Finance Japan / Naver / 雪球 / PTT** 五大本土散户社区，对同一批跨区美股做情绪对比、共识与分歧分析，最终渲染成一个**纯静态网站**。
+（注：早期作为 Reddit 单站「redditalpha」起步——抓 Reddit 财经社区帖、逐帖大模型打标、聚合声量/情绪/异动/叙事/简报；该 Reddit 管线仍是后端基础，新增 4 区由 `gr_*` 表承载。）
 
 - 线上地址：**https://www.redditalpha.xyz**（根域名，静态托管）
 - 两个市场（market）：`us`（美股）、`cn`（中概股 + 港股 + A 股），互不污染，各出一套聚合。
 
-> **🚧 UI 重构中（2026-06）**：项目正从「只分析 Reddit 单站」升级为「聚合 5 个本土社区」(Reddit / Yahoo Finance Japan / Naver / 雪球 / PTT)，并重做品牌为 **Prismo**（仓库已迁至 `Conor-711/Prismo`）。
-> 第一步已删除 Reddit 单站前端页面（dashboard/ticker/post/author/leaderboard/search/cn/onboarding）及其专属组件，首页换成 Prismo 占位页；**后端 pipeline、数据层 `lib/`、账号系统、共享 UI 与 5 地区原型 `lab/*` 全部保留**。
-> 下文中描述「已删除前端页面」的小节将在重建后更新；**后端 / 数据流 / 管线 / schema 章节仍然准确**。线上 redditalpha.xyz 仍由旧 `reddit_alpha` 仓库部署、不受本次重构影响。
+> **🎨 UI 已按 QuiverQuant 风重建（2026-06）**：品牌 = **Prismo**（仓库 `Conor-711/Prismo`）。**设计系统**：默认深藏青深色（`#0A0E17`，保留浅色切换）+ 蓝强调 `#3B82F6`（Tailwind `reddit`/`amber`/`brand` token 同值）+ 绿/红涨跌 + 数据密集卡片/表格 + 等宽数字；侧边栏导航（`globals.css` CSS 变量 + `tailwind.config.ts`）。
+> **8 个页面**（数据全部走 `gr_*` → `lib/globalQueries.ts`）：总览看板(`/`) · 标的总览(`/tickers`) · 标的详情(`/tickers/[symbol]`) · 区域总览(`/regions`) · 区域详情(`/regions/[region]`) · 搜索(`/search`) · Profile(`/me`) · 设置(`/account`)。展示件在 `components/prismo/`（Bits/TickerTable/TickerSearch）+ 复用 `components/asia/AsiaCharts`；地区元数据在 `lib/regions.ts`。
+> Reddit 单站旧页（dashboard/ticker/post/author/leaderboard/cn/onboarding）已删；**后端 pipeline 全保留**。线上 redditalpha.xyz 仍由旧 `reddit_alpha` 仓库部署、不受影响（Prismo 部署需快照含 `gr_*`，否则相关页为空）。
 
 ---
 
@@ -147,12 +146,13 @@ crypto_us/
 │   ├── app/
 │   │   ├── layout.tsx         #   根布局（主题防闪烁 + 默认 OG/metadataBase）
 │   │   ├── [lang]/            #   语言段（zh|en|ja|ko）：generateStaticParams（页面数 = locales × 各内页）
-│   │   │   ├── page.tsx       #     ★Prismo 占位首页（重构中；旧 Reddit 落地页已删）
-│   │   │   ├── lab/global-retail/ # ★5 地区原型（新产品基础：美 Reddit / 日 / 韩 / 台 / 中 跨区对比）
-│   │   │   ├── lab/asia-pulse/ #   ★亚洲散户脉搏原型（noindex / 无导航，仅 URL 直达）
-│   │   │   ├── insights(管理员看板) status(routine 运维) account/ me(个人主页·私密)
-│   │   │   ├── login/ signup/ forgot-password/ reset-password/ auth/callback/   # 账号系统（保留）
-│   │   │   └── ［已删除］dashboard/ ticker/ post/ author/ leaderboard/ search/ cn/ onboarding/  # Reddit 单站页面，重构第一步移除
+│   │   │   ├── page.tsx       #     ★总览看板（KPI/区卡/跨区情绪热力/共识·分歧/热度榜）
+│   │   │   ├── tickers/ + tickers/[symbol]/   # 标的总览(可排序表) + 标的详情(逐区分解+雷达+代表帖)
+│   │   │   ├── regions/ + regions/[region]/   # 区域总览(5 区卡+净情绪) + 区域详情(该区标的表+代表帖)
+│   │   │   ├── search/        #     搜索（客户端 ticker/公司名模糊匹配）
+│   │   │   ├── me(Profile) account(设置) login/ signup/ forgot-password/ reset-password/ auth/callback/  # 账号系统
+│   │   │   ├── insights(管理员看板) status(routine 运维)
+│   │   │   └── lab/global-retail/ lab/asia-pulse/   # 旧 5 地区/亚洲原型（noindex；图表组件被新页复用）
 │   │   ├── sitemap.ts / robots.ts / not-found.tsx   # SEO + 404
 │   │   └── icon.png           #   favicon
 │   ├── lib/

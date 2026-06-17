@@ -22,8 +22,9 @@ const config: Config = {
         gold: v("--c-gold"), // 高信号（浅色下转深金以保可读）
         silver: v("--c-silver"),
         // 品牌 / 语义色：两套主题通用，固定值
-        reddit: "#FF4500", // Reddit 橙红 (OrangeRed) = 品牌主色 / upvote / 热度 / CTA
-        amber: "#FF4500", // 沿用既有 amber 类名 = Reddit 橙
+        reddit: "#3B82F6", // Prismo 品牌蓝（沿用 reddit 类名免大规模改名）= 强调 / CTA / 链接
+        amber: "#3B82F6", // 沿用既有 amber 类名 = Prismo 蓝
+        brand: "#3B82F6", // 语义别名：新页面优先用 brand-*
         downvote: "#7193FF",
         bull: "#24B47E", // 看多 / 上涨
         bear: "#F0556E", // 看空 / 下跌

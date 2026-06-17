@@ -9,6 +9,9 @@ export const en: Dictionary = {
   },
   nav: {
     dashboard: "Dashboard",
+    overview: "Overview",
+    tickers: "Tickers",
+    regions: "Regions",
     cnstocks: "China & HK",
     search: "Search",
     trending: "Trending",
