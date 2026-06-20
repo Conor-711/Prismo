@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 import { LocaleLink } from "@/components/i18n/LocaleLink";
 import { SentScore, Consensus, StanceBar, PriceTag } from "@/components/prismo/Bits";
 import { TickerLogo } from "@/components/prismo/TickerLogo";
@@ -13,13 +12,15 @@ import {
 import { getGrTickerSymbols, getGrTickerDetail, getGrQuote } from "@/lib/globalQueries";
 import { getTickerMock } from "@/lib/mockDetail";
 import { regionLabel, regionSource, regionColor } from "@/lib/regions";
-import { tickerExchange } from "@/lib/tickerMeta";
+import { tickerExchange, TICKER_UNIVERSE } from "@/lib/tickerMeta";
 import { fmtCompact } from "@/lib/format";
 import { isLocale, defaultLocale, type Locale } from "@/lib/i18n";
 
 export const dynamicParams = false;
 export function generateStaticParams() {
-  return getGrTickerSymbols().map((symbol) => ({ symbol }));
+  // 有 gr 数据用真实标的；为空（云端快照未含 gr_*）回退到固定全集，避免 output:export 因空数组报错。
+  const syms = getGrTickerSymbols();
+  return (syms.length ? syms : TICKER_UNIVERSE).map((symbol) => ({ symbol }));
 }
 export function generateMetadata({ params }: { params: { lang: string; symbol: string } }): Metadata {
   const zh = params.lang === "zh";
@@ -29,8 +30,13 @@ export function generateMetadata({ params }: { params: { lang: string; symbol: s
 export default function TickerDetail({ params }: { params: { lang: string; symbol: string } }) {
   const lang: Locale = isLocale(params.lang) ? params.lang : defaultLocale;
   const zh = lang === "zh";
-  const { ticker } = getGrTickerDetail(params.symbol);
-  if (!ticker) notFound();
+  const sym = params.symbol.toUpperCase();
+  // gr 数据缺失时（如云端快照未含 gr_*）用占位行：静态导出不崩，页面优雅降级（详情模块为 mock，照常渲染）。
+  const ticker = getGrTickerDetail(params.symbol).ticker ?? {
+    ticker: sym, name_en: sym, name_zh: sym,
+    regions_present: 0, total_posts: 0, avg_sentiment: 0,
+    consensus: "sparse", spread: 0, divergent_region: "",
+  };
 
   const name = zh ? ticker.name_zh || ticker.name_en : ticker.name_en || ticker.name_zh;
   const quote = getGrQuote(ticker.ticker);
