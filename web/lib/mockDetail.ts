@@ -1,0 +1,406 @@
+// 标的详情页 / 地区详情页的「模块化看板」演示数据（mock）。
+// 真实管线尚未产出这些维度（基线/偏离/传导路径/期权占比…），此处用确定性伪随机生成
+// 占位数据，纯为前端模块/图表的视觉与交互原型。后续接真实数据时替换本文件即可。
+//
+// 确定性：同一 symbol / region 每次构建生成相同结果（seed = 字符串哈希），避免快照漂移。
+
+import { REGION_ORDER } from "./regions";
+
+export type Bi = { zh: string; en: string };
+
+// ---- 确定性伪随机 ----
+function rng(strSeed: string) {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < strSeed.length; i++) {
+    h ^= strSeed.charCodeAt(i);
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  return () => {
+    h += 0x6d2b79f5;
+    let t = Math.imul(h ^ (h >>> 15), 1 | h);
+    t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const r2 = (n: number, d = 2) => Math.round(n * 10 ** d) / 10 ** d;
+
+// ---- 文案池 ----
+const TOPICS: Bi[] = [
+  { zh: "财报指引上调", en: "Raised guidance" },
+  { zh: "数据中心需求强劲", en: "Data-center demand" },
+  { zh: "供应链 / 产能瓶颈", en: "Supply / capacity" },
+  { zh: "估值偏高担忧", en: "Valuation concern" },
+  { zh: "新品发布预期", en: "Product launch" },
+  { zh: "监管审查风险", en: "Regulatory risk" },
+  { zh: "大客户订单", en: "Major customer order" },
+  { zh: "毛利率改善", en: "Margin improvement" },
+  { zh: "竞争格局恶化", en: "Competition risk" },
+  { zh: "回购 / 分红", en: "Buyback / dividend" },
+  { zh: "宏观利率压力", en: "Rate pressure" },
+  { zh: "AI 叙事降温", en: "AI narrative cooling" },
+  { zh: "内部人减持", en: "Insider selling" },
+  { zh: "做空报告", en: "Short report" },
+];
+const EVENTS: { t: Bi; type: "earnings" | "product" | "macro" | "regulatory" }[] = [
+  { t: { zh: "Q2 财报", en: "Q2 earnings" }, type: "earnings" },
+  { t: { zh: "新品发布会", en: "Product keynote" }, type: "product" },
+  { t: { zh: "FOMC 利率决议", en: "FOMC decision" }, type: "macro" },
+  { t: { zh: "反垄断听证", en: "Antitrust hearing" }, type: "regulatory" },
+  { t: { zh: "投资者日", en: "Investor day" }, type: "product" },
+  { t: { zh: "CPI 数据", en: "CPI print" }, type: "macro" },
+];
+// 地区本地化背景注解
+const LOCAL_NOTE: Record<string, Bi> = {
+  us: { zh: "期权 / 0DTE 文化浓", en: "Heavy options / 0DTE culture" },
+  cn: { zh: "估值锚 + 政策预期主导", en: "Valuation anchor + policy bets" },
+  jp: { zh: "NISA 长线 + 円安买美股", en: "NISA long-hold + weak-yen buying" },
+  kr: { zh: "서학개미 + 杠杆ETF + 汇率敏感", en: "Seohak-ant + leveraged ETF + FX-sensitive" },
+  tw: { zh: "供应链视角 + 當沖客", en: "Supply-chain lens + day-traders" },
+};
+const PERSONA: Record<string, Bi> = {
+  us: { zh: "WSB 投机派", en: "WSB punters" },
+  cn: { zh: "雪球价值党", en: "Xueqiu value crowd" },
+  jp: { zh: "NISA 长线族", en: "NISA long-holders" },
+  kr: { zh: "서학개미", en: "Seohak-ant" },
+  tw: { zh: "PTT 當沖族", en: "PTT day-traders" },
+};
+const SECTORS: Bi[] = [
+  { zh: "AI / 半导体", en: "AI / Semis" },
+  { zh: "新能源车", en: "EV" },
+  { zh: "加密相关", en: "Crypto-linked" },
+  { zh: "云 / 软件", en: "Cloud / SaaS" },
+  { zh: "金融", en: "Financials" },
+  { zh: "迷因股", en: "Meme stocks" },
+  { zh: "中概", en: "China ADRs" },
+];
+
+function pick<T>(arr: T[], rnd: () => number): T {
+  return arr[Math.floor(rnd() * arr.length)];
+}
+function pickN<T>(arr: T[], n: number, rnd: () => number): T[] {
+  const pool = [...arr];
+  const out: T[] = [];
+  for (let i = 0; i < n && pool.length; i++) out.push(pool.splice(Math.floor(rnd() * pool.length), 1)[0]);
+  return out;
+}
+function trend(rnd: () => number, base: number, vol: number, len = 14, drift = 0) {
+  const out: number[] = [];
+  let v = base;
+  for (let i = 0; i < len; i++) {
+    v += (rnd() - 0.5) * vol + drift;
+    out.push(r2(Math.max(0, v)));
+  }
+  return out;
+}
+
+// =====================================================================
+// 标的详情（纵切一只票）
+// =====================================================================
+export function getTickerMock(symbol: string) {
+  const rnd = rng("T:" + symbol);
+  const regions = REGION_ORDER as readonly string[];
+
+  // 1. 异动：4 维度
+  const dimDefs: { key: string; label: Bi; unit: string; baseSpan: [number, number] }[] = [
+    { key: "volume", label: { zh: "讨论量", en: "Volume" }, unit: "", baseSpan: [120, 600] },
+    { key: "sentiment", label: { zh: "情绪", en: "Sentiment" }, unit: "", baseSpan: [-0.2, 0.3] },
+    { key: "divergence", label: { zh: "分歧度", en: "Divergence" }, unit: "", baseSpan: [0.3, 0.6] },
+    { key: "newtopic", label: { zh: "新话题", en: "New topics" }, unit: "", baseSpan: [1, 4] },
+  ];
+  const anomalyDims = dimDefs.map((d) => {
+    const base = r2(d.baseSpan[0] + rnd() * (d.baseSpan[1] - d.baseSpan[0]), d.key === "sentiment" || d.key === "divergence" ? 2 : 0);
+    const sigma = r2(1.4 + rnd() * 3.6, 1);
+    const up = rnd() > 0.42;
+    const mult = d.key === "volume" ? r2(1.3 + rnd() * 2.5, 1) : 0;
+    const cur = d.key === "volume"
+      ? Math.round(base * mult)
+      : d.key === "newtopic"
+      ? Math.round(base + (up ? 1 : -1) * (1 + rnd() * 3))
+      : r2(base + (up ? 1 : -1) * (0.1 + rnd() * 0.25), 2);
+    return {
+      key: d.key,
+      label: d.label,
+      current: cur,
+      baseline: base,
+      sigma,
+      multiple: mult || null,
+      direction: up ? "up" : "down",
+      sinceHours: Math.round(2 + rnd() * 40),
+      durationHours: Math.round(3 + rnd() * 30),
+      intensity: sigma > 4 ? 3 : sigma > 2.5 ? 2 : 1,
+      spark: trend(rnd, d.key === "volume" ? base : Math.max(0.1, base + 0.5), d.key === "volume" ? base * 0.4 : 0.18, 14, up ? (d.key === "volume" ? base * 0.06 : 0.02) : -(d.key === "volume" ? base * 0.04 : 0.015)),
+    };
+  });
+  const regionContrib = regions
+    .map((rg) => ({ region: rg, pct: r2(rnd(), 2) }))
+    .sort((a, b) => b.pct - a.pct);
+  const csum = regionContrib.reduce((s, x) => s + x.pct, 0) || 1;
+  regionContrib.forEach((x) => (x.pct = Math.round((x.pct / csum) * 100)));
+
+  // 2. 跨区域视角 ×5
+  const regionViews = regions.map((rg) => {
+    const baseVol = Math.round(60 + rnd() * 500);
+    const mult = r2(0.6 + rnd() * 2.2, 1);
+    const senti = r2(-0.5 + rnd() * 1.0, 2);
+    const bull = Math.round(30 + rnd() * 45);
+    const lead = Math.round((rnd() - 0.5) * 48); // 小时
+    return {
+      region: rg,
+      posts: Math.round(baseVol * mult),
+      vsBaseline: mult,
+      share: 0, // 下面归一
+      sentiment: senti,
+      sentimentChange: r2((rnd() - 0.5) * 0.4, 2),
+      bullPct: bull,
+      bearPct: Math.round((100 - bull) * (0.5 + rnd() * 0.4)),
+      topics: pickN(TOPICS, 3, rnd),
+      hasUnique: rnd() > 0.6,
+      leadHours: lead,
+      riskAppetite: Math.round(10 + rnd() * 60), // 期权+杠杆占比 %
+    };
+  });
+  const vsum = regionViews.reduce((s, x) => s + x.posts, 0) || 1;
+  regionViews.forEach((x) => (x.share = Math.round((x.posts / vsum) * 100)));
+
+  // 3. 海外信息差（传导路径）
+  const infoGap = pickN(TOPICS, 2, rnd).map((tp) => {
+    const order = pickN([...regions], 5, rnd);
+    let acc = 0;
+    const path = order.map((rg, i) => {
+      acc += i === 0 ? 0 : Math.round(2 + rnd() * 30);
+      return { region: rg, offsetHours: acc, isCn: rg === "cn" };
+    });
+    const cnIdx = path.findIndex((p) => p.isCn);
+    return {
+      topic: tp,
+      firstRegion: order[0],
+      firstSeen: `${Math.round(1 + rnd() * 5)}d ago`,
+      path,
+      cnPresent: cnIdx >= 0,
+      cnLagHours: cnIdx > 0 ? path[cnIdx].offsetHours : 0,
+      leadHours: cnIdx > 0 ? path[cnIdx].offsetHours : Math.round(12 + rnd() * 40),
+      growth: Math.round(20 + rnd() * 180), // %
+      novel: rnd() > 0.5,
+    };
+  });
+
+  // 4. 地区独有叙事
+  const uniqueNarratives = pickN([...regions], 2, rnd).map((rg) => ({
+    region: rg,
+    topic: pick(TOPICS, rnd),
+    heatVsBase: r2(1.2 + rnd() * 2.5, 1),
+    sentiment: r2(-0.4 + rnd() * 0.9, 2),
+    firstSeen: `${Math.round(1 + rnd() * 8)}d ago`,
+    isNewVar: rnd() > 0.5,
+    note: LOCAL_NOTE[rg],
+    diff: {
+      zh: `仅 ${rg.toUpperCase()} 区在讨论，全球主线仍聚焦${pick(TOPICS, rnd).zh}`,
+      en: `Only ${rg.toUpperCase()} talks this; global mainline still on ${pick(TOPICS, rnd).en}`,
+    } as Bi,
+  }));
+
+  // 5. 多空 & 共识分歧
+  const bull = Math.round(38 + rnd() * 30);
+  const bullBear = {
+    bullPct: bull,
+    bearPct: 100 - bull,
+    willChange: r2((rnd() - 0.5) * 16, 1), // 多空意愿变化（多头占比 Δ）
+    divergence: r2(0.4 + rnd() * 0.45, 2),
+    divergenceChange: r2((rnd() - 0.5) * 0.3, 2),
+    consensus: Math.round(40 + rnd() * 50), // 共识强度 0..100
+    bullThesis: pick(TOPICS, rnd),
+    bearThesis: pick(TOPICS, rnd),
+    authorBull: Math.round(40 + rnd() * 35), // 高质量作者多头占比
+  };
+
+  // 6. 最强反方
+  const counter = {
+    bull: { thesis: pick(TOPICS, rnd), region: pick([...regions], rnd), support: Math.round(45 + rnd() * 40) },
+    bear: { thesis: pick(TOPICS, rnd), region: pick([...regions], rnd), support: Math.round(35 + rnd() * 45) },
+    counterDiscussed: Math.round(15 + rnd() * 50), // 反方被讨论度 %
+    counterStrength: Math.round(30 + rnd() * 60),
+    counterSources: pickN([...regions], 2, rnd),
+  };
+
+  // 7. 风险温度 / 阶段
+  const temp = Math.round(20 + rnd() * 70);
+  const risk = {
+    temp,
+    optionsPct: r2(8 + rnd() * 30, 1),
+    optionsBase: r2(6 + rnd() * 10, 1),
+    callPct: Math.round(45 + rnd() * 40),
+    leveragedPct: r2(4 + rnd() * 18, 1),
+    leveragedBase: r2(3 + rnd() * 6, 1),
+    memePct: r2(3 + rnd() * 22, 1),
+    memeBase: r2(2 + rnd() * 5, 1),
+    newcomers: Math.round(20 + rnd() * 240),
+    newcomersBase: Math.round(15 + rnd() * 60),
+    breadth: Math.round(120 + rnd() * 900),
+    breadthChange: Math.round((rnd() - 0.4) * 200),
+    stage: temp > 70 ? { zh: "过热", en: "Overheated" } : temp > 45 ? { zh: "升温", en: "Heating" } : { zh: "早期", en: "Early" },
+  };
+
+  // 8. 大家在等什么
+  const waiting = pickN(EVENTS, 2, rnd).map((e) => ({
+    event: e.t,
+    type: e.type,
+    daysOut: Math.round(2 + rnd() * 40),
+    focus: pick(TOPICS, rnd),
+    heat: Math.round(30 + rnd() * 65),
+    regionAttention: regions.map((rg) => ({ region: rg, pct: Math.round(5 + rnd() * 35) })),
+    preLean: r2(-0.4 + rnd() * 0.8, 2),
+  }));
+
+  return {
+    anomaly: {
+      dims: anomalyDims,
+      attribution: pick(
+        [
+          { zh: "讨论量飙升主要由「财报指引上调」驱动，韩台两区贡献过半。", en: "Volume spike driven by 'raised guidance', with KR+TW contributing over half." },
+          { zh: "情绪转弱由「做空报告」与「估值担忧」叠加引发，美区领跌。", en: "Sentiment drop from a short report + valuation worry; US leads the decline." },
+          { zh: "分歧度走阔：多头押注产能，空头担心需求见顶。", en: "Divergence widening: bulls bet on capacity, bears fear peak demand." },
+        ],
+        rnd
+      ) as Bi,
+      regionContrib,
+      newTopic: {
+        topic: pick(TOPICS, rnd),
+        firstSeen: `${Math.round(3 + rnd() * 30)}h ago`,
+        growth: Math.round(60 + rnd() * 240),
+        regions: pickN([...regions], 2, rnd),
+      },
+    },
+    regionViews,
+    infoGap,
+    uniqueNarratives,
+    bullBear,
+    counter,
+    risk,
+    waiting,
+  };
+}
+
+export type TickerMock = ReturnType<typeof getTickerMock>;
+
+// =====================================================================
+// 地区详情（横切一个房间）
+// =====================================================================
+export function getRegionMock(region: string) {
+  const rnd = rng("R:" + region);
+  const regions = REGION_ORDER as readonly string[];
+  const TICKERS = ["NVDA", "TSLA", "MSFT", "AVGO", "MU", "GOOGL", "PLTR", "INTC", "MSTR", "SMCI", "AMD", "META", "COIN", "HOOD", "ARM"];
+
+  // 1. 地区脉搏
+  const senti = r2(-0.4 + rnd() * 0.8, 2);
+  const pulse = {
+    sentiment: senti,
+    sentimentChange: r2((rnd() - 0.5) * 0.4, 2),
+    activity: r2(0.7 + rnd() * 1.8, 1), // vs 常态倍数
+    activityChange: r2((rnd() - 0.4) * 0.6, 1),
+    riskIndex: Math.round(20 + rnd() * 70),
+    bullPct: Math.round(35 + rnd() * 35),
+    humanPct: Math.round(55 + rnd() * 40), // 真人占比 / 信噪比
+    spark: trend(rnd, 1, 0.4, 16, 0.02),
+  };
+
+  // 2. 热榜 & 发现（三类榜单）
+  const mkRow = (t: string, kind: "abs" | "surge" | "new", rnk: number) => {
+    const bull = Math.round(30 + rnd() * 45);
+    return {
+      ticker: t,
+      rank: rnk,
+      posts: Math.round((kind === "abs" ? 500 : 120) - rnk * (kind === "abs" ? 35 : 8) + rnd() * 40),
+      vsBaseline: r2(kind === "surge" ? 2 + rnd() * 6 : 1 + rnd() * 1.5, 1),
+      sentiment: r2(-0.4 + rnd() * 0.9, 2),
+      sentimentChange: r2((rnd() - 0.5) * 0.5, 2),
+      bullPct: bull,
+      bearPct: 100 - bull,
+      isNew: kind === "new",
+    };
+  };
+  const hot = {
+    abs: pickN(TICKERS, 6, rnd).map((t, i) => mkRow(t, "abs", i + 1)),
+    surge: pickN(TICKERS, 6, rnd).map((t, i) => mkRow(t, "surge", i + 1)).sort((a, b) => b.vsBaseline - a.vsBaseline),
+    fresh: pickN(TICKERS, 4, rnd).map((t, i) => mkRow(t, "new", i + 1)),
+  };
+
+  // 3. 地区异动
+  const anomalies = pickN(TICKERS, 3, rnd).map((t) => ({
+    target: t,
+    dim: pick([{ zh: "讨论量", en: "Volume" }, { zh: "情绪", en: "Sentiment" }, { zh: "分歧度", en: "Divergence" }, { zh: "新话题", en: "New topic" }] as Bi[], rnd),
+    sigma: r2(1.5 + rnd() * 4, 1),
+    direction: rnd() > 0.5 ? "up" : "down",
+    sinceHours: Math.round(2 + rnd() * 36),
+    attribution: pick(TOPICS, rnd),
+  }));
+
+  // 4. 地区独有叙事
+  const uniqueNarratives = pickN(TOPICS, 3, rnd).map((tp) => ({
+    topic: tp,
+    heatVsBase: r2(1.3 + rnd() * 2.6, 1),
+    sentiment: r2(-0.4 + rnd() * 0.9, 2),
+    note: LOCAL_NOTE[region] ?? { zh: "本地视角", en: "Local lens" },
+    isNewVar: rnd() > 0.5,
+    tickers: pickN(TICKERS, 2, rnd),
+  }));
+
+  // 5. 本区 vs 全球（差值）
+  const dims: Bi[] = [
+    { zh: "情绪", en: "Sentiment" },
+    { zh: "风险偏好", en: "Risk appetite" },
+    { zh: "AI/半导体关注", en: "AI/Semis focus" },
+    { zh: "中概关注", en: "China-ADR focus" },
+    { zh: "多空倾向", en: "Bull tilt" },
+  ];
+  const vsGlobal = dims.map((d) => {
+    const local = Math.round(20 + rnd() * 70);
+    const global = Math.round(30 + rnd() * 45);
+    return { dim: d, local, global, diff: local - global };
+  });
+  const standout = pick(
+    [
+      { zh: "几乎不碰中概股（关注度远低于全球均值）", en: "Barely touches China ADRs (far below global avg)" },
+      { zh: "风险偏好显著高于全球（杠杆 / 期权偏好）", en: "Risk appetite well above global (leverage / options)" },
+      { zh: "AI/半导体关注度领先全球", en: "AI/Semis focus leads the globe" },
+    ],
+    rnd
+  ) as Bi;
+
+  // 6. 地区性格画像（雷达）
+  const persona = {
+    leverage: Math.round(10 + rnd() * 80),
+    meme: Math.round(10 + rnd() * 80),
+    shortTerm: Math.round(20 + rnd() * 75), // 越高越短线/当冲
+    quality: Math.round(20 + rnd() * 70), // DD/真人占比
+    concentration: Math.round(20 + rnd() * 75), // 注意力集中度
+    persona: PERSONA[region] ?? { zh: "本地散户", en: "Local retail" },
+  };
+
+  // 7. 注意力轮动
+  const rotation = pickN(SECTORS, 5, rnd).map((s) => {
+    const ch = r2((rnd() - 0.45) * 80, 0);
+    return { sector: s, heat: Math.round(20 + rnd() * 70), change: ch, flow: ch >= 0 ? "in" : "out" };
+  });
+  const rotateFrom = pick(SECTORS, rnd);
+  const rotateTo = pick(SECTORS.filter((s) => s.zh !== rotateFrom.zh), rnd);
+
+  // 8. 今日引爆
+  const trigger = {
+    headline: pick(
+      [
+        { zh: "某大行上调目标价，引爆 AI 板块讨论", en: "A bank raised PT, igniting AI-sector chatter" },
+        { zh: "汇率急贬，散户涌入杠杆多头", en: "Sharp FX move; retail piles into leveraged longs" },
+        { zh: "做空机构报告刷屏，情绪急转", en: "Short-seller report goes viral; mood flips" },
+      ],
+      rnd
+    ) as Bi,
+    targets: pickN(TICKERS, 3, rnd),
+    volumeDelta: Math.round(80 + rnd() * 320), // %
+    sentimentShift: r2((rnd() - 0.5) * 0.6, 2),
+    scope: rnd() > 0.5 ? "global" : "local",
+  };
+
+  return { region, pulse, hot, anomalies, uniqueNarratives, vsGlobal, standout, persona, rotation, rotateFrom, rotateTo, trigger, allRegions: regions };
+}
+
+export type RegionMock = ReturnType<typeof getRegionMock>;

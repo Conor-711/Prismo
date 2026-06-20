@@ -1,7 +1,6 @@
 import { LocaleLink } from "./i18n/LocaleLink";
 import { NavLinks } from "./NavLinks";
 import { LanguageSwitcher } from "./LanguageSwitcher";
-import { ThemeToggle } from "./ThemeToggle";
 import type { Locale, Dictionary } from "@/lib/i18n";
 
 export function Sidebar({ dict }: { lang: Locale; dict: Dictionary }) {
@@ -55,12 +54,11 @@ export function Sidebar({ dict }: { lang: Locale; dict: Dictionary }) {
         </div>
       </div>
 
-      {/* 控制区：语言 + 主题切换 */}
-      <div className="sb-row px-4 py-3 border-t border-line flex items-center justify-between gap-2 shrink-0">
+      {/* 控制区：语言 */}
+      <div className="sb-row px-4 py-3 border-t border-line flex items-center gap-2 shrink-0">
         <span className="sb-label">
           <LanguageSwitcher />
         </span>
-        <ThemeToggle variant="inline" />
       </div>
 
       <div className="sb-hide px-5 py-4 border-t border-line text-[11px] text-neutral-600 leading-relaxed shrink-0">
