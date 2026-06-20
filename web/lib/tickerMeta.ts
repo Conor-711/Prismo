@@ -15,6 +15,10 @@ const EXCHANGE: Record<string, string> = {
   DIS: "NYSE", BABA: "NYSE", UBER: "NYSE", ORCL: "NYSE", DELL: "NYSE", PFE: "NYSE", JPM: "NYSE",
 };
 
+// 已知固定标的全集。云端快照未含 gr_* 时，作为标的详情页 generateStaticParams 的兜底，
+// 避免「空数组 + output:export」触发 Next 的 "missing generateStaticParams" 构建报错。
+export const TICKER_UNIVERSE: string[] = Object.keys(EXCHANGE);
+
 export function tickerExchange(ticker: string): string | null {
   return EXCHANGE[ticker.toUpperCase()] ?? null;
 }
