@@ -2,7 +2,7 @@
 
 > **维护约定**：本文件是项目的「活地图」。**每次对项目结构或功能有实质改动后，必须同步更新本文件对应章节**
 > （新增/删除模块、改数据流、改命令、改部署方式、改 schema 等）。详见根目录 `CLAUDE.md`。
-> 最近更新：2026-06-17。
+> 最近更新：2026-06-20。
 
 ---
 
@@ -171,6 +171,10 @@ crypto_us/
 │
 ├── supabase/migrations/       # ② Supabase SQL 迁移（ticker_searches / analytics / user_collections 的表+RLS+RPC）
 ├── data/dev.db                # 本地 SQLite 快照（gitignore；由 cloud-pull 从云端拉取）
+├── dashboard.html             # ★Advanced Mindshare 实验单页：由 data/prismo_snapshot.db + 可选 forum_mindshare.json 预计算指标生成的纯 HTML 看板
+├── experiments/
+│   ├── build_mindshare_dashboard.py # 生成 dashboard.html（penetration/entropy/方向/集中度/热力图；若找到 equity1000/forum_mindshare.json，则合并 JP/KR/US/TW 论坛 region 对比）
+│   └── exp1_fwd_return_probe.py     # 论坛信号 vs 前向收益的验证探针
 ├── Makefile                   # ★所有常用命令入口
 ├── .env / .env.example        # 凭据与配置（.env gitignore：QWEN/DEEPSEEK/DATABASE_URL…）
 └── 文档：README / DEPLOY / CLOUD_DB / SUPABASE_AUTH / STRATEGY / ARCHITECTURE(本文)
@@ -216,6 +220,7 @@ crypto_us/
 | `make analyze-qwen` | 真实千问逐帖打标 + 重算聚合 |
 | `make asia` | 亚洲散户舆情实验：爬日(Yahoo)/韩(Naver)本土板 + 真实 AI 分析（千问逐帖 + DeepSeek 汇总）。`make asia-mock` 为零成本版 |
 | `make gr` | 全球散户五地区看板：日韩台爬精选跨区美股 + DeepSeek flash 打标 + 跨区滚动(US 读现有 Reddit)。隐藏页 /lab/global-retail。CN(雪球)走 `gr-xueqiu`(收浏览器过 WAF 的导出 JSON) |
+| `make mindshare-dashboard` | 从 `data/prismo_snapshot.db` 生成根目录 `dashboard.html`：单文件实验面板，展示 penetration/entropy/量加权方向/集中度/跨市场与社区热力等 Advanced Mindshare 移植指标；若存在 `/Users/tongzheng/equity1000/forum_mindshare.json` 或 `FORUM_MINDSHARE_JSON` 指定文件，会额外嵌入 JP Yahoo / KR Naver / US Reddit / TW PTT 的 ticker×region 与 region×ticker 对比 |
 | `make rollup / mood / trending / narratives / brief` | 单独重算各聚合 |
 | `make cloud-init` | 一次性迁移：建表 + 上传本地源数据 + 云端重算派生表 |
 | `make cloud-push` | 把本地源数据增量上传到云端 |
