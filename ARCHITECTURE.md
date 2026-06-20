@@ -2,7 +2,7 @@
 
 > **维护约定**：本文件是项目的「活地图」。**每次对项目结构或功能有实质改动后，必须同步更新本文件对应章节**
 > （新增/删除模块、改数据流、改命令、改部署方式、改 schema 等）。详见根目录 `CLAUDE.md`。
-> 最近更新：2026-06-19。
+> 最近更新：2026-06-20。
 
 ---
 
@@ -156,7 +156,7 @@ crypto_us/
 │   │   ├── sitemap.ts / robots.ts / not-found.tsx   # SEO + 404
 │   │   └── icon.png           #   favicon
 │   ├── lib/
-│   │   ├── db.ts              #   ★构建期用 node:sqlite 读 ../data/dev.db
+│   │   ├── db.ts              #   ★构建期用 node:sqlite 读 ../data/dev.db；库缺失/查询失败→降级空（不崩 output:export）
 │   │   ├── queries.ts         #   ★所有取数 SQL（getMindshare/getTrending/getPostDetail…）
 │   │   ├── asiaQueries.ts      #   亚洲实验隐藏页取数（读 asia_* 表，try/catch 包裹：表缺失返回空不崩）
 │   │   ├── globalQueries.ts    #   全球散户隐藏页取数（读 gr_* 表 + US 代表帖读现有 Reddit；try/catch 兜底）
