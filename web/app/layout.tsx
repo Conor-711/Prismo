@@ -5,16 +5,15 @@ import { FavoritesProvider } from "@/components/favorites/FavoritesProvider";
 import { PwaRegister } from "@/components/PwaRegister";
 import { SITE_URL, BASE_PATH, OG_IMAGE } from "@/lib/site";
 
-// 防闪烁：首屏渲染前按 localStorage 套用主题类 + 侧边栏折叠状态（默认白天 / 展开），
-// 并同步浏览器 UI 的 theme-color（移动端状态栏配色随主题）。
-const THEME_INIT = `try{var d=document.documentElement;var t=localStorage.getItem('prismo:theme');var dark=t!=='light';if(dark){d.classList.add('dark')}else{d.classList.remove('dark')}var sb=localStorage.getItem('prismo:sidebar');if(sb){d.setAttribute('data-sb',sb)}var m=document.querySelector('meta[name=theme-color]');if(m){m.setAttribute('content',dark?'#0A0E17':'#f6f8fb')}var lp=location.pathname.split('/')[1];var LM={zh:'zh-CN',en:'en',ja:'ja',ko:'ko'};if(LM[lp]){d.lang=LM[lp]}}catch(e){}`;
+// 初始化：强制深色主题（已停用白天模式）+ 套用侧边栏折叠状态 + 按路径设 <html lang>。
+const THEME_INIT = `try{var d=document.documentElement;d.classList.add('dark');var sb=localStorage.getItem('prismo:sidebar');if(sb){d.setAttribute('data-sb',sb)}var lp=location.pathname.split('/')[1];var LM={zh:'zh-CN',en:'en',ja:'ja',ko:'ko'};if(LM[lp]){d.lang=LM[lp]}}catch(e){}`;
 
 // 移动端适配：随设备宽度自适应 + 覆盖刘海安全区（配合 sticky/fixed 元素的 env(safe-area-*) 留白）。
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#0A0E17", // 默认深色（QuiverQuant 调性）；THEME_INIT / ThemeToggle 按实际主题切换
+  themeColor: "#121212", // 深色唯一主题（已停用白天模式）
 };
 
 const SITE_TITLE = "Prismo · 多社区美股舆情聚合";
