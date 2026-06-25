@@ -1,14 +1,9 @@
 import type { Metadata } from "next";
-import { Sidebar } from "@/components/Sidebar";
-import { Topbar } from "@/components/Topbar";
-import { TopBanner } from "@/components/TopBanner";
-import { BookmarkHint } from "@/components/BookmarkHint";
-import { AnalyticsTracker } from "@/components/AnalyticsTracker";
-import { MobileTabBar } from "@/components/MobileTabBar";
-import { InstallPrompt } from "@/components/InstallPrompt";
 import { LocaleProvider } from "@/components/i18n/LocaleProvider";
 import { getDictionary, locales, defaultLocale, isLocale, type Locale } from "@/lib/i18n";
 
+// 语言段布局：只提供语言上下文（dict）+ 注册 locale 静态参数。
+// 站点 chrome（侧栏/顶栏）在 (app)/layout.tsx；落地页用 (marketing)/layout.tsx 的极简壳。
 export function generateStaticParams() {
   return locales.map((lang) => ({ lang }));
 }
@@ -30,17 +25,7 @@ export default function LangLayout({
 
   return (
     <LocaleProvider lang={lang} dict={dict}>
-      <Sidebar lang={lang} dict={dict} />
-      <div className="app-main lg:pl-[232px]">
-        <TopBanner />
-        <Topbar lang={lang} dict={dict} />
-        {/* pb-24：给移动端底部 Tab 栏留出空间（桌面端无 Tab 栏，恢复常规留白）。 */}
-        <main className="px-4 sm:px-6 lg:px-8 pt-5 pb-24 lg:pb-8 max-w-[1480px] mx-auto">{children}</main>
-      </div>
-      <MobileTabBar />
-      <InstallPrompt />
-      <BookmarkHint />
-      <AnalyticsTracker />
+      {children}
     </LocaleProvider>
   );
 }

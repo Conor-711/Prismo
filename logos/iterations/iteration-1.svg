@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 512" role="img" aria-label="prismo">
+  <!-- 4a Track + Signal arc — full ring = ALL discussion; teal arc = the surfaced signal. (hero) -->
+  <g id="icon" fill="none" stroke-linecap="round">
+    <circle cx="185" cy="258" r="76" stroke="#ECEDED" stroke-opacity="0.2" stroke-width="16"/>
+    <path d="M147 192.2 A76 76 0 0 1 259.8 244.8" stroke="#57D7BA" stroke-width="16"/>
+    <circle cx="185" cy="258" r="7" fill="#ECEDED" fill-opacity="0.5" stroke="none"/>
+  </g>
+  <text id="wordmark" x="320" y="306" font-family="'Avenir Next','Futura','Century Gothic','Segoe UI',system-ui,sans-serif" font-size="146" font-weight="600" letter-spacing="-1" fill="#ECEDED">prismo</text>
+</svg>

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="prismo app icon">
+  <!-- Layout: app tile / favicon — icon only on brand card bg + hairline -->
+  <rect x="56" y="56" width="400" height="400" rx="104" fill="#161616" stroke="#2A2D2F" stroke-width="4"/>
+  <g fill="none" stroke-linecap="round">
+    <circle cx="256" cy="256" r="118" stroke="#ECEDED" stroke-opacity="0.2" stroke-width="26"/>
+    <path d="M197 153.8 A118 118 0 0 1 372.2 235.5" stroke="#57D7BA" stroke-width="26"/>
+    <circle cx="256" cy="256" r="11" fill="#ECEDED" fill-opacity="0.5" stroke="none"/>
+  </g>
+</svg>

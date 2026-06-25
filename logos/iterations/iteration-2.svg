@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 512" role="img" aria-label="prismo">
+  <!-- 4b Bezel ticks — dense ticks = countless sources integrated; teal arc = the signal sweep. -->
+  <g id="icon" fill="none">
+    <circle cx="185" cy="258" r="74" stroke="#ECEDED" stroke-opacity="0.28" stroke-width="15" stroke-dasharray="3 9"/>
+    <path d="M159.7 188.4 A74 74 0 0 1 254.6 232.7" stroke="#57D7BA" stroke-width="15" stroke-linecap="round"/>
+  </g>
+  <text id="wordmark" x="320" y="306" font-family="'Avenir Next','Futura','Century Gothic','Segoe UI',system-ui,sans-serif" font-size="146" font-weight="600" letter-spacing="-1" fill="#ECEDED">prismo</text>
+</svg>

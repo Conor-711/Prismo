@@ -1,7 +1,7 @@
 """按「任务档位」路由到具体大模型 provider 的统一层。
 
 全站 AI 任务分三档，改档位只需动这一张路由表：
-  - LOW  低档 → DeepSeek deepseek-v4-flash（翻译：标题/正文/摘要/评论，走量）
+  - LOW  低档 → 通义千问 qwen-flash（走量：翻译 / KOL 提炼·视角·论点；原 DeepSeek flash，余额耗尽后切此）
   - MID  中档 → DeepSeek deepseek-v4-pro  （叙事聚类 / 每日简报 / 正文重排版）
   - HIGH 高档 → 通义千问 qwen3.7-plus（思考模式：逐帖投资打标，全站分析大脑）
 
@@ -32,7 +32,7 @@ def _route(tier: str) -> tuple[str, str]:
         return _QWEN, settings.qwen_model
     if tier == MID:
         return _DEEPSEEK, settings.deepseek_model_mid
-    return _DEEPSEEK, settings.deepseek_model_low  # LOW 兜底
+    return _QWEN, settings.qwen_model_low  # LOW → 千问便宜档（原 DeepSeek flash；账户余额耗尽后切千问）
 
 
 def model_label(tier: str) -> str:

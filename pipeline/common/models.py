@@ -435,6 +435,197 @@ class GrQuote(Base):
     updated_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
 
 
+# --------------------- YouTube 观点（标的页正式模块；Gemini 视频理解 + 全语种纳入当地分析者） ---------------------
+# 每标的近 24h、浏览量 > 阈值的视频；混合分析（top N 原生看视频 + 其余字幕文本）。隔离表 yt_*。
+class YtVideo(Base):
+    __tablename__ = "yt_video"
+    id: Mapped[str] = mapped_column(String(20), primary_key=True)  # YouTube videoId
+    ticker: Mapped[str] = mapped_column(String(16), index=True)
+    market: Mapped[str] = mapped_column(String(8), default="us", index=True)
+    channel: Mapped[str] = mapped_column(String(160), default="")
+    channel_id: Mapped[str] = mapped_column(String(40), default="")
+    title: Mapped[str] = mapped_column(Text, default="")
+    description: Mapped[str] = mapped_column(Text, default="")
+    lang: Mapped[str] = mapped_column(String(8), default="")  # defaultAudioLanguage / 检测
+    duration_s: Mapped[int] = mapped_column(Integer, default=0)
+    view_count: Mapped[int] = mapped_column(Integer, default=0)
+    like_count: Mapped[int] = mapped_column(Integer, default=0)
+    comment_count: Mapped[int] = mapped_column(Integer, default=0)
+    thumbnail: Mapped[str] = mapped_column(Text, default="")
+    url: Mapped[str] = mapped_column(Text, default="")
+    published_utc: Mapped[dt.datetime] = mapped_column(DateTime, index=True)
+    analyzed: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    fetched_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class YtAnalysis(Base):
+    __tablename__ = "yt_analysis"
+    video_id: Mapped[str] = mapped_column(String(20), primary_key=True)  # → yt_video.id
+    ticker: Mapped[str] = mapped_column(String(16), index=True)
+    mode: Mapped[str] = mapped_column(String(12), default="video")  # video(原生看) | transcript(字幕)
+    stance: Mapped[str] = mapped_column(String(16), default="neutral")  # bull|bear|neutral
+    sentiment: Mapped[float] = mapped_column(Float, default=0.0)  # -1..1
+    conviction: Mapped[float] = mapped_column(Float, default=0.0)  # 0..1 该视频观点笃定度
+    summary_zh: Mapped[str] = mapped_column(Text, default="")
+    summary_en: Mapped[str] = mapped_column(Text, default="")
+    key_points_zh: Mapped[Optional[list]] = mapped_column(JSONText, nullable=True)
+    key_points_en: Mapped[Optional[list]] = mapped_column(JSONText, nullable=True)
+    price_target: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    model: Mapped[str] = mapped_column(String(48), default="")
+    analyzed_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class YtTickerSummary(Base):
+    __tablename__ = "yt_ticker_summary"
+    __table_args__ = (UniqueConstraint("ticker", "market", name="uq_yt_ticker"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    ticker: Mapped[str] = mapped_column(String(16), index=True)
+    market: Mapped[str] = mapped_column(String(8), default="us")
+    window_hours: Mapped[int] = mapped_column(Integer, default=24)
+    video_count: Mapped[int] = mapped_column(Integer, default=0)
+    analyzed_count: Mapped[int] = mapped_column(Integer, default=0)
+    bull_count: Mapped[int] = mapped_column(Integer, default=0)
+    bear_count: Mapped[int] = mapped_column(Integer, default=0)
+    neutral_count: Mapped[int] = mapped_column(Integer, default=0)
+    net_sentiment: Mapped[float] = mapped_column(Float, default=0.0)  # 浏览量加权净情绪
+    mood_label: Mapped[str] = mapped_column(String(16), default="neutral")
+    total_views: Mapped[int] = mapped_column(Integer, default=0)
+    overview_zh: Mapped[str] = mapped_column(Text, default="")  # 跨视频汇总一段
+    overview_en: Mapped[str] = mapped_column(Text, default="")
+    updated_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class KolRefined(Base):
+    """KOL 个体观点的「AI 提炼 + 双语」结果（标的页「个体观点·KOL」模块用）。
+
+    覆盖文本源 reddit / x / xueqiu；YouTube 复用 yt_analysis（Gemini 已产出同形 summary+key_points）。
+    一次 DeepSeek(LOW) 调用同时产出 zh+en 的「为什么看多/看空/中性」+ 2-3 条要点 —— 提炼与翻译合一。
+    隔离表：进 ALL_TABLES 让 cloud-pull 能快照；不进 sync.SOURCE_TABLES。
+    """
+
+    __tablename__ = "kol_refined"
+    # PK 含 ticker：同一帖/推可能讨论多只标的，提炼是**按标的**的（prompt 带 ticker → 不同标的不同理由），
+    # 故须按 (source,item_id,ticker) 分别存；ticker 另留独立 index 供 web 按标的查。
+    source: Mapped[str] = mapped_column(String(12), primary_key=True)  # reddit | x | xueqiu
+    item_id: Mapped[str] = mapped_column(String(64), primary_key=True)  # 源生 id（posts.id / tweet_id / gr_post.id）
+    ticker: Mapped[str] = mapped_column(String(16), primary_key=True, index=True)
+    stance: Mapped[str] = mapped_column(String(16), default="neutral")  # bull | bear | neutral
+    reason_zh: Mapped[str] = mapped_column(Text, default="")  # 一句话「为什么」（中）
+    reason_en: Mapped[str] = mapped_column(Text, default="")  # one-sentence「why」（en）
+    points_zh: Mapped[Optional[list]] = mapped_column(JSONText, nullable=True)  # 2-3 条要点（催化剂/数据/目标价/风险）
+    points_en: Mapped[Optional[list]] = mapped_column(JSONText, nullable=True)
+    # ta 实际说的最代表性那句（忠实翻译，非提炼）——建立可信度、可对照原帖。
+    quote_zh: Mapped[str] = mapped_column(Text, default="")
+    quote_en: Mapped[str] = mapped_column(Text, default="")
+    # 原帖全文的**完整忠实翻译**（逐句直译、非提炼、非一句摘录）——「按视角·原帖流」的「译」选项展示。
+    # 由独立步骤 kol_translate 产出（与提炼解耦），让英文/中文原帖对另一语读者可读。
+    trans_zh: Mapped[str] = mapped_column(Text, default="")
+    trans_en: Mapped[str] = mapped_column(Text, default="")
+    created: Mapped[str] = mapped_column(String(32), default="")  # 源帖创建时间字符串（供时间窗过滤）
+    lang_src: Mapped[str] = mapped_column(String(8), default="")  # 源语言（信息用）
+    model: Mapped[str] = mapped_column(String(48), default="")
+    refined_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class KolViewpoint(Base):
+    """KOL 个体观点的「视角分类」（标的页「个体观点·KOL」模块的『按视角』视图用）。
+
+    对已蒸馏的观点（kol_refined 的 reddit/x/xueqiu + yt_analysis 的 youtube）用 AI(DeepSeek LOW)
+    打一组「视角」标签——估值/业务成长/竞争/管理层/宏观/催化剂/资金盘面（7 选 1-3，按相关度排序，
+    首个为主视角）。隔离表：进 ALL_TABLES 让 cloud-pull 能快照；不进 sync.SOURCE_TABLES。
+    PK 与 kol_refined 同构 (source,item_id,ticker)，web 用同一 join key 挂到观点上。
+    """
+
+    __tablename__ = "kol_viewpoint"
+    source: Mapped[str] = mapped_column(String(12), primary_key=True)  # reddit | x | xueqiu | youtube
+    item_id: Mapped[str] = mapped_column(String(64), primary_key=True)  # 源生 id（同 kol_refined / yt_video.id）
+    ticker: Mapped[str] = mapped_column(String(16), primary_key=True, index=True)
+    # 有序视角键列表（primary 在前），取值 ∈ valuation|growth|competition|management|macro|catalyst|flows|other
+    viewpoints: Mapped[Optional[list]] = mapped_column(JSONText, nullable=True)
+    model: Mapped[str] = mapped_column(String(48), default="")
+    classified_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class KolArgument(Base):
+    """KOL 观点的「论点综合」（标的页『按视角』视图：每条视角下聚成几个论点）。
+
+    在 kol_refined（提炼）+ kol_viewpoint（视角分类）之上再加一层 AI 综合：把同一
+    (ticker, 视角, 立场) 下的多条已提炼观点，聚类成 1-3 个**不同论点**（同义合并、覆盖人数多的排前）。
+    每个论点 = 一句主张 + 一句推理 + 支持它的观点列表（回指 kol_refined / yt_analysis 的 source+item_id，
+    web 据此取每个支持者的头像/原话/原帖）。隔离表：进 ALL_TABLES 让 cloud-pull 能快照；不进 sync.SOURCE_TABLES。
+    """
+
+    __tablename__ = "kol_argument"
+    ticker: Mapped[str] = mapped_column(String(16), primary_key=True, index=True)
+    lens: Mapped[str] = mapped_column(String(16), primary_key=True)  # 7 视角键（不含 other）
+    stance: Mapped[str] = mapped_column(String(8), primary_key=True)  # bull | bear | neutral
+    window: Mapped[str] = mapped_column(String(8), primary_key=True, default="14d")  # 时间窗：24h|3d|7d|14d|1mo
+    rank: Mapped[int] = mapped_column(Integer, primary_key=True)  # 同组内序号 0..N（按支持人数排）
+    claim_zh: Mapped[str] = mapped_column(Text, default="")  # 一句话主张（中）
+    claim_en: Mapped[str] = mapped_column(Text, default="")  # one-sentence claim（en）
+    detail_zh: Mapped[str] = mapped_column(Text, default="")  # 一句支撑推理（可空）
+    detail_en: Mapped[str] = mapped_column(Text, default="")
+    # 支持此论点的观点：[{"source":"reddit","item_id":"..."}]（回指 kol_refined / yt_analysis）
+    supporters: Mapped[Optional[list]] = mapped_column(JSONText, nullable=True)
+    support_count: Mapped[int] = mapped_column(Integer, default=0)  # 去重支持人数（展示/排序用）
+    model: Mapped[str] = mapped_column(String(48), default="")
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class KolNarrative(Base):
+    """KOL 论点的「叙事编织」（标的页『按视角』视图顶层，第 1 层）。
+
+    每个 (ticker, 视角, 立场) 一段：把该立场下的论点（kol_argument）编织成连贯、周全的叙事——
+    论点是论据(第 2 层)、论点的 detail+原话是子论据(第 3 层)。与 kol_argument 同一次 AI 调用产出，保证忠实。
+    隔离表：进 ALL_TABLES 让 cloud-pull 能快照；不进 sync.SOURCE_TABLES。
+    """
+
+    __tablename__ = "kol_narrative"
+    ticker: Mapped[str] = mapped_column(String(16), primary_key=True, index=True)
+    lens: Mapped[str] = mapped_column(String(16), primary_key=True)  # 7 视角键
+    stance: Mapped[str] = mapped_column(String(8), primary_key=True)  # bull | bear | neutral
+    window: Mapped[str] = mapped_column(String(8), primary_key=True, default="14d")  # 时间窗：24h|3d|7d|14d|1mo
+    lead_zh: Mapped[str] = mapped_column(Text, default="")   # 一句总述（lead）
+    lead_en: Mapped[str] = mapped_column(Text, default="")
+    points: Mapped[Optional[list]] = mapped_column(JSONText, nullable=True)  # [{zh,en,refs:[{source,item_id}]}] 每点带来源角标
+    model: Mapped[str] = mapped_column(String(48), default="")
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class KolRelevance(Base):
+    """KOL 观点的「相关性打分」（标的页『按相关性』筛选用）。
+
+    给『某帖文/视频 与 某只标的』打 0-100 相关度：是否真的在讨论/分析这只股票，还是仅顺带提及/
+    列入名单/新闻转述带到。覆盖全部源 reddit/x/xueqiu/youtube（故独立成表、PK 同构 source+item_id+ticker；
+    youtube 不在 kol_refined 也能挂）。隔离表：进 ALL_TABLES 让 cloud-pull 能快照；不进 sync.SOURCE_TABLES。
+    """
+
+    __tablename__ = "kol_relevance"
+    source: Mapped[str] = mapped_column(String(12), primary_key=True)  # reddit | x | xueqiu | youtube
+    item_id: Mapped[str] = mapped_column(String(64), primary_key=True)  # 源生 id（kol_refined / yt_video.id）
+    ticker: Mapped[str] = mapped_column(String(16), primary_key=True, index=True)
+    score: Mapped[int] = mapped_column(Integer, default=0)  # 0-100：与该标的的相关度（越高越相关）
+    model: Mapped[str] = mapped_column(String(48), default="")
+    scored_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class KolQuality(Base):
+    """KOL 观点的「帖子质量打分」（标的页『只看高质量』开关用）。
+
+    给『一条帖文/视频』本身作为投资分析的**含金量**打 0-100：有没有实质分析/数据/逻辑/洞见，
+    还是纯口号/喊单/情绪/一句话/灌水。与「相关性」正交（相关性=与某标的多相关；质量=这条本身好不好）。
+    **质量与标的无关**，故 PK 只到 (source,item_id)——同一帖被多只标的引用时只打一次分。
+    覆盖 reddit/x/xueqiu/youtube。隔离表：进 ALL_TABLES 让 cloud-pull 能快照；不进 sync.SOURCE_TABLES。
+    """
+
+    __tablename__ = "kol_quality"
+    source: Mapped[str] = mapped_column(String(12), primary_key=True)  # reddit | x | xueqiu | youtube
+    item_id: Mapped[str] = mapped_column(String(64), primary_key=True)  # 源生 id（kol_refined / yt_video.id）
+    score: Mapped[int] = mapped_column(Integer, default=0)  # 0-100：内容含金量（越高越有料）
+    model: Mapped[str] = mapped_column(String(48), default="")
+    scored_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+
+
 ALL_TABLES = [
     Subreddit, Author, Post, Comment, TickerMeta, Mention, ItemAnalysis,
     TickerRollup, MarketMood, Trending, Narrative, NarrativeTicker,
@@ -443,4 +634,18 @@ ALL_TABLES = [
     AsiaPost, AsiaAnalysis, AsiaTickerSummary, AsiaPrice,
     # 全球散户多区看板隔离表（同样进快照、不进 SOURCE_TABLES）。
     GrPost, GrTickerRegion, GrTicker, GrQuote,
+    # YouTube 观点隔离表（同样进快照、不进 SOURCE_TABLES）。
+    YtVideo, YtAnalysis, YtTickerSummary,
+    # KOL 个体观点「AI 提炼+双语」隔离表（同样进快照、不进 SOURCE_TABLES）。
+    KolRefined,
+    # KOL 个体观点「视角分类」隔离表（同样进快照、不进 SOURCE_TABLES）。
+    KolViewpoint,
+    # KOL 观点「论点综合」隔离表（同样进快照、不进 SOURCE_TABLES）。
+    KolArgument,
+    # KOL 论点「叙事编织」隔离表（同样进快照、不进 SOURCE_TABLES）。
+    KolNarrative,
+    # KOL 观点「相关性打分」隔离表（同样进快照、不进 SOURCE_TABLES）。
+    KolRelevance,
+    # KOL 观点「帖子质量打分」隔离表（同样进快照、不进 SOURCE_TABLES）。
+    KolQuality,
 ]

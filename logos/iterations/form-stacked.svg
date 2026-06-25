@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 600" role="img" aria-label="prismo">
+  <!-- Layout: stacked (icon over wordmark) — for square-ish placements, footers, splash -->
+  <g id="icon" fill="none" stroke-linecap="round">
+    <circle cx="280" cy="210" r="92" stroke="#ECEDED" stroke-opacity="0.2" stroke-width="19"/>
+    <path d="M234 130.3 A92 92 0 0 1 370.6 194" stroke="#57D7BA" stroke-width="19"/>
+    <circle cx="280" cy="210" r="8" fill="#ECEDED" fill-opacity="0.5" stroke="none"/>
+  </g>
+  <text id="wordmark" x="280" y="470" text-anchor="middle" font-family="'Avenir Next','Futura','Century Gothic','Segoe UI',system-ui,sans-serif" font-size="132" font-weight="600" letter-spacing="-1" fill="#ECEDED">prismo</text>
+</svg>

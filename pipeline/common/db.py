@@ -43,6 +43,7 @@ if engine.dialect.name == "sqlite":
         cur = dbapi_conn.cursor()
         cur.execute("PRAGMA foreign_keys=ON")
         cur.execute("PRAGMA journal_mode=WAL")
+        cur.execute("PRAGMA busy_timeout=8000")  # 并发写时等锁而非立即报 database is locked（多 AI session/管线并行）
         cur.close()
 
 

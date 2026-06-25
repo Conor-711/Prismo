@@ -8,7 +8,7 @@ import ReactECharts from "echarts-for-react";
 const AXIS = "#7a8a96";
 const TIP = { backgroundColor: "#161616", borderColor: "#2a2d2f", textStyle: { color: "#e5e5e5", fontSize: 11 } };
 const BULL = "#57D7BA";
-const BEAR = "#fe5555";
+const BEAR = "#FF5C6C";
 
 // 风险/温度环形仪表（0..100）。tone: risk(低绿→高红) / good(低红→高绿) / brand(青绿)。
 export function Gauge({ value, suffix = "", tone = "brand", height = 150 }: { value: number; suffix?: string; tone?: "risk" | "good" | "brand"; height?: number }) {

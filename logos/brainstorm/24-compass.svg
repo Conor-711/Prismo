@@ -1,0 +1,3 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" role="img" aria-label="prismo">
+<circle cx="150" cy="150" r="90" fill="none" stroke="#ECEDED" stroke-width="10"/><line x1="150" y1="150" x2="196.7" y2="103.3" stroke="#57D7BA" stroke-width="16" stroke-linecap="round"/><line x1="150" y1="150" x2="103.3" y2="196.7" stroke="#ECEDED" stroke-width="16" stroke-linecap="round"/><circle cx="150" cy="150" r="10" fill="#ECEDED"/>
+</svg>

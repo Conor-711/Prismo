@@ -1,4 +1,4 @@
-import { IconGrid, IconTrend, IconLayers, IconSearch } from "./icons";
+import { IconGrid, IconTrend, IconLayers, IconSearch, IconStar, IconTrophy } from "./icons";
 import type { Dictionary } from "@/lib/i18n";
 
 export type NavItem = {
@@ -13,14 +13,16 @@ export type NavGroup = {
   items: NavItem[];
 };
 
-// Prismo 主导航：总览 / 标的 / 区域 / 搜索（5 社区聚合）。
+// Prismo 主导航：总览 / 标的 / 投资者 / 追踪 / 区域 / 搜索（5 社区聚合）。
 export const NAV_GROUPS: NavGroup[] = [
   {
     id: "us",
     labelKey: "usSection",
     items: [
-      { href: "/", key: "overview", Icon: IconGrid },
+      { href: "/dashboard", key: "overview", Icon: IconGrid },
       { href: "/tickers", key: "tickers", Icon: IconTrend },
+      { href: "/investors", key: "investors", Icon: IconTrophy },
+      { href: "/tracking", key: "tracking", Icon: IconStar },
       { href: "/regions", key: "regions", Icon: IconLayers },
       { href: "/search", key: "search", Icon: IconSearch },
     ],

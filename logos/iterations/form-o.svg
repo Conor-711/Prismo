@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 300" role="img" aria-label="prismo">
+  <!-- Layout: the dial IS the 'o' — icon and wordmark fused into one mark -->
+  <text x="500" y="205" text-anchor="end" font-family="'Avenir Next','Futura','Century Gothic','Segoe UI',system-ui,sans-serif" font-size="150" font-weight="600" letter-spacing="-1" fill="#ECEDED">prism</text>
+  <g fill="none" stroke-linecap="round">
+    <circle cx="562" cy="165" r="40" stroke="#ECEDED" stroke-opacity="0.2" stroke-width="17"/>
+    <path d="M542 130.4 A40 40 0 0 1 602 165" stroke="#57D7BA" stroke-width="17"/>
+  </g>
+</svg>

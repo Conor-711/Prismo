@@ -243,6 +243,78 @@ def cmd_gr_quote(args):
     fetch_quotes()
 
 
+def cmd_youtube_crawl(args):
+    # YouTube 观点：按标的搜近 24h、浏览量>阈值的视频 → yt_video（全语种）。缺 key/--mock 出样本。
+    from .ingest.youtube_crawl import crawl
+    only = [t.strip() for t in args.only.split(",")] if getattr(args, "only", None) else None
+    crawl(only=only, since_hours=args.since_hours, min_views=args.min_views, mock=args.mock)
+
+
+def cmd_youtube_tag(args):
+    # 混合分析（top N 原生看视频 + 其余字幕）→ yt_analysis + 聚合 yt_ticker_summary。缺 key/--mock 出样本。
+    from .analyze.youtube_analyze import tag
+    only = [t.strip() for t in args.only.split(",")] if getattr(args, "only", None) else None
+    tag(top_native=args.top_native, only_new=not args.force, mock=args.mock,
+        per_ticker_cap=args.per_ticker, workers=args.workers, only=only)
+
+
+def cmd_youtube_tag_text(args):
+    # 无 Gemini 配额兜底：标题+简介 → DeepSeek flash 出双语观点 → yt_analysis(mode=text)。
+    from .analyze.youtube_analyze import tag_text
+    tag_text(per_ticker=args.per_ticker, workers=args.workers)
+
+
+def cmd_kol_refine(args):
+    # KOL 个体观点 AI 提炼+双语（reddit/x/xueqiu 文本源）→ kol_refined。YouTube 复用 yt_analysis。
+    from .analyze.kol_refine import refine
+    sources = [t.strip() for t in args.source.split(",")] if getattr(args, "source", None) else None
+    only = [t.strip() for t in args.only.split(",")] if getattr(args, "only", None) else None
+    refine(sources=sources, per_source=args.per_source, only=only, force=args.force,
+           workers=args.workers, since_days=args.since_days)
+
+
+def cmd_kol_viewpoint(args):
+    # KOL 个体观点 视角分类（7 选 1-3）→ kol_viewpoint。读已蒸馏的 kol_refined + yt_analysis。
+    from .analyze.kol_viewpoint import classify
+    only = [t.strip() for t in args.only.split(",")] if getattr(args, "only", None) else None
+    classify(only=only, force=args.force, workers=args.workers,
+             reclassify_other=getattr(args, "reclassify_other", False))
+
+
+def cmd_kol_argument(args):
+    # KOL 论点综合（每 标的×视角×立场 聚成 1-3 个论点）→ kol_argument。读 kol_refined+kol_viewpoint+yt_analysis。
+    from .analyze.kol_argument import synthesize
+    only = [t.strip() for t in args.only.split(",")] if getattr(args, "only", None) else None
+    synthesize(only=only, force=args.force, workers=args.workers)
+
+
+def cmd_kol_translate(args):
+    # KOL 原帖完整忠实翻译（逐句直译、不压缩）→ kol_refined.trans_zh/en。供「按视角·原帖流」的「译」选项。
+    from .analyze.kol_translate import translate
+    sources = [t.strip() for t in args.source.split(",")] if getattr(args, "source", None) else None
+    only = [t.strip() for t in args.only.split(",")] if getattr(args, "only", None) else None
+    translate(sources=sources, per_source=args.per_source, only=only, force=args.force,
+              workers=args.workers, since_days=args.since_days)
+
+
+def cmd_kol_relevance(args):
+    # KOL 相关性打分（每条帖文/视频 与标的的相关度 0-100）→ kol_relevance。供『按相关性』排序。
+    from .analyze.kol_relevance import score
+    sources = [t.strip() for t in args.source.split(",")] if getattr(args, "source", None) else None
+    only = [t.strip() for t in args.only.split(",")] if getattr(args, "only", None) else None
+    score(sources=sources, per_source=args.per_source, only=only, force=args.force,
+          workers=args.workers, since_days=args.since_days, include_youtube=not args.no_youtube)
+
+
+def cmd_kol_quality(args):
+    # KOL 帖子质量打分（每条帖文/视频本身的含金量 0-100，与标的无关）→ kol_quality。供『只看高质量』开关。
+    from .analyze.kol_quality import score
+    sources = [t.strip() for t in args.source.split(",")] if getattr(args, "source", None) else None
+    only = [t.strip() for t in args.only.split(",")] if getattr(args, "only", None) else None
+    score(sources=sources, per_source=args.per_source, only=only, force=args.force,
+          workers=args.workers, since_days=args.since_days, include_youtube=not args.no_youtube)
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="pipeline.manage")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -287,6 +359,15 @@ def build_parser() -> argparse.ArgumentParser:
     sp = sub.add_parser("gr-rollup"); sp.add_argument("--window-days", type=int, default=14); sp.set_defaults(func=cmd_gr_rollup)
     sp = sub.add_parser("gr-xueqiu"); sp.add_argument("--path", type=str, default="data/exports/gr_cn_xueqiu.json", help="浏览器导出的雪球帖 JSON"); sp.add_argument("--since-days", type=int, default=14); sp.set_defaults(func=cmd_gr_xueqiu)
     sub.add_parser("gr-quote").set_defaults(func=cmd_gr_quote)
+    sp = sub.add_parser("youtube-crawl"); sp.add_argument("--since-hours", type=int, default=24); sp.add_argument("--min-views", type=int, default=None, help="浏览量门槛，省略=用 YT_MIN_VIEWS(默认1000)"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker"); sp.add_argument("--mock", action="store_true", help="无 key 时生成多语种样本"); sp.set_defaults(func=cmd_youtube_crawl)
+    sp = sub.add_parser("youtube-tag"); sp.add_argument("--top-native", type=int, default=2, help="每标的用 Gemini 原生看视频的前 N 条（其余走字幕）"); sp.add_argument("--per-ticker", type=int, default=None, help="每标的最多分析前 N 条(按播放量)；省略=全部。配合 8h/天预算用，按档位跨标的铺开"); sp.add_argument("--force", action="store_true", help="重分析全部（默认只分析未分析的）"); sp.add_argument("--workers", type=int, default=1, help="并发线程数(>1 走并发真看视频，billing 解锁 8h 后用)"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker，只跑这些（如前十讨论度）"); sp.add_argument("--mock", action="store_true"); sp.set_defaults(func=cmd_youtube_tag)
+    sp = sub.add_parser("youtube-tag-text"); sp.add_argument("--per-ticker", type=int, default=20, help="每标的按播放量取前 N（默认 20=前端 LIMIT）"); sp.add_argument("--workers", type=int, default=6, help="LLM 并发数"); sp.set_defaults(func=cmd_youtube_tag_text)
+    sp = sub.add_parser("kol-refine"); sp.add_argument("--source", type=str, default=None, help="逗号分隔，子集 of reddit,x,xueqiu；省略=全部"); sp.add_argument("--per-source", type=int, default=40, help="每标的每源提炼前 N 条(按互动)，默认 40=前端各源 LIMIT"); sp.add_argument("--since-days", type=int, default=20, help="只提炼近 N 天(匹配前端价格窗口)；0=不限"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker"); sp.add_argument("--workers", type=int, default=6, help="LLM 并发数"); sp.add_argument("--force", action="store_true", help="重提炼全部（默认只补未提炼的）"); sp.set_defaults(func=cmd_kol_refine)
+    sp = sub.add_parser("kol-viewpoint"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker"); sp.add_argument("--workers", type=int, default=8, help="LLM 并发数"); sp.add_argument("--force", action="store_true", help="重分类全部（默认只补未分类的）"); sp.add_argument("--reclassify-other", action="store_true", help="只重判当前 other 行（用新 prompt 把实质观点归到正确视角）"); sp.set_defaults(func=cmd_kol_viewpoint)
+    sp = sub.add_parser("kol-argument"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker"); sp.add_argument("--workers", type=int, default=8, help="LLM 并发数"); sp.add_argument("--force", action="store_true", help="重综合全部（默认只补未综合的 标的×视角×立场 组）"); sp.set_defaults(func=cmd_kol_argument)
+    sp = sub.add_parser("kol-translate"); sp.add_argument("--source", type=str, default=None, help="逗号分隔，子集 of reddit,x,xueqiu；省略=全部"); sp.add_argument("--per-source", type=int, default=40, help="每标的每源前 N 条(镜像提炼/展示范围)"); sp.add_argument("--since-days", type=int, default=20, help="只译近 N 天；0=不限"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker"); sp.add_argument("--workers", type=int, default=6, help="LLM 并发数"); sp.add_argument("--force", action="store_true", help="重译全部（默认只补未译的）"); sp.set_defaults(func=cmd_kol_translate)
+    sp = sub.add_parser("kol-relevance"); sp.add_argument("--source", type=str, default=None, help="逗号分隔，子集 of reddit,x,xueqiu；省略=全部(+youtube)"); sp.add_argument("--per-source", type=int, default=200, help="每标的每源前 N 条(镜像展示范围)"); sp.add_argument("--since-days", type=int, default=30, help="只打近 N 天；0=不限"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker"); sp.add_argument("--workers", type=int, default=8, help="LLM 并发数"); sp.add_argument("--no-youtube", action="store_true", help="跳过 youtube 源"); sp.add_argument("--force", action="store_true", help="重打全部（默认只补未打分的）"); sp.set_defaults(func=cmd_kol_relevance)
+    sp = sub.add_parser("kol-quality"); sp.add_argument("--source", type=str, default=None, help="逗号分隔，子集 of reddit,x,xueqiu；省略=全部(+youtube)"); sp.add_argument("--per-source", type=int, default=800, help="每标的每源前 N 条(镜像展示范围；质量按 source+item 去重)"); sp.add_argument("--since-days", type=int, default=35, help="只打近 N 天；0=不限"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker"); sp.add_argument("--workers", type=int, default=8, help="LLM 并发数"); sp.add_argument("--no-youtube", action="store_true", help="跳过 youtube 源"); sp.add_argument("--force", action="store_true", help="重打全部（默认只补未打分的）"); sp.set_defaults(func=cmd_kol_quality)
     return p
 
 

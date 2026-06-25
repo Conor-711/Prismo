@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="prismo">
+<rect width="512" height="512" rx="120" fill="#1B1E22"/>
+<rect x="176" y="150" width="44" height="216" rx="22" fill="#F4F5F5"/><path d="M220 150 A66 66 0 0 1 220 282 Z" fill="#F4F5F5"/><circle cx="238" cy="216" r="30" fill="#1B1E22"/>
+</svg>

@@ -1,18 +1,5 @@
-"use client";
-
-import { useEffect, useState } from "react";
-
-// 给 canvas 图表(ECharts)用：读取当前是否白天模式，并随主题切换实时更新。
-// 默认 = 白天(无 .dark 类)；夜间 = html.dark。
+// 站点为暗色单主题（已停用白天模式）。此 hook 仅为兼容现有图表(ECharts)调用：
+// 恒为「非白天」，让 canvas 图表始终取暗色配色；不再依赖 <html> 的 .dark 类。
 export function useIsLight(): boolean {
-  const [dark, setDark] = useState(false);
-  useEffect(() => {
-    const el = document.documentElement;
-    const sync = () => setDark(el.classList.contains("dark"));
-    sync();
-    const obs = new MutationObserver(sync);
-    obs.observe(el, { attributes: true, attributeFilter: ["class"] });
-    return () => obs.disconnect();
-  }, []);
-  return !dark;
+  return false;
 }

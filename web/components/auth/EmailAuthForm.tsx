@@ -20,7 +20,8 @@ export function EmailAuthForm({ mode }: { mode: "login" | "signup" }) {
   const [msg, setMsg] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const toDashboard = () => router.push(withLang(lang, "/dashboard"));
+  // 登录/注册成功后回首页；新用户由 OnboardingGate 接管送去 /onboarding。
+  const toDashboard = () => router.push(withLang(lang, "/"));
 
   // 第一步：登录 or 注册（注册成功且需确认 → 进入验证码步骤）
   const submit = async (e: React.FormEvent) => {

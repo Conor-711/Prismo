@@ -3,74 +3,26 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ===================== 主题变量：默认 = Reddit 白天 ===================== */
+/* ===================== 主题变量：暗色单主题（已停用白天模式） ===================== */
 :root {
-  color-scheme: light;
-  /* QuiverQuant 字体：Figtree（UI/标题）+ Roboto（数据/数字，tabular）。保留旧 var 名免改 tailwind。 */
+  color-scheme: dark;
+  /* 字体：Figtree（UI/标题，几何无衬线）+ Roboto（数据/数字，tabular）。保留旧 var 名免改 tailwind。 */
   --font-sora: "Figtree", ui-sans-serif, system-ui, sans-serif;
   --font-inter: "Figtree", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Roboto", ui-sans-serif, system-ui, sans-serif;
 
-  /* 底色族（空格分隔 RGB，配合 <alpha-value>）—— Reddit 浅色 */
-  --c-ink: 247 248 249; /* 页面底色 #F7F8F9 */
-  --c-surface: 255 255 255; /* 导航 / 顶栏 */
-  --c-card: 255 255 255; /* 卡片 */
-  --c-elevated: 255 255 255;
-  --c-line: 226 228 232; /* 边框 #E2E4E8 */
-  --c-navy: 255 255 255;
-  --c-cream: 26 26 27; /* 主文字 #1A1A1B（Reddit） */
-  --c-gold: 176 120 20;
-  --c-silver: 96 110 124;
-
-  /* 中性灰阶（浅色：低位=深、高位=浅，保证文字对比） */
-  --n-50: 24 24 27;
-  --n-100: 32 32 36;
-  --n-200: 42 44 48;
-  --n-300: 63 66 70;
-  --n-400: 88 91 96;
-  --n-500: 104 107 112;
-  --n-600: 135 138 142;
-  --n-700: 172 175 179;
-  --n-800: 202 205 209;
-  --n-900: 224 226 230;
-  --n-950: 238 240 242;
-
-  /* 金属渐变（浅色：转深以可读） */
-  --grad-gold: linear-gradient(149deg, #a9762a 6%, #e6c14f 45%, #9c6d1f 72%, #c79a32 92%);
-  --grad-silver: linear-gradient(140deg, #6f8090 4%, #aebcc9 45%, #8198a8 75%, #5d6e7c 96%);
-  --grad-bronze: linear-gradient(141deg, #8a6a52 5%, #c2926a 45%, #7a5a48 85%);
-  --grad-brand: linear-gradient(150deg, #57D7BA, #3b4e60 65%, #7524d6); /* QuiverQuant 信号渐变：青绿→石板→紫 */
-
-  /* 面板 / 滚动条 / 画布 —— 浅色（干净白底 + 蓝光晕，参照 QuiverQuant 扁平终端感） */
-  --panel-bg: linear-gradient(180deg, #ffffff, #fbfcfe);
-  --panel-shadow: inset 0 0 0 1px rgba(20, 30, 60, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(20, 30, 70, 0.05);
-  --panel-shadow-hover: inset 0 0 0 1px rgba(87, 215, 186, 0.42), 0 8px 22px rgba(20, 40, 36, 0.1);
-  --metal-inner: #ffffff;
-  --sb-thumb: #c9ccd2;
-  --sb-thumb-hover: #b4b8c0;
-  --canvas-bg: #fbfdfe;
-  --canvas-image: none;
-  --canvas-size: auto;
-
-  /* 胶片颗粒（灰度噪声，两套主题共用，靠 overlay 混合出纹理） */
-  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  --grain-opacity: 0;
-}
-
-/* ===================== 夜间模式：Reddit 暗色 ===================== */
-html.dark {
-  color-scheme: dark;
-
-  --c-ink: 18 18 18; /* #121212 QuiverQuant 底色（近黑） */
+  /* 底色族（空格分隔 RGB，配合 <alpha-value>）—— QuiverQuant 近黑 */
+  --c-ink: 18 18 18; /* #121212 页面底色 */
   --c-surface: 22 22 22; /* #161616 导航 / 顶栏 */
-  --c-card: 22 22 22; /* #161616 卡片（中性近黑，仿 QuiverQuant；#202630 仅留给图表底） */
-  --c-elevated: 28 29 31; /* #1C1D1F 悬停/抬升（中性） */
+  --c-card: 22 22 22; /* #161616 卡片（中性近黑；#202630 仅留给图表底） */
+  --c-elevated: 28 29 31; /* #1C1D1F 悬停 / 抬升 */
   --c-line: 42 45 47; /* #2A2D2F 发丝边 */
   --c-navy: 31 36 45; /* #1F242D（兼容旧引用） */
   --c-cream: 241 243 244; /* #F1F3F4 主文字 */
   --c-gold: 247 209 78;
   --c-silver: 197 214 226;
 
+  /* 中性灰阶（低位=深、高位=浅） */
   --n-50: 248 248 248;
   --n-100: 240 240 240;
   --n-200: 224 224 224;
@@ -83,11 +35,14 @@ html.dark {
   --n-900: 38 39 42;
   --n-950: 20 20 22;
 
+  /* 金属渐变 */
   --grad-gold: linear-gradient(149deg, #8c5a1d 6%, #fbe67b 38%, #cd9124 52%, #f7d14e 67%, #d4a041 84%);
   --grad-silver: linear-gradient(140deg, #6d7f8d 4%, #c5d6e2 40%, #eaeff3 52%, #9fb9ce 78%, #6d7f8d 96%);
   --grad-bronze: linear-gradient(141deg, #7a5e50 5%, #f6d0ab 35%, #9d774e 58%, #c99b70 78%, #795f52 96%);
+  --grad-brand: linear-gradient(150deg, #57D7BA, #2f6f63); /* 品牌信号渐变：青绿→深松绿（去紫，黑+绿） */
 
-  --panel-bg: #161616; /* 扁平中性近黑，仿 QuiverQuant 卡片（靠 #2a2d2f 发丝边区分，非更亮填充） */
+  /* 面板 / 滚动条 / 画布 —— 扁平中性近黑（靠 #2a2d2f 发丝边分层，不靠提亮填充） */
+  --panel-bg: #161616;
   --panel-shadow: inset 0 0 0 1px #2a2d2f, 0 1px 2px rgba(0, 0, 0, 0.3);
   --panel-shadow-hover: inset 0 0 0 1px rgba(87, 215, 186, 0.4), 0 1px 3px rgba(0, 0, 0, 0.45);
   --metal-inner: #202630;
@@ -95,6 +50,10 @@ html.dark {
   --sb-thumb-hover: #3a3a3a;
   --canvas-bg: #121212;
   --canvas-image: none;
+  --canvas-size: auto;
+
+  /* 胶片颗粒（灰度噪声，靠 overlay 混出纹理；默认关闭） */
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   --grain-opacity: 0;
 }
 
@@ -133,7 +92,7 @@ body::before,
   z-index: 1;
 }
 
-/* 安装提醒卡显示时隐藏右下角浮动主题按钮，避免遮挡导致无法关闭提醒卡 */
+/* 安装提醒卡显示时隐藏右下角浮动按钮，避免遮挡导致无法关闭提醒卡 */
 html[data-install] .theme-fab {
   display: none;
 }
@@ -142,13 +101,13 @@ html[data-install] .theme-fab {
   background: rgba(87, 215, 186, 0.28);
 }
 
-/* QuiverQuant 招牌按钮：胶囊 + 青绿→石板→紫 渐变描边（padding-box 填卡片色） */
+/* 招牌按钮：胶囊 + 青绿→深松绿 渐变描边（padding-box 填卡片色，去紫） */
 .btn-grad {
   border: 1px solid transparent;
   border-radius: 9999px;
   background:
     linear-gradient(rgb(var(--c-card)), rgb(var(--c-card))) padding-box,
-    linear-gradient(150deg, #57d7ba 33%, #3b4e60 70%, #7524d6 100%) border-box;
+    linear-gradient(150deg, #57d7ba 40%, #2f6f63 100%) border-box;
   transition: filter 0.2s ease;
 }
 .btn-grad:hover {
@@ -161,18 +120,13 @@ html[data-install] .theme-fab {
   box-shadow: var(--panel-shadow);
 }
 
-/* 今日 Reddit Alpha 头牌底色：橙红主题，按明暗主题分别调校亮度。
-   白天=鲜亮橙；夜间=略沉的暖橙 + 柔和外发光 + 细描边，避免在深色页面上过亮刺眼。 */
+/* 今日头牌底色：暗色暖橙 + 柔和外发光 + 细描边，避免在深色页面上过亮刺眼。 */
 .alpha-hero {
-  background-image: linear-gradient(135deg, #ff4500 0%, #ff6314 48%, #e03d00 100%);
-  box-shadow: 0 18px 50px -18px rgba(255, 69, 0, 0.55);
-}
-html.dark .alpha-hero {
   background-image: linear-gradient(135deg, #c9380a 0%, #e85622 47%, #9c2f08 100%);
   box-shadow: 0 16px 42px -22px rgba(255, 69, 0, 0.30), inset 0 0 0 1px rgba(255, 255, 255, 0.07);
 }
-/* 头牌内卡片：夜间用略亮的暖底 + 细描边，避免「近黑挖洞」观感；白天保持白卡 */
-html.dark .alpha-hero .alpha-card {
+/* 头牌内卡片：略亮暖底 + 细描边，避免「近黑挖洞」观感 */
+.alpha-hero .alpha-card {
   background-color: #201d1c;
 }
 .panel-hover {
@@ -210,12 +164,9 @@ html.dark .alpha-hero .alpha-card {
   color: #1c1505;
 }
 
-/* 发丝分隔线（默认浅色=深线；夜间=浅线） */
+/* 发丝分隔线 */
 .rule {
   height: 1px;
-  background: linear-gradient(90deg, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0));
-}
-html.dark .rule {
   background: linear-gradient(90deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0));
 }
 
@@ -225,6 +176,16 @@ html.dark .rule {
   letter-spacing: 0.14em;
   font-size: 10.5px;
   font-weight: 700;
+}
+
+/* Onboarding 向导：步骤切换的轻量入场（淡入 + 微上移）；尊重 prefers-reduced-motion */
+@keyframes onbIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; } /* 收尾用 none（非 translateY(0)）：避免留下 transform 容器块而破坏子级 position:sticky */
+}
+.onb-in { animation: onbIn 0.34s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .onb-in { animation: none; }
 }
 
 /* 信号条 ticker tape */
@@ -258,57 +219,6 @@ html.dark .rule {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--sb-thumb-hover);
 }
-
-/* ============= 白/透明叠色：默认(浅色)用黑色调；夜间还原成白色调 ============= */
-/* 组件里大量 white/α 是为暗色设计的微提亮，浅色默认下需反成 black/α 才可见。 */
-.bg-white\/\[\.012\],
-.bg-white\/\[\.015\],
-.bg-white\/\[\.02\] { background-color: rgba(0, 0, 0, 0.035); }
-.bg-white\/\[\.025\],
-.bg-white\/\[\.03\] { background-color: rgba(0, 0, 0, 0.04); }
-.bg-white\/\[\.04\],
-.bg-white\/\[\.06\],
-.bg-white\/5 { background-color: rgba(0, 0, 0, 0.05); }
-.bg-white\/\[\.08\],
-.bg-white\/8 { background-color: rgba(0, 0, 0, 0.06); }
-.bg-white\/10,
-.bg-white\/12 { background-color: rgba(0, 0, 0, 0.08); }
-.hover\:bg-white\/\[\.03\]:hover,
-.hover\:bg-white\/5:hover { background-color: rgba(0, 0, 0, 0.05); }
-.hover\:bg-white\/\[\.04\]:hover { background-color: rgba(0, 0, 0, 0.06); }
-.ring-white\/6,
-.ring-white\/\[\.06\] { --tw-ring-color: rgb(0 0 0 / 0.08); }
-.ring-white\/\[\.07\] { --tw-ring-color: rgb(0 0 0 / 0.09); }
-.ring-white\/8,
-.ring-white\/10 { --tw-ring-color: rgb(0 0 0 / 0.11); }
-.ring-white\/15 { --tw-ring-color: rgb(0 0 0 / 0.15); }
-.hover\:ring-white\/20:hover { --tw-ring-color: rgb(0 0 0 / 0.18); }
-.border-white\/\[\.05\] { border-color: rgb(0 0 0 / 0.09); }
-
-/* 夜间：还原为原本的白色叠色 */
-html.dark .bg-white\/\[\.012\] { background-color: rgba(255, 255, 255, 0.012); }
-html.dark .bg-white\/\[\.015\] { background-color: rgba(255, 255, 255, 0.015); }
-html.dark .bg-white\/\[\.02\] { background-color: rgba(255, 255, 255, 0.02); }
-html.dark .bg-white\/\[\.025\] { background-color: rgba(255, 255, 255, 0.025); }
-html.dark .bg-white\/\[\.03\] { background-color: rgba(255, 255, 255, 0.03); }
-html.dark .bg-white\/\[\.04\] { background-color: rgba(255, 255, 255, 0.04); }
-html.dark .bg-white\/\[\.06\] { background-color: rgba(255, 255, 255, 0.06); }
-html.dark .bg-white\/5 { background-color: rgba(255, 255, 255, 0.05); }
-html.dark .bg-white\/\[\.08\] { background-color: rgba(255, 255, 255, 0.08); }
-html.dark .bg-white\/8 { background-color: rgba(255, 255, 255, 0.08); }
-html.dark .bg-white\/10 { background-color: rgba(255, 255, 255, 0.1); }
-html.dark .bg-white\/12 { background-color: rgba(255, 255, 255, 0.12); }
-html.dark .hover\:bg-white\/\[\.03\]:hover { background-color: rgba(255, 255, 255, 0.03); }
-html.dark .hover\:bg-white\/5:hover { background-color: rgba(255, 255, 255, 0.05); }
-html.dark .hover\:bg-white\/\[\.04\]:hover { background-color: rgba(255, 255, 255, 0.04); }
-html.dark .ring-white\/6 { --tw-ring-color: rgb(255 255 255 / 0.06); }
-html.dark .ring-white\/\[\.06\] { --tw-ring-color: rgb(255 255 255 / 0.06); }
-html.dark .ring-white\/\[\.07\] { --tw-ring-color: rgb(255 255 255 / 0.07); }
-html.dark .ring-white\/8 { --tw-ring-color: rgb(255 255 255 / 0.08); }
-html.dark .ring-white\/10 { --tw-ring-color: rgb(255 255 255 / 0.1); }
-html.dark .ring-white\/15 { --tw-ring-color: rgb(255 255 255 / 0.15); }
-html.dark .hover\:ring-white\/20:hover { --tw-ring-color: rgb(255 255 255 / 0.2); }
-html.dark .border-white\/\[\.05\] { border-color: rgb(255 255 255 / 0.05); }
 
 /* ===================== 侧边栏折叠 / 展开（折叠=窄图标轨，仍可点击）===================== */
 @media (min-width: 1024px) {
