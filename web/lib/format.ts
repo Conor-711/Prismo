@@ -57,7 +57,7 @@ export function timeAgo(s: string, lang: Locale = "zh"): string {
 // 情绪 → 颜色（图表用 hex）
 export function sentHex(score: number): string {
   if (score > 0.15) return "#57D7BA";
-  if (score < -0.15) return "#fe5555";
+  if (score < -0.15) return "#FF5C6C";
   return "#8A8A93";
 }
 

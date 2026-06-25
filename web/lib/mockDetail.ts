@@ -404,3 +404,110 @@ export function getRegionMock(region: string) {
 }
 
 export type RegionMock = ReturnType<typeof getRegionMock>;
+
+// =====================================================================
+// 第 1 块：个体观点（主观 × KOL）—— 日 K 线 + 每日 KOL 观点气泡（mock）
+// 来源 X / YouTube / Reddit / 雪球；气泡大小 ∝ 互动数。真实管线到位后替换。
+// =====================================================================
+export type KolSource = "x" | "youtube" | "reddit" | "xueqiu";
+export type Stance = "bull" | "bear" | "neutral";
+
+export interface KolOpinion {
+  id: string;
+  day: string; // YYYY-MM-DD
+  source: KolSource;
+  author: string;
+  interactions: number; // 点赞 / 转发 / 评论合计
+  stance: Stance;
+  text: Bi; // 当前语言显示文本（原文/标题；x/雪球=原文，reddit/youtube=双语）
+  orig?: string; // 原帖原文（native 语言、未翻译；卡片默认展示）
+  trans?: Bi; // 原帖完整忠实翻译（逐句、不压缩；「译」选项首选）
+  quote?: Bi; // 本人忠实原话（soundbite，译文回退）
+  reason?: Bi; // AI 提炼（不再当原帖卡正文；图表 tooltip 仍用 opinionText）
+  points?: { zh: string[]; en: string[] }; // 2-3 条要点（催化剂/数据/目标价/风险）
+  url: string;
+  avatar?: string; // 作者头像 URL（真实爬取；缺则 UI 用来源色首字母圆形兜底）
+  viewpoints?: string[]; // 视角分类键（kol_viewpoint）：有序、首个为主视角；空/缺=other
+  relevance?: number; // 与该标的的相关度 0-100（kol_relevance）；缺=未打分
+  quality?: number; // 帖子质量 0-100（kol_quality，与标的无关）；缺=未打分
+}
+export interface KolCandle {
+  day: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+}
+export interface KolFlow {
+  days: KolCandle[];
+  opinions: KolOpinion[];
+}
+
+const KOL_AUTHORS: Record<KolSource, string[]> = {
+  x: ["@DeepValueDan", "@ChartFanatic", "@MacroMaverick", "@OptionsOwl", "@TheRoaringKid"],
+  youtube: ["Meet Kevin", "Tom Nash", "Joseph Carlson", "Ticker Symbol YOU", "Graham Stephan"],
+  reddit: ["u/DeepFvalue", "u/wsb_oracle", "u/value_DD_guy", "u/SemiAnalyst", "u/macro_monk"],
+  xueqiu: ["不明真相的群众", "梁宏", "云蒙", "Ricky", "处镜如初"],
+};
+
+function kolText(topic: Bi, stance: Stance): Bi {
+  if (stance === "bull") return { zh: `${topic.zh}——继续看多，逢低加仓`, en: `${topic.en} — staying long, adding on dips` };
+  if (stance === "bear") return { zh: `${topic.zh}——短线见顶，先减仓观望`, en: `${topic.en} — topping near-term, trimming here` };
+  return { zh: `${topic.zh}——先观望，等方向确认`, en: `${topic.en} — sidelined, waiting for confirmation` };
+}
+
+export function getKolFlow(symbol: string): KolFlow {
+  const rnd = rng("KOL:" + symbol);
+  const SOURCES: KolSource[] = ["x", "youtube", "reddit", "xueqiu"];
+  const WINDOW_DAYS = 16; // 自然日窗口，跳周末后约 11 个交易日（近 2 周）
+  const today = new Date("2026-06-22T00:00:00Z"); // 固定参照 → 快照不漂移
+  const days: KolCandle[] = [];
+  const opinions: KolOpinion[] = [];
+
+  let prevClose = 60 + Math.floor(rnd() * 900); // 标的基价
+  const drift = (rnd() - 0.45) * 0.6; // 轻微趋势
+
+  for (let i = WINDOW_DAYS - 1; i >= 0; i--) {
+    const d = new Date(today);
+    d.setUTCDate(today.getUTCDate() - i);
+    const dow = d.getUTCDay();
+    if (dow === 0 || dow === 6) continue; // 跳过周末
+    const day = d.toISOString().slice(0, 10);
+
+    const vol = prevClose * (0.012 + rnd() * 0.03);
+    const open = r2(prevClose + (rnd() - 0.5) * vol * 0.4);
+    const close = r2(Math.max(1, open + (rnd() - 0.5) * vol * 2 + drift * prevClose * 0.01));
+    const high = r2(Math.max(open, close) + rnd() * vol);
+    const low = r2(Math.max(0.5, Math.min(open, close) - rnd() * vol));
+    days.push({ day, open, high, low, close });
+    prevClose = close;
+
+    // 当天观点数 0..6（偶尔爆量）；立场略与当日涨跌相关
+    const up = close >= open;
+    const n = Math.floor(rnd() * 4) + (rnd() > 0.7 ? Math.floor(rnd() * 4) : 0);
+    for (let k = 0; k < n; k++) {
+      const source = pick(SOURCES, rnd);
+      const sb = rnd();
+      const stance: Stance = sb < (up ? 0.55 : 0.3) ? "bull" : sb < (up ? 0.8 : 0.7) ? "neutral" : "bear";
+      const topic = pick(TOPICS, rnd);
+      const viral = rnd() > 0.86;
+      const interactions = Math.floor(viral ? 8000 + rnd() * 58000 : 80 + rnd() * 4200);
+      // mock 视角：1-2 个（首个为主视角），让 mock 兜底时「按视角」视图也有内容
+      const VK = ["valuation", "growth", "competition", "management", "macro", "catalyst", "flows"];
+      const v1 = pick(VK, rnd);
+      const viewpoints = rnd() > 0.78 ? ["other"] : rnd() > 0.55 ? [v1, pick(VK.filter((x) => x !== v1), rnd)] : [v1];
+      opinions.push({
+        id: `${symbol}-${day}-${k}`,
+        day,
+        source,
+        author: pick(KOL_AUTHORS[source], rnd),
+        interactions,
+        stance,
+        text: kolText(topic, stance),
+        url: "#",
+        viewpoints,
+      });
+    }
+  }
+  return { days, opinions };
+}

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 512" role="img" aria-label="prismo">
+  <!-- 4c Gauge — open 270° meter (full spectrum of sentiment); teal marker = current read. -->
+  <g id="icon" fill="none" stroke-linecap="round">
+    <path d="M131.3 311.7 A76 76 0 1 1 238.7 311.7" stroke="#ECEDED" stroke-opacity="0.2" stroke-width="16"/>
+    <path d="M225.3 193.6 A76 76 0 0 1 257.3 234.5" stroke="#57D7BA" stroke-width="16"/>
+    <circle cx="185" cy="258" r="7" fill="#ECEDED" fill-opacity="0.5" stroke="none"/>
+  </g>
+  <text id="wordmark" x="320" y="306" font-family="'Avenir Next','Futura','Century Gothic','Segoe UI',system-ui,sans-serif" font-size="146" font-weight="600" letter-spacing="-1" fill="#ECEDED">prismo</text>
+</svg>

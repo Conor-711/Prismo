@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 512" role="img" aria-label="prismo">
+  <!-- 4e Ring + Core — full ring = all discussion; solid teal core = the integrated consensus; arc = signal. -->
+  <g id="icon" fill="none" stroke-linecap="round">
+    <circle cx="185" cy="258" r="78" stroke="#ECEDED" stroke-opacity="0.2" stroke-width="14"/>
+    <path d="M178.2 180.3 A78 78 0 0 1 255.7 225.0" stroke="#57D7BA" stroke-width="14"/>
+    <circle cx="185" cy="258" r="24" fill="#57D7BA" stroke="none"/>
+  </g>
+  <text id="wordmark" x="328" y="306" font-family="'Avenir Next','Futura','Century Gothic','Segoe UI',system-ui,sans-serif" font-size="146" font-weight="600" letter-spacing="-1" fill="#ECEDED">prismo</text>
+</svg>

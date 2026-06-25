@@ -148,6 +148,14 @@ export function ProfileView() {
         <div className="flex items-baseline gap-2">
           <h3 className="font-display text-sm font-bold text-cream">{label(kind)}</h3>
           {!busy && rows.length > 0 && <span className="text-xs text-neutral-500 tabular">{rows.length}</span>}
+          {kind === "ticker" && (
+            <LocaleLink
+              href="/tracking"
+              className="ml-auto text-xs font-medium text-reddit transition hover:text-reddit/80"
+            >
+              {dict.tracking.title} →
+            </LocaleLink>
+          )}
         </div>
 
         {busy ? (

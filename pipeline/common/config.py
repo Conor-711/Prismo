@@ -65,6 +65,7 @@ class Settings:
     # 通义千问（DashScope, OpenAI 兼容）—— 高档任务（逐帖投资打标，开思考模式）
     qwen_api_key: str = os.environ.get("QWEN_API_KEY", "")
     qwen_model: str = os.environ.get("QWEN_MODEL", "qwen3.7-plus")
+    qwen_model_low: str = os.environ.get("QWEN_MODEL_LOW", "qwen-flash")  # 低档便宜模型（DeepSeek 没余额时 LOW 走它）
     qwen_base_url: str = os.environ.get(
         "QWEN_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1"
     )
@@ -74,6 +75,22 @@ class Settings:
     deepseek_base_url: str = os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
     deepseek_model_low: str = os.environ.get("DEEPSEEK_MODEL_LOW", "deepseek-v4-flash")
     deepseek_model_mid: str = os.environ.get("DEEPSEEK_MODEL_MID", "deepseek-v4-pro")
+
+    # Gemini（Google Generative Language API）—— YouTube 视频理解 + 字幕文本总结（「YouTube 观点」模块）
+    # 一把 Google key 可两用：同一 GCP 项目启用 Generative Language API + YouTube Data API v3 即可
+    # （GEMINI_API_KEY / YOUTUBE_API_KEY 单独设则优先，否则都回退到 GOOGLE_API_KEY）。
+    gemini_api_key: str = os.environ.get("GEMINI_API_KEY", "") or os.environ.get("GOOGLE_API_KEY", "")
+    # 注：免费档各模型「每天请求数」差异极大——3.5-flash 仅 20/天、2.0-flash 已降为 0/天，
+    # 2.5-flash 仍有可用额度且支持视频理解，故默认用它（要换在 .env 设 GEMINI_MODEL）。
+    gemini_model: str = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+    gemini_base_url: str = os.environ.get(
+        "GEMINI_BASE_URL", "https://generativelanguage.googleapis.com/v1beta"
+    )
+    # YouTube Data API v3 —— 视频发现（按标的近 24h 搜，配额 1万 units/天）
+    youtube_api_key: str = os.environ.get("YOUTUBE_API_KEY", "") or os.environ.get("GOOGLE_API_KEY", "")
+    # 「YouTube 观点」预算：每天原生看视频的总分钟上限（Gemini 限 8h/天=480min；留余量）
+    yt_daily_video_minutes: int = field(default_factory=lambda: _int("YT_DAILY_VIDEO_MINUTES", 420))
+    yt_min_views: int = field(default_factory=lambda: _int("YT_MIN_VIEWS", 1000))
 
     ingest_post_limit: int = field(default_factory=lambda: _int("INGEST_POST_LIMIT", 120))
     ingest_comment_min_score: int = field(
@@ -98,6 +115,14 @@ class Settings:
     @property
     def has_deepseek(self) -> bool:
         return bool(self.deepseek_api_key)
+
+    @property
+    def has_gemini(self) -> bool:
+        return bool(self.gemini_api_key)
+
+    @property
+    def has_youtube(self) -> bool:
+        return bool(self.youtube_api_key)
 
 
 @lru_cache(maxsize=1)

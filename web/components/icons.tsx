@@ -17,6 +17,8 @@ export const IconSearch = (p: P) => <S {...p}><circle cx="11" cy="11" r="7" /><p
 export const IconPulse = (p: P) => <S {...p}><path d="M3 12h4l2-7 4 14 2-7h6" /></S>;
 export const IconArrow = (p: P) => <S {...p}><path d="M5 12h14M13 6l6 6-6 6" /></S>;
 export const IconFlame = (p: P) => <S {...p}><path d="M12 3c1 4 4 5 4 9a4 4 0 0 1-8 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3 0-5-2-7z" /></S>;
+// 追踪/自选：星标
+export const IconStar = (p: P) => <S {...p}><path d="M12 3.5l2.6 5.27 5.82.85-4.21 4.1.99 5.78L12 16.77l-5.2 2.73.99-5.78-4.21-4.1 5.82-.85z" /></S>;
 // 中概·港股入口图标：¥ 置于圆环内
 export const IconYuan = (p: P) => <S {...p}><circle cx="12" cy="12" r="9" /><path d="M9 8l3 4 3-4M12 12v5M9.5 13.5h5M9.5 16h5" /></S>;
 // 折叠箭头（向下）；展开态由 group-open:rotate-180 翻转

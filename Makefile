@@ -152,6 +152,60 @@ gr:
 gr-quote:
 	$(MANAGE) gr-quote
 
+# YouTube 观点：按标的搜近 24h、浏览量>1000 的视频（全语种）→ Gemini 混合分析 → 标的页模块。
+# 需 YOUTUBE_API_KEY + GEMINI_API_KEY。无 key 验证：make youtube-mock
+youtube:
+	$(MANAGE) youtube-crawl --since-hours 24
+	$(MANAGE) youtube-tag --top-native 2
+	@echo "" && echo "✅ YouTube 观点完成。出站：make site（标的页「YouTube 观点」模块）。"
+
+# 零成本版（多语种样本，无需 YouTube/Gemini key）——验证 schema 与看板渲染
+youtube-mock:
+	$(MANAGE) youtube-crawl --mock
+	$(MANAGE) youtube-tag --mock
+
+# KOL 个体观点 AI 提炼+双语：把 reddit/x/雪球 照搬的原文 → 「为什么看多/看空 + 2-3 要点」(zh/en) → kol_refined。
+# 只提炼每标的每源 top-N(默认 20)；增量(只补未提炼)。YouTube 复用 yt_analysis 无需在此。需 DEEPSEEK_API_KEY。
+# 本地：DATABASE_URL='sqlite:///./data/dev.db' make kol-refine
+kol-refine:
+	$(MANAGE) kol-refine --per-source 20
+	@echo "" && echo "✅ KOL 观点提炼完成。出站：make site（标的页象限①「个体观点·KOL」展示 reason+要点）。"
+
+# KOL 个体观点 视角分类：把已蒸馏观点(kol_refined + yt_analysis) → 7 视角标签(1-3 个) → kol_viewpoint。
+# 增量(只补未分类)；无明确观点的直接记 other 省调用。需 DEEPSEEK_API_KEY。先跑 kol-refine 再跑本目标。
+# 本地：DATABASE_URL='sqlite:///./data/dev.db' make kol-viewpoint
+kol-viewpoint:
+	$(MANAGE) kol-viewpoint
+	@echo "" && echo "✅ KOL 视角分类完成。出站：make site（标的页 KOL 模块『按视角』视图）。"
+
+# KOL 论点综合：把已分类观点(kol_refined+kol_viewpoint+yt_analysis) → 每 标的×视角×立场 聚成 1-3 个论点 → kol_argument。
+# 增量(只补未综合的组)；单条观点的组不花 LLM。需 DEEPSEEK_API_KEY。先跑 kol-refine + kol-viewpoint 再跑本目标。
+# 本地：DATABASE_URL='sqlite:///./data/dev.db' make kol-argument
+kol-argument:
+	$(MANAGE) kol-argument
+	@echo "" && echo "✅ KOL 论点综合完成。出站：make site（标的页 KOL 模块『按视角』下的论点）。"
+
+# KOL 原帖完整忠实翻译（逐句直译、不压缩）→ kol_refined.trans_zh/en。供『按视角·原帖流』的「译」选项。
+# 与提炼解耦、可独立重跑；只译已展示(已提炼)的原帖。增量(只补未译)；需 QWEN_API_KEY。
+# 本地：DATABASE_URL='sqlite:///./data/dev.db' make kol-translate
+kol-translate:
+	$(MANAGE) kol-translate --per-source 200 --since-days 30
+	@echo "" && echo "✅ KOL 原帖翻译完成。出站：make site（标的页『按视角』原帖卡的「译」选项）。"
+
+# KOL 相关性打分：给每条帖文/视频 与标的的相关度打 0-100(越高越相关) → kol_relevance。供『按相关性』筛选/排序。
+# 覆盖 reddit/x/xueqiu(已展示项)+youtube；增量(只补未打分)；需 QWEN_API_KEY。
+# 本地：DATABASE_URL='sqlite:///./data/dev.db' make kol-relevance
+kol-relevance:
+	$(MANAGE) kol-relevance --per-source 200 --since-days 30
+	@echo "" && echo "✅ KOL 相关性打分完成。出站：make site（标的页『按相关性』排序）。"
+
+# KOL 帖子质量打分：给每条帖文/视频本身的含金量打 0-100(与标的无关、按 source+item 去重) → kol_quality。
+# 供观点浏览器『只看高质量』开关。覆盖 reddit/x/xueqiu+youtube；增量；需 QWEN_API_KEY。
+# 本地：DATABASE_URL='sqlite:///./data/dev.db' make kol-quality
+kol-quality:
+	$(MANAGE) kol-quality --per-source 800 --since-days 35
+	@echo "" && echo "✅ KOL 帖子质量打分完成。出站：make site（标的页『只看高质量』开关）。"
+
 # 零成本版（mock 启发式，无需 AI key）
 asia-mock:
 	$(MANAGE) asia-crawl --per-board 80 --since-days 7

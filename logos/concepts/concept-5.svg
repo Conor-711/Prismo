@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 512" role="img" aria-label="prismo">
+  <!-- 5 Overlap — two soft rings meet; the bright dot is the consensus where communities agree. -->
+  <g id="icon" fill="none">
+    <circle cx="150" cy="258" r="66" stroke="#ECEDED" stroke-width="14"/>
+    <circle cx="220" cy="258" r="66" stroke="#ECEDED" stroke-width="14"/>
+    <circle cx="185" cy="258" r="22" fill="#57D7BA"/>
+  </g>
+  <text id="wordmark" x="330" y="306" font-family="'Avenir Next','Futura','Century Gothic','Segoe UI',system-ui,sans-serif" font-size="146" font-weight="600" letter-spacing="-1" fill="#ECEDED">prismo</text>
+</svg>

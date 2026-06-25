@@ -1,0 +1,3 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" role="img" aria-label="prismo">
+<line x1="70" y1="124" x2="70" y2="188" stroke="#ECEDED" stroke-width="10" stroke-linecap="round" stroke-opacity="0.55"/><line x1="230" y1="124" x2="230" y2="188" stroke="#ECEDED" stroke-width="10" stroke-linecap="round" stroke-opacity="0.55"/><ellipse cx="150" cy="188" rx="80" ry="20" fill="none" stroke="#ECEDED" stroke-width="10"/><ellipse cx="150" cy="156" rx="80" ry="20" fill="none" stroke="#ECEDED" stroke-width="10"/><ellipse cx="150" cy="124" rx="80" ry="20" fill="none" stroke="#57D7BA" stroke-width="10"/>
+</svg>

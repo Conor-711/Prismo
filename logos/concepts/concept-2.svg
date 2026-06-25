@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 512" role="img" aria-label="prismo">
+  <!-- 2 Orbit / Constellation — five communities orbit one core; the top one is the live signal. -->
+  <g id="icon">
+    <circle cx="185" cy="258" r="74" fill="none" stroke="#ECEDED" stroke-width="4" opacity="0.5"/>
+    <circle cx="185" cy="258" r="9" fill="#ECEDED" opacity="0.6"/>
+    <circle cx="185" cy="184" r="15" fill="#57D7BA"/>
+    <circle cx="255.4" cy="235.1" r="15" fill="#ECEDED"/>
+    <circle cx="228.5" cy="317.9" r="15" fill="#ECEDED"/>
+    <circle cx="141.5" cy="317.9" r="15" fill="#ECEDED"/>
+    <circle cx="114.6" cy="235.1" r="15" fill="#ECEDED"/>
+  </g>
+  <text id="wordmark" x="330" y="306" font-family="'Avenir Next','Futura','Century Gothic','Segoe UI',system-ui,sans-serif" font-size="146" font-weight="600" letter-spacing="-1" fill="#ECEDED">prismo</text>
+</svg>

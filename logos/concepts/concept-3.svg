@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 512" role="img" aria-label="prismo">
+  <!-- 3 Monogram 'p' — soft monoline lowercase p, circular bowl, a lens dot in the counter. Most brandable. -->
+  <g id="icon" fill="none" stroke="#ECEDED" stroke-linecap="round">
+    <line x1="150" y1="177" x2="150" y2="339" stroke-width="22"/>
+    <circle cx="196" cy="227" r="50" stroke-width="22"/>
+  </g>
+  <circle cx="196" cy="227" r="16" fill="#57D7BA"/>
+  <text id="wordmark" x="300" y="306" font-family="'Avenir Next','Futura','Century Gothic','Segoe UI',system-ui,sans-serif" font-size="146" font-weight="600" letter-spacing="-1" fill="#ECEDED">prismo</text>
+</svg>

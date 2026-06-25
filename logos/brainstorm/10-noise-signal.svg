@@ -1,0 +1,3 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" role="img" aria-label="prismo">
+<rect x="60" y="136.0" width="8" height="28" rx="4" fill="#ECEDED" fill-opacity="0.45"/><rect x="78" y="124.0" width="8" height="52" rx="4" fill="#ECEDED" fill-opacity="0.5"/><rect x="96" y="132.0" width="8" height="36" rx="4" fill="#ECEDED" fill-opacity="0.45"/><rect x="114" y="118.0" width="8" height="64" rx="4" fill="#ECEDED" fill-opacity="0.5"/><rect x="132" y="128.0" width="8" height="44" rx="4" fill="#ECEDED" fill-opacity="0.45"/><path d="M150 150 Q180 150 200 150" fill="none" stroke="#ECEDED" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.4"/><rect x="212" y="70" width="26" height="160" rx="13" fill="#57D7BA"/>
+</svg>

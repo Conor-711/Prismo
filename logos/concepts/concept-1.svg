@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 512" role="img" aria-label="prismo">
+  <!-- 1 Lens / Focus — a clean ring (aperture) focusing onto one signal dot. Round, calm, optical. -->
+  <g id="icon" fill="none">
+    <circle cx="185" cy="258" r="76" stroke="#ECEDED" stroke-width="17"/>
+    <circle cx="185" cy="258" r="27" fill="#57D7BA"/>
+  </g>
+  <text id="wordmark" x="325" y="306" font-family="'Avenir Next','Futura','Century Gothic','Segoe UI',system-ui,sans-serif" font-size="146" font-weight="600" letter-spacing="-1" fill="#ECEDED">prismo</text>
+</svg>

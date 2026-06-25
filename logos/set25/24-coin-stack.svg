@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="prismo">
+<rect width="512" height="512" rx="120" fill="#1B1E22"/>
+<line x1="164" y1="224" x2="164" y2="322" stroke="#F4F5F5" stroke-width="12" stroke-linecap="round"/><line x1="348" y1="224" x2="348" y2="322" stroke="#F4F5F5" stroke-width="12" stroke-linecap="round"/><ellipse cx="256" cy="322" rx="92" ry="24" fill="none" stroke="#F4F5F5" stroke-width="12"/><ellipse cx="256" cy="272" rx="92" ry="24" fill="none" stroke="#F4F5F5" stroke-width="12"/><ellipse cx="256" cy="222" rx="92" ry="24" fill="none" stroke="#57D7BA" stroke-width="12"/>
+</svg>

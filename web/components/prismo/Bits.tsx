@@ -60,7 +60,7 @@ export function StanceBar({ bull, bear, neutral, className = "" }: { bull: numbe
     <div className={`flex h-1.5 w-full overflow-hidden rounded-full bg-white/[.05] ${className}`}>
       <span style={{ width: `${b}%`, background: "#57D7BA" }} />
       <span style={{ width: `${n}%`, background: "#7A8A96" }} />
-      <span style={{ width: `${r}%`, background: "#fe5555" }} />
+      <span style={{ width: `${r}%`, background: "#FF5C6C" }} />
     </div>
   );
 }
