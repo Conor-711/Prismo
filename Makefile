@@ -4,7 +4,7 @@ MANAGE := $(PY) -m pipeline.manage
 
 .PHONY: install venv db-init migrate seed seed-cn sample ingest refresh extract analyze analyze-mock \
         rollup narratives brief worker daily daily-build cn-backfill demo stats test web-install web-dev clean help \
-        asia asia-mock
+        asia asia-mock mindshare-dashboard
 
 help:
 	@echo "Reddit 版 Kaito Pro — 常用命令"
@@ -23,6 +23,7 @@ help:
 	@echo "  make seed-cn       seed 中概/港股/A 股字典"
 	@echo "  make cn-backfill   回填中概·港股语料（爬30天+AI打标+双market聚合+翻译）"
 	@echo "  make worker        启动调度：每天 UTC+8 08:00 自动跑 daily-build"
+	@echo "  make mindshare-dashboard  从 SQLite + 可选 forum_mindshare.json 生成纯 HTML 实验面板"
 	@echo "  --- Web ---"
 	@echo "  make web-install   安装前端依赖    make web-dev  启动 Next.js"
 
@@ -257,6 +258,11 @@ stats:
 
 test:
 	$(PY) -m pytest -q
+
+# 从当前 SQLite 快照 + 可选 forum_mindshare.json 生成单文件实验看板：根目录 dashboard.html。
+# 可用 python3 -m http.server 8787 --directory . 打开 /dashboard.html。
+mindshare-dashboard:
+	$(PY) experiments/build_mindshare_dashboard.py
 
 # ---------- Web ----------
 web-install:
