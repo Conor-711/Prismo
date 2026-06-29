@@ -59,11 +59,26 @@ def main() -> None:
              open REAL, high REAL, low REAL, close REAL, volume INTEGER,
              PRIMARY KEY (ticker, day))"""
     )
-    # 标的全集：gr_ticker 优先，ticker_meta 兜底
-    tickers = [r[0] for r in con.execute("SELECT ticker FROM gr_ticker").fetchall()]
-    if not tickers:
-        tickers = [r[0] for r in con.execute("SELECT symbol FROM ticker_meta").fetchall()]
-    print(f"[price_daily] db={db} 标的数={len(tickers)}")
+    # 标的全集：gr_ticker（详情页折线）∪ yt_video（YouTube 作者页「含权标的表现」需覆盖其点过的票）
+    # ∪ SPY（大盘基准，算超额收益/「跑赢大盘」）。ticker_meta 兜底（云端快照两表皆空时）。
+    seen: dict[str, None] = {}
+
+    def _add(rows: list) -> None:
+        for r in rows:
+            t = (r[0] or "").strip().upper()
+            if t:
+                seen.setdefault(t, None)
+
+    _add(con.execute("SELECT ticker FROM gr_ticker").fetchall())
+    try:
+        _add(con.execute("SELECT DISTINCT ticker FROM yt_video WHERE ticker <> ''").fetchall())
+    except sqlite3.OperationalError:
+        pass  # 快照无 yt_video 表 → 跳过
+    if not seen:
+        _add(con.execute("SELECT symbol FROM ticker_meta").fetchall())
+    seen.setdefault("SPY", None)  # 基准
+    tickers = list(seen.keys())
+    print(f"[price_daily] db={db} 标的数={len(tickers)}（含 SPY 基准 + YouTube 标的）")
 
     ok = 0
     for t in tickers:

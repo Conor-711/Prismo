@@ -55,11 +55,8 @@ def run_daily(rebuild: bool = False) -> None:
 
     started = dt.datetime.now()
     use_qwen = settings.has_qwen          # 高档：逐帖投资打标（千问思考模式）
-    mid_mock = not settings.has_deepseek  # 中档：叙事聚类 / 每日简报（DeepSeek deepseek-v4-pro）
-    providers = "+".join(
-        ([f"千问({settings.qwen_model})"] if use_qwen else [])
-        + ([f"DeepSeek({settings.deepseek_model_mid})"] if not mid_mock else [])
-    ) or "mock 启发式"
+    mid_mock = not settings.has_qwen      # 中档：叙事聚类 / 每日简报（已切千问 qwen3.7-plus）
+    providers = (f"千问({settings.qwen_model})" if use_qwen else "mock 启发式")
     print(f"[daily] 开始：过去 {WINDOW_DAYS*24} 小时分析（{providers}）— {started:%Y-%m-%d %H:%M %z}")
 
     init_db()
@@ -101,8 +98,8 @@ def run_daily(rebuild: bool = False) -> None:
     _safe("brief", run_brief, mock=mid_mock)
 
     # 4) 低档：翻译成简体中文（标题/正文/AI 摘要/评论 → *_zh），保证 zh 模式 100% 中文。
-    #    走 DeepSeek deepseek-v4-flash；缺 key 则跳过（_safe 兜底）。
-    if settings.has_deepseek:
+    #    走千问 LOW 档 qwen-flash（统一档位路由）；缺 key 则跳过（_safe 兜底）。
+    if settings.has_qwen:
         from .analyze.translate import run as run_translate
         _safe("translate", run_translate, {"posts", "analysis", "comments"}, None)
 

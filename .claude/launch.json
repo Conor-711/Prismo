@@ -6,6 +6,12 @@
       "runtimeExecutable": "/Users/windz7z/.nvm/versions/node/v22.22.2/bin/node",
       "runtimeArgs": ["/Users/windz7z/.nvm/versions/node/v22.22.2/lib/node_modules/npm/bin/npm-cli.js", "--prefix", "web", "run", "dev"],
       "port": 3000
+    },
+    {
+      "name": "out",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8137", "--directory", "web/out"],
+      "port": 8137
     }
   ]
 }

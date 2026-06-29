@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { PageHeader, Panel } from "@/components/ui";
 import { TickerTable } from "@/components/prismo/TickerTable";
+import { KolRankBoards } from "@/components/prismo/KolRankBoards";
 import { getGrTickers } from "@/lib/globalQueries";
+import { getKolBullBearBoards, getKolSentimentSwings } from "@/lib/kolQueries";
 import { isLocale, defaultLocale, type Locale } from "@/lib/i18n";
 
 export function generateMetadata({ params }: { params: { lang: string } }): Metadata {
@@ -13,6 +15,8 @@ export default function TickersPage({ params }: { params: { lang: string } }) {
   const lang: Locale = isLocale(params.lang) ? params.lang : defaultLocale;
   const zh = lang === "zh";
   const rows = getGrTickers();
+  const { bullish, bearish } = getKolBullBearBoards();
+  const swings = getKolSentimentSwings();
 
   return (
     <div className="space-y-6">
@@ -25,6 +29,8 @@ export default function TickersPage({ params }: { params: { lang: string } }) {
             : `${rows.length} cross-region US tickers — avg sentiment, regions covered and cross-region spread. Click headers to sort.`
         }
       />
+      {/* KOL 看多 / 看空 / 情绪变化最大 标的排行榜（各前 5，按近 14 天 KOL 净情绪 / 看多占比变化） */}
+      <KolRankBoards bullish={bullish} bearish={bearish} swings={swings} />
       {rows.length ? (
         <TickerTable rows={rows} lang={lang} />
       ) : (
