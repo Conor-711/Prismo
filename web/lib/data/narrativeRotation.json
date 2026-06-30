@@ -1,0 +1,5661 @@
+{
+  "version": 1,
+  "updated_at": "2026-06-30T10:04:21Z",
+  "window": {
+    "start": "2026-06-08",
+    "end": "2026-06-28",
+    "days": [
+      "2026-06-08",
+      "2026-06-09",
+      "2026-06-10",
+      "2026-06-11",
+      "2026-06-12",
+      "2026-06-13",
+      "2026-06-14",
+      "2026-06-15",
+      "2026-06-16",
+      "2026-06-17",
+      "2026-06-18",
+      "2026-06-19",
+      "2026-06-20",
+      "2026-06-21",
+      "2026-06-22",
+      "2026-06-23",
+      "2026-06-24",
+      "2026-06-25",
+      "2026-06-26",
+      "2026-06-27",
+      "2026-06-28"
+    ]
+  },
+  "sourceLabels": {
+    "reddit": {
+      "zh": "Reddit",
+      "en": "Reddit"
+    },
+    "x": {
+      "zh": "X",
+      "en": "X"
+    },
+    "youtube": {
+      "zh": "YouTube",
+      "en": "YouTube"
+    },
+    "xueqiu": {
+      "zh": "雪球",
+      "en": "Xueqiu"
+    },
+    "yahoo_jp": {
+      "zh": "Yahoo 日本",
+      "en": "Yahoo JP"
+    },
+    "naver": {
+      "zh": "Naver",
+      "en": "Naver"
+    },
+    "ptt": {
+      "zh": "PTT",
+      "en": "PTT"
+    },
+    "toss": {
+      "zh": "Toss",
+      "en": "Toss"
+    }
+  },
+  "categories": [
+    {
+      "id": "ai_cloud",
+      "slug": "ai-cloud",
+      "title": {
+        "zh": "AI、云与数据中心",
+        "en": "AI, cloud & data centers"
+      },
+      "description": {
+        "zh": "AI 应用、云平台、企业软件、数据中心服务器与算力基础设施板块。",
+        "en": "AI apps, cloud platforms, enterprise software, data-center servers and compute infrastructure."
+      },
+      "color": "#57D7BA",
+      "tickers": [
+        "PLTR",
+        "ORCL",
+        "MSFT",
+        "DELL",
+        "SMCI",
+        "CRWV",
+        "NBIS",
+        "IBM",
+        "SNOW",
+        "CRM",
+        "NOW",
+        "ADBE"
+      ],
+      "themes": [
+        "AI",
+        "AI 资本开支",
+        "人工智能",
+        "算力"
+      ],
+      "keywords": [
+        "ai",
+        "artificial intelligence",
+        "llm",
+        "inference",
+        "data center",
+        "datacenter",
+        "compute",
+        "cloud",
+        "saas",
+        "enterprise software",
+        "人工智能",
+        "算力",
+        "数据中心",
+        "推理",
+        "大模型",
+        "云计算",
+        "企业软件",
+        "ai投資",
+        "データセンター",
+        "クラウド",
+        "인공지능",
+        "데이터센터",
+        "클라우드"
+      ]
+    },
+    {
+      "id": "semiconductors",
+      "slug": "semiconductors",
+      "title": {
+        "zh": "半导体与芯片链",
+        "en": "Semiconductors & chips"
+      },
+      "description": {
+        "zh": "GPU、存储、晶圆代工、EDA、设备、封装与先进制程板块。",
+        "en": "GPUs, memory, foundries, EDA, equipment, packaging and advanced process nodes."
+      },
+      "color": "#78A7FF",
+      "tickers": [
+        "NVDA",
+        "AMD",
+        "INTC",
+        "TSM",
+        "ASML",
+        "AVGO",
+        "QCOM",
+        "MU",
+        "ARM",
+        "MRVL",
+        "AMAT",
+        "LRCX",
+        "SMH",
+        "SNDK"
+      ],
+      "themes": [
+        "半导体",
+        "芯片"
+      ],
+      "keywords": [
+        "semiconductor",
+        "chip",
+        "chips",
+        "gpu",
+        "cuda",
+        "foundry",
+        "fab",
+        "wafer",
+        "memory",
+        "hbm",
+        "dram",
+        "node",
+        "lithography",
+        "制程",
+        "晶圆",
+        "芯片",
+        "半导体",
+        "存储",
+        "封装",
+        "晶片",
+        "半導体",
+        "メモリ",
+        "반도체",
+        "칩",
+        "메모리"
+      ]
+    },
+    {
+      "id": "mega_platforms",
+      "slug": "mega-platforms",
+      "title": {
+        "zh": "大型平台与互联网",
+        "en": "Mega platforms & internet"
+      },
+      "description": {
+        "zh": "消费互联网、广告、电商、流媒体、应用生态与大型科技平台板块。",
+        "en": "Consumer internet, ads, e-commerce, streaming, app ecosystems and mega-cap platforms."
+      },
+      "color": "#4CC9F0",
+      "tickers": [
+        "AAPL",
+        "GOOGL",
+        "GOOG",
+        "META",
+        "AMZN",
+        "NFLX",
+        "DIS",
+        "SHOP",
+        "BABA",
+        "PDD",
+        "JD",
+        "0700.HK",
+        "RDDT",
+        "UBER",
+        "ABNB"
+      ],
+      "themes": [
+        "平台互联网",
+        "电商"
+      ],
+      "keywords": [
+        "internet",
+        "platform",
+        "ecommerce",
+        "e-commerce",
+        "advertising",
+        "streaming",
+        "subscriber",
+        "app store",
+        "iphone",
+        "android",
+        "social media",
+        "互联网",
+        "平台",
+        "电商",
+        "广告",
+        "流媒体",
+        "应用生态",
+        "订阅",
+        "スマホ",
+        "広告",
+        "電子商取引",
+        "플랫폼",
+        "전자상거래",
+        "광고"
+      ]
+    },
+    {
+      "id": "ev_autonomy",
+      "slug": "ev-autonomy",
+      "title": {
+        "zh": "电动车与智能驾驶",
+        "en": "EVs & autonomy"
+      },
+      "description": {
+        "zh": "电动车整车、Robotaxi、电池、自动驾驶、补能网络与智能座舱板块。",
+        "en": "EV makers, robotaxi, batteries, autonomy, charging networks and smart cockpits."
+      },
+      "color": "#32C88F",
+      "tickers": [
+        "TSLA",
+        "NIO",
+        "RIVN",
+        "LCID",
+        "F",
+        "GM",
+        "XPEV",
+        "LI",
+        "1211.HK",
+        "1810.HK",
+        "300750.SZ",
+        "UBER"
+      ],
+      "themes": [
+        "电动车",
+        "自动驾驶"
+      ],
+      "keywords": [
+        "ev",
+        "electric vehicle",
+        "robotaxi",
+        "fsd",
+        "autonomous",
+        "battery",
+        "charging",
+        "electric car",
+        "电动车",
+        "自动驾驶",
+        "电池",
+        "充电",
+        "机器人出租车",
+        "智能驾驶",
+        "電気自動車",
+        "自動運転",
+        "バッテリー",
+        "전기차",
+        "배터리",
+        "로보택시",
+        "자율주행"
+      ]
+    },
+    {
+      "id": "energy_power",
+      "slug": "energy-power",
+      "title": {
+        "zh": "能源、电力与核能",
+        "en": "Energy, power & nuclear"
+      },
+      "description": {
+        "zh": "油气、光伏、储能、电网、公用事业、核能与电力基础设施板块。",
+        "en": "Oil & gas, solar, storage, grid, utilities, nuclear and power infrastructure."
+      },
+      "color": "#F7C948",
+      "tickers": [
+        "XOM",
+        "CVX",
+        "USO",
+        "ENPH",
+        "FSLR",
+        "OKLO",
+        "CEG",
+        "VST",
+        "NEE",
+        "SMR",
+        "CCJ",
+        "GEV"
+      ],
+      "themes": [
+        "能源",
+        "核能"
+      ],
+      "keywords": [
+        "energy",
+        "oil",
+        "gas",
+        "solar",
+        "nuclear",
+        "uranium",
+        "power",
+        "grid",
+        "utility",
+        "utilities",
+        "storage",
+        "能源",
+        "原油",
+        "天然气",
+        "光伏",
+        "核能",
+        "铀",
+        "电网",
+        "电力",
+        "储能",
+        "エネルギー",
+        "原油",
+        "原子力",
+        "電力",
+        "에너지",
+        "원전",
+        "전력"
+      ]
+    },
+    {
+      "id": "crypto_fintech",
+      "slug": "crypto-fintech",
+      "title": {
+        "zh": "加密资产与金融科技",
+        "en": "Crypto assets & fintech"
+      },
+      "description": {
+        "zh": "比特币、稳定币、交易所、矿企、支付、数字券商与零售交易板块。",
+        "en": "Bitcoin, stablecoins, exchanges, miners, payments, brokers and retail trading rails."
+      },
+      "color": "#E0A33E",
+      "tickers": [
+        "MSTR",
+        "COIN",
+        "SOFI",
+        "HOOD",
+        "PYPL",
+        "SQ",
+        "RIOT",
+        "MARA",
+        "IBIT",
+        "BTC",
+        "ETH"
+      ],
+      "themes": [
+        "加密",
+        "金融科技"
+      ],
+      "keywords": [
+        "bitcoin",
+        "btc",
+        "crypto",
+        "ethereum",
+        "eth",
+        "stablecoin",
+        "coinbase",
+        "fintech",
+        "broker",
+        "payment",
+        "wallet",
+        "比特币",
+        "加密",
+        "以太坊",
+        "稳定币",
+        "金融科技",
+        "券商",
+        "支付",
+        "暗号資産",
+        "仮想通貨",
+        "비트코인",
+        "가상자산",
+        "핀테크"
+      ]
+    },
+    {
+      "id": "financials",
+      "slug": "financials",
+      "title": {
+        "zh": "金融、银行与支付",
+        "en": "Financials, banks & payments"
+      },
+      "description": {
+        "zh": "大型银行、投行、保险、信用卡网络、资产管理与综合金融板块。",
+        "en": "Large banks, investment banks, insurers, card networks, asset managers and diversified financials."
+      },
+      "color": "#9E8CFF",
+      "tickers": [
+        "JPM",
+        "BAC",
+        "GS",
+        "MS",
+        "WFC",
+        "C",
+        "BRK.B",
+        "V",
+        "MA",
+        "AXP",
+        "BLK",
+        "SCHW"
+      ],
+      "themes": [
+        "金融",
+        "银行"
+      ],
+      "keywords": [
+        "bank",
+        "banks",
+        "financial",
+        "credit card",
+        "payments",
+        "asset management",
+        "insurance",
+        "金融",
+        "银行",
+        "投行",
+        "信用卡",
+        "支付网络",
+        "保险",
+        "资产管理",
+        "銀行",
+        "金融株",
+        "은행",
+        "금융",
+        "보험"
+      ]
+    },
+    {
+      "id": "healthcare_biotech",
+      "slug": "healthcare-biotech",
+      "title": {
+        "zh": "医药、医疗与生物科技",
+        "en": "Healthcare, pharma & biotech"
+      },
+      "description": {
+        "zh": "制药、生物科技、医疗服务、器械、减重药与临床管线板块。",
+        "en": "Pharma, biotech, healthcare services, devices, obesity drugs and clinical pipelines."
+      },
+      "color": "#F26FD4",
+      "tickers": [
+        "PFE",
+        "LLY",
+        "MRNA",
+        "NVO",
+        "JNJ",
+        "ABBV",
+        "UNH",
+        "ISRG",
+        "VRTX",
+        "REGN",
+        "MRK",
+        "TMO"
+      ],
+      "themes": [
+        "医药",
+        "生物科技"
+      ],
+      "keywords": [
+        "pharma",
+        "biotech",
+        "healthcare",
+        "drug",
+        "vaccine",
+        "obesity",
+        "glp-1",
+        "clinical trial",
+        "fda",
+        "医药",
+        "医疗",
+        "生物科技",
+        "药物",
+        "疫苗",
+        "减重药",
+        "临床",
+        "バイオ",
+        "医薬",
+        "헬스케어",
+        "바이오",
+        "제약"
+      ]
+    },
+    {
+      "id": "space_defense",
+      "slug": "space-defense",
+      "title": {
+        "zh": "航天、国防与工业",
+        "en": "Space, defense & industrials"
+      },
+      "description": {
+        "zh": "商业航天、卫星、航空、国防军工、工业自动化与先进制造板块。",
+        "en": "Commercial space, satellites, aerospace, defense, industrial automation and advanced manufacturing."
+      },
+      "color": "#FF5C6C",
+      "tickers": [
+        "BA",
+        "RKLB",
+        "ASTS",
+        "SPCE",
+        "ACHR",
+        "RDW",
+        "LMT",
+        "NOC",
+        "RTX",
+        "GD",
+        "GE",
+        "KTOS"
+      ],
+      "themes": [
+        "航天",
+        "国防"
+      ],
+      "keywords": [
+        "space",
+        "satellite",
+        "rocket",
+        "aerospace",
+        "defense",
+        "drone",
+        "industrial",
+        "manufacturing",
+        "航天",
+        "卫星",
+        "火箭",
+        "航空",
+        "国防",
+        "军工",
+        "工业",
+        "制造",
+        "宇宙",
+        "防衛",
+        "항공우주",
+        "방산",
+        "위성"
+      ]
+    },
+    {
+      "id": "retail_momentum",
+      "slug": "retail-momentum",
+      "title": {
+        "zh": "散户高波动股",
+        "en": "Retail momentum stocks"
+      },
+      "description": {
+        "zh": "散户交易活跃、Meme 股、逼空候选与高波动小盘成长板块。",
+        "en": "Retail-heavy, meme-stock, squeeze-candidate and high-volatility small-cap growth names."
+      },
+      "color": "#B7C0C7",
+      "tickers": [
+        "GME",
+        "AMC",
+        "KOSS",
+        "DJT",
+        "BB",
+        "SPCE",
+        "SPCX",
+        "LCID",
+        "RDDT"
+      ],
+      "themes": [
+        "逼空 / Meme",
+        "Meme"
+      ],
+      "keywords": [
+        "meme",
+        "short squeeze",
+        "squeeze",
+        "gamma",
+        "wsb",
+        "wallstreetbets",
+        "yolo",
+        "hodl",
+        "to the moon",
+        "diamond hands",
+        "short interest",
+        "逼空",
+        "空头挤压",
+        "散户抱团",
+        "妖股",
+        "韭菜",
+        "月球",
+        "踏み上げ",
+        "ショートスクイーズ",
+        "숏스퀴즈",
+        "개미"
+      ]
+    },
+    {
+      "id": "index_etf",
+      "slug": "index-etf",
+      "title": {
+        "zh": "指数 ETF 与大盘风格",
+        "en": "Index ETFs & market style"
+      },
+      "description": {
+        "zh": "宽基指数、行业 ETF、杠杆 ETF、避险资产与市场风格轮动板块。",
+        "en": "Broad indexes, sector ETFs, leveraged ETFs, hedges and market-style rotation."
+      },
+      "color": "#8CCB5E",
+      "tickers": [
+        "SPY",
+        "QQQ",
+        "VOO",
+        "VTI",
+        "TQQQ",
+        "TLT",
+        "GLD",
+        "DIA",
+        "IWM",
+        "SPX",
+        "SMH",
+        "USO"
+      ],
+      "themes": [
+        "ETF",
+        "指数"
+      ],
+      "keywords": [
+        "index",
+        "etf",
+        "nasdaq",
+        "s&p",
+        "sp500",
+        "market",
+        "sector rotation",
+        "指数",
+        "宽基",
+        "大盘",
+        "行业轮动",
+        "杠杆etf",
+        "市場",
+        "指数",
+        "섹터",
+        "지수",
+        "etf"
+      ]
+    }
+  ],
+  "summary": {
+    "active": 11,
+    "totalVolume": 22416,
+    "topNarrative": "ai_cloud",
+    "windowDays": 21,
+    "recentDays": 7
+  },
+  "leaderboard": [
+    {
+      "id": "ai_cloud",
+      "slug": "ai-cloud",
+      "title": {
+        "zh": "AI、云与数据中心",
+        "en": "AI, cloud & data centers"
+      },
+      "color": "#57D7BA",
+      "rank": 1,
+      "previousRank": 1,
+      "rankDelta": 0,
+      "volume": 6675,
+      "share": 0.9376,
+      "shareDelta": 0.5078,
+      "sentiment": -0.462,
+      "sentimentDelta": -0.349,
+      "trend": "turning_bear",
+      "topTickers": [
+        {
+          "ticker": "PLTR",
+          "count": 9532
+        },
+        {
+          "ticker": "MSFT",
+          "count": 595
+        },
+        {
+          "ticker": "ORCL",
+          "count": 492
+        },
+        {
+          "ticker": "SMCI",
+          "count": 382
+        },
+        {
+          "ticker": "NVDA",
+          "count": 124
+        },
+        {
+          "ticker": "GOOGL",
+          "count": 110
+        }
+      ]
+    },
+    {
+      "id": "semiconductors",
+      "slug": "semiconductors",
+      "title": {
+        "zh": "半导体与芯片链",
+        "en": "Semiconductors & chips"
+      },
+      "color": "#78A7FF",
+      "rank": 2,
+      "previousRank": 2,
+      "rankDelta": 0,
+      "volume": 109,
+      "share": 0.0153,
+      "shareDelta": -0.2755,
+      "sentiment": 0.208,
+      "sentimentDelta": 0.106,
+      "trend": "cooling",
+      "topTickers": [
+        {
+          "ticker": "MU",
+          "count": 1884
+        },
+        {
+          "ticker": "NVDA",
+          "count": 749
+        },
+        {
+          "ticker": "INTC",
+          "count": 629
+        },
+        {
+          "ticker": "ARM",
+          "count": 399
+        },
+        {
+          "ticker": "AVGO",
+          "count": 371
+        },
+        {
+          "ticker": "AMD",
+          "count": 322
+        }
+      ]
+    },
+    {
+      "id": "mega_platforms",
+      "slug": "mega-platforms",
+      "title": {
+        "zh": "大型平台与互联网",
+        "en": "Mega platforms & internet"
+      },
+      "color": "#4CC9F0",
+      "rank": 3,
+      "previousRank": 4,
+      "rankDelta": 1,
+      "volume": 93,
+      "share": 0.0131,
+      "shareDelta": -0.059,
+      "sentiment": 0.148,
+      "sentimentDelta": 0.065,
+      "trend": "cooling",
+      "topTickers": [
+        {
+          "ticker": "AAPL",
+          "count": 268
+        },
+        {
+          "ticker": "GOOGL",
+          "count": 222
+        },
+        {
+          "ticker": "NFLX",
+          "count": 176
+        },
+        {
+          "ticker": "AMZN",
+          "count": 167
+        },
+        {
+          "ticker": "META",
+          "count": 128
+        },
+        {
+          "ticker": "BABA",
+          "count": 96
+        }
+      ]
+    },
+    {
+      "id": "index_etf",
+      "slug": "index-etf",
+      "title": {
+        "zh": "指数 ETF 与大盘风格",
+        "en": "Index ETFs & market style"
+      },
+      "color": "#8CCB5E",
+      "rank": 4,
+      "previousRank": 6,
+      "rankDelta": 2,
+      "volume": 60,
+      "share": 0.0084,
+      "shareDelta": -0.0165,
+      "sentiment": 0.161,
+      "sentimentDelta": 0.068,
+      "trend": "rising",
+      "topTickers": [
+        {
+          "ticker": "SPY",
+          "count": 47
+        },
+        {
+          "ticker": "QQQ",
+          "count": 31
+        },
+        {
+          "ticker": "TSLA",
+          "count": 25
+        },
+        {
+          "ticker": "GOOGL",
+          "count": 21
+        },
+        {
+          "ticker": "NVDA",
+          "count": 19
+        },
+        {
+          "ticker": "AMZN",
+          "count": 19
+        }
+      ]
+    },
+    {
+      "id": "crypto_fintech",
+      "slug": "crypto-fintech",
+      "title": {
+        "zh": "加密资产与金融科技",
+        "en": "Crypto assets & fintech"
+      },
+      "color": "#E0A33E",
+      "rank": 5,
+      "previousRank": 5,
+      "rankDelta": 0,
+      "volume": 58,
+      "share": 0.0081,
+      "shareDelta": -0.0507,
+      "sentiment": 0.179,
+      "sentimentDelta": 0.023,
+      "trend": "cooling",
+      "topTickers": [
+        {
+          "ticker": "SOFI",
+          "count": 330
+        },
+        {
+          "ticker": "MSTR",
+          "count": 241
+        },
+        {
+          "ticker": "COIN",
+          "count": 127
+        },
+        {
+          "ticker": "HOOD",
+          "count": 81
+        },
+        {
+          "ticker": "PYPL",
+          "count": 67
+        },
+        {
+          "ticker": "RIOT",
+          "count": 51
+        }
+      ]
+    },
+    {
+      "id": "ev_autonomy",
+      "slug": "ev-autonomy",
+      "title": {
+        "zh": "电动车与智能驾驶",
+        "en": "EVs & autonomy"
+      },
+      "color": "#32C88F",
+      "rank": 6,
+      "previousRank": 3,
+      "rankDelta": -3,
+      "volume": 40,
+      "share": 0.0056,
+      "shareDelta": -0.0739,
+      "sentiment": 0.097,
+      "sentimentDelta": 0.058,
+      "trend": "cooling",
+      "topTickers": [
+        {
+          "ticker": "TSLA",
+          "count": 771
+        },
+        {
+          "ticker": "NIO",
+          "count": 100
+        },
+        {
+          "ticker": "RIVN",
+          "count": 89
+        },
+        {
+          "ticker": "LCID",
+          "count": 79
+        },
+        {
+          "ticker": "F",
+          "count": 40
+        },
+        {
+          "ticker": "UBER",
+          "count": 12
+        }
+      ]
+    },
+    {
+      "id": "retail_momentum",
+      "slug": "retail-momentum",
+      "title": {
+        "zh": "散户高波动股",
+        "en": "Retail momentum stocks"
+      },
+      "color": "#B7C0C7",
+      "rank": 7,
+      "previousRank": 9,
+      "rankDelta": 2,
+      "volume": 22,
+      "share": 0.0031,
+      "shareDelta": -0.0049,
+      "sentiment": 0.229,
+      "sentimentDelta": -0.195,
+      "trend": "rising",
+      "topTickers": [
+        {
+          "ticker": "GME",
+          "count": 60
+        },
+        {
+          "ticker": "AMC",
+          "count": 54
+        },
+        {
+          "ticker": "SPCX",
+          "count": 27
+        },
+        {
+          "ticker": "TSLA",
+          "count": 12
+        },
+        {
+          "ticker": "SPCE",
+          "count": 5
+        },
+        {
+          "ticker": "SOFI",
+          "count": 5
+        }
+      ]
+    },
+    {
+      "id": "financials",
+      "slug": "financials",
+      "title": {
+        "zh": "金融、银行与支付",
+        "en": "Financials, banks & payments"
+      },
+      "color": "#9E8CFF",
+      "rank": 8,
+      "previousRank": 7,
+      "rankDelta": -1,
+      "volume": 21,
+      "share": 0.0029,
+      "shareDelta": -0.0092,
+      "sentiment": -0.065,
+      "sentimentDelta": -0.26,
+      "trend": "turning_bear",
+      "topTickers": [
+        {
+          "ticker": "JPM",
+          "count": 58
+        },
+        {
+          "ticker": "TSLA",
+          "count": 10
+        },
+        {
+          "ticker": "SOFI",
+          "count": 10
+        },
+        {
+          "ticker": "MARA",
+          "count": 8
+        },
+        {
+          "ticker": "HOOD",
+          "count": 7
+        },
+        {
+          "ticker": "PYPL",
+          "count": 7
+        }
+      ]
+    },
+    {
+      "id": "space_defense",
+      "slug": "space-defense",
+      "title": {
+        "zh": "航天、国防与工业",
+        "en": "Space, defense & industrials"
+      },
+      "color": "#FF5C6C",
+      "rank": 9,
+      "previousRank": 8,
+      "rankDelta": -1,
+      "volume": 20,
+      "share": 0.0028,
+      "shareDelta": -0.0088,
+      "sentiment": 0.161,
+      "sentimentDelta": 0.097,
+      "trend": "stable",
+      "topTickers": [
+        {
+          "ticker": "BA",
+          "count": 61
+        },
+        {
+          "ticker": "TSLA",
+          "count": 16
+        },
+        {
+          "ticker": "NVDA",
+          "count": 11
+        },
+        {
+          "ticker": "PLTR",
+          "count": 10
+        },
+        {
+          "ticker": "RKLB",
+          "count": 10
+        },
+        {
+          "ticker": "MU",
+          "count": 7
+        }
+      ]
+    },
+    {
+      "id": "healthcare_biotech",
+      "slug": "healthcare-biotech",
+      "title": {
+        "zh": "医药、医疗与生物科技",
+        "en": "Healthcare, pharma & biotech"
+      },
+      "color": "#F26FD4",
+      "rank": 10,
+      "previousRank": 11,
+      "rankDelta": 1,
+      "volume": 16,
+      "share": 0.0022,
+      "shareDelta": -0.0032,
+      "sentiment": 0.0,
+      "sentimentDelta": -0.095,
+      "trend": "stable",
+      "topTickers": [
+        {
+          "ticker": "PFE",
+          "count": 86
+        },
+        {
+          "ticker": "ELDN",
+          "count": 3
+        },
+        {
+          "ticker": "ARM",
+          "count": 2
+        },
+        {
+          "ticker": "VOO",
+          "count": 2
+        },
+        {
+          "ticker": "MSFT",
+          "count": 1
+        },
+        {
+          "ticker": "NFLX",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "energy_power",
+      "slug": "energy-power",
+      "title": {
+        "zh": "能源、电力与核能",
+        "en": "Energy, power & nuclear"
+      },
+      "color": "#F7C948",
+      "rank": 11,
+      "previousRank": 10,
+      "rankDelta": -1,
+      "volume": 5,
+      "share": 0.0007,
+      "shareDelta": -0.006,
+      "sentiment": 0.041,
+      "sentimentDelta": -0.143,
+      "trend": "stable",
+      "topTickers": [
+        {
+          "ticker": "TSLA",
+          "count": 11
+        },
+        {
+          "ticker": "NVDA",
+          "count": 10
+        },
+        {
+          "ticker": "MARA",
+          "count": 9
+        },
+        {
+          "ticker": "NIO",
+          "count": 5
+        },
+        {
+          "ticker": "GOOGL",
+          "count": 5
+        },
+        {
+          "ticker": "MU",
+          "count": 5
+        }
+      ]
+    }
+  ],
+  "series": {
+    "ai_cloud": [
+      {
+        "day": "2026-06-08",
+        "volume": 185,
+        "share": 0.1719,
+        "sentiment": 0.046,
+        "rank": 2,
+        "bull": 34,
+        "bear": 41,
+        "neutral": 110,
+        "sources": {
+          "yahoo_jp": 31,
+          "naver": 57,
+          "ptt": 6,
+          "xueqiu": 37,
+          "reddit": 54
+        }
+      },
+      {
+        "day": "2026-06-09",
+        "volume": 227,
+        "share": 0.1908,
+        "sentiment": -0.001,
+        "rank": 2,
+        "bull": 48,
+        "bear": 48,
+        "neutral": 131,
+        "sources": {
+          "yahoo_jp": 64,
+          "naver": 81,
+          "ptt": 8,
+          "xueqiu": 51,
+          "reddit": 21,
+          "youtube": 2
+        }
+      },
+      {
+        "day": "2026-06-10",
+        "volume": 540,
+        "share": 0.3275,
+        "sentiment": -0.078,
+        "rank": 1,
+        "bull": 90,
+        "bear": 159,
+        "neutral": 291,
+        "sources": {
+          "naver": 186,
+          "yahoo_jp": 154,
+          "ptt": 7,
+          "xueqiu": 84,
+          "reddit": 68,
+          "x": 37,
+          "youtube": 4
+        }
+      },
+      {
+        "day": "2026-06-11",
+        "volume": 509,
+        "share": 0.3261,
+        "sentiment": -0.052,
+        "rank": 1,
+        "bull": 110,
+        "bear": 153,
+        "neutral": 246,
+        "sources": {
+          "naver": 204,
+          "yahoo_jp": 147,
+          "ptt": 2,
+          "xueqiu": 64,
+          "reddit": 44,
+          "x": 42,
+          "youtube": 6
+        }
+      },
+      {
+        "day": "2026-06-12",
+        "volume": 242,
+        "share": 0.2237,
+        "sentiment": 0.015,
+        "rank": 2,
+        "bull": 41,
+        "bear": 41,
+        "neutral": 160,
+        "sources": {
+          "yahoo_jp": 49,
+          "ptt": 5,
+          "naver": 86,
+          "xueqiu": 94,
+          "x": 8
+        }
+      },
+      {
+        "day": "2026-06-13",
+        "volume": 149,
+        "share": 0.2956,
+        "sentiment": 0.044,
+        "rank": 2,
+        "bull": 37,
+        "bear": 34,
+        "neutral": 78,
+        "sources": {
+          "naver": 16,
+          "ptt": 3,
+          "yahoo_jp": 73,
+          "xueqiu": 45,
+          "x": 11,
+          "youtube": 1
+        }
+      },
+      {
+        "day": "2026-06-14",
+        "volume": 185,
+        "share": 0.3206,
+        "sentiment": 0.055,
+        "rank": 1,
+        "bull": 55,
+        "bear": 47,
+        "neutral": 83,
+        "sources": {
+          "ptt": 4,
+          "yahoo_jp": 78,
+          "naver": 6,
+          "xueqiu": 43,
+          "toss": 44,
+          "x": 10
+        }
+      },
+      {
+        "day": "2026-06-15",
+        "volume": 887,
+        "share": 0.3833,
+        "sentiment": -0.027,
+        "rank": 1,
+        "bull": 285,
+        "bear": 369,
+        "neutral": 233,
+        "sources": {
+          "yahoo_jp": 127,
+          "ptt": 5,
+          "naver": 68,
+          "xueqiu": 113,
+          "toss": 557,
+          "x": 10,
+          "youtube": 7
+        }
+      },
+      {
+        "day": "2026-06-16",
+        "volume": 960,
+        "share": 0.3236,
+        "sentiment": -0.078,
+        "rank": 2,
+        "bull": 225,
+        "bear": 441,
+        "neutral": 294,
+        "sources": {
+          "xueqiu": 232,
+          "yahoo_jp": 149,
+          "naver": 58,
+          "ptt": 6,
+          "toss": 483,
+          "x": 31,
+          "youtube": 1
+        }
+      },
+      {
+        "day": "2026-06-17",
+        "volume": 415,
+        "share": 0.6394,
+        "sentiment": -0.135,
+        "rank": 1,
+        "bull": 145,
+        "bear": 245,
+        "neutral": 25,
+        "sources": {
+          "yahoo_jp": 6,
+          "toss": 394,
+          "x": 11,
+          "youtube": 4
+        }
+      },
+      {
+        "day": "2026-06-18",
+        "volume": 836,
+        "share": 0.8253,
+        "sentiment": -0.468,
+        "rank": 1,
+        "bull": 107,
+        "bear": 694,
+        "neutral": 35,
+        "sources": {
+          "toss": 813,
+          "x": 22,
+          "youtube": 1
+        }
+      },
+      {
+        "day": "2026-06-19",
+        "volume": 85,
+        "share": 0.3427,
+        "sentiment": 0.16,
+        "rank": 1,
+        "bull": 44,
+        "bear": 32,
+        "neutral": 9,
+        "sources": {
+          "toss": 67,
+          "x": 8,
+          "youtube": 10
+        }
+      },
+      {
+        "day": "2026-06-20",
+        "volume": 53,
+        "share": 0.2356,
+        "sentiment": 0.135,
+        "rank": 1,
+        "bull": 18,
+        "bear": 20,
+        "neutral": 15,
+        "sources": {
+          "toss": 25,
+          "x": 13,
+          "youtube": 15
+        }
+      },
+      {
+        "day": "2026-06-21",
+        "volume": 56,
+        "share": 0.2314,
+        "sentiment": 0.269,
+        "rank": 2,
+        "bull": 35,
+        "bear": 9,
+        "neutral": 12,
+        "sources": {
+          "toss": 28,
+          "x": 20,
+          "youtube": 8
+        }
+      },
+      {
+        "day": "2026-06-22",
+        "volume": 1310,
+        "share": 0.8182,
+        "sentiment": -0.493,
+        "rank": 1,
+        "bull": 161,
+        "bear": 1088,
+        "neutral": 61,
+        "sources": {
+          "toss": 1271,
+          "x": 19,
+          "youtube": 20
+        }
+      },
+      {
+        "day": "2026-06-23",
+        "volume": 938,
+        "share": 0.8717,
+        "sentiment": -0.49,
+        "rank": 1,
+        "bull": 137,
+        "bear": 758,
+        "neutral": 43,
+        "sources": {
+          "toss": 923,
+          "x": 14,
+          "youtube": 1
+        }
+      },
+      {
+        "day": "2026-06-24",
+        "volume": 1392,
+        "share": 0.9936,
+        "sentiment": -0.579,
+        "rank": 1,
+        "bull": 146,
+        "bear": 1211,
+        "neutral": 35,
+        "sources": {
+          "toss": 1392
+        }
+      },
+      {
+        "day": "2026-06-25",
+        "volume": 1925,
+        "share": 0.9979,
+        "sentiment": -0.548,
+        "rank": 1,
+        "bull": 239,
+        "bear": 1627,
+        "neutral": 59,
+        "sources": {
+          "toss": 1925
+        }
+      },
+      {
+        "day": "2026-06-26",
+        "volume": 1050,
+        "share": 0.999,
+        "sentiment": -0.154,
+        "rank": 1,
+        "bull": 373,
+        "bear": 629,
+        "neutral": 48,
+        "sources": {
+          "toss": 1050
+        }
+      },
+      {
+        "day": "2026-06-27",
+        "volume": 55,
+        "share": 1.0,
+        "sentiment": 0.098,
+        "rank": 1,
+        "bull": 31,
+        "bear": 20,
+        "neutral": 4,
+        "sources": {
+          "toss": 55
+        }
+      },
+      {
+        "day": "2026-06-28",
+        "volume": 5,
+        "share": 0.8333,
+        "sentiment": 0.078,
+        "rank": 1,
+        "bull": 2,
+        "bear": 1,
+        "neutral": 2,
+        "sources": {
+          "toss": 5
+        }
+      }
+    ],
+    "semiconductors": [
+      {
+        "day": "2026-06-08",
+        "volume": 490,
+        "share": 0.4554,
+        "sentiment": -0.01,
+        "rank": 1,
+        "bull": 137,
+        "bear": 159,
+        "neutral": 194,
+        "sources": {
+          "naver": 329,
+          "yahoo_jp": 41,
+          "ptt": 17,
+          "xueqiu": 59,
+          "reddit": 44
+        }
+      },
+      {
+        "day": "2026-06-09",
+        "volume": 613,
+        "share": 0.5151,
+        "sentiment": -0.052,
+        "rank": 1,
+        "bull": 179,
+        "bear": 241,
+        "neutral": 193,
+        "sources": {
+          "naver": 434,
+          "yahoo_jp": 48,
+          "ptt": 12,
+          "xueqiu": 99,
+          "reddit": 17,
+          "youtube": 3
+        }
+      },
+      {
+        "day": "2026-06-10",
+        "volume": 533,
+        "share": 0.3232,
+        "sentiment": -0.077,
+        "rank": 2,
+        "bull": 126,
+        "bear": 210,
+        "neutral": 197,
+        "sources": {
+          "naver": 349,
+          "yahoo_jp": 54,
+          "ptt": 9,
+          "xueqiu": 56,
+          "reddit": 38,
+          "x": 24,
+          "youtube": 3
+        }
+      },
+      {
+        "day": "2026-06-11",
+        "volume": 468,
+        "share": 0.2998,
+        "sentiment": 0.106,
+        "rank": 2,
+        "bull": 105,
+        "bear": 50,
+        "neutral": 313,
+        "sources": {
+          "yahoo_jp": 73,
+          "naver": 241,
+          "ptt": 15,
+          "xueqiu": 61,
+          "reddit": 25,
+          "x": 46,
+          "youtube": 7
+        }
+      },
+      {
+        "day": "2026-06-12",
+        "volume": 500,
+        "share": 0.4621,
+        "sentiment": 0.147,
+        "rank": 1,
+        "bull": 143,
+        "bear": 64,
+        "neutral": 293,
+        "sources": {
+          "naver": 227,
+          "yahoo_jp": 141,
+          "ptt": 6,
+          "xueqiu": 97,
+          "x": 23,
+          "youtube": 6
+        }
+      },
+      {
+        "day": "2026-06-13",
+        "volume": 152,
+        "share": 0.3016,
+        "sentiment": 0.103,
+        "rank": 1,
+        "bull": 35,
+        "bear": 15,
+        "neutral": 102,
+        "sources": {
+          "naver": 19,
+          "yahoo_jp": 48,
+          "ptt": 5,
+          "xueqiu": 52,
+          "x": 26,
+          "youtube": 2
+        }
+      },
+      {
+        "day": "2026-06-14",
+        "volume": 147,
+        "share": 0.2548,
+        "sentiment": 0.14,
+        "rank": 2,
+        "bull": 38,
+        "bear": 11,
+        "neutral": 98,
+        "sources": {
+          "naver": 14,
+          "yahoo_jp": 69,
+          "ptt": 1,
+          "xueqiu": 47,
+          "x": 15,
+          "youtube": 1
+        }
+      },
+      {
+        "day": "2026-06-15",
+        "volume": 822,
+        "share": 0.3552,
+        "sentiment": 0.109,
+        "rank": 2,
+        "bull": 218,
+        "bear": 107,
+        "neutral": 497,
+        "sources": {
+          "yahoo_jp": 404,
+          "naver": 203,
+          "ptt": 8,
+          "xueqiu": 182,
+          "x": 22,
+          "youtube": 3
+        }
+      },
+      {
+        "day": "2026-06-16",
+        "volume": 1162,
+        "share": 0.3916,
+        "sentiment": 0.041,
+        "rank": 1,
+        "bull": 225,
+        "bear": 190,
+        "neutral": 747,
+        "sources": {
+          "xueqiu": 438,
+          "yahoo_jp": 460,
+          "naver": 232,
+          "ptt": 8,
+          "x": 20,
+          "youtube": 4
+        }
+      },
+      {
+        "day": "2026-06-17",
+        "volume": 66,
+        "share": 0.1017,
+        "sentiment": 0.376,
+        "rank": 2,
+        "bull": 41,
+        "bear": 11,
+        "neutral": 14,
+        "sources": {
+          "yahoo_jp": 12,
+          "x": 38,
+          "youtube": 16
+        }
+      },
+      {
+        "day": "2026-06-18",
+        "volume": 38,
+        "share": 0.0375,
+        "sentiment": 0.319,
+        "rank": 2,
+        "bull": 20,
+        "bear": 1,
+        "neutral": 17,
+        "sources": {
+          "x": 33,
+          "youtube": 5
+        }
+      },
+      {
+        "day": "2026-06-19",
+        "volume": 35,
+        "share": 0.1411,
+        "sentiment": 0.245,
+        "rank": 2,
+        "bull": 16,
+        "bear": 3,
+        "neutral": 16,
+        "sources": {
+          "x": 24,
+          "youtube": 11
+        }
+      },
+      {
+        "day": "2026-06-20",
+        "volume": 45,
+        "share": 0.2,
+        "sentiment": 0.179,
+        "rank": 2,
+        "bull": 18,
+        "bear": 7,
+        "neutral": 20,
+        "sources": {
+          "x": 36,
+          "youtube": 9
+        }
+      },
+      {
+        "day": "2026-06-21",
+        "volume": 59,
+        "share": 0.2438,
+        "sentiment": 0.325,
+        "rank": 1,
+        "bull": 34,
+        "bear": 2,
+        "neutral": 23,
+        "sources": {
+          "x": 48,
+          "youtube": 11
+        }
+      },
+      {
+        "day": "2026-06-22",
+        "volume": 71,
+        "share": 0.0443,
+        "sentiment": 0.254,
+        "rank": 2,
+        "bull": 31,
+        "bear": 9,
+        "neutral": 31,
+        "sources": {
+          "toss": 1,
+          "x": 26,
+          "youtube": 44
+        }
+      },
+      {
+        "day": "2026-06-23",
+        "volume": 34,
+        "share": 0.0316,
+        "sentiment": 0.154,
+        "rank": 2,
+        "bull": 13,
+        "bear": 3,
+        "neutral": 18,
+        "sources": {
+          "x": 33,
+          "youtube": 1
+        }
+      },
+      {
+        "day": "2026-06-24",
+        "volume": 3,
+        "share": 0.0021,
+        "sentiment": -0.113,
+        "rank": 2,
+        "bull": 0,
+        "bear": 1,
+        "neutral": 2,
+        "sources": {
+          "toss": 1,
+          "x": 2
+        }
+      },
+      {
+        "day": "2026-06-25",
+        "volume": 1,
+        "share": 0.0005,
+        "sentiment": -0.9,
+        "rank": 4,
+        "bull": 0,
+        "bear": 1,
+        "neutral": 0,
+        "sources": {
+          "toss": 1
+        }
+      },
+      {
+        "day": "2026-06-26",
+        "volume": 0,
+        "share": 0.0,
+        "sentiment": 0.0,
+        "rank": null,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {}
+      },
+      {
+        "day": "2026-06-27",
+        "volume": 0,
+        "share": 0.0,
+        "sentiment": 0.0,
+        "rank": null,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {}
+      },
+      {
+        "day": "2026-06-28",
+        "volume": 0,
+        "share": 0.0,
+        "sentiment": 0.0,
+        "rank": null,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {}
+      }
+    ],
+    "mega_platforms": [
+      {
+        "day": "2026-06-08",
+        "volume": 79,
+        "share": 0.0734,
+        "sentiment": -0.062,
+        "rank": 3,
+        "bull": 17,
+        "bear": 21,
+        "neutral": 41,
+        "sources": {
+          "yahoo_jp": 28,
+          "naver": 23,
+          "ptt": 4,
+          "xueqiu": 6,
+          "reddit": 18
+        }
+      },
+      {
+        "day": "2026-06-09",
+        "volume": 71,
+        "share": 0.0597,
+        "sentiment": 0.047,
+        "rank": 4,
+        "bull": 13,
+        "bear": 12,
+        "neutral": 46,
+        "sources": {
+          "yahoo_jp": 27,
+          "naver": 15,
+          "ptt": 6,
+          "xueqiu": 10,
+          "reddit": 10,
+          "youtube": 3
+        }
+      },
+      {
+        "day": "2026-06-10",
+        "volume": 97,
+        "share": 0.0588,
+        "sentiment": 0.069,
+        "rank": 5,
+        "bull": 25,
+        "bear": 15,
+        "neutral": 57,
+        "sources": {
+          "yahoo_jp": 16,
+          "naver": 15,
+          "ptt": 10,
+          "xueqiu": 19,
+          "reddit": 17,
+          "x": 19,
+          "youtube": 1
+        }
+      },
+      {
+        "day": "2026-06-11",
+        "volume": 136,
+        "share": 0.0871,
+        "sentiment": 0.032,
+        "rank": 3,
+        "bull": 24,
+        "bear": 20,
+        "neutral": 92,
+        "sources": {
+          "yahoo_jp": 25,
+          "naver": 39,
+          "ptt": 2,
+          "xueqiu": 36,
+          "reddit": 15,
+          "x": 16,
+          "youtube": 3
+        }
+      },
+      {
+        "day": "2026-06-12",
+        "volume": 107,
+        "share": 0.0989,
+        "sentiment": 0.036,
+        "rank": 3,
+        "bull": 22,
+        "bear": 14,
+        "neutral": 71,
+        "sources": {
+          "ptt": 5,
+          "yahoo_jp": 28,
+          "naver": 17,
+          "xueqiu": 37,
+          "x": 16,
+          "youtube": 4
+        }
+      },
+      {
+        "day": "2026-06-13",
+        "volume": 71,
+        "share": 0.1409,
+        "sentiment": 0.066,
+        "rank": 3,
+        "bull": 17,
+        "bear": 12,
+        "neutral": 42,
+        "sources": {
+          "yahoo_jp": 14,
+          "naver": 5,
+          "xueqiu": 34,
+          "x": 16,
+          "youtube": 2
+        }
+      },
+      {
+        "day": "2026-06-14",
+        "volume": 49,
+        "share": 0.0849,
+        "sentiment": 0.143,
+        "rank": 5,
+        "bull": 11,
+        "bear": 2,
+        "neutral": 36,
+        "sources": {
+          "ptt": 1,
+          "yahoo_jp": 5,
+          "naver": 8,
+          "xueqiu": 31,
+          "x": 1,
+          "youtube": 3
+        }
+      },
+      {
+        "day": "2026-06-15",
+        "volume": 163,
+        "share": 0.0704,
+        "sentiment": 0.09,
+        "rank": 4,
+        "bull": 40,
+        "bear": 23,
+        "neutral": 100,
+        "sources": {
+          "naver": 19,
+          "yahoo_jp": 17,
+          "xueqiu": 108,
+          "ptt": 2,
+          "x": 15,
+          "youtube": 2
+        }
+      },
+      {
+        "day": "2026-06-16",
+        "volume": 262,
+        "share": 0.0883,
+        "sentiment": -0.031,
+        "rank": 4,
+        "bull": 53,
+        "bear": 63,
+        "neutral": 146,
+        "sources": {
+          "xueqiu": 156,
+          "yahoo_jp": 36,
+          "naver": 41,
+          "ptt": 2,
+          "x": 26,
+          "youtube": 1
+        }
+      },
+      {
+        "day": "2026-06-17",
+        "volume": 24,
+        "share": 0.037,
+        "sentiment": 0.114,
+        "rank": 5,
+        "bull": 8,
+        "bear": 5,
+        "neutral": 11,
+        "sources": {
+          "x": 17,
+          "youtube": 7
+        }
+      },
+      {
+        "day": "2026-06-18",
+        "volume": 23,
+        "share": 0.0227,
+        "sentiment": 0.31,
+        "rank": 4,
+        "bull": 12,
+        "bear": 2,
+        "neutral": 9,
+        "sources": {
+          "x": 15,
+          "youtube": 8
+        }
+      },
+      {
+        "day": "2026-06-19",
+        "volume": 29,
+        "share": 0.1169,
+        "sentiment": 0.282,
+        "rank": 4,
+        "bull": 13,
+        "bear": 3,
+        "neutral": 13,
+        "sources": {
+          "x": 9,
+          "youtube": 20
+        }
+      },
+      {
+        "day": "2026-06-20",
+        "volume": 22,
+        "share": 0.0978,
+        "sentiment": 0.399,
+        "rank": 4,
+        "bull": 12,
+        "bear": 0,
+        "neutral": 10,
+        "sources": {
+          "x": 7,
+          "youtube": 15
+        }
+      },
+      {
+        "day": "2026-06-21",
+        "volume": 29,
+        "share": 0.1198,
+        "sentiment": 0.298,
+        "rank": 4,
+        "bull": 13,
+        "bear": 0,
+        "neutral": 16,
+        "sources": {
+          "x": 12,
+          "youtube": 17
+        }
+      },
+      {
+        "day": "2026-06-22",
+        "volume": 63,
+        "share": 0.0394,
+        "sentiment": 0.195,
+        "rank": 3,
+        "bull": 22,
+        "bear": 4,
+        "neutral": 37,
+        "sources": {
+          "x": 43,
+          "youtube": 20
+        }
+      },
+      {
+        "day": "2026-06-23",
+        "volume": 30,
+        "share": 0.0279,
+        "sentiment": 0.035,
+        "rank": 3,
+        "bull": 6,
+        "bear": 5,
+        "neutral": 19,
+        "sources": {
+          "x": 29,
+          "youtube": 1
+        }
+      },
+      {
+        "day": "2026-06-24",
+        "volume": 0,
+        "share": 0.0,
+        "sentiment": 0.0,
+        "rank": null,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {}
+      },
+      {
+        "day": "2026-06-25",
+        "volume": 0,
+        "share": 0.0,
+        "sentiment": 0.0,
+        "rank": null,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {}
+      },
+      {
+        "day": "2026-06-26",
+        "volume": 0,
+        "share": 0.0,
+        "sentiment": 0.0,
+        "rank": null,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {}
+      },
+      {
+        "day": "2026-06-27",
+        "volume": 0,
+        "share": 0.0,
+        "sentiment": 0.0,
+        "rank": null,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {}
+      },
+      {
+        "day": "2026-06-28",
+        "volume": 0,
+        "share": 0.0,
+        "sentiment": 0.0,
+        "rank": null,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {}
+      }
+    ],
+    "ev_autonomy": [
+      {
+        "day": "2026-06-08",
+        "volume": 51,
+        "share": 0.0474,
+        "sentiment": 0.077,
+        "rank": 6,
+        "bull": 11,
+        "bear": 4,
+        "neutral": 36,
+        "sources": {
+          "yahoo_jp": 5,
+          "naver": 34,
+          "xueqiu": 8,
+          "reddit": 4
+        }
+      },
+      {
+        "day": "2026-06-09",
+        "volume": 58,
+        "share": 0.0487,
+        "sentiment": -0.093,
+        "rank": 5,
+        "bull": 9,
+        "bear": 19,
+        "neutral": 30,
+        "sources": {
+          "yahoo_jp": 6,
+          "naver": 42,
+          "xueqiu": 3,
+          "reddit": 5,
+          "youtube": 2
+        }
+      },
+      {
+        "day": "2026-06-10",
+        "volume": 101,
+        "share": 0.0612,
+        "sentiment": -0.078,
+        "rank": 4,
+        "bull": 13,
+        "bear": 25,
+        "neutral": 63,
+        "sources": {
+          "yahoo_jp": 5,
+          "naver": 63,
+          "xueqiu": 1,
+          "reddit": 16,
+          "x": 16
+        }
+      },
+      {
+        "day": "2026-06-11",
+        "volume": 70,
+        "share": 0.0448,
+        "sentiment": -0.064,
+        "rank": 6,
+        "bull": 13,
+        "bear": 21,
+        "neutral": 36,
+        "sources": {
+          "naver": 45,
+          "xueqiu": 4,
+          "reddit": 10,
+          "x": 8,
+          "youtube": 3
+        }
+      },
+      {
+        "day": "2026-06-12",
+        "volume": 87,
+        "share": 0.0804,
+        "sentiment": -0.033,
+        "rank": 4,
+        "bull": 4,
+        "bear": 9,
+        "neutral": 74,
+        "sources": {
+          "ptt": 1,
+          "naver": 79,
+          "x": 6,
+          "youtube": 1
+        }
+      },
+      {
+        "day": "2026-06-13",
+        "volume": 25,
+        "share": 0.0496,
+        "sentiment": 0.012,
+        "rank": 6,
+        "bull": 7,
+        "bear": 7,
+        "neutral": 11,
+        "sources": {
+          "naver": 16,
+          "ptt": 3,
+          "yahoo_jp": 2,
+          "x": 3,
+          "youtube": 1
+        }
+      },
+      {
+        "day": "2026-06-14",
+        "volume": 63,
+        "share": 0.1092,
+        "sentiment": 0.105,
+        "rank": 4,
+        "bull": 10,
+        "bear": 2,
+        "neutral": 51,
+        "sources": {
+          "naver": 4,
+          "yahoo_jp": 46,
+          "x": 12,
+          "youtube": 1
+        }
+      },
+      {
+        "day": "2026-06-15",
+        "volume": 209,
+        "share": 0.0903,
+        "sentiment": -0.013,
+        "rank": 3,
+        "bull": 26,
+        "bear": 29,
+        "neutral": 154,
+        "sources": {
+          "yahoo_jp": 107,
+          "naver": 63,
+          "xueqiu": 23,
+          "x": 10,
+          "youtube": 6
+        }
+      },
+      {
+        "day": "2026-06-16",
+        "volume": 296,
+        "share": 0.0998,
+        "sentiment": -0.015,
+        "rank": 3,
+        "bull": 28,
+        "bear": 34,
+        "neutral": 234,
+        "sources": {
+          "xueqiu": 122,
+          "yahoo_jp": 61,
+          "naver": 92,
+          "ptt": 1,
+          "x": 18,
+          "youtube": 2
+        }
+      },
+      {
+        "day": "2026-06-17",
+        "volume": 36,
+        "share": 0.0555,
+        "sentiment": 0.158,
+        "rank": 3,
+        "bull": 12,
+        "bear": 6,
+        "neutral": 18,
+        "sources": {
+          "yahoo_jp": 3,
+          "x": 22,
+          "youtube": 11
+        }
+      },
+      {
+        "day": "2026-06-18",
+        "volume": 20,
+        "share": 0.0197,
+        "sentiment": 0.126,
+        "rank": 6,
+        "bull": 6,
+        "bear": 4,
+        "neutral": 10,
+        "sources": {
+          "x": 13,
+          "youtube": 7
+        }
+      },
+      {
+        "day": "2026-06-19",
+        "volume": 14,
+        "share": 0.0565,
+        "sentiment": 0.386,
+        "rank": 6,
+        "bull": 9,
+        "bear": 0,
+        "neutral": 5,
+        "sources": {
+          "x": 5,
+          "youtube": 9
+        }
+      },
+      {
+        "day": "2026-06-20",
+        "volume": 20,
+        "share": 0.0889,
+        "sentiment": 0.411,
+        "rank": 5,
+        "bull": 10,
+        "bear": 0,
+        "neutral": 10,
+        "sources": {
+          "x": 10,
+          "youtube": 10
+        }
+      },
+      {
+        "day": "2026-06-21",
+        "volume": 14,
+        "share": 0.0579,
+        "sentiment": 0.217,
+        "rank": 5,
+        "bull": 6,
+        "bear": 2,
+        "neutral": 6,
+        "sources": {
+          "x": 5,
+          "youtube": 9
+        }
+      },
+      {
+        "day": "2026-06-22",
+        "volume": 22,
+        "share": 0.0137,
+        "sentiment": 0.125,
+        "rank": 6,
+        "bull": 5,
+        "bear": 2,
+        "neutral": 15,
+        "sources": {
+          "x": 15,
+          "youtube": 7
+        }
+      },
+      {
+        "day": "2026-06-23",
+        "volume": 17,
+        "share": 0.0158,
+        "sentiment": 0.053,
+        "rank": 5,
+        "bull": 3,
+        "bear": 2,
+        "neutral": 12,
+        "sources": {
+          "x": 17
+        }
+      },
+      {
+        "day": "2026-06-24",
+        "volume": 1,
+        "share": 0.0007,
+        "sentiment": 0.2,
+        "rank": 5,
+        "bull": 1,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {
+          "toss": 1
+        }
+      },
+      {
+        "day": "2026-06-25",
+        "volume": 0,
+        "share": 0.0,
+        "sentiment": 0.0,
+        "rank": null,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {}
+      },
+      {
+        "day": "2026-06-26",
+        "volume": 0,
+        "share": 0.0,
+        "sentiment": 0.0,
+        "rank": null,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {}
+      },
+      {
+        "day": "2026-06-27",
+        "volume": 0,
+        "share": 0.0,
+        "sentiment": 0.0,
+        "rank": null,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {}
+      },
+      {
+        "day": "2026-06-28",
+        "volume": 0,
+        "share": 0.0,
+        "sentiment": 0.0,
+        "rank": null,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {}
+      }
+    ],
+    "energy_power": [
+      {
+        "day": "2026-06-08",
+        "volume": 25,
+        "share": 0.0232,
+        "sentiment": 0.409,
+        "rank": 8,
+        "bull": 16,
+        "bear": 2,
+        "neutral": 7,
+        "sources": {
+          "xueqiu": 2,
+          "reddit": 23
+        }
+      },
+      {
+        "day": "2026-06-09",
+        "volume": 11,
+        "share": 0.0092,
+        "sentiment": 0.294,
+        "rank": 10,
+        "bull": 6,
+        "bear": 1,
+        "neutral": 4,
+        "sources": {
+          "reddit": 11
+        }
+      },
+      {
+        "day": "2026-06-10",
+        "volume": 40,
+        "share": 0.0243,
+        "sentiment": 0.109,
+        "rank": 8,
+        "bull": 14,
+        "bear": 10,
+        "neutral": 16,
+        "sources": {
+          "yahoo_jp": 1,
+          "ptt": 4,
+          "xueqiu": 2,
+          "reddit": 31,
+          "x": 2
+        }
+      },
+      {
+        "day": "2026-06-11",
+        "volume": 32,
+        "share": 0.0205,
+        "sentiment": 0.206,
+        "rank": 8,
+        "bull": 14,
+        "bear": 6,
+        "neutral": 12,
+        "sources": {
+          "yahoo_jp": 1,
+          "xueqiu": 2,
+          "reddit": 22,
+          "x": 6,
+          "youtube": 1
+        }
+      },
+      {
+        "day": "2026-06-12",
+        "volume": 10,
+        "share": 0.0092,
+        "sentiment": 0.121,
+        "rank": 9,
+        "bull": 3,
+        "bear": 2,
+        "neutral": 5,
+        "sources": {
+          "yahoo_jp": 2,
+          "ptt": 1,
+          "xueqiu": 1,
+          "x": 5,
+          "youtube": 1
+        }
+      },
+      {
+        "day": "2026-06-13",
+        "volume": 5,
+        "share": 0.0099,
+        "sentiment": 0.245,
+        "rank": 9,
+        "bull": 2,
+        "bear": 0,
+        "neutral": 3,
+        "sources": {
+          "yahoo_jp": 1,
+          "x": 4
+        }
+      },
+      {
+        "day": "2026-06-14",
+        "volume": 5,
+        "share": 0.0087,
+        "sentiment": 0.521,
+        "rank": 9,
+        "bull": 5,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {
+          "x": 3,
+          "youtube": 2
+        }
+      },
+      {
+        "day": "2026-06-15",
+        "volume": 11,
+        "share": 0.0048,
+        "sentiment": 0.117,
+        "rank": 10,
+        "bull": 3,
+        "bear": 2,
+        "neutral": 6,
+        "sources": {
+          "yahoo_jp": 7,
+          "x": 3,
+          "youtube": 1
+        }
+      },
+      {
+        "day": "2026-06-16",
+        "volume": 13,
+        "share": 0.0044,
+        "sentiment": 0.017,
+        "rank": 8,
+        "bull": 3,
+        "bear": 3,
+        "neutral": 7,
+        "sources": {
+          "xueqiu": 6,
+          "yahoo_jp": 3,
+          "x": 3,
+          "youtube": 1
+        }
+      },
+      {
+        "day": "2026-06-17",
+        "volume": 6,
+        "share": 0.0092,
+        "sentiment": 0.371,
+        "rank": 10,
+        "bull": 4,
+        "bear": 0,
+        "neutral": 2,
+        "sources": {
+          "x": 2,
+          "youtube": 4
+        }
+      },
+      {
+        "day": "2026-06-18",
+        "volume": 4,
+        "share": 0.0039,
+        "sentiment": 0.139,
+        "rank": 11,
+        "bull": 1,
+        "bear": 0,
+        "neutral": 3,
+        "sources": {
+          "x": 3,
+          "youtube": 1
+        }
+      },
+      {
+        "day": "2026-06-19",
+        "volume": 4,
+        "share": 0.0161,
+        "sentiment": 0.377,
+        "rank": 10,
+        "bull": 2,
+        "bear": 0,
+        "neutral": 2,
+        "sources": {
+          "x": 1,
+          "youtube": 3
+        }
+      },
+      {
+        "day": "2026-06-20",
+        "volume": 7,
+        "share": 0.0311,
+        "sentiment": 0.129,
+        "rank": 8,
+        "bull": 2,
+        "bear": 1,
+        "neutral": 4,
+        "sources": {
+          "x": 4,
+          "youtube": 3
+        }
+      },
+      {
+        "day": "2026-06-21",
+        "volume": 6,
+        "share": 0.0248,
+        "sentiment": 0.35,
+        "rank": 10,
+        "bull": 3,
+        "bear": 1,
+        "neutral": 2,
+        "sources": {
+          "x": 2,
+          "youtube": 4
+        }
+      },
+      {
+        "day": "2026-06-22",
+        "volume": 2,
+        "share": 0.0012,
+        "sentiment": 0.241,
+        "rank": 11,
+        "bull": 1,
+        "bear": 0,
+        "neutral": 1,
+        "sources": {
+          "x": 2
+        }
+      },
+      {
+        "day": "2026-06-23",
+        "volume": 1,
+        "share": 0.0009,
+        "sentiment": 0.0,
+        "rank": 11,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 1,
+        "sources": {
+          "youtube": 1
+        }
+      },
+      {
+        "day": "2026-06-24",
+        "volume": 0,
+        "share": 0.0,
+        "sentiment": 0.0,
+        "rank": null,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {}
+      },
+      {
+        "day": "2026-06-25",
+        "volume": 1,
+        "share": 0.0005,
+        "sentiment": -1.0,
+        "rank": 3,
+        "bull": 0,
+        "bear": 1,
+        "neutral": 0,
+        "sources": {
+          "toss": 1
+        }
+      },
+      {
+        "day": "2026-06-26",
+        "volume": 0,
+        "share": 0.0,
+        "sentiment": 0.0,
+        "rank": null,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {}
+      },
+      {
+        "day": "2026-06-27",
+        "volume": 0,
+        "share": 0.0,
+        "sentiment": 0.0,
+        "rank": null,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {}
+      },
+      {
+        "day": "2026-06-28",
+        "volume": 1,
+        "share": 0.1667,
+        "sentiment": 0.0,
+        "rank": 2,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 1,
+        "sources": {
+          "toss": 1
+        }
+      }
+    ],
+    "crypto_fintech": [
+      {
+        "day": "2026-06-08",
+        "volume": 71,
+        "share": 0.066,
+        "sentiment": 0.212,
+        "rank": 5,
+        "bull": 30,
+        "bear": 16,
+        "neutral": 25,
+        "sources": {
+          "yahoo_jp": 41,
+          "naver": 7,
+          "xueqiu": 13,
+          "reddit": 10
+        }
+      },
+      {
+        "day": "2026-06-09",
+        "volume": 79,
+        "share": 0.0664,
+        "sentiment": 0.02,
+        "rank": 3,
+        "bull": 13,
+        "bear": 11,
+        "neutral": 55,
+        "sources": {
+          "yahoo_jp": 33,
+          "naver": 20,
+          "xueqiu": 15,
+          "reddit": 8,
+          "youtube": 3
+        }
+      },
+      {
+        "day": "2026-06-10",
+        "volume": 69,
+        "share": 0.0418,
+        "sentiment": 0.1,
+        "rank": 7,
+        "bull": 24,
+        "bear": 13,
+        "neutral": 32,
+        "sources": {
+          "yahoo_jp": 15,
+          "naver": 8,
+          "xueqiu": 11,
+          "reddit": 16,
+          "x": 17,
+          "youtube": 2
+        }
+      },
+      {
+        "day": "2026-06-11",
+        "volume": 64,
+        "share": 0.041,
+        "sentiment": 0.094,
+        "rank": 7,
+        "bull": 20,
+        "bear": 13,
+        "neutral": 31,
+        "sources": {
+          "yahoo_jp": 15,
+          "naver": 6,
+          "xueqiu": 7,
+          "reddit": 13,
+          "x": 22,
+          "youtube": 1
+        }
+      },
+      {
+        "day": "2026-06-12",
+        "volume": 81,
+        "share": 0.0749,
+        "sentiment": 0.1,
+        "rank": 5,
+        "bull": 24,
+        "bear": 13,
+        "neutral": 44,
+        "sources": {
+          "ptt": 2,
+          "yahoo_jp": 34,
+          "naver": 7,
+          "xueqiu": 13,
+          "x": 22,
+          "youtube": 3
+        }
+      },
+      {
+        "day": "2026-06-13",
+        "volume": 55,
+        "share": 0.1091,
+        "sentiment": 0.001,
+        "rank": 4,
+        "bull": 10,
+        "bear": 16,
+        "neutral": 29,
+        "sources": {
+          "yahoo_jp": 31,
+          "naver": 4,
+          "xueqiu": 5,
+          "x": 12,
+          "youtube": 3
+        }
+      },
+      {
+        "day": "2026-06-14",
+        "volume": 78,
+        "share": 0.1352,
+        "sentiment": 0.03,
+        "rank": 3,
+        "bull": 18,
+        "bear": 16,
+        "neutral": 44,
+        "sources": {
+          "yahoo_jp": 56,
+          "naver": 2,
+          "xueqiu": 1,
+          "x": 18,
+          "youtube": 1
+        }
+      },
+      {
+        "day": "2026-06-15",
+        "volume": 134,
+        "share": 0.0579,
+        "sentiment": 0.102,
+        "rank": 5,
+        "bull": 37,
+        "bear": 22,
+        "neutral": 75,
+        "sources": {
+          "naver": 11,
+          "yahoo_jp": 86,
+          "xueqiu": 13,
+          "x": 21,
+          "youtube": 3
+        }
+      },
+      {
+        "day": "2026-06-16",
+        "volume": 161,
+        "share": 0.0543,
+        "sentiment": 0.194,
+        "rank": 5,
+        "bull": 50,
+        "bear": 22,
+        "neutral": 89,
+        "sources": {
+          "xueqiu": 12,
+          "yahoo_jp": 115,
+          "naver": 10,
+          "x": 22,
+          "youtube": 2
+        }
+      },
+      {
+        "day": "2026-06-17",
+        "volume": 21,
+        "share": 0.0324,
+        "sentiment": 0.192,
+        "rank": 6,
+        "bull": 9,
+        "bear": 2,
+        "neutral": 10,
+        "sources": {
+          "yahoo_jp": 2,
+          "x": 16,
+          "youtube": 3
+        }
+      },
+      {
+        "day": "2026-06-18",
+        "volume": 32,
+        "share": 0.0316,
+        "sentiment": 0.126,
+        "rank": 3,
+        "bull": 13,
+        "bear": 6,
+        "neutral": 13,
+        "sources": {
+          "x": 22,
+          "youtube": 10
+        }
+      },
+      {
+        "day": "2026-06-19",
+        "volume": 35,
+        "share": 0.1411,
+        "sentiment": 0.144,
+        "rank": 3,
+        "bull": 15,
+        "bear": 6,
+        "neutral": 14,
+        "sources": {
+          "x": 13,
+          "youtube": 22
+        }
+      },
+      {
+        "day": "2026-06-20",
+        "volume": 35,
+        "share": 0.1556,
+        "sentiment": 0.128,
+        "rank": 3,
+        "bull": 12,
+        "bear": 6,
+        "neutral": 17,
+        "sources": {
+          "x": 16,
+          "youtube": 19
+        }
+      },
+      {
+        "day": "2026-06-21",
+        "volume": 33,
+        "share": 0.1364,
+        "sentiment": 0.243,
+        "rank": 3,
+        "bull": 17,
+        "bear": 5,
+        "neutral": 11,
+        "sources": {
+          "x": 10,
+          "youtube": 23
+        }
+      },
+      {
+        "day": "2026-06-22",
+        "volume": 41,
+        "share": 0.0256,
+        "sentiment": 0.212,
+        "rank": 5,
+        "bull": 14,
+        "bear": 3,
+        "neutral": 24,
+        "sources": {
+          "x": 24,
+          "youtube": 17
+        }
+      },
+      {
+        "day": "2026-06-23",
+        "volume": 17,
+        "share": 0.0158,
+        "sentiment": 0.106,
+        "rank": 4,
+        "bull": 5,
+        "bear": 2,
+        "neutral": 10,
+        "sources": {
+          "x": 16,
+          "youtube": 1
+        }
+      },
+      {
+        "day": "2026-06-24",
+        "volume": 0,
+        "share": 0.0,
+        "sentiment": 0.0,
+        "rank": null,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {}
+      },
+      {
+        "day": "2026-06-25",
+        "volume": 0,
+        "share": 0.0,
+        "sentiment": 0.0,
+        "rank": null,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {}
+      },
+      {
+        "day": "2026-06-26",
+        "volume": 0,
+        "share": 0.0,
+        "sentiment": 0.0,
+        "rank": null,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {}
+      },
+      {
+        "day": "2026-06-27",
+        "volume": 0,
+        "share": 0.0,
+        "sentiment": 0.0,
+        "rank": null,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {}
+      },
+      {
+        "day": "2026-06-28",
+        "volume": 0,
+        "share": 0.0,
+        "sentiment": 0.0,
+        "rank": null,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {}
+      }
+    ],
+    "financials": [
+      {
+        "day": "2026-06-08",
+        "volume": 23,
+        "share": 0.0214,
+        "sentiment": 0.039,
+        "rank": 9,
+        "bull": 4,
+        "bear": 2,
+        "neutral": 17,
+        "sources": {
+          "ptt": 1,
+          "xueqiu": 1,
+          "reddit": 21
+        }
+      },
+      {
+        "day": "2026-06-09",
+        "volume": 20,
+        "share": 0.0168,
+        "sentiment": 0.085,
+        "rank": 8,
+        "bull": 4,
+        "bear": 2,
+        "neutral": 14,
+        "sources": {
+          "ptt": 2,
+          "xueqiu": 2,
+          "reddit": 13,
+          "youtube": 3
+        }
+      },
+      {
+        "day": "2026-06-10",
+        "volume": 17,
+        "share": 0.0103,
+        "sentiment": -0.043,
+        "rank": 10,
+        "bull": 5,
+        "bear": 5,
+        "neutral": 7,
+        "sources": {
+          "ptt": 1,
+          "reddit": 16
+        }
+      },
+      {
+        "day": "2026-06-11",
+        "volume": 23,
+        "share": 0.0147,
+        "sentiment": -0.046,
+        "rank": 10,
+        "bull": 6,
+        "bear": 8,
+        "neutral": 9,
+        "sources": {
+          "ptt": 1,
+          "reddit": 19,
+          "x": 2,
+          "youtube": 1
+        }
+      },
+      {
+        "day": "2026-06-12",
+        "volume": 8,
+        "share": 0.0074,
+        "sentiment": 0.051,
+        "rank": 10,
+        "bull": 1,
+        "bear": 0,
+        "neutral": 7,
+        "sources": {
+          "ptt": 1,
+          "xueqiu": 3,
+          "x": 2,
+          "youtube": 2
+        }
+      },
+      {
+        "day": "2026-06-13",
+        "volume": 7,
+        "share": 0.0139,
+        "sentiment": 0.014,
+        "rank": 7,
+        "bull": 1,
+        "bear": 1,
+        "neutral": 5,
+        "sources": {
+          "x": 2,
+          "youtube": 5
+        }
+      },
+      {
+        "day": "2026-06-14",
+        "volume": 14,
+        "share": 0.0243,
+        "sentiment": 0.25,
+        "rank": 7,
+        "bull": 6,
+        "bear": 1,
+        "neutral": 7,
+        "sources": {
+          "xueqiu": 1,
+          "x": 6,
+          "youtube": 7
+        }
+      },
+      {
+        "day": "2026-06-15",
+        "volume": 17,
+        "share": 0.0073,
+        "sentiment": 0.046,
+        "rank": 8,
+        "bull": 4,
+        "bear": 3,
+        "neutral": 10,
+        "sources": {
+          "xueqiu": 1,
+          "yahoo_jp": 1,
+          "ptt": 7,
+          "x": 6,
+          "youtube": 2
+        }
+      },
+      {
+        "day": "2026-06-16",
+        "volume": 13,
+        "share": 0.0044,
+        "sentiment": 0.001,
+        "rank": 9,
+        "bull": 4,
+        "bear": 3,
+        "neutral": 6,
+        "sources": {
+          "xueqiu": 2,
+          "naver": 1,
+          "ptt": 1,
+          "x": 6,
+          "youtube": 3
+        }
+      },
+      {
+        "day": "2026-06-17",
+        "volume": 11,
+        "share": 0.0169,
+        "sentiment": 0.16,
+        "rank": 9,
+        "bull": 3,
+        "bear": 0,
+        "neutral": 8,
+        "sources": {
+          "x": 6,
+          "youtube": 5
+        }
+      },
+      {
+        "day": "2026-06-18",
+        "volume": 17,
+        "share": 0.0168,
+        "sentiment": 0.216,
+        "rank": 7,
+        "bull": 6,
+        "bear": 3,
+        "neutral": 8,
+        "sources": {
+          "x": 8,
+          "youtube": 9
+        }
+      },
+      {
+        "day": "2026-06-19",
+        "volume": 9,
+        "share": 0.0363,
+        "sentiment": 0.348,
+        "rank": 8,
+        "bull": 5,
+        "bear": 1,
+        "neutral": 3,
+        "sources": {
+          "x": 1,
+          "youtube": 8
+        }
+      },
+      {
+        "day": "2026-06-20",
+        "volume": 12,
+        "share": 0.0533,
+        "sentiment": 0.256,
+        "rank": 7,
+        "bull": 6,
+        "bear": 1,
+        "neutral": 5,
+        "sources": {
+          "toss": 1,
+          "x": 1,
+          "youtube": 10
+        }
+      },
+      {
+        "day": "2026-06-21",
+        "volume": 14,
+        "share": 0.0579,
+        "sentiment": 0.377,
+        "rank": 6,
+        "bull": 9,
+        "bear": 4,
+        "neutral": 1,
+        "sources": {
+          "x": 1,
+          "youtube": 13
+        }
+      },
+      {
+        "day": "2026-06-22",
+        "volume": 17,
+        "share": 0.0106,
+        "sentiment": -0.029,
+        "rank": 7,
+        "bull": 1,
+        "bear": 3,
+        "neutral": 13,
+        "sources": {
+          "x": 3,
+          "youtube": 14
+        }
+      },
+      {
+        "day": "2026-06-23",
+        "volume": 4,
+        "share": 0.0037,
+        "sentiment": -0.26,
+        "rank": 9,
+        "bull": 0,
+        "bear": 2,
+        "neutral": 2,
+        "sources": {
+          "x": 4
+        }
+      },
+      {
+        "day": "2026-06-24",
+        "volume": 0,
+        "share": 0.0,
+        "sentiment": 0.0,
+        "rank": null,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {}
+      },
+      {
+        "day": "2026-06-25",
+        "volume": 0,
+        "share": 0.0,
+        "sentiment": 0.0,
+        "rank": null,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {}
+      },
+      {
+        "day": "2026-06-26",
+        "volume": 0,
+        "share": 0.0,
+        "sentiment": 0.0,
+        "rank": null,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {}
+      },
+      {
+        "day": "2026-06-27",
+        "volume": 0,
+        "share": 0.0,
+        "sentiment": 0.0,
+        "rank": null,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {}
+      },
+      {
+        "day": "2026-06-28",
+        "volume": 0,
+        "share": 0.0,
+        "sentiment": 0.0,
+        "rank": null,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {}
+      }
+    ],
+    "healthcare_biotech": [
+      {
+        "day": "2026-06-08",
+        "volume": 11,
+        "share": 0.0102,
+        "sentiment": 0.078,
+        "rank": 11,
+        "bull": 6,
+        "bear": 3,
+        "neutral": 2,
+        "sources": {
+          "yahoo_jp": 2,
+          "naver": 1,
+          "reddit": 8
+        }
+      },
+      {
+        "day": "2026-06-09",
+        "volume": 10,
+        "share": 0.0084,
+        "sentiment": 0.193,
+        "rank": 11,
+        "bull": 3,
+        "bear": 0,
+        "neutral": 7,
+        "sources": {
+          "yahoo_jp": 5,
+          "naver": 1,
+          "reddit": 4
+        }
+      },
+      {
+        "day": "2026-06-10",
+        "volume": 12,
+        "share": 0.0073,
+        "sentiment": 0.092,
+        "rank": 11,
+        "bull": 3,
+        "bear": 1,
+        "neutral": 8,
+        "sources": {
+          "yahoo_jp": 3,
+          "xueqiu": 1,
+          "reddit": 2,
+          "x": 6
+        }
+      },
+      {
+        "day": "2026-06-11",
+        "volume": 12,
+        "share": 0.0077,
+        "sentiment": 0.32,
+        "rank": 11,
+        "bull": 4,
+        "bear": 0,
+        "neutral": 8,
+        "sources": {
+          "yahoo_jp": 5,
+          "naver": 3,
+          "reddit": 2,
+          "x": 2
+        }
+      },
+      {
+        "day": "2026-06-12",
+        "volume": 8,
+        "share": 0.0074,
+        "sentiment": 0.418,
+        "rank": 11,
+        "bull": 4,
+        "bear": 0,
+        "neutral": 4,
+        "sources": {
+          "yahoo_jp": 5,
+          "x": 3
+        }
+      },
+      {
+        "day": "2026-06-13",
+        "volume": 3,
+        "share": 0.006,
+        "sentiment": 0.0,
+        "rank": 10,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 3,
+        "sources": {
+          "yahoo_jp": 1,
+          "naver": 1,
+          "x": 1
+        }
+      },
+      {
+        "day": "2026-06-14",
+        "volume": 1,
+        "share": 0.0017,
+        "sentiment": 0.0,
+        "rank": 11,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 1,
+        "sources": {
+          "yahoo_jp": 1
+        }
+      },
+      {
+        "day": "2026-06-15",
+        "volume": 17,
+        "share": 0.0073,
+        "sentiment": 0.139,
+        "rank": 7,
+        "bull": 3,
+        "bear": 1,
+        "neutral": 13,
+        "sources": {
+          "xueqiu": 3,
+          "yahoo_jp": 6,
+          "naver": 5,
+          "x": 3
+        }
+      },
+      {
+        "day": "2026-06-16",
+        "volume": 8,
+        "share": 0.0027,
+        "sentiment": -0.034,
+        "rank": 11,
+        "bull": 2,
+        "bear": 3,
+        "neutral": 3,
+        "sources": {
+          "yahoo_jp": 3,
+          "x": 4,
+          "youtube": 1
+        }
+      },
+      {
+        "day": "2026-06-17",
+        "volume": 5,
+        "share": 0.0077,
+        "sentiment": 0.101,
+        "rank": 11,
+        "bull": 2,
+        "bear": 1,
+        "neutral": 2,
+        "sources": {
+          "x": 5
+        }
+      },
+      {
+        "day": "2026-06-18",
+        "volume": 6,
+        "share": 0.0059,
+        "sentiment": 0.0,
+        "rank": 10,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 6,
+        "sources": {
+          "x": 6
+        }
+      },
+      {
+        "day": "2026-06-19",
+        "volume": 3,
+        "share": 0.0121,
+        "sentiment": 0.0,
+        "rank": 11,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 3,
+        "sources": {
+          "x": 3
+        }
+      },
+      {
+        "day": "2026-06-20",
+        "volume": 2,
+        "share": 0.0089,
+        "sentiment": 0.0,
+        "rank": 11,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 2,
+        "sources": {
+          "x": 2
+        }
+      },
+      {
+        "day": "2026-06-21",
+        "volume": 1,
+        "share": 0.0041,
+        "sentiment": 0.8,
+        "rank": 11,
+        "bull": 1,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {
+          "youtube": 1
+        }
+      },
+      {
+        "day": "2026-06-22",
+        "volume": 6,
+        "share": 0.0037,
+        "sentiment": 0.0,
+        "rank": 10,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 6,
+        "sources": {
+          "x": 6
+        }
+      },
+      {
+        "day": "2026-06-23",
+        "volume": 10,
+        "share": 0.0093,
+        "sentiment": 0.0,
+        "rank": 7,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 10,
+        "sources": {
+          "x": 10
+        }
+      },
+      {
+        "day": "2026-06-24",
+        "volume": 0,
+        "share": 0.0,
+        "sentiment": 0.0,
+        "rank": null,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {}
+      },
+      {
+        "day": "2026-06-25",
+        "volume": 0,
+        "share": 0.0,
+        "sentiment": 0.0,
+        "rank": null,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {}
+      },
+      {
+        "day": "2026-06-26",
+        "volume": 0,
+        "share": 0.0,
+        "sentiment": 0.0,
+        "rank": null,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {}
+      },
+      {
+        "day": "2026-06-27",
+        "volume": 0,
+        "share": 0.0,
+        "sentiment": 0.0,
+        "rank": null,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {}
+      },
+      {
+        "day": "2026-06-28",
+        "volume": 0,
+        "share": 0.0,
+        "sentiment": 0.0,
+        "rank": null,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {}
+      }
+    ],
+    "space_defense": [
+      {
+        "day": "2026-06-08",
+        "volume": 19,
+        "share": 0.0177,
+        "sentiment": 0.149,
+        "rank": 10,
+        "bull": 6,
+        "bear": 5,
+        "neutral": 8,
+        "sources": {
+          "xueqiu": 2,
+          "reddit": 17
+        }
+      },
+      {
+        "day": "2026-06-09",
+        "volume": 18,
+        "share": 0.0151,
+        "sentiment": -0.122,
+        "rank": 9,
+        "bull": 7,
+        "bear": 7,
+        "neutral": 4,
+        "sources": {
+          "xueqiu": 3,
+          "reddit": 13,
+          "youtube": 2
+        }
+      },
+      {
+        "day": "2026-06-10",
+        "volume": 30,
+        "share": 0.0182,
+        "sentiment": 0.036,
+        "rank": 9,
+        "bull": 7,
+        "bear": 6,
+        "neutral": 17,
+        "sources": {
+          "naver": 2,
+          "xueqiu": 1,
+          "reddit": 17,
+          "x": 8,
+          "youtube": 2
+        }
+      },
+      {
+        "day": "2026-06-11",
+        "volume": 32,
+        "share": 0.0205,
+        "sentiment": 0.036,
+        "rank": 9,
+        "bull": 7,
+        "bear": 7,
+        "neutral": 18,
+        "sources": {
+          "xueqiu": 7,
+          "reddit": 15,
+          "x": 10
+        }
+      },
+      {
+        "day": "2026-06-12",
+        "volume": 12,
+        "share": 0.0111,
+        "sentiment": -0.121,
+        "rank": 7,
+        "bull": 1,
+        "bear": 4,
+        "neutral": 7,
+        "sources": {
+          "naver": 2,
+          "xueqiu": 1,
+          "x": 7,
+          "youtube": 2
+        }
+      },
+      {
+        "day": "2026-06-13",
+        "volume": 7,
+        "share": 0.0139,
+        "sentiment": 0.043,
+        "rank": 8,
+        "bull": 1,
+        "bear": 0,
+        "neutral": 6,
+        "sources": {
+          "xueqiu": 3,
+          "x": 3,
+          "youtube": 1
+        }
+      },
+      {
+        "day": "2026-06-14",
+        "volume": 11,
+        "share": 0.0191,
+        "sentiment": 0.319,
+        "rank": 8,
+        "bull": 5,
+        "bear": 1,
+        "neutral": 5,
+        "sources": {
+          "yahoo_jp": 1,
+          "xueqiu": 2,
+          "x": 5,
+          "youtube": 3
+        }
+      },
+      {
+        "day": "2026-06-15",
+        "volume": 16,
+        "share": 0.0069,
+        "sentiment": -0.222,
+        "rank": 9,
+        "bull": 4,
+        "bear": 5,
+        "neutral": 7,
+        "sources": {
+          "ptt": 4,
+          "xueqiu": 4,
+          "naver": 2,
+          "x": 6
+        }
+      },
+      {
+        "day": "2026-06-16",
+        "volume": 27,
+        "share": 0.0091,
+        "sentiment": -0.094,
+        "rank": 7,
+        "bull": 4,
+        "bear": 8,
+        "neutral": 15,
+        "sources": {
+          "xueqiu": 17,
+          "naver": 2,
+          "yahoo_jp": 3,
+          "x": 3,
+          "youtube": 2
+        }
+      },
+      {
+        "day": "2026-06-17",
+        "volume": 20,
+        "share": 0.0308,
+        "sentiment": 0.233,
+        "rank": 7,
+        "bull": 8,
+        "bear": 1,
+        "neutral": 11,
+        "sources": {
+          "x": 20
+        }
+      },
+      {
+        "day": "2026-06-18",
+        "volume": 8,
+        "share": 0.0079,
+        "sentiment": 0.203,
+        "rank": 8,
+        "bull": 4,
+        "bear": 1,
+        "neutral": 3,
+        "sources": {
+          "x": 8
+        }
+      },
+      {
+        "day": "2026-06-19",
+        "volume": 7,
+        "share": 0.0282,
+        "sentiment": 0.208,
+        "rank": 9,
+        "bull": 4,
+        "bear": 2,
+        "neutral": 1,
+        "sources": {
+          "x": 5,
+          "youtube": 2
+        }
+      },
+      {
+        "day": "2026-06-20",
+        "volume": 3,
+        "share": 0.0133,
+        "sentiment": 0.367,
+        "rank": 10,
+        "bull": 2,
+        "bear": 1,
+        "neutral": 0,
+        "sources": {
+          "youtube": 3
+        }
+      },
+      {
+        "day": "2026-06-21",
+        "volume": 8,
+        "share": 0.0331,
+        "sentiment": 0.29,
+        "rank": 9,
+        "bull": 3,
+        "bear": 0,
+        "neutral": 5,
+        "sources": {
+          "x": 5,
+          "youtube": 3
+        }
+      },
+      {
+        "day": "2026-06-22",
+        "volume": 15,
+        "share": 0.0094,
+        "sentiment": 0.199,
+        "rank": 8,
+        "bull": 5,
+        "bear": 2,
+        "neutral": 8,
+        "sources": {
+          "x": 11,
+          "youtube": 4
+        }
+      },
+      {
+        "day": "2026-06-23",
+        "volume": 4,
+        "share": 0.0037,
+        "sentiment": 0.0,
+        "rank": 10,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 4,
+        "sources": {
+          "x": 4
+        }
+      },
+      {
+        "day": "2026-06-24",
+        "volume": 1,
+        "share": 0.0007,
+        "sentiment": 0.0,
+        "rank": 6,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 1,
+        "sources": {
+          "x": 1
+        }
+      },
+      {
+        "day": "2026-06-25",
+        "volume": 0,
+        "share": 0.0,
+        "sentiment": 0.0,
+        "rank": null,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {}
+      },
+      {
+        "day": "2026-06-26",
+        "volume": 0,
+        "share": 0.0,
+        "sentiment": 0.0,
+        "rank": null,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {}
+      },
+      {
+        "day": "2026-06-27",
+        "volume": 0,
+        "share": 0.0,
+        "sentiment": 0.0,
+        "rank": null,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {}
+      },
+      {
+        "day": "2026-06-28",
+        "volume": 0,
+        "share": 0.0,
+        "sentiment": 0.0,
+        "rank": null,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {}
+      }
+    ],
+    "retail_momentum": [
+      {
+        "day": "2026-06-08",
+        "volume": 49,
+        "share": 0.0455,
+        "sentiment": -0.111,
+        "rank": 7,
+        "bull": 13,
+        "bear": 16,
+        "neutral": 20,
+        "sources": {
+          "xueqiu": 2,
+          "reddit": 47
+        }
+      },
+      {
+        "day": "2026-06-09",
+        "volume": 30,
+        "share": 0.0252,
+        "sentiment": -0.065,
+        "rank": 7,
+        "bull": 10,
+        "bear": 7,
+        "neutral": 13,
+        "sources": {
+          "reddit": 30
+        }
+      },
+      {
+        "day": "2026-06-10",
+        "volume": 77,
+        "share": 0.0467,
+        "sentiment": 0.075,
+        "rank": 6,
+        "bull": 27,
+        "bear": 15,
+        "neutral": 35,
+        "sources": {
+          "reddit": 65,
+          "x": 12
+        }
+      },
+      {
+        "day": "2026-06-11",
+        "volume": 99,
+        "share": 0.0634,
+        "sentiment": 0.225,
+        "rank": 5,
+        "bull": 43,
+        "bear": 12,
+        "neutral": 44,
+        "sources": {
+          "naver": 1,
+          "xueqiu": 5,
+          "reddit": 86,
+          "x": 6,
+          "youtube": 1
+        }
+      },
+      {
+        "day": "2026-06-12",
+        "volume": 11,
+        "share": 0.0102,
+        "sentiment": 0.418,
+        "rank": 8,
+        "bull": 8,
+        "bear": 0,
+        "neutral": 3,
+        "sources": {
+          "xueqiu": 1,
+          "x": 10
+        }
+      },
+      {
+        "day": "2026-06-13",
+        "volume": 2,
+        "share": 0.004,
+        "sentiment": 0.0,
+        "rank": 11,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 2,
+        "sources": {
+          "xueqiu": 1,
+          "x": 1
+        }
+      },
+      {
+        "day": "2026-06-14",
+        "volume": 1,
+        "share": 0.0017,
+        "sentiment": 0.55,
+        "rank": 10,
+        "bull": 1,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {
+          "x": 1
+        }
+      },
+      {
+        "day": "2026-06-15",
+        "volume": 3,
+        "share": 0.0013,
+        "sentiment": 0.363,
+        "rank": 11,
+        "bull": 2,
+        "bear": 0,
+        "neutral": 1,
+        "sources": {
+          "x": 3
+        }
+      },
+      {
+        "day": "2026-06-16",
+        "volume": 8,
+        "share": 0.0027,
+        "sentiment": 0.313,
+        "rank": 10,
+        "bull": 4,
+        "bear": 0,
+        "neutral": 4,
+        "sources": {
+          "naver": 1,
+          "xueqiu": 1,
+          "x": 6
+        }
+      },
+      {
+        "day": "2026-06-17",
+        "volume": 17,
+        "share": 0.0262,
+        "sentiment": 0.282,
+        "rank": 8,
+        "bull": 10,
+        "bear": 1,
+        "neutral": 6,
+        "sources": {
+          "x": 17
+        }
+      },
+      {
+        "day": "2026-06-18",
+        "volume": 8,
+        "share": 0.0079,
+        "sentiment": 0.267,
+        "rank": 9,
+        "bull": 4,
+        "bear": 1,
+        "neutral": 3,
+        "sources": {
+          "x": 5,
+          "youtube": 3
+        }
+      },
+      {
+        "day": "2026-06-19",
+        "volume": 10,
+        "share": 0.0403,
+        "sentiment": 0.667,
+        "rank": 7,
+        "bull": 9,
+        "bear": 0,
+        "neutral": 1,
+        "sources": {
+          "x": 3,
+          "youtube": 7
+        }
+      },
+      {
+        "day": "2026-06-20",
+        "volume": 6,
+        "share": 0.0267,
+        "sentiment": 0.647,
+        "rank": 9,
+        "bull": 5,
+        "bear": 0,
+        "neutral": 1,
+        "sources": {
+          "x": 1,
+          "youtube": 5
+        }
+      },
+      {
+        "day": "2026-06-21",
+        "volume": 9,
+        "share": 0.0372,
+        "sentiment": 0.579,
+        "rank": 8,
+        "bull": 8,
+        "bear": 0,
+        "neutral": 1,
+        "sources": {
+          "x": 2,
+          "youtube": 7
+        }
+      },
+      {
+        "day": "2026-06-22",
+        "volume": 13,
+        "share": 0.0081,
+        "sentiment": 0.349,
+        "rank": 9,
+        "bull": 8,
+        "bear": 0,
+        "neutral": 5,
+        "sources": {
+          "x": 10,
+          "youtube": 3
+        }
+      },
+      {
+        "day": "2026-06-23",
+        "volume": 8,
+        "share": 0.0074,
+        "sentiment": 0.138,
+        "rank": 8,
+        "bull": 3,
+        "bear": 1,
+        "neutral": 4,
+        "sources": {
+          "x": 8
+        }
+      },
+      {
+        "day": "2026-06-24",
+        "volume": 1,
+        "share": 0.0007,
+        "sentiment": -0.9,
+        "rank": 4,
+        "bull": 0,
+        "bear": 1,
+        "neutral": 0,
+        "sources": {
+          "toss": 1
+        }
+      },
+      {
+        "day": "2026-06-25",
+        "volume": 0,
+        "share": 0.0,
+        "sentiment": 0.0,
+        "rank": null,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {}
+      },
+      {
+        "day": "2026-06-26",
+        "volume": 0,
+        "share": 0.0,
+        "sentiment": 0.0,
+        "rank": null,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {}
+      },
+      {
+        "day": "2026-06-27",
+        "volume": 0,
+        "share": 0.0,
+        "sentiment": 0.0,
+        "rank": null,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {}
+      },
+      {
+        "day": "2026-06-28",
+        "volume": 0,
+        "share": 0.0,
+        "sentiment": 0.0,
+        "rank": null,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {}
+      }
+    ],
+    "index_etf": [
+      {
+        "day": "2026-06-08",
+        "volume": 73,
+        "share": 0.0678,
+        "sentiment": 0.01,
+        "rank": 4,
+        "bull": 18,
+        "bear": 22,
+        "neutral": 33,
+        "sources": {
+          "naver": 3,
+          "yahoo_jp": 1,
+          "ptt": 2,
+          "xueqiu": 4,
+          "reddit": 63
+        }
+      },
+      {
+        "day": "2026-06-09",
+        "volume": 53,
+        "share": 0.0445,
+        "sentiment": -0.094,
+        "rank": 6,
+        "bull": 7,
+        "bear": 9,
+        "neutral": 37,
+        "sources": {
+          "ptt": 1,
+          "xueqiu": 7,
+          "reddit": 43,
+          "youtube": 2
+        }
+      },
+      {
+        "day": "2026-06-10",
+        "volume": 133,
+        "share": 0.0807,
+        "sentiment": -0.197,
+        "rank": 3,
+        "bull": 25,
+        "bear": 51,
+        "neutral": 57,
+        "sources": {
+          "naver": 2,
+          "ptt": 7,
+          "xueqiu": 4,
+          "yahoo_jp": 1,
+          "reddit": 102,
+          "x": 12,
+          "youtube": 5
+        }
+      },
+      {
+        "day": "2026-06-11",
+        "volume": 116,
+        "share": 0.0743,
+        "sentiment": -0.112,
+        "rank": 4,
+        "bull": 12,
+        "bear": 30,
+        "neutral": 74,
+        "sources": {
+          "naver": 1,
+          "yahoo_jp": 3,
+          "ptt": 11,
+          "xueqiu": 3,
+          "reddit": 74,
+          "x": 17,
+          "youtube": 7
+        }
+      },
+      {
+        "day": "2026-06-12",
+        "volume": 16,
+        "share": 0.0148,
+        "sentiment": -0.029,
+        "rank": 6,
+        "bull": 3,
+        "bear": 4,
+        "neutral": 9,
+        "sources": {
+          "ptt": 1,
+          "naver": 1,
+          "xueqiu": 2,
+          "x": 9,
+          "youtube": 3
+        }
+      },
+      {
+        "day": "2026-06-13",
+        "volume": 28,
+        "share": 0.0556,
+        "sentiment": 0.166,
+        "rank": 5,
+        "bull": 10,
+        "bear": 2,
+        "neutral": 16,
+        "sources": {
+          "ptt": 4,
+          "yahoo_jp": 1,
+          "xueqiu": 5,
+          "x": 17,
+          "youtube": 1
+        }
+      },
+      {
+        "day": "2026-06-14",
+        "volume": 23,
+        "share": 0.0399,
+        "sentiment": 0.059,
+        "rank": 6,
+        "bull": 6,
+        "bear": 2,
+        "neutral": 15,
+        "sources": {
+          "ptt": 8,
+          "yahoo_jp": 2,
+          "xueqiu": 4,
+          "x": 5,
+          "youtube": 4
+        }
+      },
+      {
+        "day": "2026-06-15",
+        "volume": 35,
+        "share": 0.0151,
+        "sentiment": 0.029,
+        "rank": 6,
+        "bull": 10,
+        "bear": 8,
+        "neutral": 17,
+        "sources": {
+          "ptt": 1,
+          "yahoo_jp": 3,
+          "xueqiu": 14,
+          "naver": 1,
+          "x": 13,
+          "youtube": 3
+        }
+      },
+      {
+        "day": "2026-06-16",
+        "volume": 57,
+        "share": 0.0192,
+        "sentiment": 0.003,
+        "rank": 6,
+        "bull": 11,
+        "bear": 9,
+        "neutral": 37,
+        "sources": {
+          "xueqiu": 30,
+          "naver": 2,
+          "yahoo_jp": 3,
+          "x": 13,
+          "youtube": 9
+        }
+      },
+      {
+        "day": "2026-06-17",
+        "volume": 28,
+        "share": 0.0431,
+        "sentiment": 0.185,
+        "rank": 4,
+        "bull": 10,
+        "bear": 3,
+        "neutral": 15,
+        "sources": {
+          "toss": 1,
+          "x": 12,
+          "youtube": 15
+        }
+      },
+      {
+        "day": "2026-06-18",
+        "volume": 21,
+        "share": 0.0207,
+        "sentiment": 0.239,
+        "rank": 5,
+        "bull": 8,
+        "bear": 1,
+        "neutral": 12,
+        "sources": {
+          "toss": 2,
+          "x": 6,
+          "youtube": 13
+        }
+      },
+      {
+        "day": "2026-06-19",
+        "volume": 17,
+        "share": 0.0685,
+        "sentiment": 0.136,
+        "rank": 5,
+        "bull": 5,
+        "bear": 2,
+        "neutral": 10,
+        "sources": {
+          "x": 7,
+          "youtube": 10
+        }
+      },
+      {
+        "day": "2026-06-20",
+        "volume": 20,
+        "share": 0.0889,
+        "sentiment": 0.221,
+        "rank": 6,
+        "bull": 7,
+        "bear": 1,
+        "neutral": 12,
+        "sources": {
+          "x": 5,
+          "youtube": 15
+        }
+      },
+      {
+        "day": "2026-06-21",
+        "volume": 13,
+        "share": 0.0537,
+        "sentiment": 0.047,
+        "rank": 7,
+        "bull": 2,
+        "bear": 1,
+        "neutral": 10,
+        "sources": {
+          "x": 1,
+          "youtube": 12
+        }
+      },
+      {
+        "day": "2026-06-22",
+        "volume": 41,
+        "share": 0.0256,
+        "sentiment": 0.163,
+        "rank": 4,
+        "bull": 15,
+        "bear": 7,
+        "neutral": 19,
+        "sources": {
+          "toss": 1,
+          "x": 14,
+          "youtube": 26
+        }
+      },
+      {
+        "day": "2026-06-23",
+        "volume": 13,
+        "share": 0.0121,
+        "sentiment": 0.22,
+        "rank": 6,
+        "bull": 6,
+        "bear": 1,
+        "neutral": 6,
+        "sources": {
+          "toss": 1,
+          "x": 12
+        }
+      },
+      {
+        "day": "2026-06-24",
+        "volume": 3,
+        "share": 0.0021,
+        "sentiment": -0.056,
+        "rank": 3,
+        "bull": 1,
+        "bear": 2,
+        "neutral": 0,
+        "sources": {
+          "toss": 3
+        }
+      },
+      {
+        "day": "2026-06-25",
+        "volume": 2,
+        "share": 0.001,
+        "sentiment": -0.794,
+        "rank": 2,
+        "bull": 0,
+        "bear": 2,
+        "neutral": 0,
+        "sources": {
+          "toss": 2
+        }
+      },
+      {
+        "day": "2026-06-26",
+        "volume": 1,
+        "share": 0.001,
+        "sentiment": 0.8,
+        "rank": 2,
+        "bull": 1,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {
+          "toss": 1
+        }
+      },
+      {
+        "day": "2026-06-27",
+        "volume": 0,
+        "share": 0.0,
+        "sentiment": 0.0,
+        "rank": null,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {}
+      },
+      {
+        "day": "2026-06-28",
+        "volume": 0,
+        "share": 0.0,
+        "sentiment": 0.0,
+        "rank": null,
+        "bull": 0,
+        "bear": 0,
+        "neutral": 0,
+        "sources": {}
+      }
+    ]
+  },
+  "details": {
+    "ai_cloud": {
+      "topTickers": [
+        {
+          "ticker": "PLTR",
+          "count": 9532
+        },
+        {
+          "ticker": "MSFT",
+          "count": 595
+        },
+        {
+          "ticker": "ORCL",
+          "count": 492
+        },
+        {
+          "ticker": "SMCI",
+          "count": 382
+        },
+        {
+          "ticker": "NVDA",
+          "count": 124
+        },
+        {
+          "ticker": "GOOGL",
+          "count": 110
+        },
+        {
+          "ticker": "META",
+          "count": 110
+        },
+        {
+          "ticker": "DELL",
+          "count": 88
+        },
+        {
+          "ticker": "AMZN",
+          "count": 69
+        },
+        {
+          "ticker": "AMD",
+          "count": 62
+        }
+      ],
+      "sources": [
+        {
+          "source": "toss",
+          "count": 9032
+        },
+        {
+          "source": "yahoo_jp",
+          "count": 878
+        },
+        {
+          "source": "xueqiu",
+          "count": 763
+        },
+        {
+          "source": "naver",
+          "count": 762
+        },
+        {
+          "source": "x",
+          "count": 256
+        },
+        {
+          "source": "reddit",
+          "count": 187
+        },
+        {
+          "source": "youtube",
+          "count": 80
+        },
+        {
+          "source": "ptt",
+          "count": 46
+        }
+      ],
+      "regions": [
+        {
+          "region": "kr",
+          "count": 9794
+        },
+        {
+          "region": "jp",
+          "count": 878
+        },
+        {
+          "region": "cn",
+          "count": 763
+        },
+        {
+          "region": "us",
+          "count": 443
+        },
+        {
+          "region": "global",
+          "count": 80
+        },
+        {
+          "region": "tw",
+          "count": 46
+        }
+      ],
+      "windowVolume": 12004,
+      "windowSentiment": -0.234
+    },
+    "semiconductors": {
+      "topTickers": [
+        {
+          "ticker": "MU",
+          "count": 1884
+        },
+        {
+          "ticker": "NVDA",
+          "count": 749
+        },
+        {
+          "ticker": "INTC",
+          "count": 629
+        },
+        {
+          "ticker": "ARM",
+          "count": 399
+        },
+        {
+          "ticker": "AVGO",
+          "count": 371
+        },
+        {
+          "ticker": "AMD",
+          "count": 322
+        },
+        {
+          "ticker": "TSM",
+          "count": 282
+        },
+        {
+          "ticker": "QCOM",
+          "count": 201
+        },
+        {
+          "ticker": "ASML",
+          "count": 129
+        },
+        {
+          "ticker": "AMAT",
+          "count": 83
+        }
+      ],
+      "sources": [
+        {
+          "source": "naver",
+          "count": 2048
+        },
+        {
+          "source": "yahoo_jp",
+          "count": 1350
+        },
+        {
+          "source": "xueqiu",
+          "count": 1091
+        },
+        {
+          "source": "x",
+          "count": 416
+        },
+        {
+          "source": "youtube",
+          "count": 126
+        },
+        {
+          "source": "reddit",
+          "count": 124
+        },
+        {
+          "source": "ptt",
+          "count": 81
+        },
+        {
+          "source": "toss",
+          "count": 3
+        }
+      ],
+      "regions": [
+        {
+          "region": "kr",
+          "count": 2051
+        },
+        {
+          "region": "jp",
+          "count": 1350
+        },
+        {
+          "region": "cn",
+          "count": 1091
+        },
+        {
+          "region": "us",
+          "count": 540
+        },
+        {
+          "region": "global",
+          "count": 126
+        },
+        {
+          "region": "tw",
+          "count": 81
+        }
+      ],
+      "windowVolume": 5239,
+      "windowSentiment": 0.071
+    },
+    "mega_platforms": {
+      "topTickers": [
+        {
+          "ticker": "AAPL",
+          "count": 268
+        },
+        {
+          "ticker": "GOOGL",
+          "count": 222
+        },
+        {
+          "ticker": "NFLX",
+          "count": 176
+        },
+        {
+          "ticker": "AMZN",
+          "count": 167
+        },
+        {
+          "ticker": "META",
+          "count": 128
+        },
+        {
+          "ticker": "BABA",
+          "count": 96
+        },
+        {
+          "ticker": "DIS",
+          "count": 78
+        },
+        {
+          "ticker": "UBER",
+          "count": 48
+        },
+        {
+          "ticker": "NIO",
+          "count": 8
+        },
+        {
+          "ticker": "TSLA",
+          "count": 7
+        }
+      ],
+      "sources": [
+        {
+          "source": "xueqiu",
+          "count": 437
+        },
+        {
+          "source": "x",
+          "count": 241
+        },
+        {
+          "source": "yahoo_jp",
+          "count": 196
+        },
+        {
+          "source": "naver",
+          "count": 182
+        },
+        {
+          "source": "youtube",
+          "count": 107
+        },
+        {
+          "source": "reddit",
+          "count": 60
+        },
+        {
+          "source": "ptt",
+          "count": 32
+        }
+      ],
+      "regions": [
+        {
+          "region": "cn",
+          "count": 437
+        },
+        {
+          "region": "us",
+          "count": 301
+        },
+        {
+          "region": "jp",
+          "count": 196
+        },
+        {
+          "region": "kr",
+          "count": 182
+        },
+        {
+          "region": "global",
+          "count": 107
+        },
+        {
+          "region": "tw",
+          "count": 32
+        }
+      ],
+      "windowVolume": 1255,
+      "windowSentiment": 0.072
+    },
+    "ev_autonomy": {
+      "topTickers": [
+        {
+          "ticker": "TSLA",
+          "count": 771
+        },
+        {
+          "ticker": "NIO",
+          "count": 100
+        },
+        {
+          "ticker": "RIVN",
+          "count": 89
+        },
+        {
+          "ticker": "LCID",
+          "count": 79
+        },
+        {
+          "ticker": "F",
+          "count": 40
+        },
+        {
+          "ticker": "UBER",
+          "count": 12
+        },
+        {
+          "ticker": "1810.HK",
+          "count": 4
+        },
+        {
+          "ticker": "FAC",
+          "count": 2
+        },
+        {
+          "ticker": "1211.HK",
+          "count": 2
+        },
+        {
+          "ticker": "TSM",
+          "count": 1
+        }
+      ],
+      "sources": [
+        {
+          "source": "naver",
+          "count": 438
+        },
+        {
+          "source": "yahoo_jp",
+          "count": 235
+        },
+        {
+          "source": "xueqiu",
+          "count": 161
+        },
+        {
+          "source": "x",
+          "count": 160
+        },
+        {
+          "source": "youtube",
+          "count": 69
+        },
+        {
+          "source": "reddit",
+          "count": 35
+        },
+        {
+          "source": "ptt",
+          "count": 5
+        },
+        {
+          "source": "toss",
+          "count": 1
+        }
+      ],
+      "regions": [
+        {
+          "region": "kr",
+          "count": 439
+        },
+        {
+          "region": "jp",
+          "count": 235
+        },
+        {
+          "region": "us",
+          "count": 195
+        },
+        {
+          "region": "cn",
+          "count": 161
+        },
+        {
+          "region": "global",
+          "count": 69
+        },
+        {
+          "region": "tw",
+          "count": 5
+        }
+      ],
+      "windowVolume": 1104,
+      "windowSentiment": 0.02
+    },
+    "energy_power": {
+      "topTickers": [
+        {
+          "ticker": "TSLA",
+          "count": 11
+        },
+        {
+          "ticker": "NVDA",
+          "count": 10
+        },
+        {
+          "ticker": "MARA",
+          "count": 9
+        },
+        {
+          "ticker": "NIO",
+          "count": 5
+        },
+        {
+          "ticker": "GOOGL",
+          "count": 5
+        },
+        {
+          "ticker": "MU",
+          "count": 5
+        },
+        {
+          "ticker": "AVGO",
+          "count": 5
+        },
+        {
+          "ticker": "FIX",
+          "count": 5
+        },
+        {
+          "ticker": "CEG",
+          "count": 5
+        },
+        {
+          "ticker": "OKLO",
+          "count": 5
+        }
+      ],
+      "sources": [
+        {
+          "source": "reddit",
+          "count": 87
+        },
+        {
+          "source": "x",
+          "count": 40
+        },
+        {
+          "source": "youtube",
+          "count": 22
+        },
+        {
+          "source": "yahoo_jp",
+          "count": 15
+        },
+        {
+          "source": "xueqiu",
+          "count": 13
+        },
+        {
+          "source": "ptt",
+          "count": 5
+        },
+        {
+          "source": "toss",
+          "count": 2
+        }
+      ],
+      "regions": [
+        {
+          "region": "us",
+          "count": 127
+        },
+        {
+          "region": "global",
+          "count": 22
+        },
+        {
+          "region": "jp",
+          "count": 15
+        },
+        {
+          "region": "cn",
+          "count": 13
+        },
+        {
+          "region": "tw",
+          "count": 5
+        },
+        {
+          "region": "kr",
+          "count": 2
+        }
+      ],
+      "windowVolume": 184,
+      "windowSentiment": 0.216
+    },
+    "crypto_fintech": {
+      "topTickers": [
+        {
+          "ticker": "SOFI",
+          "count": 330
+        },
+        {
+          "ticker": "MSTR",
+          "count": 241
+        },
+        {
+          "ticker": "COIN",
+          "count": 127
+        },
+        {
+          "ticker": "HOOD",
+          "count": 81
+        },
+        {
+          "ticker": "PYPL",
+          "count": 67
+        },
+        {
+          "ticker": "RIOT",
+          "count": 51
+        },
+        {
+          "ticker": "MARA",
+          "count": 41
+        },
+        {
+          "ticker": "DIS",
+          "count": 7
+        },
+        {
+          "ticker": "AMC",
+          "count": 6
+        },
+        {
+          "ticker": "MSFT",
+          "count": 5
+        }
+      ],
+      "sources": [
+        {
+          "source": "yahoo_jp",
+          "count": 428
+        },
+        {
+          "source": "x",
+          "count": 251
+        },
+        {
+          "source": "youtube",
+          "count": 113
+        },
+        {
+          "source": "xueqiu",
+          "count": 90
+        },
+        {
+          "source": "naver",
+          "count": 75
+        },
+        {
+          "source": "reddit",
+          "count": 47
+        },
+        {
+          "source": "ptt",
+          "count": 2
+        }
+      ],
+      "regions": [
+        {
+          "region": "jp",
+          "count": 428
+        },
+        {
+          "region": "us",
+          "count": 298
+        },
+        {
+          "region": "global",
+          "count": 113
+        },
+        {
+          "region": "cn",
+          "count": 90
+        },
+        {
+          "region": "kr",
+          "count": 75
+        },
+        {
+          "region": "tw",
+          "count": 2
+        }
+      ],
+      "windowVolume": 1006,
+      "windowSentiment": 0.122
+    },
+    "financials": {
+      "topTickers": [
+        {
+          "ticker": "JPM",
+          "count": 58
+        },
+        {
+          "ticker": "TSLA",
+          "count": 10
+        },
+        {
+          "ticker": "SOFI",
+          "count": 10
+        },
+        {
+          "ticker": "MARA",
+          "count": 8
+        },
+        {
+          "ticker": "HOOD",
+          "count": 7
+        },
+        {
+          "ticker": "PYPL",
+          "count": 7
+        },
+        {
+          "ticker": "META",
+          "count": 6
+        },
+        {
+          "ticker": "AMZN",
+          "count": 6
+        },
+        {
+          "ticker": "MSFT",
+          "count": 5
+        },
+        {
+          "ticker": "AMC",
+          "count": 5
+        }
+      ],
+      "sources": [
+        {
+          "source": "youtube",
+          "count": 82
+        },
+        {
+          "source": "reddit",
+          "count": 69
+        },
+        {
+          "source": "x",
+          "count": 48
+        },
+        {
+          "source": "ptt",
+          "count": 14
+        },
+        {
+          "source": "xueqiu",
+          "count": 10
+        },
+        {
+          "source": "yahoo_jp",
+          "count": 1
+        },
+        {
+          "source": "naver",
+          "count": 1
+        },
+        {
+          "source": "toss",
+          "count": 1
+        }
+      ],
+      "regions": [
+        {
+          "region": "us",
+          "count": 117
+        },
+        {
+          "region": "global",
+          "count": 82
+        },
+        {
+          "region": "tw",
+          "count": 14
+        },
+        {
+          "region": "cn",
+          "count": 10
+        },
+        {
+          "region": "kr",
+          "count": 2
+        },
+        {
+          "region": "jp",
+          "count": 1
+        }
+      ],
+      "windowVolume": 226,
+      "windowSentiment": 0.109
+    },
+    "healthcare_biotech": {
+      "topTickers": [
+        {
+          "ticker": "PFE",
+          "count": 86
+        },
+        {
+          "ticker": "ELDN",
+          "count": 3
+        },
+        {
+          "ticker": "ARM",
+          "count": 2
+        },
+        {
+          "ticker": "VOO",
+          "count": 2
+        },
+        {
+          "ticker": "MSFT",
+          "count": 1
+        },
+        {
+          "ticker": "NFLX",
+          "count": 1
+        },
+        {
+          "ticker": "TSM",
+          "count": 1
+        },
+        {
+          "ticker": "BABA",
+          "count": 1
+        },
+        {
+          "ticker": "BIDU",
+          "count": 1
+        },
+        {
+          "ticker": "BYDDY",
+          "count": 1
+        }
+      ],
+      "sources": [
+        {
+          "source": "x",
+          "count": 51
+        },
+        {
+          "source": "yahoo_jp",
+          "count": 31
+        },
+        {
+          "source": "reddit",
+          "count": 16
+        },
+        {
+          "source": "naver",
+          "count": 11
+        },
+        {
+          "source": "xueqiu",
+          "count": 4
+        },
+        {
+          "source": "youtube",
+          "count": 2
+        }
+      ],
+      "regions": [
+        {
+          "region": "us",
+          "count": 67
+        },
+        {
+          "region": "jp",
+          "count": 31
+        },
+        {
+          "region": "kr",
+          "count": 11
+        },
+        {
+          "region": "cn",
+          "count": 4
+        },
+        {
+          "region": "global",
+          "count": 2
+        }
+      ],
+      "windowVolume": 115,
+      "windowSentiment": 0.125
+    },
+    "space_defense": {
+      "topTickers": [
+        {
+          "ticker": "BA",
+          "count": 61
+        },
+        {
+          "ticker": "TSLA",
+          "count": 16
+        },
+        {
+          "ticker": "NVDA",
+          "count": 11
+        },
+        {
+          "ticker": "PLTR",
+          "count": 10
+        },
+        {
+          "ticker": "RKLB",
+          "count": 10
+        },
+        {
+          "ticker": "MU",
+          "count": 7
+        },
+        {
+          "ticker": "AMZN",
+          "count": 7
+        },
+        {
+          "ticker": "ASTS",
+          "count": 7
+        },
+        {
+          "ticker": "INTC",
+          "count": 6
+        },
+        {
+          "ticker": "BABA",
+          "count": 5
+        }
+      ],
+      "sources": [
+        {
+          "source": "x",
+          "count": 96
+        },
+        {
+          "source": "reddit",
+          "count": 62
+        },
+        {
+          "source": "xueqiu",
+          "count": 40
+        },
+        {
+          "source": "youtube",
+          "count": 24
+        },
+        {
+          "source": "naver",
+          "count": 8
+        },
+        {
+          "source": "ptt",
+          "count": 4
+        },
+        {
+          "source": "yahoo_jp",
+          "count": 4
+        }
+      ],
+      "regions": [
+        {
+          "region": "us",
+          "count": 158
+        },
+        {
+          "region": "cn",
+          "count": 40
+        },
+        {
+          "region": "global",
+          "count": 24
+        },
+        {
+          "region": "kr",
+          "count": 8
+        },
+        {
+          "region": "tw",
+          "count": 4
+        },
+        {
+          "region": "jp",
+          "count": 4
+        }
+      ],
+      "windowVolume": 238,
+      "windowSentiment": 0.067
+    },
+    "retail_momentum": {
+      "topTickers": [
+        {
+          "ticker": "GME",
+          "count": 60
+        },
+        {
+          "ticker": "AMC",
+          "count": 54
+        },
+        {
+          "ticker": "SPCX",
+          "count": 27
+        },
+        {
+          "ticker": "TSLA",
+          "count": 12
+        },
+        {
+          "ticker": "SPCE",
+          "count": 5
+        },
+        {
+          "ticker": "SOFI",
+          "count": 5
+        },
+        {
+          "ticker": "NVDA",
+          "count": 4
+        },
+        {
+          "ticker": "SPY",
+          "count": 4
+        },
+        {
+          "ticker": "INHD",
+          "count": 3
+        },
+        {
+          "ticker": "ASTS",
+          "count": 3
+        }
+      ],
+      "sources": [
+        {
+          "source": "reddit",
+          "count": 228
+        },
+        {
+          "source": "x",
+          "count": 85
+        },
+        {
+          "source": "youtube",
+          "count": 26
+        },
+        {
+          "source": "xueqiu",
+          "count": 10
+        },
+        {
+          "source": "naver",
+          "count": 2
+        },
+        {
+          "source": "toss",
+          "count": 1
+        }
+      ],
+      "regions": [
+        {
+          "region": "us",
+          "count": 313
+        },
+        {
+          "region": "global",
+          "count": 26
+        },
+        {
+          "region": "cn",
+          "count": 10
+        },
+        {
+          "region": "kr",
+          "count": 3
+        }
+      ],
+      "windowVolume": 352,
+      "windowSentiment": 0.2
+    },
+    "index_etf": {
+      "topTickers": [
+        {
+          "ticker": "SPY",
+          "count": 47
+        },
+        {
+          "ticker": "QQQ",
+          "count": 31
+        },
+        {
+          "ticker": "TSLA",
+          "count": 25
+        },
+        {
+          "ticker": "GOOGL",
+          "count": 21
+        },
+        {
+          "ticker": "NVDA",
+          "count": 19
+        },
+        {
+          "ticker": "AMZN",
+          "count": 19
+        },
+        {
+          "ticker": "ARM",
+          "count": 19
+        },
+        {
+          "ticker": "PLTR",
+          "count": 19
+        },
+        {
+          "ticker": "AVGO",
+          "count": 18
+        },
+        {
+          "ticker": "DELL",
+          "count": 18
+        }
+      ],
+      "sources": [
+        {
+          "source": "reddit",
+          "count": 282
+        },
+        {
+          "source": "x",
+          "count": 143
+        },
+        {
+          "source": "youtube",
+          "count": 125
+        },
+        {
+          "source": "xueqiu",
+          "count": 73
+        },
+        {
+          "source": "ptt",
+          "count": 35
+        },
+        {
+          "source": "yahoo_jp",
+          "count": 14
+        },
+        {
+          "source": "toss",
+          "count": 11
+        },
+        {
+          "source": "naver",
+          "count": 10
+        }
+      ],
+      "regions": [
+        {
+          "region": "us",
+          "count": 425
+        },
+        {
+          "region": "global",
+          "count": 125
+        },
+        {
+          "region": "cn",
+          "count": 73
+        },
+        {
+          "region": "tw",
+          "count": 35
+        },
+        {
+          "region": "kr",
+          "count": 21
+        },
+        {
+          "region": "jp",
+          "count": 14
+        }
+      ],
+      "windowVolume": 693,
+      "windowSentiment": 0.003
+    }
+  }
+}

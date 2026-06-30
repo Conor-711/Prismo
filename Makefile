@@ -3,7 +3,7 @@ PIP := pipeline/.venv/bin/pip
 MANAGE := $(PY) -m pipeline.manage
 
 .PHONY: install venv db-init migrate seed seed-cn sample ingest refresh extract analyze analyze-mock \
-        rollup narratives brief worker daily daily-build cn-backfill demo stats test web-install web-dev clean help \
+        rollup narratives narrative-rotation brief worker daily daily-build cn-backfill demo stats test web-install web-dev clean help \
         asia asia-mock mindshare-dashboard
 
 help:
@@ -17,6 +17,7 @@ help:
 	@echo "  make analyze       用 Claude 逐帖打标"
 	@echo "  make rollup        计算 mindshare / 情绪 / 异动"
 	@echo "  make narratives    AI 叙事聚类     make brief  每日 AI 简报"
+	@echo "  make narrative-rotation  跨社区固定叙事轮动 JSON（新叙事页）"
 	@echo "  make daily         分析过去 24 小时（一天一次；UTC+8 08:00 跑）"
 	@echo "  make daily-build   分析过去 24h 并重建静态站点（web/out）"
 	@echo "  make migrate       已有库迁移到带 market 维度（幂等）"
@@ -269,6 +270,12 @@ kol-newcomers:
 overall-signals:
 	$(MANAGE) overall-signals --ticker $(or $(TICKER),PLTR)
 	@echo "" && echo "✅ 整体数据 异动归因+讨论方面 完成。出站：make site。"
+
+# 新叙事页：跨社区固定板块的叙事轮动（排名变化 / 讨论占比 / 情绪变化）→ 构建期 JSON。
+# 不使用旧 Reddit-only narratives 表；默认近 21 天，近 7 天作为当前窗口。
+narrative-rotation:
+	$(MANAGE) narrative-rotation --window-days 21 --recent-days 7
+	@echo "" && echo "✅ 叙事轮动数据完成。出站：make site。"
 
 # KOL 论点综合：把已分类观点(kol_refined+kol_viewpoint+yt_analysis) → 每 标的×视角×立场 聚成 1-3 个论点 → kol_argument。
 # 增量(只补未综合的组)；单条观点的组不花 LLM。需 DEEPSEEK_API_KEY。先跑 kol-refine + kol-viewpoint 再跑本目标。

@@ -5,6 +5,10 @@
 from __future__ import annotations
 
 import argparse
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def cmd_db_init(args):
@@ -381,6 +385,12 @@ def cmd_overall_signals(args):
         args.skill_dir, args.recent_days, args.prior_days)
 
 
+def cmd_narrative_rotation(args):
+    # 跨社区固定叙事轮动 → web/lib/data/narrativeRotation.json。读 gr_post/Reddit/X/YouTube，不用旧 narratives 表。
+    from .analyze.narrative_rotation import build
+    build(db_path=args.db, out_path=args.out, window_days=args.window_days, recent_days=args.recent_days)
+
+
 def cmd_kol_argument(args):
     # KOL 论点综合（每 标的×视角×立场 聚成 1-3 个论点）→ kol_argument。读 kol_refined+kol_viewpoint+yt_analysis。
     from .analyze.kol_argument import synthesize
@@ -479,6 +489,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("retail-newcomers").set_defaults(func=cmd_retail_newcomers)
     sub.add_parser("kol-newcomers").set_defaults(func=cmd_kol_newcomers)
     sp = sub.add_parser("overall-signals"); sp.add_argument("--ticker", default="PLTR"); sp.add_argument("--kol-file", default=None, help="KOL 推文抽取 jsonl；默认 /tmp/<ticker>_x6m.jsonl"); sp.add_argument("--window", type=int, default=11); sp.add_argument("--look", type=int, default=14); sp.add_argument("--aspect-days", type=int, default=14); sp.add_argument("--cap", type=int, default=3); sp.add_argument("--skill-dir", default="/tmp", help="技能 z / stance 缓存目录"); sp.add_argument("--recent-days", type=int, default=7); sp.add_argument("--prior-days", type=int, default=21); sp.set_defaults(func=cmd_overall_signals)
+    sp = sub.add_parser("narrative-rotation"); sp.add_argument("--db", default=str(ROOT / "data" / "dev.db")); sp.add_argument("--out", default=str(ROOT / "web" / "lib" / "data" / "narrativeRotation.json")); sp.add_argument("--window-days", type=int, default=21); sp.add_argument("--recent-days", type=int, default=7); sp.set_defaults(func=cmd_narrative_rotation)
     sp = sub.add_parser("kol-argument"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker"); sp.add_argument("--workers", type=int, default=8, help="LLM 并发数"); sp.add_argument("--force", action="store_true", help="重综合全部（默认只补未综合的 标的×视角×立场 组）"); sp.set_defaults(func=cmd_kol_argument)
     sp = sub.add_parser("kol-translate"); sp.add_argument("--source", type=str, default=None, help="逗号分隔，子集 of reddit,x,xueqiu；省略=全部"); sp.add_argument("--per-source", type=int, default=40, help="每标的每源前 N 条(镜像提炼/展示范围)"); sp.add_argument("--since-days", type=int, default=20, help="只译近 N 天；0=不限"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker"); sp.add_argument("--workers", type=int, default=6, help="LLM 并发数"); sp.add_argument("--force", action="store_true", help="重译全部（默认只补未译的）"); sp.set_defaults(func=cmd_kol_translate)
     sp = sub.add_parser("kol-relevance"); sp.add_argument("--source", type=str, default=None, help="逗号分隔，子集 of reddit,x,xueqiu；省略=全部(+youtube)"); sp.add_argument("--per-source", type=int, default=200, help="每标的每源前 N 条(镜像展示范围)"); sp.add_argument("--since-days", type=int, default=30, help="只打近 N 天；0=不限"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker"); sp.add_argument("--workers", type=int, default=8, help="LLM 并发数"); sp.add_argument("--no-youtube", action="store_true", help="跳过 youtube 源"); sp.add_argument("--force", action="store_true", help="重打全部（默认只补未打分的）"); sp.set_defaults(func=cmd_kol_relevance)

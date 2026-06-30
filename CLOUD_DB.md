@@ -1,11 +1,9 @@
 # 把数据搬上云端（Supabase）
-
 > **⚠️ 已过时（2026-06 改）**：本文档「Supabase = 数据的家、本地 `cloud-pull` 拉快照」**只适用于 redditalpha.xyz（旧 `reddit_alpha` 仓库，只 Reddit）**。
 > **Prismo（prismo.today，本仓库）现以本地 `data/dev.db` 为唯一真源**——含 `gr_*`/`yt_*`/`kol_*` 等云端**没有**的独有层。
 > **别在 Prismo 跑 `make cloud-pull` / `make site-cloud`**：会用「只有 Reddit 核心」的云端快照覆盖本地、**抹掉独有层**（『数据消失』的原因）。已在 Makefile 锁死（`cloud-pull` 默认拒绝、`site-cloud`=`make site`）。Prismo 出站只用 `make site`；改数据前先 `make backup-db`。云端仍供 Prismo 的 **web 后端**（Auth/埋点/收藏，`NEXT_PUBLIC_*`）+ 只读 `tw_*`(X)。
 
-目标：让**每一条帖子的数据与分析真正存在云端**（Supabase = Postgres），而不是只躺在你笔记本的
-`data/dev.db` 文件里。Supabase 成为数据的「家」（唯一真源）；本地只在构建网站时临时拉一份快照。
+目标：让**每一条帖子的数据与分析真正存在云端**（Supabase = Postgres），而不是只躺在你笔记本的`data/dev.db` 文件里。Supabase 成为数据的「家」（唯一真源）；本地只在构建网站时临时拉一份快照。
 
 > 好消息：代码本来就支持 Postgres，Postgres 驱动也已装好。你只需提供 Supabase 连接串，跑两条命令。
 > 你的数据约 15MB，**Supabase 免费档（500MB）绰绰有余**。
