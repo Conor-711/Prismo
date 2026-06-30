@@ -9,7 +9,10 @@ from __future__ import annotations
 import datetime as dt
 import html
 import json
+import os
 import re
+import shutil
+import subprocess
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -17,9 +20,9 @@ import requests
 from sqlalchemy import delete, select, update
 
 from ..common import gemini, llm
-from ..common.config import settings
-from ..common.db import session_scope
-from ..common.models import YtAnalysis, YtTickerSummary, YtVideo
+from ..common.config import ROOT, settings
+from ..common.db import engine, session_scope
+from ..common.models import YtAnalysis, YtFulltext, YtTickerSummary, YtVideo
 from ..ingest.youtube_crawl import _ensure_tables
 
 SYSTEM = (
@@ -384,6 +387,274 @@ def rollup(window_hours: int = 24) -> int:
                 overview_zh="", overview_en="", updated_at=dt.datetime.utcnow()))
     print(f"[yt-rollup] {len(agg)} 标的汇总")
     return len(agg)
+
+
+# ----------------------------- 完整内容还原（优化字幕 + 关键画面）-----------------------------
+
+SYSTEM_FULLTEXT = (
+    "你是金融视频口播转录器。把视频里**人说的话完整还原**成有序段落，让读者不看视频也能读全、且读得轻松。\n"
+    '每段：{"type":"speech","speaker":"说话人","text":"该段口播（通顺中文书面语，可含 Markdown 行内强调）"}\n'
+    "规则：\n"
+    "1) **只转口播**：只还原人说的话；**绝不**描述画面/图表/幻灯片/字幕（不要出现「画面显示」「图中」之类）。\n"
+    "2) **书面化但不删信息**：去口水话/重复/语气词、理顺语序，但保留每一个论点/数据/推理/结论——是完整还原，不是摘要。\n"
+    "3) **按语义分段**：把讲同一个点的句子归到同一段，话题/论点切换才另起一段。每段约 **3-6 句、120-280 字**——既不要一句一段（太碎），也**绝不**整篇一段。\n"
+    "4) **划重点（Markdown 行内强调）**：在 text 里用 `**加粗**` 标出该段最关键的结论/数据/催化剂/标的名/目标价，用 `*斜体*` 标出转折、强调或重要旁白。**务必克制**：每段加粗至多 1-3 处关键短语，绝不整句整段加粗、绝不滥用（多数句子应是普通文字）。\n"
+    "5) **标记说话人 speaker**：\n"
+    "   · 访谈/播客/对话/连线等多人视频——每段填说话人；能听出名字就用名字，否则用「主持人」「嘉宾」，多位嘉宾用「嘉宾A」「嘉宾B」并全程一致。\n"
+    "   · 全程只有一个人讲（独白/单人分析）——speaker 一律填空字符串 \"\"（前端会按无说话人排版）。\n"
+    "6) **剔除与投资无关内容**：赞助商口播/广告、点赞订阅、加入VIP/Discord/Patreon/直播间、App下载/二维码、自我推广、抽奖——都不要输出。\n"
+    "7) 按时间顺序；中立转述（是说话人的话，不要加你自己的评论）。\n"
+    '仅输出 JSON，不要多余文字：{"segments":[...]}'
+)
+
+_NODE_DIR = os.path.expanduser("~/.nvm/versions/node/v22.22.2/bin")
+
+
+def _ensure_fulltext_table() -> None:
+    YtFulltext.__table__.create(engine, checkfirst=True)
+
+
+def _tool_env() -> dict:
+    """给 yt-dlp/ffmpeg 的 PATH 补上 node(EJS 解 n-sig) + deno(bgutil PO token) + brew(ffmpeg)。"""
+    env = dict(os.environ)
+    extra = [p for p in (_NODE_DIR, "/opt/homebrew/bin") if os.path.isdir(p)]
+    env["PATH"] = os.pathsep.join(extra + [env.get("PATH", "")])
+    return env
+
+
+def _download_video(url: str, out_base: str) -> str | None:
+    """下载视频到临时文件（截完帧即删）。配方：web client + 浏览器 cookies + bgutil PO token + deno EJS。
+    YouTube 对本机 IP 开了 SABR/反爬→只 format 18(360p) 可靠可下；360p 足够看清幻灯/图表数字。"""
+    ytdlp = str(ROOT / "pipeline" / ".venv" / "bin" / "yt-dlp")
+    cmd = [ytdlp, "--cookies-from-browser", "chrome", "--extractor-args", "youtube:player_client=web",
+           "-f", "18/best[height<=480][ext=mp4]/best[height<=480]/best", "--no-warnings", "--quiet",
+           "--socket-timeout", "30", "--retries", "8", "-o", out_base + ".%(ext)s", url]
+    try:
+        subprocess.run(cmd, env=_tool_env(), capture_output=True, text=True, timeout=420)
+    except Exception:  # noqa: BLE001
+        return None
+    for ext in ("mp4", "mkv", "webm"):
+        p = out_base + "." + ext
+        if os.path.exists(p) and os.path.getsize(p) > 10000:
+            return p
+    return None
+
+
+_FRAME_DEDUP = 22  # aHash 汉明距离：<阈值=近似帧→折叠
+_STOP = {"the", "and", "for", "with", "this", "that", "are", "you", "was", "has", "have", "will",
+         "from", "not", "but", "all", "can", "its", "now", "new", "more", "most", "than", "then",
+         "also", "may", "one", "two", "get", "let", "see", "via", "per", "inc", "corp", "ltd",
+         "their", "they", "what", "when", "how", "who", "why", "into", "out", "over", "your"}
+
+
+def _tok(text: str) -> set[str]:
+    """从文案/OCR 文本抽「语言无关 token」：英文词(≥3,去停用词) + 数字串(去分隔符,≥2 位)。
+    captioned「市值3229.4亿」→ '32294'；slide「$322.94B」→ '32294' → 可匹配。"""
+    t = (text or "").lower()
+    words = {w for w in re.findall(r"[a-z][a-z&\-]{2,}", t) if w not in _STOP and len(w) >= 3}
+    nums = set(re.findall(r"\d{2,}", re.sub(r"[.,]", "", t)))
+    return words | nums
+
+
+def _select_frames(mp4: str, visuals: list[dict], viddir, ffmpeg: str, tesseract: str, step: int = 2) -> int:
+    """OCR 按内容匹配帧（不信 Gemini 时间戳）：每 step 秒采一帧 → aHash 折叠近似屏 → OCR 各独立屏 →
+    每条画面文案按 token 重叠**有序贪心**匹配到 OCR 文本最吻合的那一帧（要求重叠≥2，否则丢弃该画面）。"""
+    from PIL import Image
+    sdir = viddir.parent / (viddir.name + "_samp")
+    if sdir.exists():
+        shutil.rmtree(sdir)
+    sdir.mkdir(parents=True, exist_ok=True)
+    subprocess.run([ffmpeg, "-y", "-loglevel", "error", "-i", mp4, "-vf", f"fps=1/{step}",
+                    str(sdir / "s_%04d.jpg")], capture_output=True)
+    samples = sorted(sdir.glob("s_*.jpg"))
+    if not samples:
+        shutil.rmtree(sdir, ignore_errors=True)
+        for seg in visuals:
+            seg["_drop"] = True
+        return 0
+
+    def ahash(p, n=16):
+        px = list(Image.open(p).convert("L").resize((n, n)).getdata())
+        a = sum(px) / len(px)
+        return [1 if v > a else 0 for v in px]
+
+    def ham(a, b):
+        return sum(x != y for x, y in zip(a, b))
+
+    distinct: list[dict] = []  # 去重后的独立屏：{path, hash, tok(OCR)}
+    last = None
+    for p in samples:
+        h = ahash(p)
+        if last is not None and ham(last, h) < _FRAME_DEDUP:
+            continue
+        last = h
+        try:
+            txt = subprocess.run([tesseract, str(p), "stdout", "-l", "eng"],
+                                 capture_output=True, text=True, timeout=30).stdout
+        except Exception:  # noqa: BLE001
+            txt = ""
+        distinct.append({"path": p, "tok": _tok(txt)})
+
+    kept = 0
+    ptr = 0  # 有序：第 i 条画面只在上一条匹配位置之后找
+    for seg in visuals:
+        ctok = _tok(seg.get("caption", ""))
+        best, besti = 0, -1
+        for j in range(ptr, len(distinct)):
+            sc = len(ctok & distinct[j]["tok"])
+            if sc > best:
+                best, besti = sc, j
+        if best >= 2 and besti >= 0:
+            shutil.copy(distinct[besti]["path"], str(viddir / f"{kept}.jpg"))
+            seg["frame"] = f"yt-frames/{viddir.name}/{kept}.jpg"
+            kept += 1
+            ptr = besti + 1
+        else:
+            seg["_drop"] = True  # 没有内容吻合的帧 → 宁缺勿错
+    shutil.rmtree(sdir, ignore_errors=True)
+    return kept
+
+
+_SENT_SPLIT = re.compile(r"(?<=[。！？!?…])")  # 句末切分(保留标点在前句)
+_MD_STRIP = re.compile(r"\*{1,2}(.+?)\*{1,2}")  # 去 **加粗** / *斜体* → 纯文本
+
+
+def _strip_md(s: str) -> str:
+    return _MD_STRIP.sub(r"\1", s or "")
+
+
+def _split_speech_text(text: str, target: int = 220, hard: int = 320) -> list[str]:
+    """把口播段落按句子聚合成易读小段（目标 ~target 字/段）。Gemini 现按语义分段(每段一个 speech)，
+    这里只兜底它偶尔把整篇塞进一段的情况；≤hard 的段原样保留（尊重 Gemini 的语义分段 + 行内强调）。
+    断段只在 ** 配对闭合处，避免切断 Markdown 加粗。"""
+    text = (text or "").strip()
+    if not text:
+        return []
+    out: list[str] = []
+    for block in re.split(r"\n+", text):
+        block = block.strip()
+        if not block:
+            continue
+        if len(block) <= hard:
+            out.append(block)
+            continue
+        buf = ""
+        for sent in (s for s in _SENT_SPLIT.split(block) if s.strip()):
+            if buf and len(buf) + len(sent) > target and buf.count("**") % 2 == 0:
+                out.append(buf)
+                buf = sent
+            else:
+                buf += sent
+        if buf.strip():
+            out.append(buf.strip())
+    return out
+
+
+def gen_fulltext(only: set[str] | None = None, per_ticker: int = 10, workers: int = 4,
+                 force: bool = False, low_res: bool = False, max_native_min: int = 150,
+                 frames: bool = True) -> int:
+    """Gemini 真看视频 → 结构化「完整内容」（优化口播 + 关键画面**真实视频帧**）→ yt_fulltext。
+
+    每视频：① Gemini 出有序段落(口播/画面+文案，剔宣传) → ② yt-dlp 下载(360p,瞬时,截完即删)
+    → ③ 采样帧 + OCR **按文案内容匹配**出真正那张幻灯片(不信 Gemini 时间戳)、aHash 折叠近似屏 →
+    ④ 命中帧存 web/public/yt-frames/、段落记 frame 路径；未命中的画面段丢弃(宁缺勿错) →
+    存 segments(有序) + content_zh(扁平口播)。顺序处理、逐条落库(可续)。按 only + 每标的 top-N 播放量。
+    """
+    _ensure_fulltext_table()
+    if not settings.has_gemini:
+        print("[yt-full] 无 GEMINI_API_KEY，跳过。", flush=True)
+        return 0
+    ffmpeg = shutil.which("ffmpeg", path=_tool_env()["PATH"]) or "/opt/homebrew/bin/ffmpeg"
+    tesseract = shutil.which("tesseract", path=_tool_env()["PATH"]) or "/opt/homebrew/bin/tesseract"
+    only = {t.strip().upper() for t in only} if only else None
+    cap_s = max_native_min * 60
+    frames_root = ROOT / "web" / "public" / "yt-frames"
+    tmpdir = ROOT / "data" / "_ytframes_tmp"
+    tmpdir.mkdir(parents=True, exist_ok=True)
+
+    with session_scope() as s:
+        all_vids = list(s.execute(select(YtVideo)).scalars())
+        have = set(s.execute(select(YtFulltext.video_id)).scalars()) if not force else set()
+    grouped: dict[str, list[YtVideo]] = {}
+    for v in all_vids:
+        if only and (v.ticker or "").upper() not in only:
+            continue
+        grouped.setdefault(v.ticker, []).append(v)
+    plan: list[YtVideo] = []
+    for lst in grouped.values():
+        for v in sorted(lst, key=lambda x: -x.view_count)[:per_ticker]:
+            if v.id not in have and (v.duration_s or 0) <= cap_s:
+                plan.append(v)
+
+    total = len(plan)
+    print(f"[yt-full] 计划 {total} 视频 / {len(grouped)} 标的（结构化+真帧, model={settings.gemini_model}, force={force}）", flush=True)
+    if not total:
+        return 0
+
+    done = fail = skip = 0
+    for i, v in enumerate(plan, 1):
+        try:
+            prompt = f"标的 {v.ticker}。频道《{v.channel}》。按系统要求结构化还原该视频。"
+            data = gemini.video_json(v.url, prompt, system=SYSTEM_FULLTEXT, low_res=low_res, max_tokens=8000)
+            segs = (data or {}).get("segments") if isinstance(data, dict) else None
+            if not isinstance(segs, list) or not segs:
+                skip += 1
+                print(f"  [yt-full] – {v.ticker} {v.id} 无段落", flush=True)
+                continue
+            norm: list[dict] = []
+            visuals: list[dict] = []
+            for sg in segs:
+                if not isinstance(sg, dict):
+                    continue
+                if sg.get("type") == "speech":
+                    tx = str(sg.get("text") or "").strip()
+                    if tx:
+                        spk = str(sg.get("speaker") or "").strip()  # 多人(访谈/播客)才有；独白留空
+                        for para in _split_speech_text(tx):  # 兜底拆分过长段落，保证可读
+                            seg = {"type": "speech", "text": para}
+                            if spk:
+                                seg["speaker"] = spk
+                            norm.append(seg)
+                elif sg.get("type") == "visual" and isinstance(sg.get("sec"), (int, float)):  # 旧档兼容；新提示只产口播
+                    seg = {"type": "visual", "sec": int(sg["sec"]), "caption": str(sg.get("caption") or "").strip()}
+                    norm.append(seg)
+                    visuals.append(seg)
+            flat = "\n\n".join(  # 扁平兜底文本去掉 Markdown（卡片/搜索用纯文本；富文本只在 segments）
+                (f"{s['speaker']}：{_strip_md(s['text'])}" if s.get("speaker") else _strip_md(s["text"]))
+                for s in norm if s["type"] == "speech"
+            )
+
+            mp4 = _download_video(v.url, str(tmpdir / v.id)) if (visuals and frames) else None
+            if visuals and mp4:
+                viddir = frames_root / v.id
+                if viddir.exists():
+                    shutil.rmtree(viddir)
+                viddir.mkdir(parents=True, exist_ok=True)
+                _select_frames(mp4, visuals, viddir, ffmpeg, tesseract)  # OCR 按内容匹配真正的幻灯片
+                try:
+                    os.remove(mp4)
+                except OSError:
+                    pass
+            else:
+                for seg in visuals:  # 无帧（无 visual 或下载失败）→ 去掉视觉段，保留口播
+                    seg["_drop"] = True
+
+            final = [s for s in norm if not (s.get("type") == "visual" and (s.get("_drop") or not s.get("frame")))]
+            for s in final:
+                s.pop("_drop", None)
+                s.pop("sec", None)
+            nframes = sum(1 for s in final if s.get("type") == "visual")
+            with session_scope() as s:
+                s.merge(YtFulltext(video_id=v.id, ticker=v.ticker, content_zh=flat, content_en="",
+                                   segments=final, model=f"gemini:{settings.gemini_model}",
+                                   created_at=dt.datetime.utcnow()))
+            done += 1
+            print(f"  [yt-full] ✓ {v.ticker} {v.id} 段{len(final)}/帧{nframes} [{done}/{total}] skip={skip} fail={fail}", flush=True)
+        except Exception as e:  # noqa: BLE001
+            fail += 1
+            print(f"  [yt-full] ✗ {v.ticker} {v.id}: {str(e)[:100]}", flush=True)
+    print(f"[yt-full] 完成 {done}（跳过 {skip}，失败 {fail}）", flush=True)
+    return done
 
 
 if __name__ == "__main__":

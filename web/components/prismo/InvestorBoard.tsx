@@ -34,7 +34,15 @@ function Card({ inv, rank }: { inv: Investor; rank: number }) {
       <Avatar src={inv.avatar} color={c} name={inv.name} size={40} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          {inv.url ? (
+          {inv.source === "youtube" ? (
+            // YouTube 有作者页（含权标的表现/代表作/热门视频）→ 内链下钻；其余平台暂外链到平台主页。
+            <LocaleLink
+              href={`/investors/youtube/${inv.id}`}
+              className="min-w-0 truncate font-semibold text-cream transition hover:text-amber"
+            >
+              {inv.name}
+            </LocaleLink>
+          ) : inv.url ? (
             <a
               href={inv.url}
               target="_blank"

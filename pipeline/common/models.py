@@ -495,6 +495,25 @@ class YtTickerSummary(Base):
     updated_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
 
 
+class YtFulltext(Base):
+    """YouTube 视频「完整内容还原」：Gemini 真看视频 → 优化后的全程口播（去口水/书面化/语序优化）
+    + 关键画面理解（【画面：…】标注图表/数据/幻灯），供「不看视频也能读完整观点」。
+    比 yt_analysis 的 tldr 重得多（长文本、需重看视频），独立表、按需生成（如只跑高讨论标的）。
+    隔离表：进 ALL_TABLES 让 cloud-pull 能快照；不进 sync.SOURCE_TABLES。
+    """
+
+    __tablename__ = "yt_fulltext"
+    video_id: Mapped[str] = mapped_column(String(20), primary_key=True)  # → yt_video.id
+    ticker: Mapped[str] = mapped_column(String(16), index=True)
+    content_zh: Mapped[str] = mapped_column(Text, default="")  # 扁平全文（口播拼接，搜索/兜底用）
+    content_en: Mapped[str] = mapped_column(Text, default="")  # flat full text (en)
+    # 有序段落：[{type:'speech',text} | {type:'visual',sec,caption,frame}]——前端按此渲染
+    # 口播=整段、关键画面=「文左·截图右」。frame=web/public 下相对路径（去重后保留的关键帧）。
+    segments: Mapped[Optional[list]] = mapped_column(JSONText, nullable=True)
+    model: Mapped[str] = mapped_column(String(48), default="")
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+
+
 class KolRefined(Base):
     """KOL 个体观点的「AI 提炼 + 双语」结果（标的页「个体观点·KOL」模块用）。
 
@@ -525,6 +544,36 @@ class KolRefined(Base):
     lang_src: Mapped[str] = mapped_column(String(8), default="")  # 源语言（信息用）
     model: Mapped[str] = mapped_column(String(48), default="")
     refined_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class KolJudgment(Base):
+    """KOL 个体观点的「买入/卖出(目标)价位 + 操作周期」结构化抽取（标的页：正文提炼行 + 整体数据时间线图）。
+
+    覆盖文本源 reddit / x / xueqiu —— 从**原帖文本**里**只抽作者明确写明**的 买入价位 / 卖出·目标价位
+    （**各支持区间** lo/hi，确切价则 lo==hi；"方向性目标价"并入卖出侧）+ 操作周期（原话双语 + 档 short/mid/long）；
+    没写明一律 null/空（反臆造）。YouTube 不在此抽取，复用 yt_judgment（target + horizon，作者页已产）。
+    一次 LOW(qwen-flash) 调用，读 kol_refine 的同一候选池（近 ~90 天）的原文；`created` 存下达日供时间轴。
+    隔离表：进 ALL_TABLES 让 cloud-pull 能快照；不进 sync.SOURCE_TABLES。
+    PK 与 kol_refined 同构 (source,item_id,ticker)，web 用同一 join key 挂到观点上。
+    """
+
+    __tablename__ = "kol_judgment"
+    source: Mapped[str] = mapped_column(String(12), primary_key=True)  # reddit | x | xueqiu
+    item_id: Mapped[str] = mapped_column(String(64), primary_key=True)  # 源生 id（同 kol_refined）
+    ticker: Mapped[str] = mapped_column(String(16), primary_key=True, index=True)
+    # 买入价位 / 卖出·目标价位，各支持**区间**(lo/hi；确切价 lo==hi)；"目标价"并入卖出侧。均 nullable、仅作者明说。
+    buy_lo: Mapped[Optional[float]] = mapped_column(Float, nullable=True)   # 买入价位 区间下界
+    buy_hi: Mapped[Optional[float]] = mapped_column(Float, nullable=True)   # 买入价位 区间上界
+    sell_lo: Mapped[Optional[float]] = mapped_column(Float, nullable=True)  # 卖出/目标价位 区间下界
+    sell_hi: Mapped[Optional[float]] = mapped_column(Float, nullable=True)  # 卖出/目标价位 区间上界
+    price_raw: Mapped[str] = mapped_column(String(96), default="")          # 价格原文短语（保留区间/货币符号），语言无关
+    # 操作周期：作者原话短语（双语，忠实语义）+ 归一档位 short|mid|long。无周期 → 空。
+    horizon_zh: Mapped[str] = mapped_column(String(48), default="")
+    horizon_en: Mapped[str] = mapped_column(String(64), default="")
+    horizon_bucket: Mapped[str] = mapped_column(String(8), default="")  # short | mid | long | ""
+    created: Mapped[str] = mapped_column(String(32), default="")  # 下达日（源帖创建时间，供时间轴 x）
+    model: Mapped[str] = mapped_column(String(48), default="")
+    tagged_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
 
 
 class KolViewpoint(Base):
@@ -635,7 +684,7 @@ ALL_TABLES = [
     # 全球散户多区看板隔离表（同样进快照、不进 SOURCE_TABLES）。
     GrPost, GrTickerRegion, GrTicker, GrQuote,
     # YouTube 观点隔离表（同样进快照、不进 SOURCE_TABLES）。
-    YtVideo, YtAnalysis, YtTickerSummary,
+    YtVideo, YtAnalysis, YtTickerSummary, YtFulltext,
     # KOL 个体观点「AI 提炼+双语」隔离表（同样进快照、不进 SOURCE_TABLES）。
     KolRefined,
     # KOL 个体观点「视角分类」隔离表（同样进快照、不进 SOURCE_TABLES）。
@@ -648,4 +697,6 @@ ALL_TABLES = [
     KolRelevance,
     # KOL 观点「帖子质量打分」隔离表（同样进快照、不进 SOURCE_TABLES）。
     KolQuality,
+    # KOL 观点「目标价+操作周期」结构化抽取隔离表（同样进快照、不进 SOURCE_TABLES）。
+    KolJudgment,
 ]

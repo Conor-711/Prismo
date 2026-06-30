@@ -1,0 +1,285 @@
+{
+  "PLTR": {
+    "anomalies": [
+      {
+        "day": "2026-06-08",
+        "metric": "volume",
+        "direction": "up",
+        "z": 4.17,
+        "reason": {
+          "zh": "PLTR获英国国家枪支许可系统独家供应合同",
+          "en": "PLTR won UK's national firearms licensing system contract"
+        }
+      },
+      {
+        "day": "2026-06-09",
+        "metric": "sentiment",
+        "direction": "down",
+        "z": -5.0,
+        "reason": {
+          "zh": "PLTR因与SpaceX IPO关联的市场担忧引发抛售",
+          "en": "PLTR sold off due to market concerns over SpaceX IPO linkage"
+        }
+      },
+      {
+        "day": "2026-06-09",
+        "metric": "volume",
+        "direction": "up",
+        "z": 13.29,
+        "reason": {
+          "zh": "PLTR因与SpaceX IPO关联的市场担忧引发抛售",
+          "en": "PLTR sold off due to market concerns over SpaceX IPO linkage"
+        }
+      },
+      {
+        "day": "2026-06-10",
+        "metric": "sentiment",
+        "direction": "up",
+        "z": 3.13,
+        "reason": {
+          "zh": "PLTR CEO Karp称对马斯克及SpaceX IPO持乐观态度，引发市场关注",
+          "en": "PLTR CEO Karp expressed bullishness on Elon Musk and SpaceX IPO, driving market attention"
+        }
+      },
+      {
+        "day": "2026-06-22",
+        "metric": "sentiment",
+        "direction": "up",
+        "z": 6.83,
+        "reason": {
+          "zh": "美国陆军选定Palantir为下一代指挥控制系统云数据层",
+          "en": "U.S. Army selects Palantir as cloud data layer for next-gen command-and-control system"
+        }
+      },
+      {
+        "day": "2026-06-22",
+        "metric": "volume",
+        "direction": "up",
+        "z": 7.99,
+        "reason": {
+          "zh": "美国陆军选定Palantir为下一代指挥控制系统云数据层",
+          "en": "U.S. Army selects Palantir as cloud data layer for next-gen command-and-control system"
+        }
+      }
+    ],
+    "divergence": {
+      "series": [
+        {
+          "day": "2026-06-05",
+          "smart": -0.532,
+          "retail": -0.002
+        },
+        {
+          "day": "2026-06-08",
+          "smart": -1.0,
+          "retail": 0.009
+        },
+        {
+          "day": "2026-06-09",
+          "smart": -0.519,
+          "retail": -0.002
+        },
+        {
+          "day": "2026-06-10",
+          "smart": -0.288,
+          "retail": 0.003
+        },
+        {
+          "day": "2026-06-11",
+          "smart": 0.104,
+          "retail": -0.0
+        },
+        {
+          "day": "2026-06-12",
+          "smart": -0.272,
+          "retail": -0.001
+        },
+        {
+          "day": "2026-06-15",
+          "smart": -0.039,
+          "retail": -0.064
+        },
+        {
+          "day": "2026-06-16",
+          "smart": -0.181,
+          "retail": -0.188
+        },
+        {
+          "day": "2026-06-17",
+          "smart": -0.064,
+          "retail": -0.111
+        },
+        {
+          "day": "2026-06-18",
+          "smart": -0.29,
+          "retail": -0.589
+        },
+        {
+          "day": "2026-06-22",
+          "smart": -0.701,
+          "retail": -1.0
+        }
+      ],
+      "read": {
+        "smart": "bear",
+        "retail": "bear",
+        "diverging": false
+      },
+      "smartAuthors": 1449
+    },
+    "window": {
+      "start": "2026-06-05",
+      "end": "2026-06-22"
+    },
+    "updated_at": "2026-06-28T11:07:29.465634"
+  },
+  "NFLX": {
+    "anomalies": [
+      {
+        "day": "2026-06-02",
+        "metric": "volume",
+        "direction": "up",
+        "z": 4.76,
+        "reason": {
+          "zh": "Netflix股价跌破85美元支撑位，引发空头回补与技术性反弹讨论",
+          "en": "NFLX broke below $85 support, triggering short-covering and technical rebound speculation"
+        }
+      },
+      {
+        "day": "2026-06-16",
+        "metric": "volume",
+        "direction": "up",
+        "z": 5.43,
+        "reason": {
+          "zh": "Netflix未竞购Roku引发抛售，股价应声下跌",
+          "en": "NFLX stock dropped after it reportedly passed on acquiring Roku"
+        }
+      },
+      {
+        "day": "2026-06-17",
+        "metric": "sentiment",
+        "direction": "up",
+        "z": 11.51,
+        "reason": {
+          "zh": "Netflix否认收购狮门，引发空头回补与多头进场",
+          "en": "NFLX denied LION acquisition talks, triggering short squeeze and long positioning"
+        }
+      },
+      {
+        "day": "2026-06-18",
+        "metric": "sentiment",
+        "direction": "up",
+        "z": 6.42,
+        "reason": {
+          "zh": "UFC全球赛事直播带动Netflix流媒体订阅增长预期",
+          "en": "UFC global event streaming boosted Netflix subscription growth expectations"
+        }
+      },
+      {
+        "day": "2026-06-22",
+        "metric": "sentiment",
+        "direction": "up",
+        "z": 3.66,
+        "reason": {
+          "zh": "NFLX股价跌至20个月低点，较历史高点下跌近50%",
+          "en": "NFLX hit a 20-month low, down nearly 50% from its all-time high"
+        }
+      },
+      {
+        "day": "2026-06-22",
+        "metric": "volume",
+        "direction": "up",
+        "z": 5.44,
+        "reason": {
+          "zh": "NFLX股价跌至20个月低点，较历史高点下跌近50%",
+          "en": "NFLX hit a 20-month low, down nearly 50% from its all-time high"
+        }
+      }
+    ],
+    "divergence": {
+      "series": [
+        {
+          "day": "2026-06-02",
+          "smart": -0.254,
+          "retail": 0.056
+        },
+        {
+          "day": "2026-06-03",
+          "smart": -1.0,
+          "retail": 0.027
+        },
+        {
+          "day": "2026-06-04",
+          "smart": 0.0,
+          "retail": 0.229
+        },
+        {
+          "day": "2026-06-05",
+          "smart": 0.445,
+          "retail": -0.1
+        },
+        {
+          "day": "2026-06-08",
+          "smart": 0.0,
+          "retail": 0.135
+        },
+        {
+          "day": "2026-06-09",
+          "smart": -0.222,
+          "retail": 0.263
+        },
+        {
+          "day": "2026-06-10",
+          "smart": -0.167,
+          "retail": 0.226
+        },
+        {
+          "day": "2026-06-11",
+          "smart": 0.172,
+          "retail": 0.017
+        },
+        {
+          "day": "2026-06-12",
+          "smart": 0.0,
+          "retail": 0.206
+        },
+        {
+          "day": "2026-06-15",
+          "smart": 0.0,
+          "retail": 0.054
+        },
+        {
+          "day": "2026-06-16",
+          "smart": 0.646,
+          "retail": -1.0
+        },
+        {
+          "day": "2026-06-17",
+          "smart": -0.62,
+          "retail": 0.0
+        },
+        {
+          "day": "2026-06-18",
+          "smart": 0.222,
+          "retail": 0.08
+        },
+        {
+          "day": "2026-06-22",
+          "smart": -0.987,
+          "retail": 0.094
+        }
+      ],
+      "read": {
+        "smart": "bear",
+        "retail": "bear",
+        "diverging": false
+      },
+      "smartAuthors": 61
+    },
+    "window": {
+      "start": "2026-06-02",
+      "end": "2026-06-22"
+    },
+    "updated_at": "2026-06-29T03:15:22.589936"
+  }
+}

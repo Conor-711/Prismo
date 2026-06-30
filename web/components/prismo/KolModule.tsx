@@ -1,41 +1,111 @@
 "use client";
 
-// KOL 个体观点模块容器：
-//   ┌ 常驻：「股价与观点结合的折线 K 线图」(KolOpinionFlow) + 底部区间滑块 —— 拖手柄选一段时间区间
-//   └ 下方：该区间观点的「分类区」(ClassifiedOpinions) —— 按 KOL / 视角 / 热度 三种方式组织
-// range（起止日）+ vis（来源筛选）由本容器持有，图与分类区共享 → 选定区间与来源后，分类区只展示对应观点。
-import { useMemo, useState } from "react";
+// 「整体数据」模块容器：
+//   ┌ 人群切换：KOL ↔ 整体散户（只切换叠加图里 净情绪/讨论度/新增 三条的数据源）
+//   └ 叠加面板(OverlayPanel)：净情绪 / 讨论度 / 新增 / 聪明钱 / 散户 叠到同一条日期轴，按开关显隐。
+import { useState } from "react";
 import { useLocale } from "@/components/i18n/LocaleProvider";
-import { KolOpinionFlow } from "./KolOpinionFlow";
-import { OpinionExplorer } from "./OpinionExplorer";
-import type { KolFlow, KolOpinion, KolSource } from "@/lib/mockDetail";
+import { OverlayPanel } from "./OverlayPanel";
+import { KOL_VOL_STACK, RETAIL_VOL_STACK, RETAIL_NEW_STACK, type VolStackItem } from "./kolShared";
+import type { VolRow } from "./VolumePanel";
+import type { ChartMarker } from "./SentimentPanel";
+import { TargetPricePanel } from "./TargetPricePanel";
+import type { KolFlow, KolTargetData } from "@/lib/mockDetail";
+import type { DailyNet, DailyVol, RetailVol, RetailNew } from "@/lib/kolQueries";
+import type { OverallData, AnomalyMetric } from "@/lib/overallData";
 
-export function KolModule({ flow, pool }: { flow: KolFlow; pool?: KolOpinion[] }) {
+type Cohort = "kol" | "retail";
+
+export function KolModule({
+  flow, sentiment, volume, retailSentiment, retailVolume, retailNewcomers, overall, targetPrices,
+}: {
+  flow: KolFlow;
+  sentiment?: DailyNet[];
+  volume?: DailyVol[];
+  retailSentiment?: DailyNet[];
+  retailVolume?: RetailVol[];
+  retailNewcomers?: RetailNew[];
+  overall?: OverallData | null;
+  targetPrices?: KolTargetData;
+}) {
   const { lang } = useLocale();
   const zh = lang === "zh";
-  const { days, opinions } = flow;
+  const { days } = flow;
+  const [cohort, setCohort] = useState<Cohort>("kol");
 
-  // 折线图仍保留区间滑块 + 来源筛选（只作用于图本身）
-  const fullRange = useMemo<[string, string]>(
-    () => [days[0]?.day ?? "", days[days.length - 1]?.day ?? ""],
-    [days]
-  );
-  const [range, setRange] = useState<[string, string]>(fullRange);
-  const [vis, setVis] = useState<Record<KolSource, boolean>>({ x: true, youtube: true, reddit: true, xueqiu: true });
-  const toggle = (s: KolSource) => setVis((v) => ({ ...v, [s]: !v[s] }));
+  // 整体散户视图有数据才给切换入口（避免 mock/缺数据标的下出现空的散户图）
+  const hasRetail =
+    (retailSentiment?.some((d) => Math.abs(d.net) > 1e-6) ?? false) ||
+    (retailVolume?.some((d) => d.total > 0) ?? false);
+  const isRetail = cohort === "retail" && hasRetail;
 
-  // 观点浏览器用近 ~30 天的扁平池（pool）；mock 标的无 pool 时回退图表的 opinions
-  const explorerPool = pool && pool.length ? pool : opinions;
+  // 净情绪 / 讨论度 / 新增 随人群口径切换数据源 + 平台层
+  const curSentiment: DailyNet[] = isRetail ? retailSentiment ?? [] : sentiment ?? [];
+  const curVolume: VolRow[] = isRetail ? (retailVolume ?? []) : (volume ?? []);
+  const curVolStack: VolStackItem[] = isRetail ? RETAIL_VOL_STACK : KOL_VOL_STACK;
+  // 「新增 KOL」已删；新增只剩散户口径（仅整体散户视图出现，KOL 口径无 新增 系列）。
+  const curNewcomers: VolRow[] = isRetail ? (retailNewcomers ?? []) : [];
+  const curNewStack: VolStackItem[] = RETAIL_NEW_STACK;
+  const curNewLabel = { zh: "新增散户", en: "New retail" };
+
+  // 异动标记（金 ⚑ + AI 归因）仅 KOL 口径——归因基于 KOL 序列；切到整体散户时隐藏。
+  const anomalies = overall?.anomalies ?? [];
+  const toMarkers = (metric: AnomalyMetric): ChartMarker[] =>
+    anomalies.filter((a) => a.metric === metric).map((a) => ({ day: a.day, direction: a.direction, reason: a.reason }));
+  const sentMarkers = isRetail ? undefined : toMarkers("sentiment");
+  const volMarkers = isRetail ? undefined : toMarkers("volume");
+  // 聪明钱 vs 散户 分歧：技能加权 KOL ↔ 散户人群的固定比较，独立于人群切换，始终可叠加。
+  const divergence = overall?.divergence ?? null;
+
+  const COHORTS: { key: Cohort; zh: string; en: string }[] = [
+    { key: "kol", zh: "KOL", en: "KOL" },
+    { key: "retail", zh: "整体散户", en: "All retail" },
+  ];
+  const platforms = (isRetail ? RETAIL_VOL_STACK : KOL_VOL_STACK).map((s) => (zh ? s.zh : s.en)).join(" · ");
 
   return (
     <div>
-      {/* 常驻图表：股价折线 + 观点气泡 + 区间滑块 */}
-      <KolOpinionFlow days={days} opinions={opinions} range={range} onRangeChange={setRange} vis={vis} onToggle={toggle} />
+      {/* 人群切换 + 平台提示（切换叠加图里 净情绪/讨论度/新增 三条的数据源） */}
+      {hasRetail && (
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <div className="inline-flex rounded-md bg-elevated/60 p-0.5 text-[11.5px] ring-1 ring-inset ring-line">
+            {COHORTS.map((co) => (
+              <button
+                key={co.key}
+                onClick={() => setCohort(co.key)}
+                className={`rounded px-2.5 py-1 font-medium transition ${
+                  cohort === co.key
+                    ? "bg-card text-[#57D7BA] ring-1 ring-inset ring-line"
+                    : "text-neutral-500 hover:text-neutral-300"
+                }`}
+              >
+                {zh ? co.zh : co.en}
+              </button>
+            ))}
+          </div>
+          <span className="text-[10.5px] text-neutral-600">{platforms}</span>
+        </div>
+      )}
 
-      {/* 观点浏览器：筛选条（平台/立场/视角/时间/语言/相关性）+ 主从阅读（替代原 按KOL/按视角/按热度） */}
-      <div className="mt-4 border-t border-line pt-4">
-        <OpinionExplorer opinions={explorerPool} zh={zh} />
-      </div>
+      {/* 叠加图：净情绪 / 讨论度 / 新增 / 聪明钱 / 散户 同轴叠加，按开关显隐，统一 hover */}
+      <OverlayPanel
+        days={days}
+        zh={zh}
+        sentiment={curSentiment}
+        volume={curVolume}
+        volStack={curVolStack}
+        newcomers={curNewcomers}
+        newStack={curNewStack}
+        newLabel={curNewLabel}
+        divergence={divergence}
+        sentMarkers={sentMarkers}
+        volMarkers={volMarkers}
+      />
+
+      {/* KOL 买入/卖出价 时间线（仅 KOL 口径、独立于人群切换）：有判断才显示 */}
+      {targetPrices && targetPrices.marks.length > 0 && (
+        <TargetPricePanel data={targetPrices} zh={zh} />
+      )}
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { SITE_URL, BASE_PATH } from "@/lib/site";
 import { locales } from "@/lib/i18n";
 import { getGrTickerSymbols } from "@/lib/globalQueries";
 import { REGION_ORDER } from "@/lib/regions";
+import { getNarrativeSlugs } from "@/lib/narrativeRotation";
 
 export const dynamic = "force-static";
 
@@ -11,8 +12,9 @@ export const dynamic = "force-static";
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = `${SITE_URL}${BASE_PATH}`;
   const now = new Date();
-  const staticPaths = ["", "/tickers", "/regions", "/search"];
+  const staticPaths = ["", "/dashboard", "/narratives", "/tickers", "/regions", "/search"];
   const symbols = getGrTickerSymbols();
+  const narratives = getNarrativeSlugs();
 
   const out: MetadataRoute.Sitemap = [];
   for (const lang of locales) {
@@ -21,6 +23,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     }
     for (const r of REGION_ORDER) {
       out.push({ url: `${base}/${lang}/regions/${r}/`, lastModified: now, changeFrequency: "daily", priority: 0.6 });
+    }
+    for (const n of narratives) {
+      out.push({ url: `${base}/${lang}/narratives/${n}/`, lastModified: now, changeFrequency: "daily", priority: 0.6 });
     }
     for (const s of symbols) {
       out.push({ url: `${base}/${lang}/tickers/${s}/`, lastModified: now, changeFrequency: "daily", priority: 0.5 });

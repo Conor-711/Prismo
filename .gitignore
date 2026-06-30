@@ -22,6 +22,10 @@ data/*.db
 data/*.db-wal
 data/*.db-shm
 data/sec_company_tickers.json
+# dev.db 的备份/快照（make backup-db 产物：*.db.kolbak / *.db.bak-* / *.db.wiped*）——体积大、可再生，绝不入库
+data/*.db.*
+# YouTube 完整内容管线的临时视频/帧下载（截完即删，偶有残留），体积大不入库
+data/_ytframes_tmp/
 # 实验/管线中间产物导出（可由 make 重新生成，体积大，不入库）
 data/exports/
 *.sqlite3

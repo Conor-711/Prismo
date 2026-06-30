@@ -11,19 +11,42 @@ export const SOURCE: Record<KolSource, { color: string; label: string }> = {
   reddit: { color: "#E07A55", label: "Reddit" },
   xueqiu: { color: "#5BA3C4", label: "雪球" },
 };
-// 投资者头像气泡的**平台品牌圈色**（标的页折线图用）：X 黑 / YouTube 红 / Reddit 橙 / 雪球 蓝。
-// 与上方克制的 SOURCE 文字色分开：圈色要求强识别度（品牌色），黑色 X 圈靠淡色外环提升可见度。
-export const SOURCE_RING: Record<KolSource, string> = {
-  x: "#000000",
-  youtube: "#FF0000",
-  reddit: "#FF4500",
-  xueqiu: "#1E80FF",
-};
 export const SOURCE_ORDER: KolSource[] = ["x", "youtube", "reddit", "xueqiu"];
 
-// 头像兜底首字母：剥离 u/ 与 @ 前缀后取首字（中文取首字）。
-export const initialOf = (name: string) =>
-  (name || "?").replace(/^u\//, "").replace(/^@/, "").trim().charAt(0).toUpperCase() || "?";
+// 每日讨论度堆叠条形图的「平台层」配置（自底向上）。VolumePanel 据此渲染，两种人群口径各一套。
+export interface VolStackItem { key: string; zh: string; en: string; color: string }
+// KOL 视图：X / YouTube / Reddit / 雪球（沿用 SOURCE 配色）。
+export const KOL_VOL_STACK: VolStackItem[] = [
+  { key: "reddit", zh: "Reddit", en: "Reddit", color: SOURCE.reddit.color },
+  { key: "x", zh: "X", en: "X", color: SOURCE.x.color },
+  { key: "xueqiu", zh: "雪球", en: "Xueqiu", color: SOURCE.xueqiu.color },
+  { key: "youtube", zh: "YouTube", en: "YouTube", color: SOURCE.youtube.color },
+];
+// 整体散户视图：X / Reddit / 雪球 + 本土散户论坛 Naver(韩) / Yahoo JP / PTT(台) / Toss(韩，预留)。不含 YouTube。
+export const RETAIL_VOL_STACK: VolStackItem[] = [
+  { key: "reddit", zh: "Reddit", en: "Reddit", color: SOURCE.reddit.color },
+  { key: "x", zh: "X", en: "X", color: SOURCE.x.color },
+  { key: "xueqiu", zh: "雪球", en: "Xueqiu", color: SOURCE.xueqiu.color },
+  { key: "naver", zh: "Naver", en: "Naver", color: "#5FA86E" },
+  { key: "yahoojp", zh: "Yahoo JP", en: "Yahoo JP", color: "#C77B9A" },
+  { key: "ptt", zh: "PTT", en: "PTT", color: "#9B8ECF" },
+  { key: "toss", zh: "Toss", en: "Toss", color: "#D6A24A" },
+];
+// 「每日新增散户」堆叠层：整体散户口径，但**不含 X**（云端无作者列、无法定位新增者）、不含 YouTube（创作者非散户）。
+export const RETAIL_NEW_STACK: VolStackItem[] = [
+  { key: "reddit", zh: "Reddit", en: "Reddit", color: SOURCE.reddit.color },
+  { key: "xueqiu", zh: "雪球", en: "Xueqiu", color: SOURCE.xueqiu.color },
+  { key: "naver", zh: "Naver", en: "Naver", color: "#5FA86E" },
+  { key: "yahoojp", zh: "Yahoo JP", en: "Yahoo JP", color: "#C77B9A" },
+  { key: "ptt", zh: "PTT", en: "PTT", color: "#9B8ECF" },
+  { key: "toss", zh: "Toss", en: "Toss", color: "#D6A24A" },
+];
+// 「每日新增 KOL」堆叠层：仅 X / YouTube / 雪球（有显著身份、粉丝数象征的平台；不含 Reddit 等匿名源）。
+export const KOL_NEW_STACK: VolStackItem[] = [
+  { key: "x", zh: "X", en: "X", color: SOURCE.x.color },
+  { key: "youtube", zh: "YouTube", en: "YouTube", color: SOURCE.youtube.color },
+  { key: "xueqiu", zh: "雪球", en: "Xueqiu", color: SOURCE.xueqiu.color },
+];
 export const STANCE: Record<Stance, { color: string; zh: string; en: string }> = {
   bull: { color: "#57D7BA", zh: "看多", en: "Bull" },
   bear: { color: "#FF5C6C", zh: "看空", en: "Bear" },

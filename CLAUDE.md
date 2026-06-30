@@ -12,8 +12,8 @@
 小改动（改文案、修 bug、调样式）不必更新；**结构性/流程性改动必须更新**。更新要简洁，跟随既有格式。
 
 ## 项目速记
-- **Prismo**：双语（zh 默认 / en）Reddit 美股 + 中概股舆情看板。三系统：① Python 管线 `pipeline/` ② Supabase 云端 Postgres（数据的家）③ Next.js 静态站 `web/`。
-- 线上：https://www.redditalpha.xyz（纯静态，根域名）。
+- **Prismo**：多语（zh 默认 / en / ja / ko）多社区美股 + 中概股舆情看板。三系统：① Python 管线 `pipeline/` ② **本地 `data/dev.db`**（Prismo 的唯一真源，含 gr_*/yt_*/kol_* 等独有层）③ Next.js 静态站 `web/`。
+- **两个站、两套数据、互不干扰**（2026-06）：① **prismo.today** = 本仓库（`Conor-711/Prismo`），完整多社区，数据 = **本地 `data/dev.db`**（Railway/Dockerfile 用提交进去的 dev.db 构建，线上=本地）；② **redditalpha.xyz** = 旧仓库（`Conor-711/reddit_alpha`，只读保留），只含 Reddit，数据 = **Supabase 云端**（`wimipsiwtrqhizgmbxas` 的 Reddit 核心）。
 
 ## 硬性约定
 - **构建必须用 Node 22**（`nvm use 22`）。Node 23 + 实验 SQLite 会让 `next build` 被系统 SIGKILL。构建报 `Cannot find module for page /_not-found` 时先 `rm -rf web/.next web/out`。
@@ -22,7 +22,8 @@
 - **不要替用户输入密码 / 建账号 / 跑改库的 DDL**：这些让用户自己做；助手只准备代码与迁移脚本。
 - 改完代码做验证：Python 侧无类型检查则跑相关命令；Web 侧 `npx tsc --noEmit`，必要时构建或用 curl 验证（用户不喜欢截图式自测）。
 
-## 数据/构建工作流
-- 管线写云端：`.env` 的 `DATABASE_URL` 指向 Supabase → `make daily` 等直接写云端。
-- 出网站：`make site-cloud`（= 从云端拉快照到 `data/dev.db` + 构建），再部署 `web/out/`。
-- 详见 `CLOUD_DB.md`。
+## 数据/构建工作流（⚠ 2026-06 改：Prismo = 本地真源，别 cloud-pull）
+- **Prismo 的数据真源 = 本地 `data/dev.db`**（gr_*/yt_*/kol_* 只在本地、云端没有）。出网站 = **`make site`**（读本地 dev.db 构建 → `web/out/`）。
+- **绝对别 `make site-cloud` / `make cloud-pull`**：会用「只有 Reddit 核心」的云端快照覆盖本地、**抹掉 Prismo 独有层**（『数据消失』的元凶）。已加保护：`site-cloud` 现等同 `make site`、`cloud-pull` 默认拒绝（需 `make backup-db && FORCE=1`）、`clean` 不再删 dev.db。
+- 刷新本地数据：跑相应管线（`DATABASE_URL='sqlite:///./data/dev.db' make gr` / `make youtube` / `make kol-*` 等，都写本地）。**X 数据 `tw_*` 仍从云端只读拉**（`kol_sentiment.py`/`kol_volume.py` 的 `_cloud_url()` 直接读 .env 拿云端串，不受 sqlite 默认影响）。
+- 改数据前先 `make backup-db`。云端 Supabase 留给 redditalpha.xyz（+ Prismo 只读 tw_*）。详见 `CLOUD_DB.md`。
