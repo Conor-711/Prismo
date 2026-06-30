@@ -8,8 +8,8 @@ export const zh = {
   },
   home: {
     eyebrow: "五社区 · 五地区 · 散户舆情聚合",
-    slogan: "时间即金钱",
-    sloganAlt: "两者皆盈利",
+    slogan: "Make your next invest smart.",
+    sloganAlt: "",
     lede: "把 Reddit、雪球、Yahoo Finance、Naver、PTT 五大社区、五个地区的散户讨论聚到一处——看清每一面，信号自现。",
     ctaPrimary: "进入实时看板",
     ctaSecondary: "免费注册",
