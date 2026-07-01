@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { LocaleLink } from "@/components/i18n/LocaleLink";
 import { CreatorProfile } from "@/components/prismo/CreatorProfile";
+import { ViewportWorkspace } from "@/components/prismo/ViewportWorkspace";
 import { getYoutubeCreator, getYoutubeChannelIds } from "@/lib/creatorQueries";
 import { isLocale, defaultLocale, type Locale } from "@/lib/i18n";
 
@@ -25,12 +26,15 @@ export default function YoutubeCreatorPage({ params }: { params: { lang: string;
   const creator = getYoutubeCreator(params.channelId);
 
   return (
-    <div className="space-y-5">
-      <LocaleLink href="/investors" className="inline-flex items-center gap-1 text-xs text-neutral-500 transition hover:text-cream">
-        ← {zh ? "投资者榜单" : "Investors"}
-      </LocaleLink>
+    <ViewportWorkspace className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-3 overflow-hidden" bottomOffset={16}>
+      <div className="flex items-center gap-3">
+        <LocaleLink href="/investors" className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-neutral-500 ring-1 ring-inset ring-line transition hover:text-reddit">
+          ←
+        </LocaleLink>
+        <span className="text-[12px] font-medium text-neutral-500">{zh ? "投资者榜单" : "Investors"}</span>
+      </div>
       {creator ? (
-        <CreatorProfile creator={creator} zh={zh} />
+        <CreatorProfile creator={creator} zh={zh} fill />
       ) : (
         <div className="panel rounded-xl p-10 text-center">
           <p className="text-sm text-neutral-400">{zh ? "暂无该作者数据" : "No data for this creator"}</p>
@@ -39,6 +43,6 @@ export default function YoutubeCreatorPage({ params }: { params: { lang: string;
           </p>
         </div>
       )}
-    </div>
+    </ViewportWorkspace>
   );
 }

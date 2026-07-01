@@ -12,7 +12,7 @@ export function NavLinks() {
   const items = NAV_GROUPS.flatMap((g) => g.items);
 
   return (
-    <nav className="px-3 py-4 space-y-1">
+    <nav className="px-3 py-0 space-y-1">
       {items.map(({ href, key, Icon }) => {
         const active = navActive(rest, href);
         return (

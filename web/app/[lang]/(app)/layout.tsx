@@ -1,6 +1,4 @@
 import { Sidebar } from "@/components/Sidebar";
-import { Topbar } from "@/components/Topbar";
-import { TopBanner } from "@/components/TopBanner";
 import { BookmarkHint } from "@/components/BookmarkHint";
 import { AnalyticsTracker } from "@/components/AnalyticsTracker";
 import { MobileTabBar } from "@/components/MobileTabBar";
@@ -23,11 +21,9 @@ export default function AppLayout({
   return (
     <>
       <Sidebar lang={lang} dict={dict} />
-      <div className="app-main lg:pl-[232px]">
-        <TopBanner />
-        <Topbar lang={lang} dict={dict} />
+      <div className="app-main">
         {/* pb-24：给移动端底部 Tab 栏留出空间（桌面端无 Tab 栏，恢复常规留白）。 */}
-        <main className="px-4 sm:px-6 lg:px-8 pt-5 pb-24 lg:pb-8 max-w-[1480px] mx-auto">{children}</main>
+        <main className="px-4 sm:px-5 lg:px-6 py-4 pb-24 lg:pb-4">{children}</main>
       </div>
       <MobileTabBar />
       <InstallPrompt />

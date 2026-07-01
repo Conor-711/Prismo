@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import { LocaleLink } from "@/components/i18n/LocaleLink";
 import { Consensus, PriceTag } from "@/components/prismo/Bits";
 import { TickerLogo } from "@/components/prismo/TickerLogo";
 import { KolModule } from "@/components/prismo/KolModule";
 import { OpinionExplorer } from "@/components/prismo/OpinionExplorer";
 import { TopInvestors } from "@/components/prismo/TopInvestors";
 import { PriceSparkline } from "@/components/prismo/PriceSparkline";
-import { Module, StageBadge } from "@/components/prismo/DetailBits";
+import { ViewportWorkspace } from "@/components/prismo/ViewportWorkspace";
+import { StageBadge } from "@/components/prismo/DetailBits";
 import { getGrTickerSymbols, getGrTickerDetail, getGrQuote } from "@/lib/globalQueries";
 import { getTickerMock, getKolFlow } from "@/lib/mockDetail";
 import { getKolFlowReal, getKolOpinions, getKolSentimentDaily, getKolVolumeDaily, getRetailSentimentDaily, getRetailVolumeDaily, getRetailNewcomersDaily, getKolTargetPrices } from "@/lib/kolQueries";
@@ -25,6 +25,23 @@ export function generateStaticParams() {
 export function generateMetadata({ params }: { params: { lang: string; symbol: string } }): Metadata {
   const zh = params.lang === "zh";
   return { title: `${params.symbol} · ${zh ? "标的详情" : "Ticker"} · Prismo` };
+}
+
+function InfoHint({ text }: { text: string }) {
+  return (
+    <span className="group relative inline-flex">
+      <span
+        tabIndex={0}
+        aria-label={text}
+        className="grid h-4 w-4 cursor-help place-items-center rounded-full text-[10px] font-bold text-neutral-500 ring-1 ring-inset ring-neutral-500/70 transition hover:text-cream hover:ring-neutral-300 focus:text-cream focus:outline-none focus:ring-neutral-300"
+      >
+        i
+      </span>
+      <span className="pointer-events-none absolute left-1/2 top-5 z-30 hidden w-72 -translate-x-1/2 rounded-lg bg-elevated px-3 py-2 text-[11px] font-normal leading-relaxed text-neutral-300 shadow-xl ring-1 ring-inset ring-line group-hover:block group-focus-within:block">
+        {text}
+      </span>
+    </span>
+  );
 }
 
 export default function TickerDetail({ params }: { params: { lang: string; symbol: string } }) {
@@ -51,20 +68,23 @@ export default function TickerDetail({ params }: { params: { lang: string; symbo
   const overall = getOverallData(ticker.ticker);
   const topDim = [...m.anomaly.dims].sort((a, b) => b.sigma - a.sigma)[0];
 
-  return (
-    <div className="space-y-5">
-      <LocaleLink href="/tickers" className="inline-flex items-center gap-1 text-xs text-neutral-500 hover:text-reddit transition">
-        ← {zh ? "标的总览" : "All tickers"}
-      </LocaleLink>
+  const stats = [
+    { label: zh ? "平均情绪" : "Sentiment", value: (ticker.avg_sentiment > 0 ? "+" : "") + ticker.avg_sentiment.toFixed(2), tone: ticker.avg_sentiment >= 0 ? "text-bull" : "text-bear" },
+    { label: zh ? "风险温度" : "Risk temp", value: String(m.risk.temp), tone: m.risk.temp > 66 ? "text-bear" : m.risk.temp > 40 ? "text-amber" : "text-bull" },
+    { label: zh ? "多空比" : "Bull/bear", value: `${m.bullBear.bullPct}%`, tone: m.bullBear.bullPct >= 50 ? "text-bull" : "text-bear" },
+    { label: zh ? "共识强度" : "Consensus", value: String(m.bullBear.consensus), tone: "text-cream" },
+    { label: zh ? "最强异动" : "Top anomaly", value: `${topDim.sigma}σ`, tone: topDim.sigma >= 4 ? "text-bear" : topDim.sigma >= 2.5 ? "text-amber" : "text-cream" },
+    { label: zh ? "讨论帖" : "Posts", value: fmtCompact(ticker.total_posts), tone: "text-cream" },
+  ];
 
-      {/* 页头 · 基础信息单行：logo/名称 + 紧凑指标（原第二行上移、缩小）+ 右侧迷你折线&价格 */}
-      <div className="panel rounded-xl px-4 sm:px-5 py-3.5">
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-          {/* logo + 名称 + 代码/badges */}
-          <div className="flex shrink-0 items-center gap-3 min-w-0">
+  return (
+    <ViewportWorkspace className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-4 overflow-hidden" bottomOffset={16}>
+      <div className="px-1 py-1">
+        <div className="flex items-center gap-x-5 gap-y-3">
+          <div className="flex min-w-[220px] shrink-0 items-center gap-3">
             <TickerLogo ticker={ticker.ticker} size={44} />
             <div className="min-w-0">
-              <h1 className="font-display font-extrabold text-cream text-xl sm:text-2xl tracking-tight leading-none truncate">{name}</h1>
+              <h1 className="truncate font-display text-2xl font-extrabold leading-none tracking-tight text-cream">{name}</h1>
               <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[12.5px]">
                 <span className="font-mono font-semibold text-neutral-300">{ticker.ticker}</span>
                 {tickerExchange(ticker.ticker) && <span className="text-neutral-600">· {tickerExchange(ticker.ticker)}</span>}
@@ -74,26 +94,17 @@ export default function TickerDetail({ params }: { params: { lang: string; symbo
             </div>
           </div>
 
-          {/* 紧凑指标条（原大数字 KPI 缩小并上移） */}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-            {[
-              { label: zh ? "平均情绪" : "Sentiment", value: (ticker.avg_sentiment > 0 ? "+" : "") + ticker.avg_sentiment.toFixed(2), tone: ticker.avg_sentiment >= 0 ? "text-bull" : "text-bear" },
-              { label: zh ? "风险温度" : "Risk temp", value: String(m.risk.temp), tone: m.risk.temp > 66 ? "text-bear" : m.risk.temp > 40 ? "text-amber" : "text-bull" },
-              { label: zh ? "多空比" : "Bull/bear", value: `${m.bullBear.bullPct}%`, tone: m.bullBear.bullPct >= 50 ? "text-bull" : "text-bear" },
-              { label: zh ? "共识强度" : "Consensus", value: String(m.bullBear.consensus), tone: "text-cream" },
-              { label: zh ? "最强异动" : "Top anomaly", value: `${topDim.sigma}σ`, tone: topDim.sigma >= 4 ? "text-bear" : topDim.sigma >= 2.5 ? "text-amber" : "text-cream" },
-              { label: zh ? "讨论帖" : "Posts", value: fmtCompact(ticker.total_posts), tone: "text-cream" },
-            ].map((s) => (
-              <div key={s.label} className="px-1">
-                <div className="text-[10px] uppercase tracking-wide text-neutral-500">{s.label}</div>
-                <div className={`mt-0.5 font-display font-bold text-[17px] leading-none tabular ${s.tone}`}>{s.value}</div>
+          <div className="grid min-w-0 flex-1 grid-cols-6 divide-x divide-line overflow-hidden rounded-lg bg-white/[.012] ring-1 ring-inset ring-white/[.06]">
+            {stats.map((s) => (
+              <div key={s.label} className="min-w-0 px-3 py-2">
+                <div className="truncate text-[10px] uppercase tracking-wide text-neutral-500">{s.label}</div>
+                <div className={`mt-0.5 truncate font-display text-[17px] font-bold leading-none tabular ${s.tone}`}>{s.value}</div>
               </div>
             ))}
           </div>
 
-          {/* 右侧：迷你价格走势（更小）+ 价格 */}
-          <div className="ml-auto flex shrink-0 items-center gap-3">
-            <div className="w-[84px] sm:w-[116px]"><PriceSparkline days={flow.days} height={34} /></div>
+          <div className="flex shrink-0 items-center gap-3">
+            <div className="w-[116px]"><PriceSparkline days={flow.days} height={34} /></div>
             {quote && (
               <div className="text-right">
                 <PriceTag price={quote.price} change={quote.price - quote.prev_close} changePct={quote.change_pct} />
@@ -104,58 +115,68 @@ export default function TickerDetail({ params }: { params: { lang: string; symbo
         </div>
       </div>
 
-      {/* ① 整体数据（KOL ↔ 整体散户）：每日净情绪折线 + 每日讨论度 + 每日新增散户（整体散户视图）。
-          命名「整体数据」：本模块后续不仅情绪/讨论度，还反映标的整体形势。价格走势已上移页头；观点浏览独立为模块 ③ */}
-      <Module
-        title={zh ? "整体数据" : "Overview"}
-        icon="trend"
-        accent="reddit"
-        hint={zh
-          ? "聪明钱↔散户分歧 · 每日净情绪/讨论度/新增(⚑ AI 异动归因) · 可切 KOL/整体散户"
-          : "smart-money↔retail divergence · sentiment/volume/new (⚑ AI anomalies) · toggle KOL/all-retail"}
-      >
-        {/* 真实数据优先（kol / retail 各 daily 表）；不足时回退确定性 mock，保证不空 */}
-        <KolModule
-          flow={flow}
-          sentiment={getKolSentimentDaily(ticker.ticker)}
-          volume={getKolVolumeDaily(ticker.ticker)}
-          retailSentiment={getRetailSentimentDaily(ticker.ticker)}
-          retailVolume={getRetailVolumeDaily(ticker.ticker)}
-          retailNewcomers={getRetailNewcomersDaily(ticker.ticker)}
-          overall={overall}
-          targetPrices={getKolTargetPrices(ticker.ticker)}
+      <div className="min-h-0 overflow-hidden">
+        <OpinionExplorer
+          opinions={explorerPool}
+          zh={zh}
+          fill
+          overview={
+            <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl bg-card/45 ring-1 ring-inset ring-line">
+              <div className="flex shrink-0 items-center justify-between gap-3 border-b border-line px-4 py-3">
+                <div className="min-w-0">
+                  <h2 className="flex items-center gap-1.5 font-display text-[15px] font-bold leading-none text-cream">
+                    {zh ? "整体数据" : "Overview"}
+                    <InfoHint
+                      text={
+                        zh
+                          ? "展示该标的在近一年里的净情绪、讨论度、聪明钱与散户分歧，以及 AI 识别的异常波动归因。当前更早日期使用稳定 mock 补全，用于呈现一年尺度。"
+                          : "Shows one-year net sentiment, discussion volume, smart-money vs retail divergence, and AI anomaly attribution. Earlier missing dates are filled with stable mock data for the one-year view."
+                      }
+                    />
+                  </h2>
+                </div>
+                <span className="shrink-0 rounded-md bg-reddit/12 px-2 py-1 text-[11px] font-semibold text-reddit ring-1 ring-inset ring-reddit/25">
+                  {zh ? "Overview" : "Overview"}
+                </span>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto p-3">
+                <KolModule
+                  flow={flow}
+                  sentiment={getKolSentimentDaily(ticker.ticker)}
+                  volume={getKolVolumeDaily(ticker.ticker)}
+                  retailSentiment={getRetailSentimentDaily(ticker.ticker)}
+                  retailVolume={getRetailVolumeDaily(ticker.ticker)}
+                  retailNewcomers={getRetailNewcomersDaily(ticker.ticker)}
+                  overall={overall}
+                  targetPrices={getKolTargetPrices(ticker.ticker)}
+                />
+                {topInv && topInv.investors.length > 0 && (
+                  <div className="mt-4 overflow-hidden rounded-xl bg-ink/35 ring-1 ring-inset ring-line">
+                    <div className="border-b border-line px-4 py-3">
+                      <h3 className="flex items-center gap-1.5 font-display text-[14px] font-bold text-cream">
+                        {zh ? "该标的值得参考的投资者" : "Investors worth following on this ticker"}
+                        <InfoHint
+                          text={
+                            zh
+                              ? "覆盖本标的的博主列表，按跨标的选股技能和相关覆盖质量排序。"
+                              : "Authors covering this ticker, ranked by cross-ticker stock-picking skill and coverage quality."
+                          }
+                        />
+                      </h3>
+                    </div>
+                    <div className="px-4 py-2">
+                      <TopInvestors board={topInv} zh={zh} />
+                    </div>
+                  </div>
+                )}
+                <p className="mt-3 border-t border-line/70 pt-2 text-[10.5px] text-neutral-600">
+                  {zh ? "异动 / 信号 / 风险等模块为演示数据（mock），用于展示模块设计；接入真实管线后替换。" : "Modules use mock demo data to showcase the design; to be wired to the real pipeline."}
+                </p>
+              </div>
+            </div>
+          }
         />
-      </Module>
-
-      {/* ② 观点检索（已从情绪/讨论度模块独立出来）：按平台 / 立场 / 视角 / 时间 / 语言 / 相关性 浏览 KOL 原文 */}
-      <Module
-        title={zh ? "观点检索" : "Opinion explorer"}
-        icon="layers"
-        accent="reddit"
-        hint={zh
-          ? "X / YouTube / Reddit / 雪球 的 KOL 原文 · 按平台 / 时间 / 语言 / 质量 筛选,逐条精读"
-          : "KOL posts from X / YouTube / Reddit / Xueqiu · filter by platform / time / language / quality"}
-      >
-        <OpinionExplorer opinions={explorerPool} zh={zh} />
-      </Module>
-
-      {/* 该标的值得参考的投资者（移到最底部）：简单排行榜 —— 覆盖本标的的博主按「跨标的选股技能 z」排名 */}
-      {topInv && topInv.investors.length > 0 && (
-        <Module
-          title={zh ? "该标的值得参考的投资者" : "Investors worth following on this ticker"}
-          icon="pulse"
-          accent="amber"
-          hint={zh
-            ? "覆盖本标的的博主 · 按「跨标的选股技能（样本外验证，非单票运气）」排名"
-            : "authors covering this ticker · ranked by cross-ticker stock-picking skill (out-of-sample validated)"}
-        >
-          <TopInvestors board={topInv} zh={zh} />
-        </Module>
-      )}
-
-      <p className="text-[11px] text-neutral-600 text-center pt-1">
-        {zh ? "异动 / 信号 / 风险等模块为演示数据（mock），用于展示模块设计；接入真实管线后替换。" : "Modules use mock demo data to showcase the design; to be wired to the real pipeline."}
-      </p>
-    </div>
+      </div>
+    </ViewportWorkspace>
   );
 }

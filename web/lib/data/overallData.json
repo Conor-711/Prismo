@@ -281,5 +281,159 @@
       "end": "2026-06-22"
     },
     "updated_at": "2026-06-29T03:15:22.589936"
+  },
+  "MU": {
+    "anomalies": [
+      {
+        "day": "2026-06-08",
+        "metric": "volume",
+        "direction": "up",
+        "z": 9.17,
+        "reason": {
+          "zh": "HBM4价格预期2027年将翻倍，直接引爆内存板块炒作",
+          "en": "HBM4 pricing expected to more than double by 2027, directly triggering memory sector speculation"
+        }
+      },
+      {
+        "day": "2026-06-09",
+        "metric": "volume",
+        "direction": "up",
+        "z": 9.41,
+        "reason": {
+          "zh": "瑞银分析师Timothy Arcuri预测MU三财季营收达360亿美元，远超预期",
+          "en": "UBS analyst Timothy Arcuri predicts MU's Q3 revenue at $36B, far exceeding expectations"
+        }
+      },
+      {
+        "day": "2026-06-22",
+        "metric": "sentiment",
+        "direction": "up",
+        "z": 9.17,
+        "reason": {
+          "zh": "MU与Anthropic达成AI基础设施战略合作，引爆市场对HBM需求的预期",
+          "en": "MU's strategic AI infrastructure deal with Anthropic ignited HBM demand expectations"
+        }
+      },
+      {
+        "day": "2026-06-22",
+        "metric": "volume",
+        "direction": "up",
+        "z": 3.63,
+        "reason": {
+          "zh": "MU与Anthropic达成AI基础设施战略合作，引爆市场对HBM需求的预期",
+          "en": "MU's strategic AI infrastructure deal with Anthropic ignited HBM demand expectations"
+        }
+      }
+    ],
+    "divergence": {
+      "series": [
+        {
+          "day": "2026-05-26",
+          "smart": 0.0,
+          "retail": 0.764
+        },
+        {
+          "day": "2026-05-27",
+          "smart": 0.0,
+          "retail": -0.094
+        },
+        {
+          "day": "2026-05-28",
+          "smart": 0.0,
+          "retail": 0.195
+        },
+        {
+          "day": "2026-05-29",
+          "smart": 0.0,
+          "retail": 0.542
+        },
+        {
+          "day": "2026-06-01",
+          "smart": 0.742,
+          "retail": 0.371
+        },
+        {
+          "day": "2026-06-02",
+          "smart": 0.078,
+          "retail": 0.215
+        },
+        {
+          "day": "2026-06-03",
+          "smart": 0.037,
+          "retail": 0.124
+        },
+        {
+          "day": "2026-06-04",
+          "smart": 0.006,
+          "retail": -0.549
+        },
+        {
+          "day": "2026-06-05",
+          "smart": 0.111,
+          "retail": -1.0
+        },
+        {
+          "day": "2026-06-08",
+          "smart": 0.307,
+          "retail": -0.157
+        },
+        {
+          "day": "2026-06-09",
+          "smart": -0.062,
+          "retail": -0.338
+        },
+        {
+          "day": "2026-06-10",
+          "smart": 0.008,
+          "retail": -0.412
+        },
+        {
+          "day": "2026-06-11",
+          "smart": 0.146,
+          "retail": 0.289
+        },
+        {
+          "day": "2026-06-12",
+          "smart": 0.17,
+          "retail": 0.393
+        },
+        {
+          "day": "2026-06-15",
+          "smart": -0.14,
+          "retail": 0.987
+        },
+        {
+          "day": "2026-06-16",
+          "smart": -0.053,
+          "retail": 0.248
+        },
+        {
+          "day": "2026-06-17",
+          "smart": 0.2,
+          "retail": 0.384
+        },
+        {
+          "day": "2026-06-18",
+          "smart": 0.47,
+          "retail": 0.774
+        },
+        {
+          "day": "2026-06-22",
+          "smart": 1.0,
+          "retail": 0.948
+        }
+      ],
+      "read": {
+        "smart": "bull",
+        "retail": "bull",
+        "diverging": false
+      },
+      "smartAuthors": 399
+    },
+    "window": {
+      "start": "2026-05-26",
+      "end": "2026-06-22"
+    },
+    "updated_at": "2026-07-01T08:55:09.080347"
   }
 }

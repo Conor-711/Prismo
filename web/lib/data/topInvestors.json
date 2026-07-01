@@ -118,5 +118,265 @@
         ]
       }
     ]
+  },
+  "NFLX": {
+    "base": 0.3,
+    "investors": [
+      {
+        "handle": "jbulltard1",
+        "name": "jbulltard1",
+        "avatar": "https://unavatar.io/twitter/jbulltard1",
+        "skillZ": 2.0,
+        "tickerCalls": 8,
+        "tickerHit": 0.62,
+        "pltrCalls": 8,
+        "pltrHit": 0.62,
+        "stance": "neutral",
+        "latest": [
+          {
+            "date": "2026-04-16",
+            "stance": "bear",
+            "text": "told you guys they closed those $NFLX calls today! Did your furu not mention that? Sad sad sad. https://t.co/7X6R5TV1nH",
+            "url": "https://x.com/jbulltard1/status/2044918811971699162"
+          },
+          {
+            "date": "2026-04-16",
+            "stance": "bear",
+            "text": "this person just closed for a small gain at 2.87, no balls to hold through $NFLX earnings tonight\n\nhttps://t.co/XZedWStReW",
+            "url": "https://x.com/jbulltard1/status/2044805094260998638"
+          }
+        ]
+      },
+      {
+        "handle": "danielisdizzy",
+        "name": "danielisdizzy",
+        "avatar": "https://unavatar.io/twitter/danielisdizzy",
+        "skillZ": 1.8,
+        "tickerCalls": 17,
+        "tickerHit": 0.47,
+        "pltrCalls": 17,
+        "pltrHit": 0.47,
+        "stance": "bull",
+        "latest": [
+          {
+            "date": "2026-06-16",
+            "stance": "bull",
+            "text": "Harsh but fair 😂\nAdding live sports events will be a huge growth driver for $NFLX",
+            "url": "https://x.com/danielisdizzy/status/2066956700242866433"
+          },
+          {
+            "date": "2026-06-16",
+            "stance": "bear",
+            "text": "$NFLX is down 42% from its highs.\n\nAt what point does it become too hard to ignore?\n\nOne of the biggest investing mistakes is assuming every stock follows the same cycle as the broader market.\n\nThe market is always offering opportunities.\n\nYou just need to know where to look. https://t.co/2R3fihhjJN",
+            "url": "https://x.com/danielisdizzy/status/2066952916921995278"
+          }
+        ]
+      },
+      {
+        "handle": "Couzin_Vinny",
+        "name": "Couzin_Vinny",
+        "avatar": "https://unavatar.io/twitter/Couzin_Vinny",
+        "skillZ": 1.2,
+        "tickerCalls": 17,
+        "tickerHit": 0.53,
+        "pltrCalls": 17,
+        "pltrHit": 0.53,
+        "stance": "neutral",
+        "latest": [
+          {
+            "date": "2026-05-21",
+            "stance": "bull",
+            "text": "$NFLX not a guarantee BUT when price gets above the 10/20ema on the 60min and the momentum shifts your odds with longs increase dramatically. https://t.co/Js7uTjziMe",
+            "url": "https://x.com/Couzin_Vinny/status/2057484018036170969"
+          },
+          {
+            "date": "2026-05-18",
+            "stance": "bull",
+            "text": "$NFLX working on an #outside #day #bullish #engulfing #IBDpartner if it gets above 90 dealers will need to #hedge aka #squeeze play \n\n @IBDinvestors\nTry @MarketSurge discount https://t.co/I8N6amvn09 https://t.co/tYKpdZbXrT",
+            "url": "https://x.com/Couzin_Vinny/status/2056375480983458056"
+          }
+        ]
+      },
+      {
+        "handle": "TheDividendDog",
+        "name": "TheDividendDog",
+        "avatar": "https://unavatar.io/twitter/TheDividendDog",
+        "skillZ": 1.1,
+        "tickerCalls": 10,
+        "tickerHit": 0.7,
+        "pltrCalls": 10,
+        "pltrHit": 0.7,
+        "stance": "neutral",
+        "latest": [
+          {
+            "date": "2026-04-07",
+            "stance": "bull",
+            "text": "$NFLX target price boost to $120 per Goldman Sachs.",
+            "url": "https://x.com/TheDividendDog/status/2041338907778748596"
+          },
+          {
+            "date": "2026-04-05",
+            "stance": "bull",
+            "text": "$UBER &amp; $NFLX leaps! https://t.co/b0NPLoRd2Z",
+            "url": "https://x.com/TheDividendDog/status/2040786594387349974"
+          }
+        ]
+      },
+      {
+        "handle": "squawksquare",
+        "name": "squawksquare",
+        "avatar": "https://unavatar.io/twitter/squawksquare",
+        "skillZ": 0.7,
+        "tickerCalls": 26,
+        "tickerHit": 0.62,
+        "pltrCalls": 26,
+        "pltrHit": 0.62,
+        "stance": "bear",
+        "latest": [
+          {
+            "date": "2026-06-22",
+            "stance": "bear",
+            "text": "Okay, I changed my mind. I think $NFLX might have just took the reigns from $TSLA for being the biggest POS stock in the market. https://t.co/gInLiFgNgH",
+            "url": "https://x.com/squawksquare/status/2069111283316633674"
+          },
+          {
+            "date": "2026-05-28",
+            "stance": "bear",
+            "text": "So, $NFLX was a piece of shit during the acquisition and still a piece of shit after they ditched the acquisition. I said long ago the split would ruin the stock and I was right. Doesn't help they're woke either. \n\n$TSLA",
+            "url": "https://x.com/squawksquare/status/2060012766589546866"
+          }
+        ]
+      }
+    ]
+  },
+  "MU": {
+    "base": 0.72,
+    "investors": [
+      {
+        "handle": "jedimarkus77",
+        "name": "jedimarkus77",
+        "avatar": "https://unavatar.io/twitter/jedimarkus77",
+        "skillZ": 2.0,
+        "tickerCalls": 9,
+        "tickerHit": 0.78,
+        "pltrCalls": 9,
+        "pltrHit": 0.78,
+        "stance": "bull",
+        "latest": [
+          {
+            "date": "2026-06-26",
+            "stance": "bear",
+            "text": "$MU loses its Thursday RTH low (1136.31) in the overnight... https://t.co/Ri1MdUZrLK",
+            "url": "https://x.com/jedimarkus77/status/2070457108353462435"
+          },
+          {
+            "date": "2026-06-26",
+            "stance": "bear",
+            "text": "$MU post-report NEW LOW https://t.co/FAe1Y9oMLH",
+            "url": "https://x.com/jedimarkus77/status/2070496181831053823"
+          }
+        ]
+      },
+      {
+        "handle": "BruceTennen",
+        "name": "BruceTennen",
+        "avatar": "https://unavatar.io/twitter/BruceTennen",
+        "skillZ": 0.9,
+        "tickerCalls": 9,
+        "tickerHit": 0.67,
+        "pltrCalls": 9,
+        "pltrHit": 0.67,
+        "stance": "bull",
+        "latest": [
+          {
+            "date": "2026-06-26",
+            "stance": "bull",
+            "text": "$MU with a huge gap down and then filling a monster run of $65. Falling at the moment but will be back at it.",
+            "url": "https://x.com/BruceTennen/status/2070512348507320769"
+          },
+          {
+            "date": "2026-06-26",
+            "stance": "neutral",
+            "text": "$MU",
+            "url": "https://x.com/BruceTennen/status/2070612249601810885"
+          }
+        ]
+      },
+      {
+        "handle": "squawksquare",
+        "name": "squawksquare",
+        "avatar": "https://unavatar.io/twitter/squawksquare",
+        "skillZ": 0.7,
+        "tickerCalls": 8,
+        "tickerHit": 0.62,
+        "pltrCalls": 8,
+        "pltrHit": 0.62,
+        "stance": "bull",
+        "latest": [
+          {
+            "date": "2026-06-25",
+            "stance": "bear",
+            "text": "$MU just passed $TSLA market value. Elon is the master at shareholder deterioration while every other CEO is printing money for their shareholders.",
+            "url": "https://x.com/squawksquare/status/2070139454660980974"
+          },
+          {
+            "date": "2026-06-24",
+            "stance": "bear",
+            "text": "Just sold my $MU and took the $5,500. \n\n$TSLA",
+            "url": "https://x.com/squawksquare/status/2069756169946579099"
+          }
+        ]
+      },
+      {
+        "handle": "TheBigBerbowski",
+        "name": "TheBigBerbowski",
+        "avatar": "https://unavatar.io/twitter/TheBigBerbowski",
+        "skillZ": 0.6,
+        "tickerCalls": 12,
+        "tickerHit": 0.67,
+        "pltrCalls": 12,
+        "pltrHit": 0.67,
+        "stance": "bull",
+        "latest": [
+          {
+            "date": "2026-06-25",
+            "stance": "bull",
+            "text": "$MU earnings call\n\n\"The demand continues to be well above our supply.\" \"not just in 2027, but even 2028\"\n\nQuestion: \nI think it was September of last year when the Micron team said that they were booked out through calendar 2026 on HBM3, HBM3E. If you fast-forward to now, and with a stronger, especially XPU ASIC demand profile, is the team already booked up volume and pricing for HBM3E and HBM4 fo",
+            "url": "https://x.com/TheBigBerbowski/status/2070037098996854988"
+          },
+          {
+            "date": "2026-06-25",
+            "stance": "bull",
+            "text": "The day has arrived. $MU \n\nA lot of folks thought it was overly ambitious. \n\nDon't worry, we'll get to $2500 in a few months. https://t.co/7L6BcwetGY",
+            "url": "https://x.com/TheBigBerbowski/status/2070058879891759284"
+          }
+        ]
+      },
+      {
+        "handle": "SevenParr",
+        "name": "SevenParr",
+        "avatar": "https://unavatar.io/twitter/SevenParr",
+        "skillZ": 0.1,
+        "tickerCalls": 8,
+        "tickerHit": 0.12,
+        "pltrCalls": 8,
+        "pltrHit": 0.12,
+        "stance": "bull",
+        "latest": [
+          {
+            "date": "2026-06-26",
+            "stance": "bear",
+            "text": "$MU Yesterday and today vs $SMH June 3rd - June 4th\n\nSomething I'm watching.\n\nIf price cannot hold back over $1200 this could see a horrific decline in the coming sessions. https://t.co/VyNlALDAIx",
+            "url": "https://x.com/SevenParr/status/2070547575388725267"
+          },
+          {
+            "date": "2026-06-26",
+            "stance": "bear",
+            "text": "$MU $385M bearish options flow\n\nHedging for this potentual daily hanging man candle https://t.co/l1uNzdJeAy",
+            "url": "https://x.com/SevenParr/status/2070547913013387646"
+          }
+        ]
+      }
+    ]
   }
 }

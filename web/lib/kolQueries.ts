@@ -225,6 +225,7 @@ function redditOps(symbol: string, since: string, limit = 40): RawOp[] {
     () =>
       all<any>(
         `SELECT p.id AS id, p.author_id AS author, p.title AS title, p.title_zh AS title_zh,
+                COALESCE(p.selftext,'') AS selftext, COALESCE(p.selftext_zh,'') AS selftext_zh,
                 p.permalink AS url, COALESCE(p.score,0) AS score, COALESCE(p.num_comments,0) AS comments,
                 p.created_utc AS created, a.stance AS stance, COALESCE(a.sentiment_score,0) AS senti
            FROM mentions m
@@ -238,20 +239,28 @@ function redditOps(symbol: string, since: string, limit = 40): RawOp[] {
       ),
     []
   );
-  return rows.map((r) => ({
-    id: "rd-" + r.id,
-    day: dayOf(r.created),
-    source: "reddit" as KolSource,
-    author: r.author && r.author !== "[deleted]" ? "u/" + r.author : "u/—",
-    interactions: (r.score || 0) + (r.comments || 0),
-    stance: stanceOf(r.stance, r.senti),
-    zh: r.title_zh || r.title || "",
-    en: r.title || "",
-    url: r.url || "#",
-    avatarKey: r.author || "", // reddit 头像按 author_id join
-    refKey: r.id, // kol_refined: reddit:<post id>
-    orig: r.title || "", // 原文 = 英文标题（title_zh 是译文，不算原文）
-  }));
+  return rows.map((r) => {
+    const title = String(r.title || "").trim();
+    const body = String(r.selftext || "").trim();
+    const titleZh = String(r.title_zh || "").trim();
+    const bodyZh = String(r.selftext_zh || "").trim();
+    const orig = [title, body].filter(Boolean).join("\n\n");
+    const zhText = [titleZh || title, bodyZh].filter(Boolean).join("\n\n");
+    return {
+      id: "rd-" + r.id,
+      day: dayOf(r.created),
+      source: "reddit" as KolSource,
+      author: r.author && r.author !== "[deleted]" ? "u/" + r.author : "u/—",
+      interactions: (r.score || 0) + (r.comments || 0),
+      stance: stanceOf(r.stance, r.senti),
+      zh: zhText || title,
+      en: orig || title,
+      url: r.url || "#",
+      avatarKey: r.author || "", // reddit 头像按 author_id join
+      refKey: r.id, // kol_refined: reddit:<post id>
+      orig: orig || title, // 原文 = 英文标题 + 正文；避免高质量长帖只显示标题
+    };
+  });
 }
 
 // yt_fulltext（pipeline youtube-fulltext 产出）：video_id -> {flat 口播全文, segments 有序口播段落(多人视频带说话人)}。
@@ -580,7 +589,7 @@ export function getKolOpinions(symbol: string): KolOpinion[] {
       ...redditOps(symbol, since, 200),
       ...youtubeOps(symbol, since, 80),
       ...xueqiuOps(symbol, since, 200),
-      ...xOps(symbol, since, 200),
+      ...xOps(symbol, since, 500),
     ];
     const refined = refinedMap(symbol);
     const vpMap = viewpointMap(symbol);

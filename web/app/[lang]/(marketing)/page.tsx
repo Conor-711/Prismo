@@ -7,7 +7,7 @@ import { REGION_ORDER, regionLabel, regionSource, regionColor } from "@/lib/regi
 import { fmtInt, fmtCompact, timeAgo } from "@/lib/format";
 import { getDictionary, isLocale, defaultLocale, type Locale } from "@/lib/i18n";
 
-// 落地页（域名根 /）：以 slogan「时间即金钱 / 两者皆盈利」开篇，文案在 dict.home。
+// 落地页（域名根 /）：以 dict.home 的 slogan 开篇。
 // 实时看板已移到 /dashboard。本页与静态导出兼容（[lang] 的 generateStaticParams 由 layout 提供）。
 export function generateMetadata({ params }: { params: { lang: string } }): Metadata {
   const h = getDictionary(params.lang).home;
@@ -36,12 +36,14 @@ export default function Landing({ params }: { params: { lang: string } }) {
 
   return (
     <div className="space-y-16 pb-12">
-      {/* ===== Hero — 时间即金钱 ===== */}
+      {/* ===== Hero ===== */}
       <section className="pt-4 sm:pt-10">
         <Eyebrow color="text-reddit">{h.eyebrow}</Eyebrow>
         <h1 className="mt-4 font-display font-extrabold text-cream tracking-tight text-[52px] sm:text-[88px] leading-[0.92]">
           {h.slogan}
-          <span className="mt-1 block font-bold text-neutral-600 text-[30px] sm:text-[48px]">{h.sloganAlt}</span>
+          {h.sloganAlt ? (
+            <span className="mt-1 block font-bold text-neutral-600 text-[30px] sm:text-[48px]">{h.sloganAlt}</span>
+          ) : null}
         </h1>
         <p className="mt-6 max-w-2xl text-base sm:text-lg leading-relaxed text-neutral-400">{h.lede}</p>
         <div className="mt-8 flex flex-wrap items-center gap-3">

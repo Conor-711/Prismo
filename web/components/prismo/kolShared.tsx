@@ -71,8 +71,8 @@ export const opinionText = (o: KolOpinion, zh: boolean) => {
 export const opinionPoints = (o: KolOpinion, zh: boolean) =>
   (o.points ? (zh ? o.points.zh : o.points.en) : []).filter(Boolean).slice(0, 3);
 
-// 「原文 + 译」取文（原帖卡通用，原帖流与「按 KOL」共用）：默认展示原文（orig 优先，native 语言）；
-// 当原文非当前界面语言（CJK 粗判）且有该语言的忠实译文时，给「译」选项。trans(全文) 优先于 quote(soundbite)。
+// 「原文 + 译」取文（原帖卡通用，原帖流与「按 KOL」共用）。
+// 当原文非当前界面语言（CJK 粗判）且有该语言的忠实译文时，默认展示译文，给「看原文」选项。
 export const CJK_RE = /[一-鿿぀-ヿ가-힯]/;
 export function pickOriginal(
   o: { orig?: string; text?: Bi; trans?: Bi; quote?: Bi },
@@ -114,15 +114,16 @@ export function Avatar({ src, color, name, size = 32 }: { src?: string; color: s
   );
 }
 
-// 单条原帖卡：头像 + 来源/作者 + 立场 + 互动 + **原帖原文** + 「译」选项 + 回原帖。tag 可选（视角「主」标）。
-// 与「按视角·原帖流」一致：展示原文而非 AI 提炼；原文异语种时给「译」（pickOriginal，全文 trans 优先于一句 quote）。
+// 单条原帖卡：头像 + 来源/作者 + 立场 + 互动 + 帖子正文 + 翻译/原文切换 + 回原帖。tag 可选（视角「主」标）。
+// 与「按视角·原帖流」一致：展示帖子正文而非 AI 提炼；原文异语种时默认用界面语言展示。
 // compact=true：去掉头像与来源/作者行（用于「按 KOL」分组——作者身份已在分组头展示）。
 export function OpinionCard({ o, zh, tag, compact }: { o: KolOpinion; zh: boolean; tag?: string; compact?: boolean }) {
   const [showT, setShowT] = useState(false);
   const s = STANCE[o.stance];
   const src = SOURCE[o.source];
   const { base, trans, canTranslate } = pickOriginal(o, zh);
-  const showTrans = showT && canTranslate;
+  const showOriginal = showT && canTranslate;
+  const displayText = showOriginal ? base : (canTranslate ? trans : base);
   const hasLink = !!o.url && o.url !== "#";
   const body = (
     <div className="min-w-0 flex-1">
@@ -135,16 +136,16 @@ export function OpinionCard({ o, zh, tag, compact }: { o: KolOpinion; zh: boolea
           <span className="font-mono tabular text-neutral-500">{fmtCompact(o.interactions)}</span>
         </span>
       </div>
-      {(showTrans ? trans : base) && (
-        <p className={`mt-1 whitespace-pre-line text-[13.5px] leading-relaxed ${showTrans ? "italic text-neutral-300" : "text-cream"}`}>
-          {showTrans ? trans : base}
+      {displayText && (
+        <p className="mt-1 whitespace-pre-line text-[13.5px] leading-relaxed text-cream">
+          {displayText}
         </p>
       )}
       {(canTranslate || hasLink) && (
         <div className="mt-1.5 flex items-center gap-3 text-[11px]">
           {canTranslate && (
             <button onClick={() => setShowT((v) => !v)} className="text-neutral-500 transition hover:text-[#57D7BA]">
-              {showT ? (zh ? "看原文" : "Original") : (zh ? "译" : "Translate")}
+              {showOriginal ? (zh ? "看译文" : "Translation") : (zh ? "看原文" : "Original")}
             </button>
           )}
           {hasLink && (

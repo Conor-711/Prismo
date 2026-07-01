@@ -135,7 +135,7 @@ export function YtFullContent({ segments, chapters, zh }: { segments: YtSeg[]; c
         </div>
       ) : (
         // 单人：干净分段长文。章节标题在对应 speech 下标的段落前插入（j == speech 全局下标）。
-        <div className={`max-w-[68ch] ${chBySeg.size ? "space-y-3" : "space-y-3.5 border-l-2 border-line/60 pl-4"}`}>
+        <div className={`w-full ${chBySeg.size ? "space-y-3" : "space-y-3.5 border-l-2 border-line/60 pl-4"}`}>
           {turns.flatMap((t) => t.texts).map((tx, j) => (
             <Fragment key={j}>
               {headFor(j)}

@@ -2,7 +2,6 @@ import { LocaleLink } from "./i18n/LocaleLink";
 import { getMeta, getDataStats } from "@/lib/queries";
 import { timeAgo, fmtInt } from "@/lib/format";
 import { LanguageSwitcher } from "./LanguageSwitcher";
-import { SidebarToggle } from "./SidebarToggle";
 import type { Locale, Dictionary } from "@/lib/i18n";
 import { UserMenu } from "./auth/UserMenu";
 
@@ -27,7 +26,6 @@ export function Topbar({ lang, dict }: { lang: Locale; dict: Dictionary }) {
     >
       <div className="flex items-center justify-between gap-3 h-16 px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-2 min-w-0">
-          <SidebarToggle />
           <LocaleLink href="/" className="lg:hidden flex items-center gap-2">
             <span className="w-7 h-7 rounded-xl overflow-hidden bg-white shrink-0 ring-1 ring-white/10">
               {/* eslint-disable-next-line @next/next/no-img-element */}
