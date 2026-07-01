@@ -69,9 +69,9 @@ function Header({ p, zh }: { p: YoutubeCreator["profile"]; zh: boolean }) {
   if (typeof p.channelVideos === "number") stats.push({ label: zh ? "视频" : "Videos", value: fmtCompact(p.channelVideos) });
   if (typeof p.channelViews === "number") stats.push({ label: zh ? "总播放" : "Total views", value: fmtCompact(p.channelViews) });
   return (
-    <Panel className="overflow-hidden p-4 sm:p-5">
-      <div className="flex flex-wrap items-start gap-4">
-        <Avatar src={p.avatar} color={YT} name={p.name} size={64} />
+    <div className="px-1 py-1">
+      <div className="flex items-start gap-4">
+        <Avatar src={p.avatar} color={YT} name={p.name} size={58} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
             <h1 className="font-display text-2xl font-extrabold leading-none tracking-tight text-cream">{p.name}</h1>
@@ -88,12 +88,12 @@ function Header({ p, zh }: { p: YoutubeCreator["profile"]; zh: boolean }) {
               {zh ? "频道主页 ↗" : "Channel ↗"}
             </a>
           </div>
-          {p.bio && <p className="mt-2.5 max-w-3xl whitespace-pre-line text-[13px] leading-relaxed text-neutral-400 line-clamp-3">{p.bio}</p>}
+          {p.bio && <p className="mt-2 max-w-4xl whitespace-pre-line text-[12.5px] leading-relaxed text-neutral-500 line-clamp-2">{p.bio}</p>}
         </div>
         {stats.length > 0 && (
-          <div className="flex shrink-0 gap-2">
+          <div className="grid shrink-0 grid-cols-3 divide-x divide-line overflow-hidden rounded-lg bg-white/[.012] ring-1 ring-inset ring-white/[.06]">
             {stats.map((s) => (
-              <div key={s.label} className="rounded-lg bg-white/[.012] px-3 py-2 text-center ring-1 ring-inset ring-white/[.06]">
+              <div key={s.label} className="min-w-[88px] px-3 py-2">
                 <div className="font-display text-lg font-bold leading-none tabular text-cream">{s.value}</div>
                 <div className="mt-1 text-[10px] uppercase tracking-wider text-neutral-500">{s.label}</div>
               </div>
@@ -101,14 +101,14 @@ function Header({ p, zh }: { p: YoutubeCreator["profile"]; zh: boolean }) {
           </div>
         )}
       </div>
-    </Panel>
+    </div>
   );
 }
 
 // ===== ① 标的判断 =====
 // 刻画作者对每只标的的具体判断（多/空/中性 + 观点/论据 + 目标价）及判断结果回测（当时价→现在价 + 命中）。
 // 顶部汇总沿用方向性回测（命中率/平均收益）；下方按标的归组、逐条展开判断。
-function Judgments({ creator, zh }: { creator: YoutubeCreator; zh: boolean }) {
+function Judgments({ creator, zh, fill = false }: { creator: YoutubeCreator; zh: boolean; fill?: boolean }) {
   const tr = creator.trackRecord;
   const groups = creator.tickerJudgments;
   const bench = tr.hasBenchmark;
@@ -122,13 +122,15 @@ function Judgments({ creator, zh }: { creator: YoutubeCreator; zh: boolean }) {
         : "No directional calls with price data to score in the recent window; opinions & arguments still shown below.";
 
   return (
-    <Panel className="p-4 sm:p-5">
-      <SectionHead
-        title={zh ? "① 标的判断" : "① Ticker judgments"}
-        hint={zh ? "他对每只标的的多空/中性判断、观点与论据、目标价，以及自表态日起「当时价→现在价」的回测" : "His bull/bear/neutral judgment on each ticker — opinion, arguments, target — and the price-then-vs-now backtest from his call date"}
-      />
+    <Panel className={`p-4 sm:p-5 ${fill ? "flex h-full min-h-0 flex-col overflow-hidden" : ""}`}>
+      <div className="shrink-0">
+        <SectionHead
+          title={zh ? "① 标的判断" : "① Ticker judgments"}
+          hint={zh ? "他对每只标的的多空/中性判断、观点与论据、目标价，以及自表态日起「当时价→现在价」的回测" : "His bull/bear/neutral judgment on each ticker — opinion, arguments, target — and the price-then-vs-now backtest from his call date"}
+        />
+      </div>
       {tr.count > 0 && (
-        <div className="mb-4 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+        <div className="mb-4 grid shrink-0 grid-cols-2 gap-2.5 sm:grid-cols-4">
           <Stat label={zh ? "命中率" : "Hit rate"} value={`${Math.round(tr.hitRate * 100)}%`} sub={`${tr.calls.filter((c) => c.hit).length}/${tr.count}`} tone={tr.hitRate >= 0.5 ? UP : DOWN} />
           <Stat label={zh ? "按方向平均" : "Avg (directional)"} value={pctStr(tr.avgSignedRet)} sub={zh ? "看多/看空修正后" : "stance-adjusted"} tone={moveColor(tr.avgSignedRet)} />
           {bench && <Stat label={zh ? "平均跑赢大盘" : "Avg vs SPY"} value={pctStr(tr.avgExcess)} sub={zh ? "相对 SPY 超额" : "excess over SPY"} tone={moveColor(tr.avgExcess)} />}
@@ -136,7 +138,7 @@ function Judgments({ creator, zh }: { creator: YoutubeCreator; zh: boolean }) {
         </div>
       )}
       {groups.length > 0 ? (
-        <div className="space-y-3">
+        <div className={`space-y-3 ${fill ? "min-h-0 flex-1 overflow-y-auto pr-1" : ""}`}>
           {groups.map((g) => (
             <TickerGroup key={g.ticker} g={g} zh={zh} />
           ))}
@@ -144,7 +146,7 @@ function Judgments({ creator, zh }: { creator: YoutubeCreator; zh: boolean }) {
       ) : (
         <p className="text-[13px] text-neutral-500">{zh ? "暂无该作者的标的判断。" : "No ticker judgments for this creator yet."}</p>
       )}
-      <p className="mt-3 text-[11px] leading-relaxed text-neutral-600">{caveat}</p>
+      <p className="mt-3 shrink-0 text-[11px] leading-relaxed text-neutral-600">{caveat}</p>
     </Panel>
   );
 }
@@ -243,12 +245,14 @@ function Stat({ label, value, sub, tone = "#EDEDED" }: { label: string; value: s
 }
 
 // ===== ② 互动最高视频 =====
-function TopVideos({ items, zh }: { items: CreatorVideo[]; zh: boolean }) {
+function TopVideos({ items, zh, fill = false }: { items: CreatorVideo[]; zh: boolean; fill?: boolean }) {
   if (!items.length) return null;
   return (
-    <Panel className="p-4 sm:p-5">
-      <SectionHead title={zh ? "② 互动最高的视频" : "② Most-watched videos"} hint={zh ? "按播放量排序" : "Ranked by view count"} />
-      <ul className="space-y-2.5">
+    <Panel className={`p-4 sm:p-5 ${fill ? "flex h-full min-h-0 flex-col overflow-hidden" : ""}`}>
+      <div className="shrink-0">
+        <SectionHead title={zh ? "② 互动最高的视频" : "② Most-watched videos"} hint={zh ? "按播放量排序" : "Ranked by view count"} />
+      </div>
+      <ul className={`space-y-2.5 ${fill ? "min-h-0 flex-1 overflow-y-auto pr-1" : ""}`}>
         {items.map((v) => (
           <li key={v.videoId} className="flex gap-3 rounded-xl bg-card p-2.5 ring-1 ring-inset ring-line">
             <a href={v.url} target="_blank" rel="noopener noreferrer" className="relative block aspect-video w-32 shrink-0 overflow-hidden rounded-lg bg-elevated">
@@ -279,7 +283,19 @@ function TopVideos({ items, zh }: { items: CreatorVideo[]; zh: boolean }) {
   );
 }
 
-export function CreatorProfile({ creator, zh }: { creator: YoutubeCreator; zh: boolean }) {
+export function CreatorProfile({ creator, zh, fill = false }: { creator: YoutubeCreator; zh: boolean; fill?: boolean }) {
+  if (fill) {
+    return (
+      <div className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-3">
+        <Header p={creator.profile} zh={zh} />
+        <div className="grid min-h-0 gap-3 lg:grid-cols-[minmax(0,1fr)_390px]">
+          <Judgments creator={creator} zh={zh} fill />
+          <TopVideos items={creator.topVideos} zh={zh} fill />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5">
       <Header p={creator.profile} zh={zh} />

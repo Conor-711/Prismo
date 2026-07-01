@@ -24,9 +24,11 @@ export function fmtSignedPct(n: number, digits = 0): string {
 }
 
 export function parseUTC(s: string): Date {
-  // SQLite 里是 "YYYY-MM-DD HH:MM:SS(.ffffff)"，按 UTC 解析。
+  // SQLite 里是 "YYYY-MM-DD HH:MM:SS(.ffffff)"，按 UTC 解析；同时兼容 ISO 时间。
   if (!s) return new Date(0);
-  return new Date(s.replace(" ", "T").replace(/(\.\d+)?$/, "") + "Z");
+  const normalized = s.trim().replace(" ", "T");
+  if (/[zZ]|[+-]\d\d:?\d\d$/.test(normalized)) return new Date(normalized);
+  return new Date(normalized.replace(/(\.\d+)?$/, "") + "Z");
 }
 
 export function timeAgo(s: string, lang: Locale = "zh"): string {

@@ -1,4 +1,4 @@
-import { IconGrid, IconTrend, IconLayers, IconSearch, IconStar, IconTrophy, IconDoc } from "./icons";
+import { IconGrid, IconTrend, IconLayers, IconStar, IconTrophy, IconDoc } from "./icons";
 import type { Dictionary } from "@/lib/i18n";
 
 export type NavItem = {
@@ -13,19 +13,18 @@ export type NavGroup = {
   items: NavItem[];
 };
 
-// Prismo 主导航：总览 / 叙事 / 标的 / 投资者 / 追踪 / 区域 / 搜索（5 社区聚合）。
+// Prismo 主导航：搜索框单独置顶；其余入口按 SaaS 工作台优先级排列。
 export const NAV_GROUPS: NavGroup[] = [
   {
     id: "us",
     labelKey: "usSection",
     items: [
       { href: "/dashboard", key: "overview", Icon: IconGrid },
-      { href: "/narratives", key: "narratives", Icon: IconDoc },
       { href: "/tickers", key: "tickers", Icon: IconTrend },
+      { href: "/narratives", key: "narratives", Icon: IconDoc },
       { href: "/investors", key: "investors", Icon: IconTrophy },
-      { href: "/tracking", key: "tracking", Icon: IconStar },
       { href: "/regions", key: "regions", Icon: IconLayers },
-      { href: "/search", key: "search", Icon: IconSearch },
+      { href: "/tracking", key: "tracking", Icon: IconStar },
     ],
   },
 ];

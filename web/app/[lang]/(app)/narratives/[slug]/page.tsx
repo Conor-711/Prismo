@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { LocaleLink } from "@/components/i18n/LocaleLink";
-import { Panel } from "@/components/ui";
 import { SentScore } from "@/components/prismo/Bits";
 import { TickerLogo } from "@/components/prismo/TickerLogo";
 import { Module, Counter, Counters, flag } from "@/components/prismo/DetailBits";
 import { NarrativeDetailTimeline } from "@/components/prismo/NarrativeRotationCharts";
+import { ViewportWorkspace } from "@/components/prismo/ViewportWorkspace";
 import { fmtCompact, fmtPct } from "@/lib/format";
 import {
   getNarrativeBySlug,
@@ -85,21 +85,20 @@ export default function NarrativeDetailPage({ params }: { params: { lang: string
   const regionTotal = Math.max(1, detail.regions.reduce((s, r) => s + r.count, 0));
 
   return (
-    <div className="space-y-5">
-      <LocaleLink href="/narratives" className="inline-flex items-center gap-1 text-xs text-neutral-500 hover:text-reddit transition">
-        ← {zh ? "叙事轮动" : "Narrative rotation"}
-      </LocaleLink>
-
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-line pb-4">
-        <div className="flex items-center gap-3">
+    <ViewportWorkspace className="grid min-h-0 grid-rows-[auto_auto_minmax(0,1fr)] gap-3 overflow-hidden" bottomOffset={16}>
+      <div className="flex items-center justify-between gap-4 px-1 py-1">
+        <div className="flex min-w-0 items-center gap-3">
+          <LocaleLink href="/narratives" className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-neutral-500 ring-1 ring-inset ring-line transition hover:text-reddit">
+            ←
+          </LocaleLink>
           <span className="h-12 w-2 rounded-full" style={{ background: category.color }} />
-          <div>
+          <div className="min-w-0">
             <div className="text-[11px] font-semibold uppercase tracking-wider text-reddit">{zh ? "板块叙事" : "Sector narrative"}</div>
-            <h1 className="mt-1 font-display text-2xl font-extrabold leading-none tracking-tight text-cream">{narrativeText(category.title, lang)}</h1>
-            <p className="mt-2 max-w-2xl text-sm text-neutral-500">{narrativeText(category.description, lang)}</p>
+            <h1 className="mt-1 truncate font-display text-2xl font-extrabold leading-none tracking-tight text-cream">{narrativeText(category.title, lang)}</h1>
+            <p className="mt-1 max-w-4xl truncate text-sm text-neutral-500">{narrativeText(category.description, lang)}</p>
           </div>
         </div>
-        <span className="rounded-md bg-white/[.04] px-2.5 py-1 text-[12px] text-neutral-400 ring-1 ring-inset ring-white/10">
+        <span className="shrink-0 rounded-md bg-white/[.04] px-2.5 py-1 text-[12px] text-neutral-400 ring-1 ring-inset ring-white/10">
           {trendLabel(current.trend, lang)}
         </span>
       </div>
@@ -113,91 +112,107 @@ export default function NarrativeDetailPage({ params }: { params: { lang: string
         <Counter label={zh ? "全窗样本" : "Window samples"} value={fmtCompact(detail.windowVolume)} sub={`${data.window.start} → ${data.window.end}`} />
       </Counters>
 
-      <Module title={zh ? "轮动时间线" : "Rotation timeline"} icon="trend" accent="reddit" hint={zh ? "讨论度柱 + 占比线 + 情绪线" : "volume bars + share line + sentiment line"}>
-        <NarrativeDetailTimeline rows={series} color={category.color} />
-      </Module>
+      <div className="grid min-h-0 gap-3 lg:grid-cols-[300px_minmax(0,1fr)_340px]">
+        <aside className="min-h-0 space-y-3 overflow-y-auto pr-1">
+          <Module title={zh ? "来源构成" : "Source mix"} icon="layers" accent="reddit" hint={zh ? "全窗样本" : "full window"} bodyClassName="p-4">
+            {detail.sources.length ? (
+              <SourceRows rows={detail.sources} labels={data.sourceLabels} lang={lang} />
+            ) : (
+              <p className="text-sm text-neutral-600">{zh ? "暂无来源数据。" : "No source data."}</p>
+            )}
+          </Module>
 
-      <div className="grid lg:grid-cols-3 gap-5 items-start">
-        <Module title={zh ? "来源构成" : "Source mix"} icon="layers" accent="reddit" hint={zh ? "全窗样本" : "full window"}>
-          {detail.sources.length ? (
-            <SourceRows rows={detail.sources} labels={data.sourceLabels} lang={lang} />
-          ) : (
-            <p className="text-sm text-neutral-600">{zh ? "暂无来源数据。" : "No source data."}</p>
-          )}
-        </Module>
-
-        <Module title={zh ? "地区构成" : "Region mix"} icon="layers" accent="bull" hint={zh ? "全窗样本" : "full window"}>
-          {detail.regions.length ? (
-            <div className="space-y-3">
-              {detail.regions.map((r) => {
-                const pct = (r.count / regionTotal) * 100;
-                return (
-                  <div key={r.region}>
-                    <div className="mb-1 flex items-center justify-between gap-3 text-[12px]">
-                      <span className="text-neutral-300">{flag(r.region)} {r.region.toUpperCase()}</span>
-                      <span className="font-mono tabular text-neutral-500">{fmtCompact(r.count)} · {fmtPct(pct, 1)}</span>
+          <Module title={zh ? "地区构成" : "Region mix"} icon="layers" accent="bull" hint={zh ? "全窗样本" : "full window"} bodyClassName="p-4">
+            {detail.regions.length ? (
+              <div className="space-y-3">
+                {detail.regions.map((r) => {
+                  const pct = (r.count / regionTotal) * 100;
+                  return (
+                    <div key={r.region}>
+                      <div className="mb-1 flex items-center justify-between gap-3 text-[12px]">
+                        <span className="text-neutral-300">{flag(r.region)} {r.region.toUpperCase()}</span>
+                        <span className="font-mono tabular text-neutral-500">{fmtCompact(r.count)} · {fmtPct(pct, 1)}</span>
+                      </div>
+                      <div className="h-1.5 overflow-hidden rounded-full bg-white/[.06]">
+                        <div className="h-full rounded-full bg-bull" style={{ width: `${Math.min(100, pct)}%` }} />
+                      </div>
                     </div>
-                    <div className="h-1.5 overflow-hidden rounded-full bg-white/[.06]">
-                      <div className="h-full rounded-full bg-bull" style={{ width: `${Math.min(100, pct)}%` }} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="text-sm text-neutral-600">{zh ? "暂无地区数据。" : "No region data."}</p>
-          )}
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-neutral-600">{zh ? "暂无地区数据。" : "No region data."}</p>
+            )}
+          </Module>
+
+          <Module title={zh ? "关联标的" : "Linked tickers"} icon="pulse" accent="amber" hint={zh ? "按出现次数" : "by mentions"} bodyClassName="p-4">
+            {detail.topTickers.length ? (
+              <div className="divide-y divide-line">
+                {detail.topTickers.slice(0, 8).map((t) => (
+                  <LocaleLink key={t.ticker} href={`/tickers/${t.ticker}`} className="flex items-center gap-2.5 py-2.5 first:pt-0 last:pb-0 hover:opacity-80 transition">
+                    <TickerLogo ticker={t.ticker} size={22} />
+                    <span className="font-mono font-bold text-cream">{t.ticker}</span>
+                    <span className="ml-auto font-mono text-[12px] tabular text-neutral-500">{fmtCompact(t.count)}</span>
+                  </LocaleLink>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-neutral-600">{zh ? "暂无关联标的。" : "No linked tickers."}</p>
+            )}
+          </Module>
+        </aside>
+
+        <Module
+          title={zh ? "轮动时间线" : "Rotation timeline"}
+          icon="trend"
+          accent="reddit"
+          hint={zh ? "讨论度柱 + 占比线 + 情绪线" : "volume bars + share line + sentiment line"}
+          className="flex h-full min-h-0 flex-col"
+          bodyClassName="min-h-0 flex-1 p-4"
+        >
+          <NarrativeDetailTimeline rows={series} color={category.color} height="100%" />
         </Module>
 
-        <Module title={zh ? "关联标的" : "Linked tickers"} icon="pulse" accent="amber" hint={zh ? "按出现次数" : "by mentions"}>
-          {detail.topTickers.length ? (
-            <div className="divide-y divide-line">
-              {detail.topTickers.slice(0, 8).map((t) => (
-                <LocaleLink key={t.ticker} href={`/tickers/${t.ticker}`} className="flex items-center gap-2.5 py-2.5 first:pt-0 last:pb-0 hover:opacity-80 transition">
-                  <TickerLogo ticker={t.ticker} size={22} />
-                  <span className="font-mono font-bold text-cream">{t.ticker}</span>
-                  <span className="ml-auto font-mono text-[12px] tabular text-neutral-500">{fmtCompact(t.count)}</span>
-                </LocaleLink>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-neutral-600">{zh ? "暂无关联标的。" : "No linked tickers."}</p>
-          )}
-        </Module>
-      </div>
-
-      <Module title={zh ? "每日明细" : "Daily detail"} icon="doc" accent="reddit" hint={zh ? "最近 10 天" : "last 10 days"} flush>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-white/[.02] text-[11px] uppercase tracking-wider text-neutral-500">
-                <th className="py-2.5 pl-5 pr-3 text-left font-medium">{zh ? "日期" : "Day"}</th>
-                <th className="px-3 py-2.5 text-right font-medium">{zh ? "排名" : "Rank"}</th>
-                <th className="px-3 py-2.5 text-right font-medium">{zh ? "讨论" : "Volume"}</th>
-                <th className="px-3 py-2.5 text-right font-medium">{zh ? "占比" : "Share"}</th>
-                <th className="py-2.5 pl-3 pr-5 text-right font-medium">{zh ? "情绪" : "Sentiment"}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentRows.map((r) => (
-                <tr key={r.day} className="border-t border-line">
-                  <td className="py-3 pl-5 pr-3 font-mono text-xs text-neutral-400">{r.day}</td>
-                  <td className="px-3 py-3 text-right font-mono text-neutral-500">{r.rank ? `#${r.rank}` : "—"}</td>
-                  <td className="px-3 py-3 text-right font-mono text-neutral-300">{fmtCompact(r.volume)}</td>
-                  <td className="px-3 py-3 text-right font-mono text-neutral-300">{fmtPct(r.share * 100, 1)}</td>
-                  <td className="py-3 pl-3 pr-5 text-right"><SentScore score={r.sentiment} /></td>
+        <aside className="grid min-h-0 grid-rows-[minmax(0,1fr)_auto] gap-3">
+          <Module
+            title={zh ? "每日明细" : "Daily detail"}
+            icon="doc"
+            accent="reddit"
+            hint={zh ? "最近 10 天" : "last 10 days"}
+            className="flex h-full min-h-0 flex-col"
+            bodyClassName="min-h-0 flex-1 overflow-auto"
+          >
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-white/[.02] text-[11px] uppercase tracking-wider text-neutral-500">
+                  <th className="py-2.5 pl-4 pr-3 text-left font-medium">{zh ? "日期" : "Day"}</th>
+                  <th className="px-3 py-2.5 text-right font-medium">{zh ? "排名" : "Rank"}</th>
+                  <th className="px-3 py-2.5 text-right font-medium">{zh ? "讨论" : "Volume"}</th>
+                  <th className="px-3 py-2.5 text-right font-medium">{zh ? "占比" : "Share"}</th>
+                  <th className="py-2.5 pl-3 pr-4 text-right font-medium">{zh ? "情绪" : "Sentiment"}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Module>
+              </thead>
+              <tbody>
+                {recentRows.map((r) => (
+                  <tr key={r.day} className="border-t border-line">
+                    <td className="py-3 pl-4 pr-3 font-mono text-xs text-neutral-400">{r.day}</td>
+                    <td className="px-3 py-3 text-right font-mono text-neutral-500">{r.rank ? `#${r.rank}` : "—"}</td>
+                    <td className="px-3 py-3 text-right font-mono text-neutral-300">{fmtCompact(r.volume)}</td>
+                    <td className="px-3 py-3 text-right font-mono text-neutral-300">{fmtPct(r.share * 100, 1)}</td>
+                    <td className="py-3 pl-3 pr-4 text-right"><SentScore score={r.sentiment} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Module>
 
-      <Panel className="p-4 text-[11px] leading-relaxed text-neutral-600">
-        {zh
-          ? "说明：当前页面只展示固定板块叙事的轮动指标，不展示代表原帖。板块归属由离线 pipeline 以固定关键词与标的锚点归类，后续可升级为 AI 分类。"
-          : "Note: this page shows fixed sector-narrative rotation metrics only, without representative posts. Sector membership is produced offline via fixed keywords and ticker anchors, and can later be upgraded to AI classification."}
-      </Panel>
-    </div>
+          <div className="rounded-xl bg-card/45 p-4 text-[11px] leading-relaxed text-neutral-600 ring-1 ring-inset ring-line">
+            {zh
+              ? "说明：当前页面只展示固定板块叙事的轮动指标，不展示代表原帖。板块归属由离线 pipeline 以固定关键词与标的锚点归类，后续可升级为 AI 分类。"
+              : "Note: this page shows fixed sector-narrative rotation metrics only, without representative posts. Sector membership is produced offline via fixed keywords and ticker anchors, and can later be upgraded to AI classification."}
+          </div>
+        </aside>
+      </div>
+    </ViewportWorkspace>
   );
 }

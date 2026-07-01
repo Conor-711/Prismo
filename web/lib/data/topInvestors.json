@@ -248,5 +248,135 @@
         ]
       }
     ]
+  },
+  "MU": {
+    "base": 0.72,
+    "investors": [
+      {
+        "handle": "jedimarkus77",
+        "name": "jedimarkus77",
+        "avatar": "https://unavatar.io/twitter/jedimarkus77",
+        "skillZ": 2.0,
+        "tickerCalls": 9,
+        "tickerHit": 0.78,
+        "pltrCalls": 9,
+        "pltrHit": 0.78,
+        "stance": "bull",
+        "latest": [
+          {
+            "date": "2026-06-26",
+            "stance": "bear",
+            "text": "$MU loses its Thursday RTH low (1136.31) in the overnight... https://t.co/Ri1MdUZrLK",
+            "url": "https://x.com/jedimarkus77/status/2070457108353462435"
+          },
+          {
+            "date": "2026-06-26",
+            "stance": "bear",
+            "text": "$MU post-report NEW LOW https://t.co/FAe1Y9oMLH",
+            "url": "https://x.com/jedimarkus77/status/2070496181831053823"
+          }
+        ]
+      },
+      {
+        "handle": "BruceTennen",
+        "name": "BruceTennen",
+        "avatar": "https://unavatar.io/twitter/BruceTennen",
+        "skillZ": 0.9,
+        "tickerCalls": 9,
+        "tickerHit": 0.67,
+        "pltrCalls": 9,
+        "pltrHit": 0.67,
+        "stance": "bull",
+        "latest": [
+          {
+            "date": "2026-06-26",
+            "stance": "bull",
+            "text": "$MU with a huge gap down and then filling a monster run of $65. Falling at the moment but will be back at it.",
+            "url": "https://x.com/BruceTennen/status/2070512348507320769"
+          },
+          {
+            "date": "2026-06-26",
+            "stance": "neutral",
+            "text": "$MU",
+            "url": "https://x.com/BruceTennen/status/2070612249601810885"
+          }
+        ]
+      },
+      {
+        "handle": "squawksquare",
+        "name": "squawksquare",
+        "avatar": "https://unavatar.io/twitter/squawksquare",
+        "skillZ": 0.7,
+        "tickerCalls": 8,
+        "tickerHit": 0.62,
+        "pltrCalls": 8,
+        "pltrHit": 0.62,
+        "stance": "bull",
+        "latest": [
+          {
+            "date": "2026-06-25",
+            "stance": "bear",
+            "text": "$MU just passed $TSLA market value. Elon is the master at shareholder deterioration while every other CEO is printing money for their shareholders.",
+            "url": "https://x.com/squawksquare/status/2070139454660980974"
+          },
+          {
+            "date": "2026-06-24",
+            "stance": "bear",
+            "text": "Just sold my $MU and took the $5,500. \n\n$TSLA",
+            "url": "https://x.com/squawksquare/status/2069756169946579099"
+          }
+        ]
+      },
+      {
+        "handle": "TheBigBerbowski",
+        "name": "TheBigBerbowski",
+        "avatar": "https://unavatar.io/twitter/TheBigBerbowski",
+        "skillZ": 0.6,
+        "tickerCalls": 12,
+        "tickerHit": 0.67,
+        "pltrCalls": 12,
+        "pltrHit": 0.67,
+        "stance": "bull",
+        "latest": [
+          {
+            "date": "2026-06-25",
+            "stance": "bull",
+            "text": "$MU earnings call\n\n\"The demand continues to be well above our supply.\" \"not just in 2027, but even 2028\"\n\nQuestion: \nI think it was September of last year when the Micron team said that they were booked out through calendar 2026 on HBM3, HBM3E. If you fast-forward to now, and with a stronger, especially XPU ASIC demand profile, is the team already booked up volume and pricing for HBM3E and HBM4 fo",
+            "url": "https://x.com/TheBigBerbowski/status/2070037098996854988"
+          },
+          {
+            "date": "2026-06-25",
+            "stance": "bull",
+            "text": "The day has arrived. $MU \n\nA lot of folks thought it was overly ambitious. \n\nDon't worry, we'll get to $2500 in a few months. https://t.co/7L6BcwetGY",
+            "url": "https://x.com/TheBigBerbowski/status/2070058879891759284"
+          }
+        ]
+      },
+      {
+        "handle": "SevenParr",
+        "name": "SevenParr",
+        "avatar": "https://unavatar.io/twitter/SevenParr",
+        "skillZ": 0.1,
+        "tickerCalls": 8,
+        "tickerHit": 0.12,
+        "pltrCalls": 8,
+        "pltrHit": 0.12,
+        "stance": "bull",
+        "latest": [
+          {
+            "date": "2026-06-26",
+            "stance": "bear",
+            "text": "$MU Yesterday and today vs $SMH June 3rd - June 4th\n\nSomething I'm watching.\n\nIf price cannot hold back over $1200 this could see a horrific decline in the coming sessions. https://t.co/VyNlALDAIx",
+            "url": "https://x.com/SevenParr/status/2070547575388725267"
+          },
+          {
+            "date": "2026-06-26",
+            "stance": "bear",
+            "text": "$MU $385M bearish options flow\n\nHedging for this potentual daily hanging man candle https://t.co/l1uNzdJeAy",
+            "url": "https://x.com/SevenParr/status/2070547913013387646"
+          }
+        ]
+      }
+    ]
   }
 }

@@ -2,10 +2,10 @@
 
 // 标的页「个体观点 · KOL」的观点浏览器（替代原 按KOL/按视角/按热度 三 tab）：
 //   顶部 = 筛选条（平台[品牌 logo] / 时间[指定起始日期 + 5 个区间模板] / 语言[简中·英·日·韩·繁中] / 质量）
-//   下方 = 主从布局：左窄列 = 帖文卡列表（头像+handle+开头），右宽栏 = 选中帖的完整原文（含「译」+回原帖）
+//   下方 = 主从布局：左窄列 = 帖文卡列表（头像+handle+开头），右宽栏 = 选中帖的完整正文（含原文/译文切换 + 回原帖）
 // 全部筛选在前端做；默认按「相关性」降序排（最相关的在前）。数据来自 lib/kolQueries.getKolOpinions（近 ~30 天扁平池）。
 import { useMemo, useState } from "react";
-import type { KolOpinion, KolSource, KolJudgment, TweetMetrics, TweetReply } from "@/lib/mockDetail";
+import type { KolOpinion, KolSource, KolJudgment, Stance, TweetMetrics, TweetReply } from "@/lib/mockDetail";
 import { Avatar, SOURCE, STANCE, pickOriginal, mmdd } from "./kolShared";
 import { YtReader } from "./YtReader";
 import { fmtCompact } from "@/lib/format";
@@ -103,7 +103,9 @@ const WINDOWS: { k: string; days: number; zh: string; en: string }[] = [
   { k: "1mo", days: 31, zh: "1 个月", en: "1mo" },
 ];
 const DEFAULT_WIN_DAYS = 31; // 默认起始 = 池中最新日往前 1 个月
-const QUALITY_MIN = 65; // 「只看高质量」阈值：kol_quality ≥ 此分算高质量（=「言之有物」及以上）
+// 「只看高质量」不是单一分数线：YouTube 长视频基于完整口播/摘要，65 分已可读；
+// 社区短帖噪声更高，必须更严格，并且要有可见正文或 AI 提炼支撑。
+const QUALITY_MIN_BY_SOURCE: Record<KolSource, number> = { youtube: 65, reddit: 80, x: 80, xueqiu: 80 };
 // 五种完整语言：简体中文 / 英文 / 日语 / 韩文 / 繁体中文
 const LANGS: { k: string; zh: string; en: string }[] = [
   { k: "zh-Hans", zh: "简体中文", en: "简" },
@@ -112,6 +114,7 @@ const LANGS: { k: string; zh: string; en: string }[] = [
   { k: "ko", zh: "韩文", en: "KO" },
   { k: "zh-Hant", zh: "繁体中文", en: "繁" },
 ];
+const STANCE_FILTERS: Stance[] = ["bull", "neutral", "bear"];
 
 // 起始日期工具：day ± delta（UTC，YYYY-MM-DD）
 const shiftDay = (day: string, delta: number): string => {
@@ -145,6 +148,15 @@ const lensesOf = (o: KolOpinion): LensKey[] =>
   (o.viewpoints && o.viewpoints.length ? o.viewpoints : ["other"]) as LensKey[];
 const relOf = (o: KolOpinion): number => (typeof o.relevance === "number" ? o.relevance : -1);
 const qualOf = (o: KolOpinion): number => (typeof o.quality === "number" ? o.quality : -1);
+const hasSubstantiveText = (o: KolOpinion): boolean => {
+  if (o.source === "youtube") return Boolean(o.ytSegments?.length || o.ytDigest);
+  const body = (o.orig || o.text?.zh || o.text?.en || "").replace(/\s+/g, " ").trim();
+  const reason = `${o.reason?.zh || ""} ${o.reason?.en || ""}`.trim();
+  const points = (o.points?.zh?.length || 0) + (o.points?.en?.length || 0);
+  return body.length >= 180 || reason.length >= 40 || points >= 2;
+};
+const isHighQuality = (o: KolOpinion): boolean =>
+  qualOf(o) >= QUALITY_MIN_BY_SOURCE[o.source] && hasSubstantiveText(o);
 
 function Chip({ active, dim, onClick, children }: { active: boolean; dim?: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
@@ -185,7 +197,7 @@ function Dropdown({ label, value, children }: { label: string; value: string; ch
     <div className="relative">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11.5px] ring-1 ring-inset ring-line text-neutral-300 transition hover:text-cream"
+        className="flex h-11 min-w-[148px] items-center justify-between gap-2 rounded-md px-3.5 text-[13px] ring-1 ring-inset ring-line text-neutral-300 transition hover:text-cream"
       >
         <span className="text-neutral-500">{label}</span>
         <span className="text-cream">{value}</span>
@@ -207,7 +219,7 @@ function MenuItem({ active, disabled, onClick, children }: { active?: boolean; d
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[11.5px] transition ${
+      className={`flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[12px] transition ${
         disabled ? "cursor-default text-neutral-700" : active ? "bg-card text-[#57D7BA]" : "text-neutral-300 hover:bg-card hover:text-cream"
       }`}
     >
@@ -216,13 +228,25 @@ function MenuItem({ active, disabled, onClick, children }: { active?: boolean; d
   );
 }
 
-export function OpinionExplorer({ opinions, zh }: { opinions: KolOpinion[]; zh: boolean }) {
+export function OpinionExplorer({
+  opinions,
+  zh,
+  fill = false,
+  overview,
+}: {
+  opinions: KolOpinion[];
+  zh: boolean;
+  fill?: boolean;
+  overview?: React.ReactNode;
+}) {
   // 多选集合（空 = 不限）；时间 = 起始日期（"" 用默认 1 个月）。
   const [plat, setPlat] = useState<Set<KolSource>>(new Set());
   const [langs, setLangs] = useState<Set<string>>(new Set());
+  const [stanceFilter, setStanceFilter] = useState<Set<Stance>>(new Set());
   const [since, setSince] = useState(""); // 起始日期 YYYY-MM-DD；"" = 用默认（最新日往前 1 个月）
   const [hiQ, setHiQ] = useState(false); // 「只看高质量」开关
   const [sort, setSort] = useState<"rel" | "time" | "hot">("rel"); // 排序：相关度 / 热度 / 最新
+  const [query, setQuery] = useState("");
   const [showT, setShowT] = useState(false);
   const [selId, setSelId] = useState<string | null>(null);
 
@@ -254,14 +278,40 @@ export function OpinionExplorer({ opinions, zh }: { opinions: KolOpinion[]; zh: 
   }, [sinceEff, maxDay, zh]);
   const langLabel = langs.size === 0 ? (zh ? "全部" : "All") : (zh ? `${langs.size} 项` : String(langs.size));
 
-  const filtered = useMemo(() => {
-    const out = opinions.filter((o) => {
-      if (plat.size && !plat.has(o.source)) return false;
+  const baseFiltered = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return opinions.filter((o) => {
       if (langs.size && !langs.has(langOf(o))) return false;
+      if (stanceFilter.size && !stanceFilter.has(o.stance)) return false;
       if (sinceEff && o.day < sinceEff) return false;
-      if (hiQ && qualOf(o) < QUALITY_MIN) return false; // 「只看高质量」开关
+      if (hiQ && !isHighQuality(o)) return false; // 「只看高质量」开关
+      if (needle) {
+        const haystack = [
+          o.author,
+          o.orig,
+          o.text?.zh,
+          o.text?.en,
+          o.trans?.zh,
+          o.trans?.en,
+          o.quote?.zh,
+          o.quote?.en,
+          o.channel?.handle,
+          o.channel?.bio,
+        ].filter(Boolean).join(" ").toLowerCase();
+        if (!haystack.includes(needle)) return false;
+      }
       return true;
     });
+  }, [opinions, langs, stanceFilter, sinceEff, hiQ, query]);
+
+  const sourceCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const o of baseFiltered) counts[o.source] = (counts[o.source] ?? 0) + 1;
+    return counts;
+  }, [baseFiltered]);
+
+  const filtered = useMemo(() => {
+    const out = baseFiltered.filter((o) => !plat.size || plat.has(o.source));
     // 排序：相关度（降序，其次互动）/ 热度（互动降序，其次相关度）/ 最新（发布日降序，其次相关度）
     out.sort((a, b) => {
       if (sort === "time") return (a.day < b.day ? 1 : a.day > b.day ? -1 : 0) || relOf(b) - relOf(a);
@@ -269,43 +319,76 @@ export function OpinionExplorer({ opinions, zh }: { opinions: KolOpinion[]; zh: 
       return relOf(b) - relOf(a) || (b.interactions || 0) - (a.interactions || 0);
     });
     return out;
-  }, [opinions, plat, langs, sinceEff, hiQ, sort]);
+  }, [baseFiltered, plat, sort]);
 
-  const selected = filtered.find((o) => o.id === selId) || filtered[0] || null;
+  const selected = selId ? filtered.find((o) => o.id === selId) ?? null : overview ? null : filtered[0] ?? null;
+  const availablePlatforms = PLATFORMS.filter((p) => avail.plat.has(p));
+  const hasFilter = Boolean(query.trim() || plat.size || langs.size || stanceFilter.size || since || hiQ || sort !== "rel");
+  const resetFilters = () => {
+    setQuery("");
+    setPlat(new Set());
+    setLangs(new Set());
+    setStanceFilter(new Set());
+    setSince("");
+    setHiQ(false);
+    setSort("rel");
+    setSelId(null);
+    setShowT(false);
+  };
 
   return (
-    <div>
-      {/* 精简筛选条：平台 logo 切换 · 时间下拉 · 语言下拉 · 质量开关 · 排序（右） */}
-      <div className="flex flex-wrap items-center gap-2 rounded-lg bg-card/40 px-2.5 py-2 ring-1 ring-inset ring-line">
-        {/* 平台：仅 logo（空选=全部亮；选中=亮+青环，其余暗） */}
-        <div className="flex items-center gap-1">
-          {PLATFORMS.filter((p) => avail.plat.has(p)).map((p) => {
-            const on = plat.has(p);
-            const anySel = plat.size > 0;
+    <div className={fill ? "flex h-full min-h-0 flex-col" : ""}>
+      {/* Kaito 式顶部工具条：搜索 · 情绪 · 时间 · 语言 · 质量 · 清空。 */}
+      <div className="flex shrink-0 items-center gap-2.5 px-0 py-0">
+        <label className="relative min-w-[300px] max-w-[460px] flex-[1_1_420px]">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-neutral-600">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.3-4.3" />
+            </svg>
+          </span>
+          <input
+            value={query}
+            onChange={(e) => { setQuery(e.target.value); setSelId(null); }}
+            placeholder={zh ? "搜索主题、作者或正文" : "Search topic, author, or post"}
+            className="h-11 w-full rounded-md bg-elevated/70 pl-9 pr-3 text-[13px] text-cream outline-none ring-1 ring-inset ring-line placeholder:text-neutral-600 focus:ring-reddit/70"
+          />
+        </label>
+        <button
+          type="button"
+          className="h-11 min-w-[72px] shrink-0 rounded-md bg-reddit px-4 text-[13px] font-bold text-black transition hover:bg-reddit/90"
+        >
+          {zh ? "搜索" : "Search"}
+        </button>
+        <div className="inline-flex h-11 min-w-[342px] shrink-0 items-center gap-1 rounded-md bg-elevated/50 p-1 ring-1 ring-inset ring-line">
+          {STANCE_FILTERS.map((key) => {
+            const meta = STANCE[key];
+            const active = stanceFilter.has(key);
             return (
               <button
-                key={p}
-                onClick={() => toggle(plat, setPlat, p)}
-                title={SOURCE[p].label}
-                aria-pressed={on}
-                className={`rounded-md p-1 ring-1 ring-inset transition ${
-                  on ? "bg-elevated ring-[#57D7BA]" : `ring-transparent hover:opacity-100 ${anySel ? "opacity-40" : "opacity-100"}`
+                key={key}
+                type="button"
+                onClick={() => { toggle(stanceFilter, setStanceFilter, key); setSelId(null); }}
+                aria-pressed={active}
+                className={`inline-flex h-9 min-w-[106px] flex-1 items-center justify-center gap-1.5 rounded px-3 text-[13px] font-semibold transition ${
+                  active
+                    ? "border border-[#57D7BA]/80 bg-[#57D7BA]/10 text-cream shadow-[0_0_14px_rgb(87_215_186_/_0.12)] ring-1 ring-inset ring-[#57D7BA]/45"
+                    : "border border-transparent text-neutral-500 hover:border-line/80 hover:text-neutral-300"
                 }`}
               >
-                <PlatformIcon src={p} size={16} />
+                <span className="h-1.5 w-1.5 rounded-full" style={{ background: meta.color }} />
+                {zh ? meta.zh : meta.en}
               </button>
             );
           })}
         </div>
-        <span className="h-4 w-px bg-line" />
-        {/* 时间：单下拉（模板 + 自定义起始） */}
         <Dropdown label={zh ? "时间" : "Time"} value={timeLabel}>
           {(close) => (
             <div className="min-w-[150px]">
               {WINDOWS.map((w) => {
                 const d = shiftDay(maxDay, -(w.days - 1));
                 return (
-                  <MenuItem key={w.k} active={!!d && sinceEff === d} onClick={() => { setSince(d); close(); }}>
+                  <MenuItem key={w.k} active={!!d && sinceEff === d} onClick={() => { setSince(d); setSelId(null); close(); }}>
                     {zh ? w.zh : w.en}
                   </MenuItem>
                 );
@@ -318,7 +401,7 @@ export function OpinionExplorer({ opinions, zh }: { opinions: KolOpinion[]; zh: 
                   value={sinceEff}
                   min={minDay || undefined}
                   max={maxDay || undefined}
-                  onChange={(e) => setSince(e.target.value)}
+                  onChange={(e) => { setSince(e.target.value); setSelId(null); }}
                   className="mt-1 w-full rounded-md bg-card px-2 py-1 text-[11.5px] text-cream ring-1 ring-inset ring-line [color-scheme:dark]"
                 />
               </div>
@@ -329,13 +412,13 @@ export function OpinionExplorer({ opinions, zh }: { opinions: KolOpinion[]; zh: 
         <Dropdown label={zh ? "语言" : "Lang"} value={langLabel}>
           {() => (
             <div className="min-w-[140px]">
-              <MenuItem active={langs.size === 0} onClick={() => setLangs(new Set())}>{zh ? "全部" : "All"}</MenuItem>
+              <MenuItem active={langs.size === 0} onClick={() => { setLangs(new Set()); setSelId(null); }}>{zh ? "全部" : "All"}</MenuItem>
               <div className="my-1 border-t border-line" />
               {LANGS.map((l) => {
                 const on = langs.has(l.k);
                 const dim = !avail.lang.has(l.k);
                 return (
-                  <MenuItem key={l.k} active={on} disabled={dim} onClick={() => toggle(langs, setLangs, l.k)}>
+                  <MenuItem key={l.k} active={on} disabled={dim} onClick={() => { toggle(langs, setLangs, l.k); setSelId(null); }}>
                     <span className={`grid h-3 w-3 place-items-center rounded-[3px] ring-1 ring-inset ${on ? "bg-[#57D7BA] ring-[#57D7BA]" : "ring-line"}`}>
                       {on && <svg viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="#0d0d0d" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M5 12l5 5L20 7" /></svg>}
                     </span>
@@ -346,10 +429,9 @@ export function OpinionExplorer({ opinions, zh }: { opinions: KolOpinion[]; zh: 
             </div>
           )}
         </Dropdown>
-        {/* 质量开关 */}
         <button
-          onClick={() => setHiQ(!hiQ)}
-          className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[11.5px] font-medium ring-1 ring-inset ring-line transition hover:text-neutral-200"
+          onClick={() => { setHiQ(!hiQ); setSelId(null); }}
+          className="flex h-11 min-w-[148px] shrink-0 items-center justify-center gap-2 rounded-md px-3.5 text-[13px] font-medium ring-1 ring-inset ring-line transition hover:text-neutral-200"
           title={zh ? "只展示 AI 判定为高质量(有实质分析)的帖子" : "Only AI-rated high-quality posts"}
           aria-pressed={hiQ}
         >
@@ -358,33 +440,75 @@ export function OpinionExplorer({ opinions, zh }: { opinions: KolOpinion[]; zh: 
           </span>
           <span className={hiQ ? "text-cream" : "text-neutral-400"}>{zh ? "高质量" : "Quality"}</span>
         </button>
-        {/* 排序（右对齐） */}
-        <div className="ml-auto flex items-center gap-1">
-          <span className="text-[11px] text-neutral-500">{zh ? "排序" : "Sort"}</span>
-          <Chip active={sort === "rel"} onClick={() => setSort("rel")}>{zh ? "相关度" : "Relevance"}</Chip>
-          <Chip active={sort === "hot"} onClick={() => setSort("hot")}>{zh ? "热度" : "Top"}</Chip>
-          <Chip active={sort === "time"} onClick={() => setSort("time")}>{zh ? "最新" : "Newest"}</Chip>
-        </div>
+        <button
+          type="button"
+          onClick={resetFilters}
+          disabled={!hasFilter}
+          className="h-11 shrink-0 rounded-md px-3.5 text-[13px] font-semibold text-reddit transition hover:text-cream disabled:text-neutral-700"
+        >
+          {zh ? "清空" : "Clear All"}
+        </button>
       </div>
 
-      {/* 主从：左列表（窄）/ 右阅读（宽）。lg:items-start → 两列各自内容高、不互相拉伸，各自独立滚动 */}
-      <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-start">
-        <div className="lg:w-[300px] lg:shrink-0">
-          <div className="mb-1.5 px-0.5">
-            <span className="text-[11px] text-neutral-500">{filtered.length} {zh ? "条" : "posts"}</span>
+      {/* 主从：左列表 / 右侧 overview 或正文。 */}
+      <div className={`mt-3 flex flex-col gap-3 lg:flex-row ${fill ? "min-h-0 flex-1 overflow-hidden lg:items-stretch" : "lg:items-start"}`}>
+        <div className={fill ? "flex min-h-0 flex-col overflow-hidden rounded-xl bg-card/45 ring-1 ring-inset ring-line lg:w-[392px] lg:shrink-0" : "lg:w-[320px] lg:shrink-0"}>
+          <div className="shrink-0 border-b border-line">
+            <div className="flex items-center gap-3 overflow-x-auto px-3 pt-3">
+              <button
+                type="button"
+                onClick={() => { setPlat(new Set()); setSelId(null); }}
+                className={`shrink-0 border-b-2 pb-2 text-[12px] font-bold transition ${plat.size === 0 ? "border-reddit text-reddit" : "border-transparent text-neutral-500 hover:text-neutral-300"}`}
+              >
+                {zh ? "全部" : "All"} <span className="font-mono text-[10.5px] text-neutral-600">{baseFiltered.length}</span>
+              </button>
+              {availablePlatforms.map((p) => {
+                const on = plat.size === 1 && plat.has(p);
+                return (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => { setPlat(new Set([p])); setSelId(null); }}
+                    className={`shrink-0 border-b-2 pb-2 text-[12px] font-bold transition ${on ? "border-reddit text-reddit" : "border-transparent text-neutral-500 hover:text-neutral-300"}`}
+                  >
+                    {SOURCE[p].label} <span className="font-mono text-[10.5px] text-neutral-600">{sourceCounts[p] ?? 0}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex items-center justify-between gap-2 px-3 py-2">
+              <span className="text-[11px] text-neutral-500">{filtered.length} {zh ? "条结果" : "results"}</span>
+              <div className="flex items-center gap-1">
+                <span className="text-[11px] text-neutral-600">{zh ? "排序" : "Sort"}</span>
+                <Chip active={sort === "rel"} onClick={() => setSort("rel")}>{zh ? "相关度" : "Rel"}</Chip>
+                <Chip active={sort === "hot"} onClick={() => setSort("hot")}>{zh ? "热度" : "Top"}</Chip>
+                <Chip active={sort === "time"} onClick={() => setSort("time")}>{zh ? "最新" : "New"}</Chip>
+              </div>
+            </div>
           </div>
           {filtered.length === 0 ? (
             <p className="py-8 text-center text-sm text-neutral-600">{zh ? "没有符合筛选的观点" : "No posts match the filters"}</p>
           ) : (
-            <ul className="space-y-1.5 lg:max-h-[640px] lg:overflow-y-auto lg:pr-1">
+            <ul className={fill ? "min-h-0 flex-1 overflow-y-auto" : "lg:max-h-[640px] lg:overflow-y-auto"}>
               {filtered.map((o) => (
                 <ListCard key={o.id} o={o} zh={zh} active={selected?.id === o.id} onClick={() => { setSelId(o.id); setShowT(false); }} />
               ))}
             </ul>
           )}
         </div>
-        <div className="min-w-0 lg:flex-1">
-          {selected ? <Reader o={selected} zh={zh} showT={showT} setShowT={setShowT} /> : null}
+        <div className={`min-w-0 ${fill ? "min-h-0 overflow-hidden lg:flex-1" : "lg:flex-1"}`}>
+          {selected ? (
+            <Reader
+              o={selected}
+              zh={zh}
+              showT={showT}
+              setShowT={setShowT}
+              fill={fill}
+              onBack={overview ? () => { setSelId(null); setShowT(false); } : undefined}
+            />
+          ) : overview ? (
+            overview
+          ) : null}
         </div>
       </div>
     </div>
@@ -396,18 +520,20 @@ export function OpinionExplorer({ opinions, zh }: { opinions: KolOpinion[]; zh: 
 function ListCard({ o, zh, active, onClick }: { o: KolOpinion; zh: boolean; active: boolean; onClick: () => void }) {
   const src = SOURCE[o.source];
   const st = STANCE[o.stance];
-  const { base } = pickOriginal(o, zh);
-  const excerpt = base.replace(/\s+/g, " ").trim().slice(0, 84);
+  const { base, trans, canTranslate } = pickOriginal(o, zh);
+  const preview = canTranslate ? trans : base;
+  const excerpt = preview.replace(/\s+/g, " ").trim().slice(0, 84);
   return (
     <li>
       <button
         onClick={onClick}
         title={zh ? st.zh : st.en}
-        className={`relative flex w-full gap-2.5 overflow-hidden rounded-lg py-2.5 pl-4 pr-3 text-left ring-1 ring-inset transition ${
-          active ? "bg-elevated ring-[#57D7BA]" : "bg-card/60 ring-line hover:bg-card"
+        className={`relative flex w-full gap-2.5 overflow-hidden border-b border-line/70 py-3 pl-4 pr-3 text-left transition ${
+          active ? "bg-elevated/80" : "bg-transparent hover:bg-white/[.025]"
         }`}
       >
         <span className="absolute left-0 top-0 h-full w-[3px]" style={{ background: st.color }} aria-hidden />
+        {active && <span className="absolute right-0 top-0 h-full w-[3px] bg-reddit" aria-hidden />}
         <Avatar src={o.avatar} color={src.color} name={o.author} size={26} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
@@ -460,16 +586,43 @@ function JudgmentLine({ j, zh }: { j: KolJudgment; zh: boolean }) {
   );
 }
 
-// 右侧阅读面板：作者头像/handle/来源/立场/互动/相关/时间 + 完整原文 + 「译」 + 回原帖
-function Reader({ o, zh, showT, setShowT }: { o: KolOpinion; zh: boolean; showT: boolean; setShowT: (v: boolean) => void }) {
+// 右侧阅读面板：作者头像/handle/来源/立场/互动/相关/时间 + 完整正文 + 原文/译文切换 + 回原帖
+function Reader({
+  o,
+  zh,
+  showT,
+  setShowT,
+  fill = false,
+  onBack,
+}: {
+  o: KolOpinion;
+  zh: boolean;
+  showT: boolean;
+  setShowT: (v: boolean) => void;
+  fill?: boolean;
+  onBack?: () => void;
+}) {
   const src = SOURCE[o.source];
   const st = STANCE[o.stance];
   const { base, trans, canTranslate } = pickOriginal(o, zh);
-  const showTrans = showT && canTranslate;
+  const showOriginal = showT && canTranslate;
+  const displayText = showOriginal ? base : (canTranslate ? trans : base);
   const hasLink = !!o.url && o.url !== "#";
   const lensKeys = lensesOf(o);
   return (
-    <div className="rounded-xl bg-card px-4 py-3.5 ring-1 ring-inset ring-line lg:max-h-[640px] lg:overflow-y-auto">
+    <div
+      data-reader-scroll
+      className={`rounded-xl bg-card px-4 py-3.5 ring-1 ring-inset ring-line ${fill ? "h-full overflow-y-auto overflow-x-hidden" : "lg:max-h-[640px] lg:overflow-y-auto lg:overflow-x-hidden"}`}
+    >
+      {onBack && (
+        <button
+          type="button"
+          onClick={onBack}
+          className="mb-3 inline-flex items-center gap-1.5 text-[12px] font-medium text-neutral-400 transition hover:text-reddit"
+        >
+          ← {zh ? "返回概览" : "Back to overview"}
+        </button>
+      )}
       <div className="flex items-center gap-2.5">
         <Avatar src={o.avatar} color={src.color} name={o.author} size={34} />
         <div className="min-w-0 flex-1">
@@ -521,13 +674,13 @@ function Reader({ o, zh, showT, setShowT }: { o: KolOpinion; zh: boolean; showT:
       )}
       {/* 作者明确给出的 目标价 + 操作周期（kol_judgment / yt_judgment 抽取，只抽明说） */}
       {o.judgment && <JudgmentLine j={o.judgment} zh={zh} />}
-      {/* YouTube 有完整内容(口播+真实关键画面帧) → 结构化渲染；其余源 = 完整原文段落 */}
+      {/* YouTube 有完整内容(口播+真实关键画面帧) → 结构化渲染；其余源 = 完整正文段落 */}
       {o.source === "youtube" && o.ytSegments && o.ytSegments.length ? (
         <YtReader segments={o.ytSegments} digest={o.ytDigest} zh={zh} noCollapse />
       ) : (
-        (showTrans ? trans : base) && (
-          <p className={`mt-3 whitespace-pre-line text-[13.5px] leading-relaxed ${showTrans ? "italic text-neutral-300" : "text-neutral-100"}`}>
-            {showTrans ? trans : base}
+        displayText && (
+          <p className="mt-3 whitespace-pre-line text-[13.5px] leading-relaxed text-neutral-100">
+            {displayText}
           </p>
         )
       )}
@@ -536,7 +689,7 @@ function Reader({ o, zh, showT, setShowT }: { o: KolOpinion; zh: boolean; showT:
       <div className="mt-3 flex items-center gap-3 text-[11.5px]">
         {canTranslate && (
           <button onClick={() => setShowT(!showT)} className="text-neutral-500 transition hover:text-[#57D7BA]">
-            {showT ? (zh ? "看原文" : "Original") : (zh ? "译" : "Translate")}
+            {showOriginal ? (zh ? "看译文" : "Translation") : (zh ? "看原文" : "Original")}
           </button>
         )}
         {hasLink && (

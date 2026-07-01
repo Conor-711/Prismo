@@ -344,14 +344,15 @@ function Cluster({ c, color, zh }: { c: KolArgument; color: string; zh: boolean 
   );
 }
 
-// 原帖卡：作者身份（头像+来源）+ 立场 + 互动 + **原帖原文** + 「译」选项 + 回原帖。
-// 默认展示原文（native 语言）；原文异语种且有忠实译文时给「译」切换（pickOriginal，与「按 KOL」卡共用逻辑）。
+// 原帖卡：作者身份（头像+来源）+ 立场 + 互动 + 帖子正文 + 翻译/原文切换 + 回原帖。
+// 默认展示界面语言；原文异语种且有忠实译文时给「看原文」切换。
 function OriginalCard({ s, zh }: { s: ArgSupporter; zh: boolean }) {
   const [showT, setShowT] = useState(false);
   const src = SOURCE[s.source];
   const st = STANCE[s.stance];
   const { base, trans, canTranslate: canT } = pickOriginal(s, zh);
-  const showTrans = showT && canT;
+  const showOriginal = showT && canT;
+  const displayText = showOriginal ? base : (canT ? trans : base);
   const hasLink = !!s.url && s.url !== "#";
   return (
     <li className="rounded-lg bg-card px-3.5 py-2.5 ring-1 ring-inset ring-line">
@@ -364,16 +365,16 @@ function OriginalCard({ s, zh }: { s: ArgSupporter; zh: boolean }) {
         <span className="shrink-0 text-[11px] font-medium" style={{ color: st.color }}>{zh ? st.zh : st.en}</span>
         <span className="shrink-0 font-mono tabular text-[11px] text-neutral-500">{fmtCompact(s.interactions)}</span>
       </div>
-      {(showTrans ? trans : base) && (
-        <p className={`mt-2 whitespace-pre-line text-[13px] leading-relaxed ${showTrans ? "text-neutral-300 italic" : "text-neutral-200"}`}>
-          {showTrans ? trans : base}
+      {displayText && (
+        <p className="mt-2 whitespace-pre-line text-[13px] leading-relaxed text-neutral-200">
+          {displayText}
         </p>
       )}
       {(canT || hasLink) && (
         <div className="mt-1.5 flex items-center gap-3 text-[11px]">
           {canT && (
             <button onClick={() => setShowT((v) => !v)} className="text-neutral-500 transition hover:text-[#57D7BA]">
-              {showT ? (zh ? "看原文" : "Original") : (zh ? "译" : "Translate")}
+              {showOriginal ? (zh ? "看译文" : "Translation") : (zh ? "看原文" : "Original")}
             </button>
           )}
           {hasLink && (

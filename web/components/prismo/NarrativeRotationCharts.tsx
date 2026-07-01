@@ -22,6 +22,93 @@ function topLeaders(leaders: NarrativeLeader[]) {
   return leaders.filter((l) => l.volume > 0).slice(0, 6);
 }
 
+function activeLeaders(leaders: NarrativeLeader[]) {
+  return leaders.filter((l) => l.volume > 0);
+}
+
+export function NarrativeMindshareAreaChart({
+  leaders, series, height = 620,
+}: {
+  leaders: NarrativeLeader[];
+  series: Record<string, NarrativeDay[]>;
+  height?: number | string;
+}) {
+  const { lang } = useLocale();
+  const zh = lang === "zh";
+  const active = activeLeaders(leaders);
+  const days = series[active[0]?.id || ""]?.map((d) => d.day) ?? [];
+  const option = useMemo(() => {
+    const shareByLeader = new Map(
+      active.map((l) => [l.id, new Map((series[l.id] ?? []).map((d) => [d.day, Math.max(0, d.share)]))])
+    );
+    const totalByDay = new Map(
+      days.map((day) => [
+        day,
+        active.reduce((sum, l) => sum + (shareByLeader.get(l.id)?.get(day) ?? 0), 0),
+      ])
+    );
+
+    return {
+      backgroundColor: "transparent",
+      color: active.map((l) => l.color),
+      grid: { left: 12, right: 22, top: 92, bottom: 34, containLabel: true },
+      tooltip: {
+        ...TIP,
+        order: "valueDesc",
+        valueFormatter: (v: any) => (v == null ? "-" : `${(+v).toFixed(2)}%`),
+      },
+      legend: {
+        top: 2,
+        left: 0,
+        right: 0,
+        type: "scroll",
+        pageIconColor: "#8a8d92",
+        pageIconInactiveColor: "#3a3d42",
+        pageTextStyle: { color: AXIS },
+        itemWidth: 18,
+        itemHeight: 8,
+        itemGap: 13,
+        textStyle: { color: AXIS, fontSize: 11 },
+      },
+      xAxis: {
+        type: "category",
+        data: days.map(md),
+        boundaryGap: false,
+        axisLine: { lineStyle: { color: "rgba(115,117,122,0.45)" } },
+        axisTick: { show: false },
+        axisLabel: { color: AXIS, fontSize: 11 },
+      },
+      yAxis: {
+        type: "value",
+        min: 0,
+        max: 100,
+        minInterval: 20,
+        axisLine: { show: false },
+        axisTick: { show: false },
+        axisLabel: { color: AXIS, fontSize: 11, formatter: (v: number) => `${v}%` },
+        splitLine: { lineStyle: { color: "rgba(127,127,127,0.10)" } },
+      },
+      series: active.map((l) => ({
+        name: zh ? l.title.zh : l.title.en,
+        type: "line",
+        stack: "mindshare",
+        smooth: 0.28,
+        symbol: "none",
+        emphasis: { focus: "series" },
+        data: days.map((day) => {
+          const total = totalByDay.get(day) ?? 0;
+          const raw = shareByLeader.get(l.id)?.get(day) ?? 0;
+          return total > 0 ? +((raw / total) * 100).toFixed(3) : null;
+        }),
+        lineStyle: { width: 0.8, color: l.color, opacity: 0.82 },
+        areaStyle: { opacity: 0.68 },
+        itemStyle: { color: l.color },
+      })),
+    };
+  }, [active, days, series, zh]);
+  return <ReactECharts option={option} style={{ height, width: "100%" }} opts={{ renderer: "canvas" }} notMerge />;
+}
+
 export function NarrativeRankChart({
   leaders, series, height = 260,
 }: {
@@ -184,7 +271,7 @@ export function NarrativeDetailTimeline({
 }: {
   rows: NarrativeDay[];
   color: string;
-  height?: number;
+  height?: number | string;
 }) {
   const { lang } = useLocale();
   const zh = lang === "zh";

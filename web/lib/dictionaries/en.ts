@@ -36,7 +36,7 @@ export const en: Dictionary = {
     dashboard: "Dashboard",
     overview: "Overview",
     tickers: "Tickers",
-    investors: "Investors",
+    investors: "Authors",
     regions: "Regions",
     cnstocks: "China & HK",
     search: "Search",

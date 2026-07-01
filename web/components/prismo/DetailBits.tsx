@@ -22,15 +22,16 @@ const MACCENT: Record<string, string> = {
   bear: "bg-bear/15 text-bear ring-bear/25",
 };
 export function Module({
-  title, hint, icon = "flame", accent = "reddit", right, flush = false, className = "", children,
+  title, hint, icon = "flame", accent = "reddit", right, flush = false, className = "", bodyClassName, children,
 }: {
   title: string; hint?: string; icon?: keyof typeof MICON; accent?: keyof typeof MACCENT;
-  right?: React.ReactNode; flush?: boolean; className?: string; children: React.ReactNode;
+  right?: React.ReactNode; flush?: boolean; className?: string; bodyClassName?: string; children: React.ReactNode;
 }) {
   const Ic = MICON[icon] ?? IconFlame;
+  const bodyCls = bodyClassName ?? (flush ? "overflow-hidden rounded-b-xl" : "p-5");
   return (
     <section className={`panel rounded-xl ${className}`}>
-      <div className="flex items-center gap-2.5 px-5 pt-4 pb-3 border-b border-line">
+      <div className="flex shrink-0 items-center gap-2.5 px-5 pt-4 pb-3 border-b border-line">
         <span className={`grid place-items-center w-7 h-7 rounded-lg ring-1 ring-inset shrink-0 ${MACCENT[accent] ?? MACCENT.reddit}`}>
           <Ic className="w-4 h-4" />
         </span>
@@ -40,7 +41,7 @@ export function Module({
         </div>
         {right && <div className="shrink-0">{right}</div>}
       </div>
-      <div className={flush ? "overflow-hidden rounded-b-xl" : "p-5"}>{children}</div>
+      <div className={bodyCls}>{children}</div>
     </section>
   );
 }
