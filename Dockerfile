@@ -13,7 +13,9 @@ ENV DATABASE_URL=sqlite:///./data/dev.db \
 
 # ---- 依赖层（利于缓存）----
 COPY pipeline/requirements.txt pipeline/requirements.txt
-RUN python3 -m venv /venv && /venv/bin/pip install --no-cache-dir -r pipeline/requirements.txt
+RUN python3 -m venv /venv \
+    && /venv/bin/python -m pip install --no-cache-dir --upgrade pip setuptools wheel \
+    && /venv/bin/python -m pip install --no-cache-dir --retries 5 --timeout 120 -r pipeline/requirements.txt
 
 COPY web/package.json web/package-lock.json* web/
 RUN cd web && npm install --no-audit --no-fund
