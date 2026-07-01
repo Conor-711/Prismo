@@ -4,7 +4,7 @@
 //   x = 下达日期、y = 价格，叠**真实股价折线**；买入=青、卖出·目标=珊瑚；**区间**=竖条、确切价=圆点。
 //   同一天多条：y 按价位纵向分开 + 小幅左右抖动 + 半透明叠加(重叠=共识)。现价虚线基准。
 //   悬浮 tooltip 出详情：作者 / 平台·日期 / 价位(±现价%) / 操作周期(短中长+原话) / 简单依据。
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import ReactECharts from "echarts-for-react";
 import type { KolTargetData, TargetMark } from "@/lib/mockDetail";
 import { SOURCE } from "./kolShared";
@@ -16,6 +16,7 @@ const fmtRange = (lo: number, hi: number) => (hi > lo ? `$${fmtPrice(lo)}–$${f
 const BUCKET_ZH: Record<string, string> = { short: "短线", mid: "中线", long: "长线" };
 const BUCKET_EN: Record<string, string> = { short: "short", mid: "mid", long: "long" };
 const mmdd = (ds: string) => { const [, m, d] = (ds || "").split("-"); return m ? `${+m}/${+d}` : ds; };
+const PRICE_ZOOMS = [1, 2, 4, 8] as const;
 
 // 同一天多条 → 稳定左右抖动（±0.15 天），按作者+侧+价位散开，避免重叠成一团。
 function jitterMs(m: TargetMark): number {
@@ -27,6 +28,7 @@ function jitterMs(m: TargetMark): number {
 
 export function TargetPricePanel({ data, zh }: { data: KolTargetData; zh: boolean }) {
   const { current, priceLine, marks } = data;
+  const [priceZoom, setPriceZoom] = useState<(typeof PRICE_ZOOMS)[number]>(2);
 
   const option = useMemo(() => {
     const lineData = priceLine.map((p) => [+new Date(p.day), p.close] as [number, number]);
@@ -38,12 +40,26 @@ export function TargetPricePanel({ data, zh }: { data: KolTargetData; zh: boolea
       ...marks.flatMap((m) => [m.lo, m.hi]),
       ...(current ? [current] : []),
     ].filter((n) => n > 0);
+    if (!prices.length) return { backgroundColor: "transparent" };
     const yLo = Math.min(...prices), yHi = Math.max(...prices);
     const span = yHi - yLo || yHi * 0.2 || 1;
+    const yMin = Math.max(0, yLo - span * 0.15);
+    const yMax = yHi + span * 0.15;
+    const fullSpan = Math.max(1, yMax - yMin);
+    const sortedPrices = [...prices].sort((a, b) => a - b);
+    const median = sortedPrices[Math.floor(sortedPrices.length / 2)] ?? yLo;
+    const center = current && current > 0 ? current : median;
+    const visibleSpan = fullSpan / priceZoom;
+    let zoomStart = Math.max(yMin, center - visibleSpan / 2);
+    let zoomEnd = Math.min(yMax, center + visibleSpan / 2);
+    if (zoomEnd - zoomStart < visibleSpan) {
+      if (zoomStart <= yMin) zoomEnd = Math.min(yMax, yMin + visibleSpan);
+      if (zoomEnd >= yMax) zoomStart = Math.max(yMin, yMax - visibleSpan);
+    }
 
     return {
       backgroundColor: "transparent",
-      grid: { left: 6, right: 56, top: 12, bottom: 22, containLabel: true },
+      grid: { left: 6, right: 74, top: 12, bottom: 22, containLabel: true },
       tooltip: {
         trigger: "item",
         backgroundColor: "rgba(20,20,20,0.96)",
@@ -82,14 +98,48 @@ export function TargetPricePanel({ data, zh }: { data: KolTargetData; zh: boolea
       },
       yAxis: {
         type: "value",
-        min: Math.max(0, yLo - span * 0.15),
-        max: yHi + span * 0.15,
+        min: yMin,
+        max: yMax,
         position: "right",
         axisLine: { show: false },
         axisTick: { show: false },
         axisLabel: { color: "#73757a", fontSize: 9.5, formatter: (v: number) => "$" + fmtPrice(v) },
         splitLine: { show: true, lineStyle: { color: "#1d1f21" } },
       },
+      dataZoom: [
+        {
+          type: "inside",
+          yAxisIndex: 0,
+          filterMode: "none",
+          startValue: priceZoom === 1 ? yMin : zoomStart,
+          endValue: priceZoom === 1 ? yMax : zoomEnd,
+          zoomOnMouseWheel: true,
+          moveOnMouseMove: true,
+          moveOnMouseWheel: true,
+          preventDefaultMouseMove: true,
+        },
+        {
+          type: "slider",
+          yAxisIndex: 0,
+          filterMode: "none",
+          right: 4,
+          top: 28,
+          bottom: 22,
+          width: 11,
+          startValue: priceZoom === 1 ? yMin : zoomStart,
+          endValue: priceZoom === 1 ? yMax : zoomEnd,
+          showDataShadow: false,
+          showDetail: false,
+          brushSelect: false,
+          borderColor: "#2a2d2f",
+          fillerColor: "rgba(87,215,186,0.14)",
+          backgroundColor: "rgba(255,255,255,0.03)",
+          handleSize: 14,
+          handleStyle: { color: "#57D7BA", borderColor: "#57D7BA" },
+          moveHandleStyle: { color: "#57D7BA" },
+          textStyle: { color: "#73757a" },
+        },
+      ],
       series: [
         {
           type: "line",
@@ -115,6 +165,7 @@ export function TargetPricePanel({ data, zh }: { data: KolTargetData; zh: boolea
           name: "marks",
           data: markData,
           encode: { x: 0, y: [1, 2] },
+          clip: true,
           z: 5,
           renderItem: (params: any, api: any) => {
             const m: TargetMark | undefined = marks[params.dataIndex];
@@ -140,7 +191,7 @@ export function TargetPricePanel({ data, zh }: { data: KolTargetData; zh: boolea
         },
       ],
     };
-  }, [priceLine, marks, current, zh]);
+  }, [priceLine, marks, current, zh, priceZoom]);
 
   if (!marks.length && !priceLine.length) return null;
 
@@ -155,6 +206,21 @@ export function TargetPricePanel({ data, zh }: { data: KolTargetData; zh: boolea
           <span className="flex items-center gap-1"><span className="inline-block h-3 w-[5px] rounded-sm ring-1 ring-inset ring-neutral-500" />{zh ? "区间" : "range"}</span>
           <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-neutral-500" />{zh ? "确切价" : "exact"}</span>
           <span className="flex items-center gap-1"><span className="inline-block h-px w-3 bg-neutral-500" />{zh ? "股价" : "price"}</span>
+        </span>
+        <span className="flex items-center gap-1 rounded-md bg-elevated/50 p-0.5 text-[10.5px] ring-1 ring-inset ring-line" title={zh ? "价格轴缩放" : "Price-axis zoom"}>
+          <span className="px-1.5 text-neutral-600">{zh ? "价格" : "Price"}</span>
+          {PRICE_ZOOMS.map((z) => (
+            <button
+              key={z}
+              type="button"
+              onClick={() => setPriceZoom(z)}
+              className={`rounded px-1.5 py-0.5 font-mono font-semibold transition ${
+                priceZoom === z ? "bg-[#57D7BA]/12 text-[#57D7BA] ring-1 ring-inset ring-[#57D7BA]/55" : "text-neutral-500 hover:text-neutral-300"
+              }`}
+            >
+              {z}×
+            </button>
+          ))}
         </span>
       </div>
       {marks.length ? (

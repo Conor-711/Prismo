@@ -454,11 +454,11 @@ export function OpinionExplorer({
       <div className={`mt-3 flex flex-col gap-3 lg:flex-row ${fill ? "min-h-0 flex-1 overflow-hidden lg:items-stretch" : "lg:items-start"}`}>
         <div className={fill ? "flex min-h-0 flex-col overflow-hidden rounded-xl bg-card/45 ring-1 ring-inset ring-line lg:w-[392px] lg:shrink-0" : "lg:w-[320px] lg:shrink-0"}>
           <div className="shrink-0 border-b border-line">
-            <div className="flex items-center gap-3 overflow-x-auto px-3 pt-3">
+            <div className="flex items-center gap-2 overflow-x-auto px-3 pb-px pt-3">
               <button
                 type="button"
                 onClick={() => { setPlat(new Set()); setSelId(null); }}
-                className={`shrink-0 border-b-2 pb-2 text-[12px] font-bold transition ${plat.size === 0 ? "border-reddit text-reddit" : "border-transparent text-neutral-500 hover:text-neutral-300"}`}
+                className={`min-w-[72px] shrink-0 border-b-2 px-2 pb-2 text-center text-[12px] font-bold transition ${plat.size === 0 ? "border-reddit text-reddit" : "border-transparent text-neutral-500 hover:text-neutral-300"}`}
               >
                 {zh ? "全部" : "All"} <span className="font-mono text-[10.5px] text-neutral-600">{baseFiltered.length}</span>
               </button>
@@ -469,7 +469,7 @@ export function OpinionExplorer({
                     key={p}
                     type="button"
                     onClick={() => { setPlat(new Set([p])); setSelId(null); }}
-                    className={`shrink-0 border-b-2 pb-2 text-[12px] font-bold transition ${on ? "border-reddit text-reddit" : "border-transparent text-neutral-500 hover:text-neutral-300"}`}
+                    className={`min-w-[86px] shrink-0 border-b-2 px-2 pb-2 text-center text-[12px] font-bold transition ${on ? "border-reddit text-reddit" : "border-transparent text-neutral-500 hover:text-neutral-300"}`}
                   >
                     {SOURCE[p].label} <span className="font-mono text-[10.5px] text-neutral-600">{sourceCounts[p] ?? 0}</span>
                   </button>
