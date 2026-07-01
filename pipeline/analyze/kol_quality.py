@@ -27,8 +27,11 @@ QUALITY_SYSTEM = (
     "具体数据/估值/财报指标、因果逻辑链、可验证证据或来源、情景/反方风险、同业或历史比较。\n"
     "反之，以下内容即使有数字也不是高质量：短句喊单、标题党、新闻转述、只列目标价、只说涨跌、"
     "模板化『大师/框架/量化工具打分』但没有来源与假设、作者自推工具/订阅/群组、纯情绪或广告。\n"
-    "YouTube 要根据摘要、目录和完整口播节选判断；有完整论证的视频可给高分，"
-    "但 shorts/新闻快讯/只在标题或简介提到标的的视频要低分。\n"
+    "YouTube 要根据摘要、目录和完整口播节选判断。高质量 YouTube 有两种："
+    "A) 长视频/完整分析，有清晰 thesis、数据、估值/财报/风险/情景推演；"
+    "B) 短视频但信息密度高，明确给出可执行交易方案（目标价/买卖点/回撤风险/技术位/时间窗口）。"
+    "低质量 YouTube 包括：短访谈片段、风向标/新闻快讯、只复述财报数字、只提到这只票但重点在别的公司/行业、"
+    "没有明确行动含义或风险收益框架的内容。\n"
     "档位务必用满区间：\n"
     "85-100：深度研究，有数据+逻辑+证据+风险权衡，信息密度高；\n"
     "65-84：有明确观点和多条具体理由/数据，能支撑投资判断；\n"
@@ -44,6 +47,25 @@ _PROMO_RE = re.compile(
     re.I,
 )
 _HYPE_RE = re.compile(r"\b(skyrocket|moon|explode|100x|next stop|must buy|load up|can't miss|only \d+ hours?)\b", re.I)
+_ACTIONABLE_RE = re.compile(
+    r"目标|买入|卖出|止损|止盈|获利|回调|重新建仓|支撑|阻力|技术位|均线|ema|rsi|target|buy|sell|take profit|"
+    r"re-enter|support|resistance|pullback|downside|upside|risk|entry|exit|trim",
+    re.I,
+)
+_TRADE_PLAN_RE = re.compile(
+    r"买入|卖出|止损|止盈|获利|建仓|加仓|减仓|仓位|分批|持有|观望|避开|回调.{0,12}(买|建仓)|"
+    r"buy|sell|take profit|trim|re-enter|entry|exit|position|dca|hold|avoid",
+    re.I,
+)
+_SHORT_BRIEF_RE = re.compile(
+    r"rapid[- ]fire|morning minute|快问快答|速览|快讯|三件事|3 things|机会还是陷阱|opportunity or trap",
+    re.I,
+)
+_RISK_RE = re.compile(
+    r"风险|回撤|回调|下跌|跌幅|波动|估值|指引|预期|目标|卖出|获利|重新建仓|支撑|阻力|"
+    r"downside|risk|pullback|valuation|guidance|volatility|target|take profit|re-enter|support|resistance",
+    re.I,
+)
 
 
 def _json_list(raw) -> list[str]:
@@ -82,8 +104,23 @@ def _heuristic_cap(source: str, txt: str) -> int:
         if _HYPE_RE.search(t) and len(words) < 90:
             cap = min(cap, 45)
     else:
-        has_transcript = "完整口播节选：" in t and len(t.split("完整口播节选：", 1)[1].strip()) >= 240
+        duration = _first_int(r"时长：(\d+)\s*秒", t)
+        relevance = _first_int(r"相关度：(\d+)", t)
+        transcript = t.split("完整口播节选：", 1)[1].strip() if "完整口播节选：" in t else ""
+        has_transcript = len(transcript) >= 240
         has_digest = "投资者摘要：" in t and len(t.split("投资者摘要：", 1)[1].strip()) >= 80
+        numbers = _number_count(t)
+        actionable = _is_actionable_youtube(t)
+        if relevance is not None and relevance < 60:
+            cap = min(cap, 55)
+        if (duration is not None and duration < 120) and (
+            _SHORT_BRIEF_RE.search(t) or "没有给出具体的投资建议" in t or "未明确立场" in t
+        ):
+            cap = min(cap, 55)
+        if (duration is not None and duration < 90 or len(transcript) < 500) and not actionable:
+            cap = min(cap, 55)
+        if len(transcript) < 380 and numbers < 4:
+            cap = min(cap, 52)
         if not has_transcript and not has_digest:
             cap = min(cap, 45)
         if "仅据标题/简介推断" in t or "inferred from title only" in low:
@@ -93,20 +130,45 @@ def _heuristic_cap(source: str, txt: str) -> int:
     return cap
 
 
+def _first_int(pattern: str, txt: str) -> int | None:
+    m = re.search(pattern, txt)
+    return int(m.group(1)) if m else None
+
+
+def _number_count(txt: str) -> int:
+    return len(re.findall(r"(?:\$?\d+(?:\.\d+)?%?|\d+\s*(?:亿|万|billion|million|倍|x))", txt or "", re.I))
+
+
+def _is_actionable_youtube(txt: str) -> bool:
+    transcript = txt.split("完整口播节选：", 1)[1].strip() if "完整口播节选：" in txt else txt
+    return (
+        len(transcript) >= 300
+        and _number_count(txt) >= 4
+        and bool(_ACTIONABLE_RE.search(txt))
+        and bool(_TRADE_PLAN_RE.search(txt))
+        and bool(_RISK_RE.search(txt))
+    )
+
+
 def _heuristic_floor(source: str, txt: str) -> int:
     """Minimum score for content with enough visible evidence, especially long-form YouTube analysis."""
     if source != "youtube":
         return 0
     t = txt or ""
     low = t.lower()
+    relevance = _first_int(r"相关度：(\d+)", t)
+    if relevance is not None and relevance < 60:
+        return 0
     digest_part = t.split("投资者摘要：", 1)[1] if "投资者摘要：" in t else ""
     transcript_part = t.split("完整口播节选：", 1)[1] if "完整口播节选：" in t else ""
     has_digest = len(digest_part.strip()) >= 240
     has_transcript = len(transcript_part.strip()) >= 900
-    numbers = len(re.findall(r"(?:\$?\d+(?:\.\d+)?%?|\d+\s*(?:亿|万|billion|million|倍|x))", t, re.I))
-    risk_terms = bool(re.search(r"风险|下跌|波动|指引|预期|估值|市盈率|margin|valuation|risk|guidance|earnings|target", low))
+    numbers = _number_count(t)
+    risk_terms = bool(_RISK_RE.search(low))
     if has_digest and has_transcript and numbers >= 6 and risk_terms:
         return 72
+    if _is_actionable_youtube(t):
+        return 68
     if has_digest and has_transcript and numbers >= 3:
         return 68
     return 0
@@ -120,11 +182,13 @@ def _load_youtube_quality(only: set[str] | None, since_days: int) -> list[dict]:
                COALESCE(a.summary_zh,'') AS a_sz, COALESCE(a.summary_en,'') AS a_se,
                a.key_points_zh AS kp_zh, a.key_points_en AS kp_en,
                COALESCE(d.summary_zh,'') AS d_sz, COALESCE(d.summary_en,'') AS d_se,
-               d.chapters AS chapters, COALESCE(f.content_zh,'') AS full_zh
+               d.chapters AS chapters, COALESCE(f.content_zh,'') AS full_zh,
+               COALESCE(r.score,70) AS relevance
           FROM yt_video v
           LEFT JOIN yt_analysis a ON a.video_id = v.id
           LEFT JOIN yt_digest d ON d.video_id = v.id
           LEFT JOIN yt_fulltext f ON f.video_id = v.id
+          LEFT JOIN kol_relevance r ON r.source = 'youtube' AND r.item_id = v.id AND r.ticker = v.ticker
          ORDER BY v.ticker, v.view_count DESC
     """
     with session_scope() as s:
@@ -143,7 +207,7 @@ def _load_youtube_quality(only: set[str] | None, since_days: int) -> list[dict]:
         parts = [
             "来源：youtube",
             f"标题：{r.get('title') or ''}",
-            f"频道：{r.get('channel') or ''}；时长：{int(r.get('duration_s') or 0)} 秒；播放：{int(r.get('view_count') or 0)}",
+            f"频道：{r.get('channel') or ''}；时长：{int(r.get('duration_s') or 0)} 秒；播放：{int(r.get('view_count') or 0)}；相关度：{int(r.get('relevance') or 70)}",
         ]
         if r.get("a_sz") or r.get("a_se"):
             parts.append(f"AI观点摘要：{r.get('a_sz') or r.get('a_se')}")

@@ -156,7 +156,7 @@ const hasSubstantiveText = (o: KolOpinion): boolean => {
   return body.length >= 180 || reason.length >= 40 || points >= 2;
 };
 const isHighQuality = (o: KolOpinion): boolean =>
-  qualOf(o) >= QUALITY_MIN_BY_SOURCE[o.source] && hasSubstantiveText(o);
+  qualOf(o) >= QUALITY_MIN_BY_SOURCE[o.source] && relOf(o) >= 60 && hasSubstantiveText(o);
 
 function Chip({ active, dim, onClick, children }: { active: boolean; dim?: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
@@ -458,7 +458,7 @@ export function OpinionExplorer({
               <button
                 type="button"
                 onClick={() => { setPlat(new Set()); setSelId(null); }}
-                className={`min-w-[72px] shrink-0 border-b-2 px-2 pb-2 text-center text-[12px] font-bold transition ${plat.size === 0 ? "border-reddit text-reddit" : "border-transparent text-neutral-500 hover:text-neutral-300"}`}
+                className={`min-w-[80px] shrink-0 border-b-2 px-2 pb-2 text-center text-[12px] font-bold transition ${plat.size === 0 ? "border-reddit text-reddit" : "border-transparent text-neutral-500 hover:text-neutral-300"}`}
               >
                 {zh ? "全部" : "All"} <span className="font-mono text-[10.5px] text-neutral-600">{baseFiltered.length}</span>
               </button>
@@ -469,7 +469,7 @@ export function OpinionExplorer({
                     key={p}
                     type="button"
                     onClick={() => { setPlat(new Set([p])); setSelId(null); }}
-                    className={`min-w-[86px] shrink-0 border-b-2 px-2 pb-2 text-center text-[12px] font-bold transition ${on ? "border-reddit text-reddit" : "border-transparent text-neutral-500 hover:text-neutral-300"}`}
+                    className={`min-w-[96px] shrink-0 border-b-2 px-2 pb-2 text-center text-[12px] font-bold transition ${on ? "border-reddit text-reddit" : "border-transparent text-neutral-500 hover:text-neutral-300"}`}
                   >
                     {SOURCE[p].label} <span className="font-mono text-[10.5px] text-neutral-600">{sourceCounts[p] ?? 0}</span>
                   </button>
