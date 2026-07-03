@@ -4,7 +4,7 @@ FROM node:22-slim
 
 # Python（管线用）
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      python3 python3-venv python3-pip ca-certificates \
+      python3 python3-venv python3-pip ca-certificates xz-utils \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -28,6 +28,10 @@ COPY . .
 # 已随上面的 COPY . . 进入镜像（.gitignore / .dockerignore 已对 data/dev.db 开例外）。
 # 这样线上 = 本地。更新线上：本机重跑 `make daily` → 重新提交 data/dev.db → push 触发 Railway 重建。
 # 注：dev.db 已含完整 schema + us/cn 双市场聚合 + ticker_meta（保证 /cn/ticker generateStaticParams 非空）。
+RUN if [ ! -s data/dev.db ] || [ "$(wc -c < data/dev.db)" -lt 1000000 ]; then \
+      echo "[build] data/dev.db is missing or still a Git LFS pointer; restoring from data/dev.db.xz"; \
+      xz -dc data/dev.db.xz > data/dev.db; \
+    fi
 
 # ---- 前端公开变量（NEXT_PUBLIC_*）----
 # Next 在「构建期」把这些值内联进静态导出包；运行期再设也没用（静态文件已生成）。

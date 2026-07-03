@@ -44,7 +44,7 @@
 
 ### ② 数据真源 = 本地 `data/dev.db`（Prismo）
 - Reddit 核心（14 表）+ **Prismo 独有层** `gr_*`(5 社区)/`yt_*`(YouTube)/`kol_*`/`x_opinion`/`price_daily`/`author_avatar` 等（这些云端**没有**）。
-- Railway/Dockerfile 用**提交进镜像的 `data/dev.db`** 构建（线上=本地；`.dockerignore` 对 `data/dev.db` 开例外）。改数据前先 `make backup-db`。
+- Railway/Dockerfile 用**提交进镜像的 `data/dev.db`** 构建（线上=本地；`.dockerignore` 对 `data/dev.db` 开例外）。`data/dev.db` 走 Git LFS；为防 Railway 构建上下文未还原 LFS，仓库同时提交普通文件 `data/dev.db.xz`，Docker build 若检测到 `data/dev.db` 仍是 LFS 指针会自动解压恢复。改数据前先 `make backup-db`。
 - **Supabase 云端**（`wimipsiwtrqhizgmbxas`，**不是 Prismo 的内容家**）：① redditalpha.xyz 的 Reddit 核心；② Prismo 的 **web 后端**（`app_events`/`ticker_searches`/`user_collections`/`user_profiles`/Auth，走 `NEXT_PUBLIC_*`）；③ Prismo 只读的 `tw_*`(X)。见 `CLOUD_DB.md`。
 
 ### ③ Next.js 静态网站（`web/`）

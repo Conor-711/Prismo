@@ -6,6 +6,7 @@ pipeline/.venv
 **/__pycache__
 data/*.db
 !data/dev.db
+!data/dev.db.xz
 data/*.db-wal
 data/*.db-shm
 *.log
