@@ -1,6 +1,6 @@
 "use client";
 
-// 「整体数据」叠加面板：把 每日净情绪 / 讨论度 / 聪明钱 / 散户 / 股价 叠到**同一条日期轴**上，
+// 「整体数据」叠加面板：把 每日净情绪 / 讨论度 / 聪明钱-散户分歧差 / 股价 叠到**同一条日期轴**上，
 // 每个指标一个开关（React 控显隐，按需叠加），各指标各自缩放（隐藏 y 轴、互不压扁），
 // 数值由**统一 hover tooltip**读出（含讨论度的平台拆分 + 金色 ⚑ 标记日的 AI 异动归因）。
 // x 轴 = 逐日历日（含周末）；折线类指标对非交易日 connectNulls 平滑跨越。
@@ -27,7 +27,7 @@ const STANCE: Record<SentStance, { zh: string; en: string; color: string }> = {
   neutral: { zh: "中性", en: "Neutral", color: "#9a9a9a" },
 };
 
-type MetricKey = "sentiment" | "volume" | "smart" | "retail" | "price";
+type MetricKey = "sentiment" | "volume" | "gap" | "price";
 type RangeKey = "1m" | "3m" | "6m" | "12m";
 const RANGES: { key: RangeKey; zh: string; en: string; days: number }[] = [
   { key: "1m", zh: "1月", en: "1M", days: 31 },
@@ -72,36 +72,38 @@ export function OverlayPanel({
     const red = sentArr.map((v) => (v == null ? null : Math.min(0, v)));
     const volTotal = cats.map((d) => +(volByDay.get(d)?.total ?? 0) || 0);
     const priceLine = cats.map((d) => priceByDay.get(d) ?? null);
-    const smart = cats.map((d) => (drvByDay.has(d) ? drvByDay.get(d)!.smart : null));
-    const retail = cats.map((d) => (drvByDay.has(d) ? drvByDay.get(d)!.retail : null));
+    const gap = cats.map((d) => {
+      const v = drvByDay.get(d);
+      return v ? +(v.smart - v.retail).toFixed(2) : null;
+    });
+    const gapPos = gap.map((v) => (v == null ? null : Math.max(0, v)));
+    const gapNeg = gap.map((v) => (v == null ? null : Math.min(0, v)));
     const inCats = new Set(cats);
     const sentMk = (sentMarkers ?? []).filter((m) => inCats.has(m.day)).map((m) => ({ value: [m.day, sentByDay.get(m.day) ?? 0] }));
     const volMk = (volMarkers ?? []).filter((m) => inCats.has(m.day)).map((m) => ({ value: [m.day, +(volByDay.get(m.day)?.total ?? 0) || 0] }));
     const anomByDay = new Map<string, { sent?: string; vol?: string }>();
     for (const m of sentMarkers ?? []) anomByDay.set(m.day, { ...anomByDay.get(m.day), sent: zh ? m.reason.zh : m.reason.en });
     for (const m of volMarkers ?? []) anomByDay.set(m.day, { ...anomByDay.get(m.day), vol: zh ? m.reason.zh : m.reason.en });
-    return { sentByDay, volByDay, priceByDay, drvByDay, green, red, volTotal, priceLine, smart, retail, sentMk, volMk, anomByDay };
+    return { sentByDay, volByDay, priceByDay, drvByDay, green, red, volTotal, priceLine, gap, gapPos, gapNeg, sentMk, volMk, anomByDay };
   }, [cats, sentiment, volume, price, divergence, sentMarkers, volMarkers, zh]);
 
   // 各指标是否有数据（无则不出 chip）
   const avail = useMemo(() => ({
     sentiment: sentiment.some((d) => Math.abs(d.net) > 1e-6),
     volume: volume.some((r) => (r.total || 0) > 0),
-    smart: !!divergence && divergence.series.some((p) => Math.abs(p.smart) > 1e-6),
-    retail: !!divergence && divergence.series.some((p) => Math.abs(p.retail) > 1e-6),
+    gap: !!divergence && divergence.series.some((p) => Math.abs(p.smart - p.retail) > 1e-6),
     price: (price ?? []).some((p) => p.close > 0),
   }), [sentiment, volume, divergence, price]);
 
   // 默认只开 净情绪 + 讨论度（其余按需叠加）
-  const [vis, setVis] = useState<Record<MetricKey, boolean>>({ sentiment: true, volume: true, smart: false, retail: false, price: false });
+  const [vis, setVis] = useState<Record<MetricKey, boolean>>({ sentiment: true, volume: true, gap: true, price: false });
   const on = (k: MetricKey) => avail[k] && vis[k];
   const toggle = (k: MetricKey) => setVis((v) => ({ ...v, [k]: !v[k] }));
 
   const CHIPS: { key: MetricKey; label: string; color: string; kind: "area" | "bar" | "line" | "dash" }[] = [
     { key: "sentiment", label: zh ? "净情绪" : "Net sentiment", color: GREEN, kind: "area" },
     { key: "volume", label: zh ? "讨论度" : "Volume", color: VOL, kind: "bar" },
-    { key: "smart", label: zh ? "聪明钱" : "Smart $", color: SMART, kind: "line" },
-    { key: "retail", label: zh ? "散户" : "Retail", color: RETAIL, kind: "dash" },
+    { key: "gap", label: zh ? "分歧差" : "Smart-retail gap", color: SMART, kind: "area" },
     { key: "price", label: zh ? "股价" : "Price", color: PRICE, kind: "line" },
   ];
 
@@ -130,8 +132,17 @@ export function OverlayPanel({
       if (prep.sentMk.length) series.push(markPt(prep.sentMk, 0));
     }
     if (on("volume") && prep.volMk.length) series.push(markPt(prep.volMk, 1));
-    if (on("smart")) series.push({ name: "smart", type: "line", yAxisIndex: 2, data: prep.smart, smooth: 0.3, symbol: "none", connectNulls: true, lineStyle: { width: 2.2, color: SMART }, z: 6 });
-    if (on("retail")) series.push({ name: "retail", type: "line", yAxisIndex: 2, data: prep.retail, smooth: 0.3, symbol: "none", connectNulls: true, lineStyle: { width: 1.8, color: RETAIL, type: "dashed" }, z: 5 });
+    if (on("gap")) {
+      series.push({
+        name: "gapP", type: "line", yAxisIndex: 2, data: prep.gapPos, smooth: 0.3, symbol: "none", connectNulls: true,
+        lineStyle: { width: 1.8, color: SMART }, areaStyle: { color: SMART, opacity: 0.28, origin: "auto" }, z: 6,
+        markLine: { silent: true, symbol: "none", lineStyle: { color: "rgba(127,127,127,0.32)", width: 1, type: "dashed" }, label: { show: false }, data: [{ yAxis: 0 }] },
+      });
+      series.push({
+        name: "gapN", type: "line", yAxisIndex: 2, data: prep.gapNeg, smooth: 0.3, symbol: "none", connectNulls: true,
+        lineStyle: { width: 1.8, color: RED }, areaStyle: { color: RED, opacity: 0.22, origin: "auto" }, z: 6,
+      });
+    }
     if (on("price")) series.push({ name: "price", type: "line", yAxisIndex: 3, data: prep.priceLine, smooth: 0.28, symbol: "none", connectNulls: true, lineStyle: { width: 1.9, color: PRICE }, z: 7 });
 
     const hiddenY = (extra: any) => ({ type: "value", show: false, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false }, splitLine: { show: false }, ...extra });
@@ -159,8 +170,11 @@ export function OverlayPanel({
               if (bd) lines.push(`<span style="color:#9aa0a6;font-size:10px;margin-left:14px">${bd}</span>`);
             }
           }
-          if (on("smart") && prep.drvByDay.has(day)) lines.push(`<span style="color:${SMART}">◆</span> ${zh ? "聪明钱" : "Smart $"} <b>${prep.drvByDay.get(day)!.smart.toFixed(2)}</b>`);
-          if (on("retail") && prep.drvByDay.has(day)) lines.push(`<span style="color:${RETAIL}">◇</span> ${zh ? "散户" : "Retail"} <b>${prep.drvByDay.get(day)!.retail.toFixed(2)}</b>`);
+          if (on("gap") && prep.drvByDay.has(day)) {
+            const d = prep.drvByDay.get(day)!;
+            const gap = +(d.smart - d.retail).toFixed(2);
+            lines.push(`<span style="color:${gap >= 0 ? SMART : RED}">◆</span> ${zh ? "分歧差" : "Smart-retail"} <b>${gap >= 0 ? "+" : ""}${gap}</b> <span style="color:#73757a">(${zh ? "聪明钱" : "smart"} ${d.smart.toFixed(2)} · ${zh ? "散户" : "retail"} ${d.retail.toFixed(2)})</span>`);
+          }
           if (on("price") && prep.priceByDay.has(day)) lines.push(`<span style="color:${PRICE}">●</span> ${zh ? "股价" : "Price"} <b>$${prep.priceByDay.get(day)!.toFixed(2)}</b>`);
           let html = `<b>${mmdd(day)}</b><br/>${lines.join("<br/>")}`;
           const a = prep.anomByDay.get(day);
@@ -184,7 +198,7 @@ export function OverlayPanel({
       yAxis: [
         hiddenY({ scale: true }),                 // 0 净情绪
         hiddenY({ min: 0 }),                       // 1 讨论度
-        hiddenY({ min: -1.15, max: 1.15 }),        // 2 聪明钱/散户（归一）
+        hiddenY({ min: -1.15, max: 1.15 }),        // 2 聪明钱-散户分歧差（归一）
         hiddenY({ scale: true }),                  // 3 股价
       ],
       series,

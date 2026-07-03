@@ -3,6 +3,8 @@
 //   - YouTube：yt_video 按 channel_id 聚合，主指标=播放量；头像取 author_avatar(source=youtube)。
 //   - Reddit：posts ⋈ mentions 的作者，按帖子互动(score+评论)聚合（去重帖，一帖多标的不重复计数）。
 //   - 雪球：gr_post(source=xueqiu) 按 author 聚合；只有昵称无 uid → 无外链，头像受 WAF 限制暂缺。
+//   - Toss：gr_post(source=toss) 按 author 聚合；主指标=赞+评论+少量浏览权重。
+//   - Yahoo JP：gr_post(source=yahoo_jp) 按 author 聚合；主指标=赞+踩+评论。
 // 库缺失/缺表时各平台返回空数组 → 页面渲染空态（与 output:export 兼容，见 db.ts 兜底）。
 import { all } from "./db";
 import type { KolSource } from "./mockDetail";
@@ -32,6 +34,8 @@ export interface InvestorBoard {
   youtube: Investor[];
   reddit: Investor[];
   xueqiu: Investor[];
+  toss: Investor[];
+  yahoojp: Investor[];
 }
 
 interface BaseRow {
@@ -189,11 +193,55 @@ function xueqiuInvestors(): Investor[] {
   return build("xueqiu", base, bd, LIMIT);
 }
 
+function tossInvestors(): Investor[] {
+  const base = safe(
+    () =>
+      all<BaseRow>(
+        `SELECT author AS id, author AS name, author AS handle,
+                SUM(likes + comments + views * 0.02) AS metric, COUNT(*) AS posts
+           FROM gr_post WHERE source = 'toss' AND author <> '' GROUP BY author`
+      ),
+    []
+  );
+  const bd = safe(
+    () =>
+      all<BdRow>(
+        `SELECT author AS id, ticker, SUM(likes + comments + views * 0.02) AS weight
+           FROM gr_post WHERE source = 'toss' AND author <> '' GROUP BY author, ticker`
+      ),
+    []
+  );
+  return build("toss", base, bd, LIMIT);
+}
+
+function yahooJpInvestors(): Investor[] {
+  const base = safe(
+    () =>
+      all<BaseRow>(
+        `SELECT author AS id, author AS name, author AS handle,
+                SUM(likes + dislikes + comments) AS metric, COUNT(*) AS posts
+           FROM gr_post WHERE source = 'yahoo_jp' AND author <> '' AND author <> '—' GROUP BY author`
+      ),
+    []
+  );
+  const bd = safe(
+    () =>
+      all<BdRow>(
+        `SELECT author AS id, ticker, SUM(likes + dislikes + comments) AS weight
+           FROM gr_post WHERE source = 'yahoo_jp' AND author <> '' AND author <> '—' GROUP BY author, ticker`
+      ),
+    []
+  );
+  return build("yahoojp", base, bd, LIMIT);
+}
+
 export function getInvestorBoard(): InvestorBoard {
   return {
     x: xInvestors(),
     youtube: youtubeInvestors(),
     reddit: redditInvestors(),
     xueqiu: xueqiuInvestors(),
+    toss: tossInvestors(),
+    yahoojp: yahooJpInvestors(),
   };
 }

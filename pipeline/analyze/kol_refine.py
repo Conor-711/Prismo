@@ -1,7 +1,7 @@
 """KOL 个体观点 · AI 提炼 + 双语（标的页「个体观点·KOL」模块）。
 
 把各社区**照搬过来的原文**提炼成「ta 为什么看多/看空/中性 + 2-3 条要点」，并同时产出
-zh/en 双语（提炼与翻译合一，一次 DeepSeek(LOW/flash) 调用）。覆盖文本源 reddit / x / xueqiu；
+zh/en 双语（提炼与翻译合一，一次 DeepSeek(LOW/flash) 调用）。覆盖文本源 reddit / x / xueqiu / toss / yahoojp；
 YouTube 复用 `yt_analysis`（Gemini 已产出同形 summary+key_points，不在此重复花配额）。
 
 设计要点：
@@ -26,8 +26,14 @@ from ..common.models import KolRefined
 
 DEFAULT_PER_SOURCE = 40  # = web 取数层各源 LIMIT（reddit/x/雪球 都 40）→ 展示项全覆盖
 DEFAULT_SINCE_DAYS = 20  # 只提炼近 N 天（≥ 前端价格窗口 ~11 交易日），预算不浪费在不展示的旧帖
-TEXT_SOURCES = ("reddit", "x", "xueqiu")
-_SRC_LABEL = {"reddit": "Reddit 帖子", "x": "X(Twitter) 推文", "xueqiu": "雪球帖子"}
+TEXT_SOURCES = ("reddit", "x", "xueqiu", "toss", "yahoojp")
+_SRC_LABEL = {
+    "reddit": "Reddit 帖子",
+    "x": "X(Twitter) 推文",
+    "xueqiu": "雪球帖子",
+    "toss": "Toss 帖子",
+    "yahoojp": "Yahoo Finance Japan 掲示板",
+}
 
 SYSTEM = (
     "你是金融观点提炼器。给定某社区用户/博主关于一只美股的发言（语言可能为中/英/日/韩），"
@@ -112,6 +118,26 @@ def _load(source: str, per_source: int, only: set[str] | None, since_days: int) 
                    COALESCE(likes,0)+COALESCE(comments,0) AS metric
               FROM gr_post
              WHERE source = 'xueqiu'
+             ORDER BY ticker, metric DESC
+        """
+    elif source == "toss":
+        sql = """
+            SELECT id AS item_id, ticker,
+                   COALESCE(title,'') AS title, COALESCE(body,'') AS body,
+                   stance AS hint, created_utc AS created,
+                   COALESCE(likes,0)+COALESCE(comments,0)+COALESCE(views,0)*0.02 AS metric
+              FROM gr_post
+           WHERE source = 'toss'
+             ORDER BY ticker, metric DESC
+        """
+    elif source == "yahoojp":
+        sql = """
+            SELECT id AS item_id, ticker,
+                   COALESCE(title,'') AS title, COALESCE(body,'') AS body,
+                   stance AS hint, created_utc AS created,
+                   COALESCE(likes,0)+COALESCE(dislikes,0)+COALESCE(comments,0) AS metric
+              FROM gr_post
+             WHERE source = 'yahoo_jp'
              ORDER BY ticker, metric DESC
         """
     elif source == "x":

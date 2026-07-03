@@ -6,7 +6,7 @@
 + 操作周期（原话双语 horizon_zh/en + 归一档 short/mid/long）+ price_raw（原话）+ created（下达日）。
 **反臆造**：没明说一律 null；绝不从涨跌幅/情绪/看多看空推断；prompt 喂当前价锚点剔数量级离谱者。
 
-覆盖 reddit / x / xueqiu —— 复用 kol_refine 的候选池（近 ~90 天，覆盖时间线窗口）。YouTube 复用
+覆盖 reddit / x / xueqiu / toss / yahoojp —— 复用 kol_refine 的候选池（近 ~90 天，覆盖时间线窗口）。YouTube 复用
 yt_judgment(target+horizon)。一次 LOW(qwen-flash) 调用。增量：已在 kol_judgment 的 (source,item_id,
 ticker) 默认跳过（--force 重抽）。并发只在网络层（线程池跑 LLM，回主线程顺序落库）。
 
@@ -234,7 +234,7 @@ def run(sources: list[str] | None = None, per_source: int = DEFAULT_PER_SOURCE,
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--source", type=str, default=None, help="逗号分隔，子集 of reddit,x,xueqiu；省略=全部")
+    ap.add_argument("--source", type=str, default=None, help="逗号分隔，子集 of reddit,x,xueqiu,toss,yahoojp；省略=全部")
     ap.add_argument("--per-source", type=int, default=DEFAULT_PER_SOURCE, help="每标的每源前 N 条")
     ap.add_argument("--since-days", type=int, default=DEFAULT_SINCE_DAYS, help="只抽近 N 天（默认 90=时间线窗口）")
     ap.add_argument("--only", type=str, default=None, help="逗号分隔 ticker，只跑这些")

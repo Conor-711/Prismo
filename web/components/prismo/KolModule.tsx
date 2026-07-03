@@ -6,12 +6,13 @@
 import { useMemo, useState } from "react";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { OverlayPanel } from "./OverlayPanel";
-import { KOL_VOL_STACK, RETAIL_VOL_STACK, type VolStackItem } from "./kolShared";
+import { KOL_NEW_STACK, KOL_VOL_STACK, RETAIL_NEW_STACK, RETAIL_VOL_STACK, type VolStackItem } from "./kolShared";
 import type { VolRow } from "./VolumePanel";
 import type { ChartMarker } from "./SentimentPanel";
 import { TargetPricePanel } from "./TargetPricePanel";
+import { BullBearStructureChart, CrowdingChart, ViewpointStanceChart } from "./OverallStructureCharts";
 import type { KolFlow, KolTargetData } from "@/lib/mockDetail";
-import type { DailyNet, DailyVol, RetailVol, RetailNew } from "@/lib/kolQueries";
+import type { DailyNet, DailyVol, KolNew, RetailVol, RetailNew, WindowedArguments } from "@/lib/kolQueries";
 import type { OverallData, AnomalyMetric, Divergence, SentStance } from "@/lib/overallData";
 
 type Cohort = "kol" | "retail";
@@ -122,7 +123,7 @@ function extendPrice(rows: Array<{ day: string; close: number }> | undefined, da
 }
 
 export function KolModule({
-  flow, sentiment, volume, retailSentiment, retailVolume, retailNewcomers, overall, targetPrices,
+  flow, sentiment, volume, retailSentiment, retailVolume, retailNewcomers, kolNewcomers, overall, targetPrices, argumentsData,
 }: {
   flow: KolFlow;
   sentiment?: DailyNet[];
@@ -130,15 +131,17 @@ export function KolModule({
   retailSentiment?: DailyNet[];
   retailVolume?: RetailVol[];
   retailNewcomers?: RetailNew[];
+  kolNewcomers?: KolNew[];
   overall?: OverallData | null;
   targetPrices?: KolTargetData;
+  argumentsData?: WindowedArguments;
 }) {
   const { lang } = useLocale();
   const zh = lang === "zh";
   const [cohort, setCohort] = useState<Cohort>("kol");
   const latestDay = useMemo(
-    () => latestDayOf(flow.days, sentiment, volume, retailSentiment, retailVolume, retailNewcomers, overall?.divergence?.series) || "2026-06-22",
-    [flow.days, sentiment, volume, retailSentiment, retailVolume, retailNewcomers, overall?.divergence?.series]
+    () => latestDayOf(flow.days, sentiment, volume, retailSentiment, retailVolume, retailNewcomers, kolNewcomers, overall?.divergence?.series) || "2026-06-22",
+    [flow.days, sentiment, volume, retailSentiment, retailVolume, retailNewcomers, kolNewcomers, overall?.divergence?.series]
   );
   const yearDays = useMemo(() => enumerateDays(dayShift(latestDay, -(YEAR_DAYS - 1)), latestDay), [latestDay]);
   const salt = useMemo(() => hash01(`${flow.days[0]?.close ?? 0}:${flow.days.at(-1)?.close ?? 0}:${latestDay}`) * 9 + 1, [flow.days, latestDay]);
@@ -153,8 +156,11 @@ export function KolModule({
   const curSentiment: DailyNet[] = isRetail ? retailSentiment ?? [] : sentiment ?? [];
   const curVolume: VolRow[] = isRetail ? (retailVolume ?? []) : (volume ?? []);
   const curVolStack: VolStackItem[] = isRetail ? RETAIL_VOL_STACK : KOL_VOL_STACK;
+  const curNewcomers: VolRow[] = isRetail ? (retailNewcomers ?? []) : (kolNewcomers ?? []);
+  const curNewStack: VolStackItem[] = isRetail ? RETAIL_NEW_STACK : KOL_NEW_STACK;
   const yearSentiment = useMemo(() => extendSentiment(curSentiment, yearDays, salt + (isRetail ? 1 : 0)), [curSentiment, yearDays, salt, isRetail]);
   const yearVolume = useMemo(() => extendVolume(curVolume, yearDays, curVolStack, salt + (isRetail ? 2 : 0)), [curVolume, yearDays, curVolStack, salt, isRetail]);
+  const yearNewcomers = useMemo(() => extendVolume(curNewcomers, yearDays, curNewStack, salt + (isRetail ? 4 : 3)), [curNewcomers, yearDays, curNewStack, salt, isRetail]);
   const yearPrice = useMemo(() => extendPrice(flow.days, yearDays, salt), [flow.days, yearDays, salt]);
 
   // 异动标记（金 ⚑ + AI 归因）仅 KOL 口径——归因基于 KOL 序列；切到整体散户时隐藏。
@@ -208,6 +214,12 @@ export function KolModule({
         sentMarkers={sentMarkers}
         volMarkers={volMarkers}
       />
+
+      <div className="mt-3 grid gap-3 xl:grid-cols-3">
+        <BullBearStructureChart data={yearSentiment} zh={zh} />
+        <CrowdingChart newcomers={yearNewcomers} volume={yearVolume} stack={curNewStack} zh={zh} />
+        <ViewpointStanceChart data={argumentsData} zh={zh} />
+      </div>
 
       {/* KOL 买入/卖出价 时间线（仅 KOL 口径、独立于人群切换）：有判断才显示 */}
       {targetPrices && targetPrices.marks.length > 0 && (

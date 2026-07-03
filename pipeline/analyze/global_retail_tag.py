@@ -22,18 +22,37 @@ def _stance(score: float) -> str:
     return "bull" if score > 0.15 else "bear" if score < -0.15 else "neutral"
 
 
-def tag_all(batch_size: int = 15, workers: int = 8, only_new: bool = True) -> int:
+def tag_all(batch_size: int = 15, workers: int = 8, only_new: bool = True,
+            only: list[str] | None = None, sources: list[str] | None = None,
+            regions: list[str] | None = None) -> int:
     """DeepSeek flash 给全部 gr_post 打情绪分 + 派生 stance。only_new 只打未打的。"""
     use_real = available(LOW)
+    only_set = {x.strip().upper() for x in only if x.strip()} if only else None
+    source_set = {x.strip() for x in sources if x.strip()} if sources else None
+    region_set = {x.strip() for x in regions if x.strip()} if regions else None
     with session_scope() as s:
         stmt = select(GrPost.id, GrPost.region, GrPost.ticker, GrPost.title, GrPost.body, GrPost.label)
         if only_new:
             stmt = stmt.where(GrPost.sentiment.is_(None))
+        if only_set:
+            stmt = stmt.where(GrPost.ticker.in_(only_set))
+        if source_set:
+            stmt = stmt.where(GrPost.source.in_(source_set))
+        if region_set:
+            stmt = stmt.where(GrPost.region.in_(region_set))
         rows = s.execute(stmt).all()
     posts = [{"id": r[0], "region": r[1], "ticker": r[2],
               "text": f"{r[3] or ''} {r[4] or ''}".strip()[:280], "label": r[5]} for r in rows]
     total = len(posts)
-    print(f"[gr-tag] 待打标 {total} 帖（flash real={use_real}, batch={batch_size}）。", flush=True)
+    scope = []
+    if only_set:
+        scope.append("ticker=" + ",".join(sorted(only_set)))
+    if source_set:
+        scope.append("source=" + ",".join(sorted(source_set)))
+    if region_set:
+        scope.append("region=" + ",".join(sorted(region_set)))
+    print(f"[gr-tag] 待打标 {total} 帖（flash real={use_real}, batch={batch_size}"
+          f"{'; ' + '; '.join(scope) if scope else ''}）。", flush=True)
     if not total:
         return 0
     batches = [posts[i:i + batch_size] for i in range(0, total, batch_size)]

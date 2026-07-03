@@ -280,6 +280,7 @@ html[data-install] .theme-fab {
     opacity: 1;
     visibility: visible;
     transform: scale(1);
+    cursor: pointer;
     transition:
       width 0.24s cubic-bezier(0.22, 1, 0.36, 1),
       opacity 0.16s ease 0.06s,
@@ -375,7 +376,10 @@ html[data-install] .theme-fab {
       opacity 0.16s ease 0.06s,
       margin 0.24s cubic-bezier(0.22, 1, 0.36, 1);
   }
-  html[data-sb="collapsed"] .app-sidebar { width: 64px; }
+  html[data-sb="collapsed"] .app-sidebar {
+    width: 64px;
+    cursor: pointer;
+  }
   html[data-sb="collapsed"] .app-main { padding-left: var(--app-sidebar-collapsed); }
   html[data-sb="collapsed"] .app-main > main { width: calc((100vw - var(--app-sidebar-collapsed)) / var(--app-density)); }
   html[data-sb="collapsed"] .sidebar-collapsed-expand-hitbox {
@@ -438,12 +442,23 @@ html[data-install] .theme-fab {
     pointer-events: none;
   }
   html[data-sb="collapsed"] .sb-row { justify-content: center; padding-left: 0; padding-right: 0; gap: 0; }
+  html[data-sb="collapsed"] .app-sidebar a,
+  html[data-sb="collapsed"] .app-sidebar button,
+  html[data-sb="collapsed"] .app-sidebar input,
+  html[data-sb="collapsed"] .app-sidebar [data-sidebar-entry="true"] {
+    cursor: pointer;
+  }
   html[data-sb="collapsed"] .sb-search-form {
     justify-content: center;
     margin-left: 12px;
     margin-right: 12px;
     padding-left: 0;
     padding-right: 0;
+    cursor: pointer;
+  }
+  html[data-sb="collapsed"] .sb-search-submit {
+    height: 100%;
+    width: 100%;
   }
   html[data-sb="collapsed"] .sb-search-input {
     max-width: 0;

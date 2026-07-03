@@ -22,6 +22,7 @@ import re
 import time
 
 import requests
+from sqlalchemy import select
 
 from ..common.db import session_scope
 from ..common.models import Base, GrPost
@@ -36,8 +37,9 @@ HEADERS = {
     "Origin": "https://www.tossinvest.com",
 }
 
-# Toss 股票代码（页面 URL /stocks/<code>/community）→ 我们的 ticker。先 Palantir；后续扩展即可。
+# Toss 股票代码（页面 URL /stocks/<code>/community）→ 我们的 ticker。
 TOSS_STOCKS: dict[str, str] = {
+    "US19890516001": "MU",
     "US20200930014": "PLTR",
 }
 
@@ -110,51 +112,154 @@ def _upsert(s, *, ticker: str, code: str, c: dict, created: dt.datetime) -> bool
     return True
 
 
+def _comment_id(row_id: str) -> str | None:
+    try:
+        return str(row_id).rsplit(":", 1)[1]
+    except IndexError:
+        return None
+
+
+def _existing_bounds(ticker: str, code: str) -> tuple[str, dt.datetime, dt.datetime] | None:
+    """返回本地已有窗口的 (最旧 commentId, 最旧时间, 最新时间)，供 --resume 从旧游标续抓。"""
+    stmt = select(GrPost.id, GrPost.created_utc).where(
+        GrPost.source == "toss",
+        GrPost.ticker == ticker,
+        GrPost.board_code == code,
+    )
+    with session_scope() as s:
+        oldest = s.execute(stmt.order_by(GrPost.created_utc.asc()).limit(1)).first()
+        newest = s.execute(stmt.order_by(GrPost.created_utc.desc()).limit(1)).first()
+    if not oldest or not newest:
+        return None
+    cid = _comment_id(oldest[0])
+    if not cid:
+        return None
+    return cid, oldest[1], newest[1]
+
+
+def _crawl_loop(
+    *,
+    sess: requests.Session,
+    dbs,
+    ticker: str,
+    code: str,
+    cutoff: dt.datetime,
+    max_pages: int,
+    sleep: float,
+    commit_pages: int,
+    start_cursor: str | None = None,
+    stop_before: dt.datetime | None = None,
+    phase: str = "",
+) -> dict:
+    cursor = start_cursor
+    got = pages = 0
+    oldest = newest = None
+    hit_cutoff = hit_overlap = False
+    label = f"{ticker}{' ' + phase if phase else ''}"
+    while pages < max_pages:
+        params = {"subjectType": "STOCK", "subjectId": code, "commentSortType": "RECENT"}
+        if cursor is not None:
+            params["lastCommentId"] = cursor
+        data = _get(sess, params)
+        if not data:
+            print(f"[toss] {label} 第 {pages+1} 页请求失败，停止。", flush=True)
+            break
+        res = (data.get("result") or {})
+        rows = res.get("results") or []
+        if not rows:
+            break
+        stop = False
+        for c in rows:
+            created = _parse_ts(c.get("createdAt") or "")
+            newest = newest or created
+            oldest = created
+            if stop_before is not None and created < stop_before:
+                hit_overlap = True
+                stop = True
+                break
+            if created < cutoff:
+                hit_cutoff = True
+                stop = True
+                break
+            if _upsert(dbs, ticker=ticker, code=code, c=c, created=created):
+                got += 1
+        pages += 1
+        if commit_pages > 0 and pages % commit_pages == 0:
+            dbs.commit()
+        if pages % 20 == 0:
+            oldest_s = oldest.strftime("%Y-%m-%d %H:%M") if oldest else "—"
+            print(f"[toss] {label} … {pages} 页 / merge {got} 条 / 最早 {oldest_s} UTC", flush=True)
+        if stop or not res.get("hasNext"):
+            break
+        cursor = res.get("key")
+        if cursor is None:
+            break
+        if sleep > 0:
+            time.sleep(sleep)
+    return {
+        "got": got,
+        "pages": pages,
+        "oldest": oldest,
+        "newest": newest,
+        "hit_cutoff": hit_cutoff,
+        "hit_overlap": hit_overlap,
+    }
+
+
 def crawl_stock(code: str, ticker: str, *, days: int = 14, max_pages: int = 1500,
-                sleep: float = 0.3) -> int:
+                sleep: float = 0.3, commit_pages: int = 100, resume: bool = False) -> int:
     """游标翻页爬 RECENT 评论，直到早于 days 窗口或没有下一页。返回入库条数。"""
     cutoff = dt.datetime.utcnow() - dt.timedelta(days=days)
     sess = _session()
-    cursor = None
-    got = pages = 0
-    oldest = None
     with session_scope() as s:
-        while pages < max_pages:
-            params = {"subjectType": "STOCK", "subjectId": code, "commentSortType": "RECENT"}
-            if cursor is not None:
-                params["lastCommentId"] = cursor
-            data = _get(sess, params)
-            if not data:
-                print(f"[toss] {ticker} 第 {pages+1} 页请求失败，停止。", flush=True)
-                break
-            res = (data.get("result") or {})
-            rows = res.get("results") or []
-            if not rows:
-                break
-            stop = False
-            for c in rows:
-                created = _parse_ts(c.get("createdAt") or "")
-                oldest = created
-                if created < cutoff:
-                    stop = True
-                    break  # RECENT 排序：此后全更早
-                if _upsert(s, ticker=ticker, code=code, c=c, created=created):
-                    got += 1
-            pages += 1
-            if pages % 20 == 0:
-                print(f"[toss] {ticker} … {pages} 页 / 入库 {got} 条 / 最早 {oldest:%Y-%m-%d %H:%M} UTC", flush=True)
-            if stop or not res.get("hasNext"):
-                break
-            cursor = res.get("key")
-            if cursor is None:
-                break
-            time.sleep(sleep)
+        total_got = total_pages = 0
+        oldest = None
+        hit_cutoff = False
+        bounds = _existing_bounds(ticker, code) if resume else None
+        if bounds:
+            oldest_cursor, local_oldest, local_newest = bounds
+            print(
+                f"[toss] {ticker} resume：本地已有 {local_oldest:%Y-%m-%d %H:%M} → "
+                f"{local_newest:%Y-%m-%d %H:%M} UTC；先补新，再从 {oldest_cursor} 补旧。",
+                flush=True,
+            )
+            head = _crawl_loop(
+                sess=sess, dbs=s, ticker=ticker, code=code, cutoff=cutoff, max_pages=max_pages,
+                sleep=sleep, commit_pages=commit_pages, stop_before=local_newest, phase="补新"
+            )
+            total_got += head["got"]
+            total_pages += head["pages"]
+            if local_oldest > cutoff:
+                tail = _crawl_loop(
+                    sess=sess, dbs=s, ticker=ticker, code=code, cutoff=cutoff, max_pages=max_pages,
+                    sleep=sleep, commit_pages=commit_pages, start_cursor=oldest_cursor, phase="补旧"
+                )
+                total_got += tail["got"]
+                total_pages += tail["pages"]
+                oldest = tail["oldest"] or local_oldest
+                hit_cutoff = bool(tail["hit_cutoff"])
+            else:
+                oldest = local_oldest
+                hit_cutoff = True
+        else:
+            res = _crawl_loop(
+                sess=sess, dbs=s, ticker=ticker, code=code, cutoff=cutoff, max_pages=max_pages,
+                sleep=sleep, commit_pages=commit_pages
+            )
+            total_got = res["got"]
+            total_pages = res["pages"]
+            oldest = res["oldest"]
+            hit_cutoff = bool(res["hit_cutoff"])
     oldest_s = oldest.strftime("%Y-%m-%d %H:%M") if oldest else "—"
-    print(f"[toss] {ticker} 完成：{pages} 页，入库 {got} 条（窗口 {days}d，最早至 {oldest_s} UTC）。", flush=True)
-    return got
+    suffix = f"窗口 {days}d，最早至 {oldest_s} UTC"
+    if total_pages >= max_pages and not hit_cutoff:
+        suffix = f"达到 max_pages={max_pages}，尚未触达 {days}d 截止；最早至 {oldest_s} UTC"
+    print(f"[toss] {ticker} 完成：{total_pages} 页，merge {total_got} 条（{suffix}）。", flush=True)
+    return total_got
 
 
-def crawl(days: int = 14, only: list[str] | None = None, max_pages: int = 1500) -> int:
+def crawl(days: int = 14, only: list[str] | None = None, max_pages: int = 1500,
+          sleep: float = 0.3, commit_pages: int = 100, resume: bool = False) -> int:
     """爬 TOSS_STOCKS 里所有（或 only 指定 ticker）股票的近 days 天社区评论 → gr_post。"""
     _ensure_tables()
     total = 0
@@ -162,7 +267,8 @@ def crawl(days: int = 14, only: list[str] | None = None, max_pages: int = 1500) 
         if only and ticker not in only:
             continue
         print(f"[toss] ▶ {ticker}（{code}）近 {days} 天 …", flush=True)
-        total += crawl_stock(code, ticker, days=days, max_pages=max_pages)
+        total += crawl_stock(code, ticker, days=days, max_pages=max_pages, sleep=sleep,
+                             commit_pages=commit_pages, resume=resume)
     print(f"[toss] 全部完成，共入库 {total} 条 → gr_post(source='toss')。下一步：make gr-tag → make retail-sentiment/-volume。", flush=True)
     return total
 

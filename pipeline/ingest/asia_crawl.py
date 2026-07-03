@@ -31,6 +31,8 @@ UA_MOBILE = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/
 UA_PC = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36"
 
 YAHOO_FORUM = "https://finance.yahoo.co.jp/quote/{code}/forum"
+YAHOO_OLD_ORIGIN = "https://finance.yahoo.co.jp"
+YAHOO_COMMENT_LIST = "https://finance.yahoo.co.jp/cm/ds/comment/listview"
 # Naver 移动端讨论 front-api：海外股(foreignStock)/国内股(domesticStock)统一接口，返回完整正文。
 NAVER_FRONT = "https://m.stock.naver.com/front-api/discussion/list"
 NAVER_CCOUNT = "https://m.stock.naver.com/front-api/discussion/comment/counts"  # 每帖评论数
@@ -62,13 +64,17 @@ def _to_utc(local: dt.datetime) -> dt.datetime:
 
 
 def _parse_jp_date(s: str) -> dt.datetime:
-    """'2026/6/14 7:52'（JST）→ UTC；缺年份按当年。"""
+    """'2026/6/14 7:52' / '7月3日 11:21'（JST）→ UTC；缺年份按当年。"""
     s = s.strip()
     m = re.search(r"(?:(\d{4})/)?(\d{1,2})/(\d{1,2})\s+(\d{1,2}):(\d{2})", s)
-    if not m:
-        return dt.datetime.utcnow()
-    y = int(m.group(1)) if m.group(1) else dt.datetime.utcnow().year
-    return _to_utc(dt.datetime(y, int(m.group(2)), int(m.group(3)), int(m.group(4)), int(m.group(5))))
+    if m:
+        y = int(m.group(1)) if m.group(1) else dt.datetime.utcnow().year
+        return _to_utc(dt.datetime(y, int(m.group(2)), int(m.group(3)), int(m.group(4)), int(m.group(5))))
+    m = re.search(r"(?:(\d{4})年)?(\d{1,2})月(\d{1,2})日\s+(\d{1,2}):(\d{2})", s)
+    if m:
+        y = int(m.group(1)) if m.group(1) else dt.datetime.utcnow().year
+        return _to_utc(dt.datetime(y, int(m.group(2)), int(m.group(3)), int(m.group(4)), int(m.group(5))))
+    return dt.datetime.utcnow()
 
 
 def _session(ua: str) -> requests.Session:
@@ -97,9 +103,158 @@ def _get(sess: requests.Session, url: str, *, params: dict | None = None,
 
 
 # ----------------------------- 日本：Yahoo Finance JP 掲示板 -----------------------------
-def fetch_yahoo_jp(symbol: str, limit: int = 60, since: dt.datetime | None = None) -> list[dict]:
-    """解析 Yahoo JP 掲示板 SSR HTML（单页约 164 条最新帖；无简单分页 API）。
-    since 给定时只保留 >= since 的帖（按窗口过滤；超活跃股一周量可能超出单页覆盖，属已知限制）。"""
+_JP_LABELS = ("強く買いたい", "買いたい", "様子見", "売りたい", "強く売りたい")
+
+
+def _discover_yahoo_old_thread(symbol: str) -> tuple[str, str, str, str] | None:
+    """从新版 quote/{symbol}/forum 发现旧掲示板入口。
+
+    新页面只稳定暴露最近一屏；旧页面带 thread/part 与 AJAX listview，能补齐 14 天历史。
+    返回 (category, thread, base_url, thread_name)。
+    """
+    r = _get(_session(UA_PC), YAHOO_FORUM.format(code=symbol))
+    if r is None:
+        return None
+    m = re.search(r'href="https://finance\.yahoo\.co\.jp/cm/message/(\d+)/([a-z0-9]+)"', r.text)
+    if not m:
+        return None
+    category, thread = m.group(1), m.group(2)
+    name = _html.unescape(_first(r"<h1[^>]*>(.*?)</h1>", r.text) or f"{symbol} 掲示板")
+    return category, thread, f"{YAHOO_OLD_ORIGIN}/cm/message/{category}/{thread}", _clean(name)
+
+
+def _split_old_comment_blocks(html: str) -> list[tuple[str, str]]:
+    """旧掲示板 HTML/listview fragment → [(display_no, block)]."""
+    starts = list(re.finditer(r'<li\s+[^>]*id="c(\d+)"[^>]*data-comment="\d+"[^>]*>', html))
+    out: list[tuple[str, str]] = []
+    for i, m in enumerate(starts):
+        end = starts[i + 1].start() if i + 1 < len(starts) else len(html)
+        out.append((m.group(1), html[m.start():end]))
+    return out
+
+
+def _parse_yahoo_old_comments(symbol: str, html: str) -> list[dict]:
+    recs: list[dict] = []
+    for display_no, block in _split_old_comment_blocks(html):
+        cid = _first(r'<div class="comment" data-comment="(\d+)"', block) or display_no
+        body_m = re.search(r'<p class="comText">(.*?)</p>', block, re.S)
+        body = _clean(body_m.group(1)) if body_m else ""
+        if not body:
+            continue
+        author_html = _first(r'<p class="comWriter">(.*?)</p>', block, flags=re.S)
+        author = _clean(re.sub(r"<span>.*?</span>", "", author_html, flags=re.S)) if author_html else "—"
+        date_text = _first(r'rel="nofollow">([\s\S]*?\d{1,2}:\d{2})\s*</a>', block)
+        created = _parse_jp_date(date_text)
+        label = next((x for x in _JP_LABELS if x in block), None)
+        likes = _first(r'class="positive"[\s\S]*?<span>(\d+)</span>', block, flags=re.S)
+        dislikes = _first(r'class="negative"[\s\S]*?<span>(\d+)</span>', block, flags=re.S)
+        recs.append({
+            "native_id": cid,
+            "author": author or "—",
+            "title": "",
+            "body": body,
+            "label": label,
+            "url": f"{YAHOO_OLD_ORIGIN}/quote/{symbol}/forum/{cid}",
+            "likes": int(likes) if likes else 0,
+            "dislikes": int(dislikes) if dislikes else 0,
+            "images": len(re.findall(r"<img\b", block, re.I)),
+            "views": 0,
+            "comments": 0,
+            "verified": False,
+            "created_utc": created,
+            "_display_no": int(display_no),
+        })
+    return recs
+
+
+def _fetch_yahoo_old_part(sess: requests.Session, *, base_url: str, category: str, thread: str,
+                          part: int, thread_name: str, symbol: str, limit: int,
+                          since: dt.datetime | None) -> tuple[list[dict], bool]:
+    """抓一个旧 part；返回 (records, should_continue_older_parts)。"""
+    page_url = f"{base_url}/{part}"
+    r = _get(sess, page_url)
+    if r is None:
+        return [], False
+    out: list[dict] = []
+    page = 1
+    html = r.text
+    while True:
+        recs = _parse_yahoo_old_comments(symbol, html)
+        if recs:
+            out.extend(recs)
+        if len(out) >= limit:
+            return out[:limit], True
+        if since and recs and min(x["created_utc"] for x in recs) < since:
+            return out, False
+        if not recs:
+            return out, False
+        last_no = min(int(x["_display_no"]) for x in recs)
+        if last_no <= 1:
+            return out, True
+        page += 1
+        sess.headers.update({"Referer": page_url, "X-Requested-With": "XMLHttpRequest"})
+        params = {
+            "category": category,
+            "thread": thread,
+            "part": str(part),
+            "thread_feel_type": "1",
+            "thread_stop_flag": "false",
+            "tieup_name": "finance",
+            "thread_name": thread_name,
+            "offset": str(last_no - 1),
+            "page": str(page),
+        }
+        rr = _get(sess, YAHOO_COMMENT_LIST, params=params, timeout=25)
+        if rr is None:
+            return out, True
+        try:
+            html = rr.json().get("feed", {}).get("content", "")
+        except ValueError:
+            return out, True
+        if not html.strip():
+            return out, True
+
+
+def _fetch_yahoo_old(symbol: str, limit: int, since: dt.datetime | None) -> list[dict]:
+    found = _discover_yahoo_old_thread(symbol)
+    if not found:
+        return []
+    category, thread, base_url, thread_name = found
+    sess = _session(UA_PC)
+    first = _get(sess, base_url)
+    if first is None:
+        return []
+    part_s = _first(r'data-part="(\d+)"', first.text) or _first(r"/cm/message/%s/%s/(\d+)" % (category, thread), first.text)
+    if not part_s:
+        return []
+    part = int(part_s)
+    seen: set[str] = set()
+    out: list[dict] = []
+    for p in range(part, 0, -1):
+        remain = max(0, limit - len(out))
+        if remain <= 0:
+            break
+        recs, keep_older = _fetch_yahoo_old_part(
+            sess, base_url=base_url, category=category, thread=thread, part=p,
+            thread_name=thread_name, symbol=symbol, limit=remain, since=since,
+        )
+        for rec in recs:
+            rec["url"] = f"{YAHOO_OLD_ORIGIN}/quote/{symbol}/forum/{rec['native_id']}"
+            if since and rec["created_utc"] < since:
+                continue
+            if rec["native_id"] in seen:
+                continue
+            rec.pop("_display_no", None)
+            seen.add(rec["native_id"])
+            out.append(rec)
+        if not keep_older:
+            break
+    out.sort(key=lambda x: x["created_utc"], reverse=True)
+    return out[:limit]
+
+
+def _fetch_yahoo_new(symbol: str, limit: int, since: dt.datetime | None) -> list[dict]:
+    """新版 SSR 兜底：最近一屏，结构更稳定但历史覆盖有限。"""
     url = YAHOO_FORUM.format(code=symbol)
     r = _get(_session(UA_MOBILE), url)
     if r is None:
@@ -118,7 +273,7 @@ def fetch_yahoo_jp(symbol: str, limit: int = 60, since: dt.datetime | None = Non
         if not body:
             continue
         created = _parse_jp_date(_first(r'_BbsItem__postDate_[^"]*">([^<]*)<', block))
-        if since and created < since:  # 窗口外（旧帖）跳过
+        if since and created < since:
             continue
         author = _first(r'_BbsItem__userName_[^"]*">([^<]*)<', block)
         label = _first(r'_BbsItem__label_[^"]*">([^<]*)<', block) or None
@@ -128,17 +283,28 @@ def fetch_yahoo_jp(symbol: str, limit: int = 60, since: dt.datetime | None = Non
             "author": author or "—",
             "title": "",
             "body": body,
-            "label": label,  # 用户「評価」自标：強く買いたい/買いたい/中立/売りたい/強く売りたい
+            "label": label,
             "url": "https://finance.yahoo.co.jp" + mid.group(1),
-            "likes": int(counts[0]) if len(counts) >= 1 else 0,    # はい（そう思う）
-            "dislikes": int(counts[1]) if len(counts) >= 2 else 0,  # いいえ
-            "images": len(re.findall(r"_BbsItem__image_", block)),  # 附图数
-            "views": 0, "comments": 0, "verified": False,  # Yahoo SSR 不暴露
+            "likes": int(counts[0]) if len(counts) >= 1 else 0,
+            "dislikes": int(counts[1]) if len(counts) >= 2 else 0,
+            "images": len(re.findall(r"_BbsItem__image_", block)),
+            "views": 0, "comments": 0, "verified": False,
             "created_utc": created,
         })
         if len(out) >= limit:
             break
     return out
+
+
+def fetch_yahoo_jp(symbol: str, limit: int = 60, since: dt.datetime | None = None) -> list[dict]:
+    """Yahoo JP 掲示板。
+
+    先用旧掲示板 AJAX listview 补历史分页（可覆盖 14 天以上），失败时回退新版 SSR 最近一屏。
+    """
+    old = _fetch_yahoo_old(symbol, limit=limit, since=since)
+    if old:
+        return old
+    return _fetch_yahoo_new(symbol, limit=limit, since=since)
 
 
 # ----------------------------- 台湾：PTT Stock 板（综合股票讨论板） -----------------------------
@@ -334,8 +500,8 @@ def _fill_naver_comment_counts(sess: requests.Session, recs: list[dict]) -> None
 
 
 # ----------------------------- 小工具 -----------------------------
-def _first(pattern: str, text: str) -> str:
-    m = re.search(pattern, text, re.S)
+def _first(pattern: str, text: str, flags: int = re.S) -> str:
+    m = re.search(pattern, text, flags)
     return _html.unescape(m.group(1)).strip() if m else ""
 
 

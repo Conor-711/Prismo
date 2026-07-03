@@ -1,15 +1,14 @@
 import type { Metadata } from "next";
 import { Consensus, PriceTag } from "@/components/prismo/Bits";
 import { TickerLogo } from "@/components/prismo/TickerLogo";
-import { KolModule } from "@/components/prismo/KolModule";
 import { OpinionExplorer } from "@/components/prismo/OpinionExplorer";
-import { TopInvestors } from "@/components/prismo/TopInvestors";
 import { PriceSparkline } from "@/components/prismo/PriceSparkline";
 import { ViewportWorkspace } from "@/components/prismo/ViewportWorkspace";
+import { TickerOverviewPanel } from "@/components/prismo/TickerOverviewPanel";
 import { StageBadge } from "@/components/prismo/DetailBits";
 import { getGrTickerSymbols, getGrTickerDetail, getGrQuote } from "@/lib/globalQueries";
 import { getTickerMock, getKolFlow } from "@/lib/mockDetail";
-import { getKolFlowReal, getKolOpinions, getKolSentimentDaily, getKolVolumeDaily, getRetailSentimentDaily, getRetailVolumeDaily, getRetailNewcomersDaily, getKolTargetPrices } from "@/lib/kolQueries";
+import { getKolArguments, getKolFlowReal, getKolNewcomersDaily, getKolOpinions, getKolSentimentDaily, getKolVolumeDaily, getRetailSentimentDaily, getRetailVolumeDaily, getRetailNewcomersDaily, getKolTargetPrices } from "@/lib/kolQueries";
 import { getTopInvestors } from "@/lib/topInvestors";
 import { getOverallData } from "@/lib/overallData";
 import { tickerExchange, TICKER_UNIVERSE } from "@/lib/tickerMeta";
@@ -25,23 +24,6 @@ export function generateStaticParams() {
 export function generateMetadata({ params }: { params: { lang: string; symbol: string } }): Metadata {
   const zh = params.lang === "zh";
   return { title: `${params.symbol} · ${zh ? "标的详情" : "Ticker"} · Prismo` };
-}
-
-function InfoHint({ text }: { text: string }) {
-  return (
-    <span className="group relative inline-flex">
-      <span
-        tabIndex={0}
-        aria-label={text}
-        className="grid h-4 w-4 cursor-help place-items-center rounded-full text-[10px] font-bold text-neutral-500 ring-1 ring-inset ring-neutral-500/70 transition hover:text-cream hover:ring-neutral-300 focus:text-cream focus:outline-none focus:ring-neutral-300"
-      >
-        i
-      </span>
-      <span className="pointer-events-none absolute left-1/2 top-5 z-30 hidden w-72 -translate-x-1/2 rounded-lg bg-elevated px-3 py-2 text-[11px] font-normal leading-relaxed text-neutral-300 shadow-xl ring-1 ring-inset ring-line group-hover:block group-focus-within:block">
-        {text}
-      </span>
-    </span>
-  );
 }
 
 export default function TickerDetail({ params }: { params: { lang: string; symbol: string } }) {
@@ -121,59 +103,20 @@ export default function TickerDetail({ params }: { params: { lang: string; symbo
           zh={zh}
           fill
           overview={
-            <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl bg-card/45 ring-1 ring-inset ring-line">
-              <div className="flex shrink-0 items-center justify-between gap-3 border-b border-line px-4 py-3">
-                <div className="min-w-0">
-                  <h2 className="flex items-center gap-1.5 font-display text-[15px] font-bold leading-none text-cream">
-                    {zh ? "整体数据" : "Overview"}
-                    <InfoHint
-                      text={
-                        zh
-                          ? "展示该标的在近一年里的净情绪、讨论度、聪明钱与散户分歧，以及 AI 识别的异常波动归因。当前更早日期使用稳定 mock 补全，用于呈现一年尺度。"
-                          : "Shows one-year net sentiment, discussion volume, smart-money vs retail divergence, and AI anomaly attribution. Earlier missing dates are filled with stable mock data for the one-year view."
-                      }
-                    />
-                  </h2>
-                </div>
-                <span className="shrink-0 rounded-md bg-reddit/12 px-2 py-1 text-[11px] font-semibold text-reddit ring-1 ring-inset ring-reddit/25">
-                  {zh ? "Overview" : "Overview"}
-                </span>
-              </div>
-              <div className="min-h-0 flex-1 overflow-y-auto p-3">
-                <KolModule
-                  flow={flow}
-                  sentiment={getKolSentimentDaily(ticker.ticker)}
-                  volume={getKolVolumeDaily(ticker.ticker)}
-                  retailSentiment={getRetailSentimentDaily(ticker.ticker)}
-                  retailVolume={getRetailVolumeDaily(ticker.ticker)}
-                  retailNewcomers={getRetailNewcomersDaily(ticker.ticker)}
-                  overall={overall}
-                  targetPrices={getKolTargetPrices(ticker.ticker)}
-                />
-                {topInv && topInv.investors.length > 0 && (
-                  <div className="mt-4 overflow-hidden rounded-xl bg-ink/35 ring-1 ring-inset ring-line">
-                    <div className="border-b border-line px-4 py-3">
-                      <h3 className="flex items-center gap-1.5 font-display text-[14px] font-bold text-cream">
-                        {zh ? "该标的值得参考的投资者" : "Investors worth following on this ticker"}
-                        <InfoHint
-                          text={
-                            zh
-                              ? "覆盖本标的的博主列表，按跨标的选股技能和相关覆盖质量排序。"
-                              : "Authors covering this ticker, ranked by cross-ticker stock-picking skill and coverage quality."
-                          }
-                        />
-                      </h3>
-                    </div>
-                    <div className="px-4 py-2">
-                      <TopInvestors board={topInv} zh={zh} />
-                    </div>
-                  </div>
-                )}
-                <p className="mt-3 border-t border-line/70 pt-2 text-[10.5px] text-neutral-600">
-                  {zh ? "异动 / 信号 / 风险等模块为演示数据（mock），用于展示模块设计；接入真实管线后替换。" : "Modules use mock demo data to showcase the design; to be wired to the real pipeline."}
-                </p>
-              </div>
-            </div>
+            <TickerOverviewPanel
+              zh={zh}
+              flow={flow}
+              sentiment={getKolSentimentDaily(ticker.ticker)}
+              volume={getKolVolumeDaily(ticker.ticker)}
+              retailSentiment={getRetailSentimentDaily(ticker.ticker)}
+              retailVolume={getRetailVolumeDaily(ticker.ticker)}
+              retailNewcomers={getRetailNewcomersDaily(ticker.ticker)}
+              kolNewcomers={getKolNewcomersDaily(ticker.ticker)}
+              overall={overall}
+              targetPrices={getKolTargetPrices(ticker.ticker)}
+              argumentsData={getKolArguments(ticker.ticker)}
+              topInvestors={topInv}
+            />
           }
         />
       </div>

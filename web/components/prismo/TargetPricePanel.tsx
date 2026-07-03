@@ -1,12 +1,12 @@
 "use client";
 
 // 「整体数据」底部子面板：KOL 买入/卖出(目标)价位 时间线。
-//   x = 下达日期、y = 价格，叠**真实股价折线**；买入=青、卖出·目标=珊瑚；**区间**=竖条、确切价=圆点。
+//   x = 下达日期、y = 价格，叠**真实股价折线**；买入=青、卖出·目标=珊瑚；区间=竖条，单一价位=圆点。
 //   同一天多条：y 按价位纵向分开 + 小幅左右抖动 + 半透明叠加(重叠=共识)。现价虚线基准。
 //   悬浮 tooltip 出详情：作者 / 平台·日期 / 价位(±现价%) / 操作周期(短中长+原话) / 简单依据。
 import { useMemo, useState } from "react";
 import ReactECharts from "echarts-for-react";
-import type { KolTargetData, TargetMark } from "@/lib/mockDetail";
+import type { KolSource, KolTargetData, TargetMark } from "@/lib/mockDetail";
 import { SOURCE } from "./kolShared";
 
 const BUY = "#57D7BA";
@@ -16,7 +16,11 @@ const fmtRange = (lo: number, hi: number) => (hi > lo ? `$${fmtPrice(lo)}–$${f
 const BUCKET_ZH: Record<string, string> = { short: "短线", mid: "中线", long: "长线" };
 const BUCKET_EN: Record<string, string> = { short: "short", mid: "mid", long: "long" };
 const mmdd = (ds: string) => { const [, m, d] = (ds || "").split("-"); return m ? `${+m}/${+d}` : ds; };
-const PRICE_ZOOMS = [1, 2, 4, 8] as const;
+const DEFAULT_PRICE_ZOOM = 2;
+const BUCKETS = ["short", "mid", "long"] as const;
+const PLATFORM_ORDER: KolSource[] = ["x", "youtube", "reddit", "xueqiu", "toss", "yahoojp"];
+type BucketFilter = "all" | (typeof BUCKETS)[number];
+type SourceFilter = "all" | KolSource;
 
 // 同一天多条 → 稳定左右抖动（±0.15 天），按作者+侧+价位散开，避免重叠成一团。
 function jitterMs(m: TargetMark): number {
@@ -26,18 +30,132 @@ function jitterMs(m: TargetMark): number {
   return ((h % 1000) / 1000 - 0.5) * 0.3 * 864e5;
 }
 
+function TargetDistributionChart({ marks, current, zh }: { marks: TargetMark[]; current: number | null; zh: boolean }) {
+  const option = useMemo(() => {
+    const points = marks.map((m) => ({ mark: m, mid: (m.lo + m.hi) / 2 })).filter((p) => p.mid > 0);
+    const prices = [...points.map((p) => p.mid), ...(current ? [current] : [])];
+    if (!points.length || !prices.length) return { backgroundColor: "transparent" };
+    const rawMin = Math.min(...prices);
+    const rawMax = Math.max(...prices);
+    const span = rawMax - rawMin || rawMax * 0.2 || 1;
+    const min = Math.max(0, rawMin - span * 0.12);
+    const max = rawMax + span * 0.12;
+    const binCount = Math.max(4, Math.min(9, Math.ceil(Math.sqrt(points.length) * 1.8)));
+    const step = (max - min) / binCount || 1;
+    const labels = Array.from({ length: binCount }, (_, i) => {
+      const a = min + step * i;
+      const b = i === binCount - 1 ? max : min + step * (i + 1);
+      return `$${fmtPrice(a)}–${fmtPrice(b)}`;
+    });
+    const buy = Array(binCount).fill(0);
+    const sell = Array(binCount).fill(0);
+    for (const p of points) {
+      const idx = Math.max(0, Math.min(binCount - 1, Math.floor((p.mid - min) / step)));
+      if (p.mark.kind === "buy") buy[idx] += 1;
+      else sell[idx] += 1;
+    }
+    const currentIdx = current ? Math.max(0, Math.min(binCount - 1, Math.floor((current - min) / step))) : null;
+    return {
+      backgroundColor: "transparent",
+      grid: { left: 6, right: 12, top: 8, bottom: 28, containLabel: true },
+      tooltip: {
+        trigger: "axis",
+        axisPointer: { type: "shadow" },
+        backgroundColor: "rgba(20,20,20,0.96)",
+        borderColor: "#2a2d2f",
+        borderWidth: 1,
+        textStyle: { color: "#e5e5e5", fontSize: 11 },
+        extraCssText: "border-radius:8px;max-width:240px;white-space:normal",
+        formatter: (ps: any[]) => {
+          const idx = ps?.[0]?.dataIndex ?? 0;
+          return `<b>${labels[idx]}</b><br/><span style="color:${BUY}">●</span> ${zh ? "买入" : "Buy"} <b>${buy[idx]}</b><br/><span style="color:${SELL}">●</span> ${zh ? "卖出/目标" : "Sell/target"} <b>${sell[idx]}</b>${currentIdx === idx ? `<br/><span style="color:#9a9da1">${zh ? "现价所在区间" : "Current price bin"}</span>` : ""}`;
+        },
+      },
+      xAxis: {
+        type: "category",
+        data: labels,
+        axisLine: { lineStyle: { color: "#2a2d2f" } },
+        axisTick: { show: false },
+        axisLabel: { color: "#73757a", fontSize: 9, interval: 0, rotate: labels.length > 5 ? 18 : 0 },
+      },
+      yAxis: {
+        type: "value",
+        minInterval: 1,
+        axisLine: { show: false },
+        axisTick: { show: false },
+        axisLabel: { color: "#73757a", fontSize: 9 },
+        splitLine: { lineStyle: { color: "#1d1f21" } },
+      },
+      series: [
+        {
+          name: zh ? "买入" : "Buy",
+          type: "bar",
+          data: buy,
+          itemStyle: { color: BUY, opacity: 0.82, borderRadius: [2, 2, 0, 0] },
+          barMaxWidth: 18,
+          markLine: currentIdx != null ? {
+            silent: true,
+            symbol: "none",
+            lineStyle: { color: "#9a9da1", type: "dashed", width: 1 },
+            label: { color: "#c2c4c7", fontSize: 9, formatter: `${zh ? "现价" : "Now"} $${fmtPrice(current!)}` },
+            data: [{ xAxis: labels[currentIdx] }],
+          } : undefined,
+        },
+        {
+          name: zh ? "卖出/目标" : "Sell/target",
+          type: "bar",
+          data: sell,
+          itemStyle: { color: SELL, opacity: 0.82, borderRadius: [2, 2, 0, 0] },
+          barMaxWidth: 18,
+        },
+      ],
+    };
+  }, [marks, current, zh]);
+
+  if (!marks.length) return null;
+  return (
+    <div className="mt-3 border-t border-line/50 pt-2">
+      <div className="mb-1 flex items-center justify-between gap-3 px-1">
+        <span className="text-[11.5px] font-semibold text-neutral-400">{zh ? "目标价分布" : "Target price distribution"}</span>
+        <span className="text-[10px] text-neutral-600">{zh ? "同筛选条件 · 区间计数" : "same filters · binned"}</span>
+      </div>
+      <ReactECharts
+        option={option}
+        style={{ height: 148, width: "100%" }}
+        opts={{ renderer: "canvas" }}
+        onChartReady={(c: any) => { requestAnimationFrame(() => { try { c.resize(); } catch {} }); }}
+        notMerge
+      />
+    </div>
+  );
+}
+
 export function TargetPricePanel({ data, zh }: { data: KolTargetData; zh: boolean }) {
   const { current, priceLine, marks } = data;
-  const [priceZoom, setPriceZoom] = useState<(typeof PRICE_ZOOMS)[number]>(2);
+  const [bucket, setBucket] = useState<BucketFilter>("all");
+  const [source, setSource] = useState<SourceFilter>("all");
+
+  const sourceOptions = useMemo(
+    () => PLATFORM_ORDER.filter((s) => marks.some((m) => m.source === s)),
+    [marks]
+  );
+  const filteredMarks = useMemo(
+    () => marks.filter((m) => (bucket === "all" || m.bucket === bucket) && (source === "all" || m.source === source)),
+    [marks, bucket, source]
+  );
 
   const option = useMemo(() => {
     const lineData = priceLine.map((p) => [+new Date(p.day), p.close] as [number, number]);
-    const markData = marks.map((m) => ({ value: [+new Date(m.date) + jitterMs(m), m.lo, m.hi] }));
+    const markData = filteredMarks.map((m) => ({
+      value: [+new Date(m.date) + jitterMs(m), m.lo, m.hi],
+      opinionId: m.opinionId,
+      date: m.date,
+    }));
 
-    const tsAll = [...lineData.map((d) => d[0]), ...marks.map((m) => +new Date(m.date))].filter((n) => n > 0);
+    const tsAll = [...lineData.map((d) => d[0]), ...filteredMarks.map((m) => +new Date(m.date))].filter((n) => n > 0);
     const prices = [
       ...lineData.map((d) => d[1]),
-      ...marks.flatMap((m) => [m.lo, m.hi]),
+      ...filteredMarks.flatMap((m) => [m.lo, m.hi]),
       ...(current ? [current] : []),
     ].filter((n) => n > 0);
     if (!prices.length) return { backgroundColor: "transparent" };
@@ -49,7 +167,7 @@ export function TargetPricePanel({ data, zh }: { data: KolTargetData; zh: boolea
     const sortedPrices = [...prices].sort((a, b) => a - b);
     const median = sortedPrices[Math.floor(sortedPrices.length / 2)] ?? yLo;
     const center = current && current > 0 ? current : median;
-    const visibleSpan = fullSpan / priceZoom;
+    const visibleSpan = fullSpan / DEFAULT_PRICE_ZOOM;
     let zoomStart = Math.max(yMin, center - visibleSpan / 2);
     let zoomEnd = Math.min(yMax, center + visibleSpan / 2);
     if (zoomEnd - zoomStart < visibleSpan) {
@@ -68,7 +186,7 @@ export function TargetPricePanel({ data, zh }: { data: KolTargetData; zh: boolea
         textStyle: { color: "#e5e5e5", fontSize: 11 },
         extraCssText: "border-radius:8px;max-width:260px;white-space:normal",
         formatter: (p: any) => {
-          const m: TargetMark | undefined = marks[p.dataIndex];
+          const m: TargetMark | undefined = filteredMarks[p.dataIndex];
           if (!m) return "";
           const color = m.kind === "buy" ? BUY : SELL;
           const kind = m.kind === "buy" ? (zh ? "买入" : "Buy") : (zh ? "卖出/目标" : "Sell/target");
@@ -84,6 +202,7 @@ export function TargetPricePanel({ data, zh }: { data: KolTargetData; zh: boolea
           if (horizon || bk) html += `<div style="color:#cfcfcf;margin-top:2px">${zh ? "周期" : "Horizon"}: ${horizon}${bk ? `（${bk}）` : ""}</div>`;
           if (reason) html += `<div style="color:#9a9da1;margin-top:3px;border-top:1px solid #2a2d2f;padding-top:4px">${reason.slice(0, 90)}</div>`;
           else if (m.priceRaw) html += `<div style="color:#6b6e72;margin-top:3px;font-size:10px">“${m.priceRaw}”</div>`;
+          if (m.opinionId) html += `<div style="color:#57D7BA;margin-top:5px;font-size:10px">${zh ? "点击在右侧打开正文" : "Click to open the post here"}</div>`;
           return html;
         },
       },
@@ -108,17 +227,6 @@ export function TargetPricePanel({ data, zh }: { data: KolTargetData; zh: boolea
       },
       dataZoom: [
         {
-          type: "inside",
-          yAxisIndex: 0,
-          filterMode: "none",
-          startValue: priceZoom === 1 ? yMin : zoomStart,
-          endValue: priceZoom === 1 ? yMax : zoomEnd,
-          zoomOnMouseWheel: true,
-          moveOnMouseMove: true,
-          moveOnMouseWheel: true,
-          preventDefaultMouseMove: true,
-        },
-        {
           type: "slider",
           yAxisIndex: 0,
           filterMode: "none",
@@ -126,8 +234,9 @@ export function TargetPricePanel({ data, zh }: { data: KolTargetData; zh: boolea
           top: 28,
           bottom: 22,
           width: 11,
-          startValue: priceZoom === 1 ? yMin : zoomStart,
-          endValue: priceZoom === 1 ? yMax : zoomEnd,
+          startValue: zoomStart,
+          endValue: zoomEnd,
+          zoomLock: false,
           showDataShadow: false,
           showDetail: false,
           brushSelect: false,
@@ -168,7 +277,7 @@ export function TargetPricePanel({ data, zh }: { data: KolTargetData; zh: boolea
           clip: true,
           z: 5,
           renderItem: (params: any, api: any) => {
-            const m: TargetMark | undefined = marks[params.dataIndex];
+            const m: TargetMark | undefined = filteredMarks[params.dataIndex];
             if (!m) return null;
             const color = m.kind === "buy" ? BUY : SELL;
             const ts = api.value(0);
@@ -176,11 +285,12 @@ export function TargetPricePanel({ data, zh }: { data: KolTargetData; zh: boolea
             const pHi = api.coord([ts, api.value(2)]);
             const h = Math.abs(pLo[1] - pHi[1]);
             if (h < 5) {
-              return { type: "circle", shape: { cx: pLo[0], cy: pLo[1], r: 4.5 }, style: { fill: color, stroke: "#141414", lineWidth: 1 } };
+              return { type: "circle", cursor: "pointer", shape: { cx: pLo[0], cy: pLo[1], r: 4.5 }, style: { fill: color, stroke: "#141414", lineWidth: 1 } };
             }
             const w = 7;
             return {
               type: "group",
+              cursor: "pointer",
               children: [
                 { type: "rect", shape: { x: pLo[0] - w / 2, y: pHi[1], width: w, height: h, r: 2 }, style: { fill: color, opacity: 0.3, stroke: color, lineWidth: 1 } },
                 { type: "line", shape: { x1: pLo[0] - w / 2, y1: pHi[1], x2: pLo[0] + w / 2, y2: pHi[1] }, style: { stroke: color, lineWidth: 1.4 } },
@@ -191,7 +301,7 @@ export function TargetPricePanel({ data, zh }: { data: KolTargetData; zh: boolea
         },
       ],
     };
-  }, [priceLine, marks, current, zh, priceZoom]);
+  }, [priceLine, filteredMarks, current, zh]);
 
   if (!marks.length && !priceLine.length) return null;
 
@@ -199,41 +309,80 @@ export function TargetPricePanel({ data, zh }: { data: KolTargetData; zh: boolea
     <div className="mt-4 border-t border-line/60 pt-3">
       <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1 px-1">
         <span className="text-[11.5px] font-semibold text-neutral-400">{zh ? "买入 / 卖出价 时间线" : "Buy / sell price timeline"}</span>
-        <span className="text-[10.5px] text-neutral-600">{zh ? "近 3 个月 · 悬浮看作者/依据/周期 · 现价剔噪" : "last 3mo · hover for author/why/horizon"}</span>
+        <span className="text-[10.5px] text-neutral-600">
+          {zh ? "近 3 个月 · 悬浮看作者/依据/周期 · 右侧缩放条缩放价格轴" : "last 3mo · hover for author/why/horizon · use the right zoom bar"}
+        </span>
         <span className="ml-auto flex items-center gap-2.5 text-[10px] text-neutral-500">
           <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: BUY }} />{zh ? "买入" : "Buy"}</span>
           <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: SELL }} />{zh ? "卖出/目标" : "Sell/target"}</span>
           <span className="flex items-center gap-1"><span className="inline-block h-3 w-[5px] rounded-sm ring-1 ring-inset ring-neutral-500" />{zh ? "区间" : "range"}</span>
-          <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-neutral-500" />{zh ? "确切价" : "exact"}</span>
           <span className="flex items-center gap-1"><span className="inline-block h-px w-3 bg-neutral-500" />{zh ? "股价" : "price"}</span>
         </span>
-        <span className="flex items-center gap-1 rounded-md bg-elevated/50 p-0.5 text-[10.5px] ring-1 ring-inset ring-line" title={zh ? "价格轴缩放" : "Price-axis zoom"}>
-          <span className="px-1.5 text-neutral-600">{zh ? "价格" : "Price"}</span>
-          {PRICE_ZOOMS.map((z) => (
+      </div>
+      <div className="mb-2 flex flex-wrap items-center gap-2 px-1">
+        <div className="inline-flex rounded-md bg-elevated/50 p-0.5 text-[10.5px] ring-1 ring-inset ring-line">
+          <button
+            type="button"
+            onClick={() => setBucket("all")}
+            className={`rounded px-2 py-0.5 font-semibold transition ${bucket === "all" ? "bg-card text-reddit ring-1 ring-inset ring-line" : "text-neutral-500 hover:text-neutral-300"}`}
+          >
+            {zh ? "全部周期" : "All horizons"}
+          </button>
+          {BUCKETS.map((b) => (
             <button
-              key={z}
+              key={b}
               type="button"
-              onClick={() => setPriceZoom(z)}
-              className={`rounded px-1.5 py-0.5 font-mono font-semibold transition ${
-                priceZoom === z ? "bg-[#57D7BA]/12 text-[#57D7BA] ring-1 ring-inset ring-[#57D7BA]/55" : "text-neutral-500 hover:text-neutral-300"
-              }`}
+              onClick={() => setBucket(b)}
+              className={`rounded px-2 py-0.5 font-semibold transition ${bucket === b ? "bg-card text-reddit ring-1 ring-inset ring-line" : "text-neutral-500 hover:text-neutral-300"}`}
             >
-              {z}×
+              {zh ? BUCKET_ZH[b] : BUCKET_EN[b]}
             </button>
           ))}
-        </span>
+        </div>
+        <div className="inline-flex rounded-md bg-elevated/50 p-0.5 text-[10.5px] ring-1 ring-inset ring-line">
+          <button
+            type="button"
+            onClick={() => setSource("all")}
+            className={`rounded px-2 py-0.5 font-semibold transition ${source === "all" ? "bg-card text-reddit ring-1 ring-inset ring-line" : "text-neutral-500 hover:text-neutral-300"}`}
+          >
+            {zh ? "全部平台" : "All sources"}
+          </button>
+          {sourceOptions.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setSource(s)}
+              className={`rounded px-2 py-0.5 font-semibold transition ${source === s ? "bg-card text-reddit ring-1 ring-inset ring-line" : "text-neutral-500 hover:text-neutral-300"}`}
+            >
+              {SOURCE[s].label}
+            </button>
+          ))}
+        </div>
       </div>
-      {marks.length ? (
-        <ReactECharts
-          option={option}
-          style={{ height: 250, width: "100%" }}
-          opts={{ renderer: "canvas" }}
-          onChartReady={(c: any) => { requestAnimationFrame(() => { try { c.resize(); } catch {} }); }}
-          notMerge
-        />
+      {filteredMarks.length ? (
+        <>
+          <ReactECharts
+            option={option}
+            style={{ height: 250, width: "100%" }}
+            opts={{ renderer: "canvas" }}
+            onChartReady={(c: any) => { requestAnimationFrame(() => { try { c.resize(); } catch {} }); }}
+            onEvents={{
+              click: (p: any) => {
+                if (p?.seriesName !== "marks" || !p?.data?.opinionId) return;
+                window.dispatchEvent(new CustomEvent("prismo:open-opinion", {
+                  detail: { opinionId: p.data.opinionId, day: p.data.date },
+                }));
+              },
+            }}
+            notMerge
+          />
+          <TargetDistributionChart marks={filteredMarks} current={current} zh={zh} />
+        </>
       ) : (
         <p className="px-1 py-6 text-center text-[12px] text-neutral-600">
-          {zh ? "暂无明确买卖价位（KOL 多数只给方向、不给具体价位）" : "No explicit buy/sell prices yet"}
+          {marks.length
+            ? (zh ? "没有符合筛选的目标价" : "No target prices match the filters")
+            : (zh ? "暂无明确买卖价位（KOL 多数只给方向、不给具体价位）" : "No explicit buy/sell prices yet")}
         </p>
       )}
     </div>

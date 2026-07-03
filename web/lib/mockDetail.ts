@@ -407,9 +407,9 @@ export type RegionMock = ReturnType<typeof getRegionMock>;
 
 // =====================================================================
 // 第 1 块：个体观点（主观 × KOL）—— 日 K 线 + 每日 KOL 观点气泡（mock）
-// 来源 X / YouTube / Reddit / 雪球；气泡大小 ∝ 互动数。真实管线到位后替换。
+// 来源 X / YouTube / Reddit / 雪球 / Toss / Yahoo JP；气泡大小 ∝ 互动数。真实管线到位后替换。
 // =====================================================================
-export type KolSource = "x" | "youtube" | "reddit" | "xueqiu";
+export type KolSource = "x" | "youtube" | "reddit" | "xueqiu" | "toss" | "yahoojp";
 export type Stance = "bull" | "bear" | "neutral";
 
 // X/Twitter 推文的逐项互动数（用于卡片底部的图标行；其他源仍只用合计 interactions）。
@@ -489,6 +489,7 @@ export interface KolJudgment {
 // 「整体数据 · 目标价时间线」一个标记（一条判断的买入侧或卖出侧）：日期 × 价格(区间)。
 export interface TargetMark {
   source: KolSource;
+  opinionId?: string; // 对应 OpinionExplorer 里的观点 id，用于图表点击后在站内打开正文
   author: string;
   kind: "buy" | "sell"; // 买入 / 卖出·目标
   lo: number; // 价格区间下界（确切价 hi==lo）
@@ -528,6 +529,8 @@ const KOL_AUTHORS: Record<KolSource, string[]> = {
   youtube: ["Meet Kevin", "Tom Nash", "Joseph Carlson", "Ticker Symbol YOU", "Graham Stephan"],
   reddit: ["u/DeepFvalue", "u/wsb_oracle", "u/value_DD_guy", "u/SemiAnalyst", "u/macro_monk"],
   xueqiu: ["不明真相的群众", "梁宏", "云蒙", "Ricky", "处镜如初"],
+  toss: ["토스개미", "장기투자자", "반도체노트", "주식초보", "가치투자"],
+  yahoojp: ["掲示板投資家", "NISA長期派", "半導体ウォッチャー", "個人投資家A", "決算メモ"],
 };
 
 function kolText(topic: Bi, stance: Stance): Bi {
@@ -538,7 +541,7 @@ function kolText(topic: Bi, stance: Stance): Bi {
 
 export function getKolFlow(symbol: string): KolFlow {
   const rnd = rng("KOL:" + symbol);
-  const SOURCES: KolSource[] = ["x", "youtube", "reddit", "xueqiu"];
+  const SOURCES: KolSource[] = ["x", "youtube", "reddit", "xueqiu", "toss", "yahoojp"];
   const WINDOW_DAYS = 16; // 自然日窗口，跳周末后约 11 个交易日（近 2 周）
   const today = new Date("2026-06-22T00:00:00Z"); // 固定参照 → 快照不漂移
   const days: KolCandle[] = [];

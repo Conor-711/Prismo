@@ -4,18 +4,13 @@ import { LanguageSwitcher } from "./LanguageSwitcher";
 import { SidebarSearch } from "./SidebarSearch";
 import { SidebarToggle } from "./SidebarToggle";
 import { SidebarAccount } from "./auth/SidebarAccount";
+import { SidebarCollapsedBehavior } from "./SidebarCollapsedBehavior";
 import type { Locale, Dictionary } from "@/lib/i18n";
 
 export function Sidebar({ dict }: { lang: Locale; dict: Dictionary }) {
   return (
     <aside className="app-sidebar hidden lg:flex fixed inset-y-0 left-0 w-[208px] flex-col border-r border-line bg-surface/60 backdrop-blur z-40">
-      <SidebarToggle
-        action="expand"
-        label="展开侧边栏"
-        className="sidebar-collapsed-expand-hitbox"
-      >
-        <span className="sr-only">展开侧边栏</span>
-      </SidebarToggle>
+      <SidebarCollapsedBehavior />
       <div className="border-b border-line px-3 py-3 shrink-0">
         <div className="sidebar-brand flex items-center gap-2">
           {/* 品牌（占位 P 标，正式 Logo 待设计） */}
