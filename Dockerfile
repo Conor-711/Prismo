@@ -1,21 +1,15 @@
-# Railway 部署：一镜像内跑完整管线(真实数据+样本兜底)→ 构建静态站 → 在 $PORT 提供服务。
+# Railway 部署：使用仓库数据快照构建静态站 → 在 $PORT 提供服务。
 # 用明确的 Dockerfile，避免 Railway Nixpacks 对 Python+Node 混合仓库识别失败。
 FROM node:22-slim
 
-# Python（管线用）
+# 基础工具：xz 用于在 Railway 未拉取 Git LFS 时还原 data/dev.db。
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      python3 python3-venv python3-pip ca-certificates xz-utils \
+      ca-certificates xz-utils \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 ENV DATABASE_URL=sqlite:///./data/dev.db \
     REDDIT_USER_AGENT="redditalpha/0.1 (railway build)"
-
-# ---- 依赖层（利于缓存）----
-COPY pipeline/requirements.txt pipeline/requirements.txt
-RUN python3 -m venv /venv \
-    && /venv/bin/python -m pip install --no-cache-dir --upgrade pip setuptools wheel \
-    && /venv/bin/python -m pip install --no-cache-dir --retries 5 --timeout 120 -r pipeline/requirements.txt
 
 COPY web/package.json web/package-lock.json* web/
 RUN cd web && npm install --no-audit --no-fund
