@@ -1,25 +1,37 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { useEffect, useMemo } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { LocaleLink } from "./i18n/LocaleLink";
 import { useLocale } from "./i18n/LocaleProvider";
-import { stripLang } from "@/lib/i18n";
+import { stripLang, withLang } from "@/lib/i18n";
 import { NAV_GROUPS, navActive } from "./nav";
 
 export function NavLinks() {
   const { rest } = stripLang(usePathname() || "/");
-  const { dict } = useLocale();
-  const items = NAV_GROUPS.flatMap((g) => g.items);
+  const router = useRouter();
+  const { lang, dict } = useLocale();
+  const localizedItems = useMemo(
+    () => NAV_GROUPS.flatMap((g) => g.items).map((item) => ({ ...item, localizedHref: withLang(lang, item.href) })),
+    [lang],
+  );
+
+  useEffect(() => {
+    localizedItems.forEach((item) => router.prefetch(item.localizedHref));
+  }, [router, localizedItems]);
 
   return (
     <nav className="px-3 py-0 space-y-1">
-      {items.map(({ href, key, Icon }) => {
+      {localizedItems.map(({ href, localizedHref, key, Icon }) => {
         const active = navActive(rest, href);
         return (
           <LocaleLink
             key={href}
             href={href}
+            prefetch
             title={dict.nav[key]}
+            onMouseEnter={() => router.prefetch(localizedHref)}
+            onFocus={() => router.prefetch(localizedHref)}
             className={`sb-row group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-[14.5px] transition ${
               active
                 ? "bg-reddit/15 text-reddit font-semibold ring-1 ring-inset ring-reddit/30"

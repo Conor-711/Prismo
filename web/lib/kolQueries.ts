@@ -1,6 +1,6 @@
 // 第 1 块「个体观点 · KOL」的**真实数据**取数层（替换 mock）。
 //   - 价格：price_daily（pipeline/ingest/price_daily.py，Yahoo 日 OHLC）。
-//   - 观点：Reddit（posts+mentions+item_analysis）+ YouTube（yt_video+yt_analysis）+ 雪球（gr_post source=xueqiu）。
+//   - 观点：Reddit（posts+mentions+item_analysis）+ YouTube（yt_video+yt_analysis）+ 雪球/Toss/Yahoo JP（gr_post）。
 //   - X/Twitter：x_opinion + x_reply（pipeline/ingest/x_pull.py 从云端 tw_* 拉进本地；含逐项互动数 + 热门评论）。
 // 数据不足（无价格历史/无观点）时返回 null → 详情页回退 getKolFlow(mock)，保证不空。
 import { all, parseJSON } from "./db";
@@ -113,9 +113,9 @@ interface RawOp {
   en: string;
   url: string;
   avatarKey: string; // 头像 join key：reddit=author_id / youtube=channel_id / 其余=""
-  refKey: string; // kol_refined join key（源生 id：reddit=post id / xueqiu=gr_post id / x=tweet_id）
-  orig?: string; // 原帖原文（native 语言、未翻译；reddit=英文标题 / x=推文 / 雪球=中文；youtube 无原文）
-  reason?: Bi; // YouTube 直接取自 yt_analysis；reddit/x/xueqiu 在 getKolFlowReal 里补
+  refKey: string; // kol_refined join key（源生 id：reddit=post id / xueqiu/Toss/YahooJP=gr_post id / x=tweet_id）
+  orig?: string; // 原帖原文（native 语言、未翻译；reddit=英文标题 / x=推文 / 雪球/Toss/YahooJP=原文；youtube 无原文）
+  reason?: Bi; // YouTube 直接取自 yt_analysis；reddit/x/xueqiu/toss/yahoojp 在 getKolFlowReal 里补
   points?: { zh: string[]; en: string[] };
   metrics?: TweetMetrics; // X 逐项互动数（赞/转/评/引/看/藏）
   ytSegments?: YtSeg[]; // YouTube 完整口播段落（yt_fulltext.segments；多人带说话人）
@@ -367,6 +367,83 @@ function xueqiuOps(symbol: string, since: string, limit = 40): RawOp[] {
   });
 }
 
+function tossOps(symbol: string, since: string, limit = 40): RawOp[] {
+  const rows = safe(
+    () =>
+      all<any>(
+        `SELECT id, author, title, body, url, COALESCE(likes,0) AS likes,
+                COALESCE(comments,0) AS comments, COALESCE(views,0) AS views,
+                COALESCE(sentiment,0) AS senti, stance, created_utc AS created
+           FROM gr_post
+          WHERE source = 'toss' AND ticker = ? AND created_utc >= ?
+          ORDER BY (likes + comments + views * 0.02) DESC, created_utc DESC
+          LIMIT ${limit | 0}`,
+        symbol,
+        since
+      ),
+    []
+  );
+  return rows.map((r) => {
+    const title = stripHtml(String(r.title || ""));
+    const body = stripHtml(String(r.body || ""));
+    const full = [title, body].filter(Boolean).join("\n");
+    const short = title || body.slice(0, 280);
+    return {
+      id: "toss-" + r.id,
+      day: dayOf(r.created),
+      source: "toss" as KolSource,
+      author: r.author || "Toss",
+      interactions: (r.likes || 0) + (r.comments || 0) + Math.round((r.views || 0) * 0.02),
+      stance: stanceOf(r.stance, r.senti),
+      zh: short,
+      en: short,
+      url: r.url || "#",
+      avatarKey: "",
+      refKey: String(r.id),
+      orig: full || short,
+    };
+  });
+}
+
+function yahooJpOps(symbol: string, since: string, limit = 40): RawOp[] {
+  const rows = safe(
+    () =>
+      all<any>(
+        `SELECT id, author, title, body, url, COALESCE(likes,0) AS likes,
+                COALESCE(dislikes,0) AS dislikes, COALESCE(comments,0) AS comments,
+                COALESCE(sentiment,0) AS senti, stance, created_utc AS created, label
+           FROM gr_post
+          WHERE source = 'yahoo_jp' AND ticker = ? AND created_utc >= ?
+          ORDER BY (likes + dislikes + comments) DESC, created_utc DESC
+          LIMIT ${limit | 0}`,
+        symbol,
+        since
+      ),
+    []
+  );
+  return rows.map((r) => {
+    const title = stripHtml(String(r.title || ""));
+    const body = stripHtml(String(r.body || ""));
+    const label = stripHtml(String(r.label || ""));
+    const full = [title, body].filter(Boolean).join("\n");
+    const short = title || body.slice(0, 280);
+    return {
+      id: "yj-" + r.id,
+      day: dayOf(r.created),
+      source: "yahoojp" as KolSource,
+      author: r.author || "Yahoo JP",
+      interactions: (r.likes || 0) + (r.dislikes || 0) + (r.comments || 0),
+      stance: stanceOf(r.stance || label, r.senti),
+      zh: short,
+      en: short,
+      url: r.url || "#",
+      avatarKey: "",
+      refKey: String(r.id),
+      orig: full || short,
+    };
+  });
+}
+
 // X / Twitter（云端 tw_* 拉进本地 x_opinion；pipeline/ingest/x_pull.py）。无情绪标注 → 中性。
 function xOps(symbol: string, since: string, limit = 40): RawOp[] {
   const rows = safe(
@@ -414,6 +491,8 @@ export function getKolFlowReal(symbol: string): KolFlow | null {
     ...redditOps(symbol, since),
     ...youtubeOps(symbol, since),
     ...xueqiuOps(symbol, since),
+    ...tossOps(symbol, since),
+    ...yahooJpOps(symbol, since),
     ...xOps(symbol, since),
   ];
   const refined = refinedMap(symbol);
@@ -508,7 +587,7 @@ function judgmentMap(symbol: string): Map<string, KolJudgment> {
   const bi = (zh: string, en: string): Bi | undefined => (zh || en ? { zh: zh || en, en: en || zh } : undefined);
   const bk = (b: string) => (["short", "mid", "long"].includes(b) ? b : undefined) as KolJudgment["bucket"];
   const m = new Map<string, KolJudgment>();
-  // reddit / x / 雪球：kol_judgment（买入/卖出 各 lo/hi + bucket 来自 LLM）
+  // reddit / x / 雪球 / Toss / Yahoo JP：kol_judgment（买入/卖出 各 lo/hi + bucket 来自 LLM）
   const rows = safe(
     () =>
       all<any>(
@@ -580,15 +659,17 @@ function repliesByTweet(symbol: string): Map<string, TweetReply[]> {
 }
 
 // 标的页「观点浏览器」（OpinionExplorer，筛选+主从阅读）的扁平观点池。
-// 与折线图的 getKolFlowReal 不同：① 取近 ~32 天（覆盖最大 1 个月时间窗）② 不 snap 到交易日（用真实发布日）
+// 与折线图的 getKolFlowReal 不同：① 取近 ~95 天（覆盖目标价时间线点击回正文）② 不 snap 到交易日（用真实发布日）
 // ③ 每条带 relevance（kol_relevance）。源/立场/视角/时间/语言/相关性 的筛选全在前端做。
 export function getKolOpinions(symbol: string): KolOpinion[] {
   return safe(() => {
-    const since = new Date(Date.now() - 32 * 864e5).toISOString().slice(0, 10);
+    const since = new Date(Date.now() - 95 * 864e5).toISOString().slice(0, 10);
     const raw = [
       ...redditOps(symbol, since, 200),
       ...youtubeOps(symbol, since, 80),
       ...xueqiuOps(symbol, since, 200),
+      ...tossOps(symbol, since, 200),
+      ...yahooJpOps(symbol, since, 200),
       ...xOps(symbol, since, 500),
     ];
     const refined = refinedMap(symbol);
@@ -663,9 +744,9 @@ function priceWindow(symbol: string, days: number): { day: string; close: number
   );
 }
 
-// 「整体数据 · 目标价时间线」取数：近 ~3 个月 kol_judgment(reddit/x/雪球) + yt_judgment(youtube)，
+// 「整体数据 · 目标价时间线」取数：近 ~3 个月 kol_judgment(reddit/x/雪球/Toss/Yahoo JP) + yt_judgment(youtube)，
 // 每条判断的买入侧/卖出侧各出一个 TargetMark(日期×价位区间)；叠真实股价折线 + 现价。作者/链接 join 源表，
-// 简单依据(reason)取 kol_refined(reddit/x/雪球) 或 yt_analysis.summary(youtube)；价格按现价 band 二次剔噪。
+// 简单依据(reason)取 kol_refined(reddit/x/雪球/Toss/Yahoo JP) 或 yt_analysis.summary(youtube)；价格按现价 band 二次剔噪。
 export function getKolTargetPrices(symbol: string): KolTargetData {
   return safe(
     () => {
@@ -676,6 +757,15 @@ export function getKolTargetPrices(symbol: string): KolTargetData {
       const bi = (zh: string, en: string): Bi | undefined => (zh || en ? { zh: zh || en, en: en || zh } : undefined);
       const bk = (b: string) => (["short", "mid", "long"].includes(b) ? b : undefined) as TargetMark["bucket"];
       const inBand = (mid: number) => !current || (mid >= current * 0.2 && mid <= current * 5);
+      const opinionId = (source: KolSource, itemId: string | number) => {
+        const id = String(itemId);
+        if (source === "reddit") return `rd-${id}`;
+        if (source === "youtube") return `yt-${id}`;
+        if (source === "xueqiu") return `xq-${id}`;
+        if (source === "toss") return `toss-${id}`;
+        if (source === "yahoojp") return `yj-${id}`;
+        return `x-${id}`;
+      };
       const marks: TargetMark[] = [];
 
       const SRC: { s: KolSource; sql: string; name: (a: string) => string }[] = [
@@ -691,6 +781,14 @@ export function getKolTargetPrices(symbol: string): KolTargetData {
           sql: `SELECT kj.*, g.author AS author, g.url AS url
                   FROM kol_judgment kj JOIN gr_post g ON g.id = kj.item_id
                  WHERE kj.source='xueqiu' AND kj.ticker=? AND kj.created>=?` },
+        { s: "toss", name: (a) => a || "Toss",
+          sql: `SELECT kj.*, g.author AS author, g.url AS url
+                  FROM kol_judgment kj JOIN gr_post g ON g.id = kj.item_id
+                 WHERE kj.source='toss' AND kj.ticker=? AND kj.created>=?` },
+        { s: "yahoojp", name: (a) => a || "Yahoo JP",
+          sql: `SELECT kj.*, g.author AS author, g.url AS url
+                  FROM kol_judgment kj JOIN gr_post g ON g.id = kj.item_id
+                 WHERE kj.source='yahoojp' AND kj.ticker=? AND kj.created>=?` },
       ];
       for (const cfg of SRC) {
         const rows = safe(() => all<any>(cfg.sql, symbol, cutoff), []);
@@ -698,7 +796,7 @@ export function getKolTargetPrices(symbol: string): KolTargetData {
           const ref = refined.get(`${cfg.s}:${r.item_id}`);
           const reason = ref?.reason && (ref.reason.zh || ref.reason.en) ? ref.reason : undefined;
           const base = {
-            source: cfg.s, author: cfg.name(r.author), priceRaw: r.price_raw || undefined,
+            source: cfg.s, opinionId: opinionId(cfg.s, r.item_id), author: cfg.name(r.author), priceRaw: r.price_raw || undefined,
             horizon: bi(r.horizon_zh || "", r.horizon_en || ""), bucket: bk(r.horizon_bucket || ""),
             reason, date: String(r.created || "").slice(0, 10), url: r.url || "#",
           };
@@ -712,6 +810,7 @@ export function getKolTargetPrices(symbol: string): KolTargetData {
       const yt = safe(
         () => all<any>(
           `SELECT yj.target AS target, COALESCE(yj.horizon_zh,'') AS hz, COALESCE(yj.horizon_en,'') AS he,
+                  yj.video_id AS video_id,
                   v.channel AS author, v.url AS url, v.published_utc AS created,
                   COALESCE(a.summary_zh,'') AS sz, COALESCE(a.summary_en,'') AS se
              FROM yt_judgment yj JOIN yt_video v ON v.id = yj.video_id
@@ -724,7 +823,7 @@ export function getKolTargetPrices(symbol: string): KolTargetData {
         if (!rng || !inBand((rng[0] + rng[1]) / 2)) continue;
         const horizon = bi(r.hz, r.he);
         marks.push({
-          source: "youtube", author: r.author || "YouTube", kind: "sell", lo: rng[0], hi: rng[1],
+          source: "youtube", opinionId: opinionId("youtube", r.video_id), author: r.author || "YouTube", kind: "sell", lo: rng[0], hi: rng[1],
           priceRaw: r.target || undefined, horizon, bucket: horizon ? bucketHorizon(`${r.hz} ${r.he}`) : undefined,
           reason: bi(r.sz, r.se), date: String(r.created || "").slice(0, 10), url: r.url || "#",
         });
@@ -805,6 +904,8 @@ export function getKolArguments(symbol: string): WindowedArguments {
       ...redditOps(symbol, cutoff, 200),
       ...youtubeOps(symbol, cutoff, 80),
       ...xueqiuOps(symbol, cutoff, 200),
+      ...tossOps(symbol, cutoff, 200),
+      ...yahooJpOps(symbol, cutoff, 200),
       ...xOps(symbol, cutoff, 200),
     ]) rawIdx.set(`${op.source}:${op.refKey}`, op);
     const refined = refinedMap(symbol);
@@ -824,7 +925,7 @@ export function getKolArguments(symbol: string): WindowedArguments {
       const reason = ref?.reason && (ref.reason.zh || ref.reason.en) ? ref.reason : raw?.reason;
       return {
         source,
-        author: raw?.author || (source === "xueqiu" ? "雪球" : source),
+        author: raw?.author || (source === "xueqiu" ? "雪球" : source === "toss" ? "Toss" : source === "yahoojp" ? "Yahoo JP" : source),
         avatar,
         url: raw?.url || "#",
         interactions: raw?.interactions || 0,
@@ -933,7 +1034,7 @@ export function getRetailSentimentDaily(symbol: string): DailyNet[] {
   );
 }
 
-// 每日讨论度（retail_volume_daily）：7 个平台键（toss 暂为 0，待 Toss 爬虫上线）。供 VolumePanel + RETAIL_VOL_STACK 堆叠。
+// 每日讨论度（retail_volume_daily）：7 个平台键。供 VolumePanel + RETAIL_VOL_STACK 堆叠。
 export interface RetailVol { day: string; total: number; reddit: number; x: number; xueqiu: number; naver: number; yahoojp: number; ptt: number; toss: number; [key: string]: number | string }
 export function getRetailVolumeDaily(symbol: string): RetailVol[] {
   return safe(

@@ -1,6 +1,6 @@
 "use client";
 
-// 投资者榜单：X / YouTube / Reddit / 雪球 四平台的活跃投资者，按影响力（互动/播放）排名。
+// 投资者榜单：X / YouTube / Reddit / 雪球 / Toss / Yahoo JP 的活跃投资者，按影响力（互动/播放）排名。
 // 顶部平台过滤：「全部」= 每平台前若干名预览（可点进单平台看全部）；选中某平台 = 该平台完整榜单。
 import { useState } from "react";
 import { LocaleLink } from "@/components/i18n/LocaleLink";
@@ -18,6 +18,8 @@ const UNIT: Record<KolSource, { zh: string; en: string }> = {
   youtube: { zh: "视频", en: "videos" },
   reddit: { zh: "帖", en: "posts" },
   xueqiu: { zh: "帖", en: "posts" },
+  toss: { zh: "帖", en: "posts" },
+  yahoojp: { zh: "帖", en: "posts" },
 };
 const metricLabel = (src: KolSource, zh: boolean) =>
   src === "youtube" ? (zh ? "播放" : "views") : zh ? "互动" : "interactions";

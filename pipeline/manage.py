@@ -227,7 +227,11 @@ def cmd_gr_crawl(args):
 
 def cmd_gr_tag(args):
     from .analyze.global_retail_tag import tag_all
-    tag_all(batch_size=args.batch, workers=args.workers, only_new=not args.force)
+    only = [t.strip().upper() for t in args.only.split(",")] if getattr(args, "only", None) else None
+    sources = [t.strip() for t in args.source.split(",")] if getattr(args, "source", None) else None
+    regions = [t.strip() for t in args.regions.split(",")] if getattr(args, "regions", None) else None
+    tag_all(batch_size=args.batch, workers=args.workers, only_new=not args.force,
+            only=only, sources=sources, regions=regions)
 
 
 def cmd_gr_rollup(args):
@@ -251,7 +255,8 @@ def cmd_toss(args):
     # Toss(토스증권) 종목 커뮤니티评论 → gr_post(source='toss', region='kr')。游标翻页 RECENT。
     from .ingest.toss import crawl
     only = [t.strip().upper() for t in args.only.split(",")] if getattr(args, "only", None) else None
-    crawl(days=args.days, only=only, max_pages=args.max_pages)
+    crawl(days=args.days, only=only, max_pages=args.max_pages, sleep=args.sleep,
+          commit_pages=args.commit_pages, resume=args.resume)
 
 
 def cmd_youtube_crawl(args):
@@ -310,7 +315,7 @@ def cmd_youtube_creator_view(args):
 
 
 def cmd_kol_refine(args):
-    # KOL 个体观点 AI 提炼+双语（reddit/x/xueqiu 文本源）→ kol_refined。YouTube 复用 yt_analysis。
+    # KOL 个体观点 AI 提炼+双语（reddit/x/xueqiu/toss/yahoojp 文本源）→ kol_refined。YouTube 复用 yt_analysis。
     from .analyze.kol_refine import refine
     sources = [t.strip() for t in args.source.split(",")] if getattr(args, "source", None) else None
     only = [t.strip() for t in args.only.split(",")] if getattr(args, "only", None) else None
@@ -327,7 +332,7 @@ def cmd_kol_viewpoint(args):
 
 
 def cmd_kol_judgment(args):
-    # KOL 目标价+操作周期 抽取（reddit/x/xueqiu 原帖文本，只抽明说）→ kol_judgment。YouTube 复用 yt_judgment。
+    # KOL 目标价+操作周期 抽取（reddit/x/xueqiu/toss/yahoojp 原帖文本，只抽明说）→ kol_judgment。YouTube 复用 yt_judgment。
     from .analyze.kol_judgment import run
     sources = [t.strip() for t in args.source.split(",")] if getattr(args, "source", None) else None
     only = [t.strip() for t in args.only.split(",")] if getattr(args, "only", None) else None
@@ -465,11 +470,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     # 全球散户多区看板（gr-*）
     sp = sub.add_parser("gr-crawl"); sp.add_argument("--per-board", type=int, default=120); sp.add_argument("--since-days", type=int, default=14); sp.add_argument("--regions", type=str, default=None, help="逗号分隔 jp,kr,tw；省略=全部"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker（调试用）"); sp.set_defaults(func=cmd_gr_crawl)
-    sp = sub.add_parser("gr-tag"); sp.add_argument("--batch", type=int, default=15); sp.add_argument("--workers", type=int, default=8); sp.add_argument("--force", action="store_true", help="重打全部（默认只打未打的）"); sp.set_defaults(func=cmd_gr_tag)
+    sp = sub.add_parser("gr-tag"); sp.add_argument("--batch", type=int, default=15); sp.add_argument("--workers", type=int, default=8); sp.add_argument("--force", action="store_true", help="重打全部（默认只打未打的）"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker"); sp.add_argument("--source", type=str, default=None, help="逗号分隔 gr_post.source，如 yahoo_jp,toss"); sp.add_argument("--regions", type=str, default=None, help="逗号分隔 region，如 jp,kr,tw"); sp.set_defaults(func=cmd_gr_tag)
     sp = sub.add_parser("gr-rollup"); sp.add_argument("--window-days", type=int, default=14); sp.set_defaults(func=cmd_gr_rollup)
     sp = sub.add_parser("gr-xueqiu"); sp.add_argument("--path", type=str, default="data/exports/gr_cn_xueqiu.json", help="浏览器导出的雪球帖 JSON"); sp.add_argument("--since-days", type=int, default=14); sp.set_defaults(func=cmd_gr_xueqiu)
     sub.add_parser("gr-quote").set_defaults(func=cmd_gr_quote)
-    sp = sub.add_parser("toss"); sp.add_argument("--days", type=int, default=14, help="爬近 N 天"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker（省略=TOSS_STOCKS 全部）"); sp.add_argument("--max-pages", type=int, default=1500, help="每标的最多翻页数（每页 11 条）"); sp.set_defaults(func=cmd_toss)
+    sp = sub.add_parser("toss"); sp.add_argument("--days", type=int, default=14, help="爬近 N 天"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker（省略=TOSS_STOCKS 全部）"); sp.add_argument("--max-pages", type=int, default=1500, help="每标的最多翻页数（每页 11 条）"); sp.add_argument("--sleep", type=float, default=0.3, help="分页请求间隔秒数"); sp.add_argument("--commit-pages", type=int, default=100, help="每 N 页提交一次，避免大体量标的长跑回滚"); sp.add_argument("--resume", action="store_true", help="基于本地已有 Toss 数据补新并从最旧游标继续向前抓"); sp.set_defaults(func=cmd_toss)
     sp = sub.add_parser("youtube-crawl"); sp.add_argument("--since-hours", type=int, default=24); sp.add_argument("--min-views", type=int, default=None, help="浏览量门槛，省略=用 YT_MIN_VIEWS(默认1000)"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker"); sp.add_argument("--mock", action="store_true", help="无 key 时生成多语种样本"); sp.set_defaults(func=cmd_youtube_crawl)
     sub.add_parser("yt-channels").set_defaults(func=cmd_yt_channels)
     sp = sub.add_parser("youtube-tag"); sp.add_argument("--top-native", type=int, default=2, help="每标的用 Gemini 原生看视频的前 N 条（其余走字幕）"); sp.add_argument("--per-ticker", type=int, default=None, help="每标的最多分析前 N 条(按播放量)；省略=全部。配合 8h/天预算用，按档位跨标的铺开"); sp.add_argument("--force", action="store_true", help="重分析全部（默认只分析未分析的）"); sp.add_argument("--workers", type=int, default=1, help="并发线程数(>1 走并发真看视频，billing 解锁 8h 后用)"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker，只跑这些（如前十讨论度）"); sp.add_argument("--mock", action="store_true"); sp.set_defaults(func=cmd_youtube_tag)
@@ -478,9 +483,9 @@ def build_parser() -> argparse.ArgumentParser:
     sp = sub.add_parser("youtube-digest"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 video_id"); sp.add_argument("--force", action="store_true", help="重跑已有的"); sp.set_defaults(func=cmd_youtube_digest)
     sp = sub.add_parser("youtube-judgment"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker"); sp.add_argument("--workers", type=int, default=8, help="LLM 并发数"); sp.add_argument("--force", action="store_true", help="重抽已有的"); sp.set_defaults(func=cmd_youtube_judgment)
     sp = sub.add_parser("youtube-creator-view"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker"); sp.add_argument("--workers", type=int, default=8, help="LLM 并发数"); sp.add_argument("--force", action="store_true", help="重综合已有的"); sp.set_defaults(func=cmd_youtube_creator_view)
-    sp = sub.add_parser("kol-refine"); sp.add_argument("--source", type=str, default=None, help="逗号分隔，子集 of reddit,x,xueqiu；省略=全部"); sp.add_argument("--per-source", type=int, default=40, help="每标的每源提炼前 N 条(按互动)，默认 40=前端各源 LIMIT"); sp.add_argument("--since-days", type=int, default=20, help="只提炼近 N 天(匹配前端价格窗口)；0=不限"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker"); sp.add_argument("--workers", type=int, default=6, help="LLM 并发数"); sp.add_argument("--force", action="store_true", help="重提炼全部（默认只补未提炼的）"); sp.set_defaults(func=cmd_kol_refine)
+    sp = sub.add_parser("kol-refine"); sp.add_argument("--source", type=str, default=None, help="逗号分隔，子集 of reddit,x,xueqiu,toss,yahoojp；省略=全部"); sp.add_argument("--per-source", type=int, default=40, help="每标的每源提炼前 N 条(按互动)，默认 40=前端各源 LIMIT"); sp.add_argument("--since-days", type=int, default=20, help="只提炼近 N 天(匹配前端价格窗口)；0=不限"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker"); sp.add_argument("--workers", type=int, default=6, help="LLM 并发数"); sp.add_argument("--force", action="store_true", help="重提炼全部（默认只补未提炼的）"); sp.set_defaults(func=cmd_kol_refine)
     sp = sub.add_parser("kol-viewpoint"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker"); sp.add_argument("--workers", type=int, default=8, help="LLM 并发数"); sp.add_argument("--force", action="store_true", help="重分类全部（默认只补未分类的）"); sp.add_argument("--reclassify-other", action="store_true", help="只重判当前 other 行（用新 prompt 把实质观点归到正确视角）"); sp.set_defaults(func=cmd_kol_viewpoint)
-    sp = sub.add_parser("kol-judgment"); sp.add_argument("--source", type=str, default=None, help="逗号分隔，子集 of reddit,x,xueqiu；省略=全部"); sp.add_argument("--per-source", type=int, default=40, help="每标的每源前 N 条(镜像提炼/展示范围)"); sp.add_argument("--since-days", type=int, default=90, help="只抽近 N 天（默认 90=时间线窗口）；0=不限"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker"); sp.add_argument("--workers", type=int, default=6, help="LLM 并发数"); sp.add_argument("--force", action="store_true", help="重抽全部（默认只补未抽的）"); sp.set_defaults(func=cmd_kol_judgment)
+    sp = sub.add_parser("kol-judgment"); sp.add_argument("--source", type=str, default=None, help="逗号分隔，子集 of reddit,x,xueqiu,toss,yahoojp；省略=全部"); sp.add_argument("--per-source", type=int, default=40, help="每标的每源前 N 条(镜像提炼/展示范围)"); sp.add_argument("--since-days", type=int, default=90, help="只抽近 N 天（默认 90=时间线窗口）；0=不限"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker"); sp.add_argument("--workers", type=int, default=6, help="LLM 并发数"); sp.add_argument("--force", action="store_true", help="重抽全部（默认只补未抽的）"); sp.set_defaults(func=cmd_kol_judgment)
     sp = sub.add_parser("tw-sentiment"); sp.add_argument("--batch", type=int, default=20, help="每次 LLM 打多少条"); sp.add_argument("--workers", type=int, default=8, help="LLM 并发数"); sp.add_argument("--limit", type=int, default=None, help="只打前 N（调试）"); sp.add_argument("--force", action="store_true", help="重打全部（默认只打未打分的）"); sp.set_defaults(func=cmd_tw_sentiment)
     sub.add_parser("kol-sentiment").set_defaults(func=cmd_kol_sentiment)
     sub.add_parser("kol-volume").set_defaults(func=cmd_kol_volume)
@@ -491,9 +496,9 @@ def build_parser() -> argparse.ArgumentParser:
     sp = sub.add_parser("overall-signals"); sp.add_argument("--ticker", default="PLTR"); sp.add_argument("--kol-file", default=None, help="KOL 推文抽取 jsonl；默认 /tmp/<ticker>_x6m.jsonl"); sp.add_argument("--window", type=int, default=11); sp.add_argument("--look", type=int, default=14); sp.add_argument("--aspect-days", type=int, default=14); sp.add_argument("--cap", type=int, default=3); sp.add_argument("--skill-dir", default="/tmp", help="技能 z / stance 缓存目录"); sp.add_argument("--recent-days", type=int, default=7); sp.add_argument("--prior-days", type=int, default=21); sp.set_defaults(func=cmd_overall_signals)
     sp = sub.add_parser("narrative-rotation"); sp.add_argument("--db", default=str(ROOT / "data" / "dev.db")); sp.add_argument("--out", default=str(ROOT / "web" / "lib" / "data" / "narrativeRotation.json")); sp.add_argument("--window-days", type=int, default=21); sp.add_argument("--recent-days", type=int, default=7); sp.set_defaults(func=cmd_narrative_rotation)
     sp = sub.add_parser("kol-argument"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker"); sp.add_argument("--workers", type=int, default=8, help="LLM 并发数"); sp.add_argument("--force", action="store_true", help="重综合全部（默认只补未综合的 标的×视角×立场 组）"); sp.set_defaults(func=cmd_kol_argument)
-    sp = sub.add_parser("kol-translate"); sp.add_argument("--source", type=str, default=None, help="逗号分隔，子集 of reddit,x,xueqiu；省略=全部"); sp.add_argument("--per-source", type=int, default=40, help="每标的每源前 N 条(镜像提炼/展示范围)"); sp.add_argument("--since-days", type=int, default=20, help="只译近 N 天；0=不限"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker"); sp.add_argument("--workers", type=int, default=6, help="LLM 并发数"); sp.add_argument("--force", action="store_true", help="重译全部（默认只补未译的）"); sp.set_defaults(func=cmd_kol_translate)
-    sp = sub.add_parser("kol-relevance"); sp.add_argument("--source", type=str, default=None, help="逗号分隔，子集 of reddit,x,xueqiu；省略=全部(+youtube)"); sp.add_argument("--per-source", type=int, default=200, help="每标的每源前 N 条(镜像展示范围)"); sp.add_argument("--since-days", type=int, default=30, help="只打近 N 天；0=不限"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker"); sp.add_argument("--workers", type=int, default=8, help="LLM 并发数"); sp.add_argument("--no-youtube", action="store_true", help="跳过 youtube 源"); sp.add_argument("--force", action="store_true", help="重打全部（默认只补未打分的）"); sp.set_defaults(func=cmd_kol_relevance)
-    sp = sub.add_parser("kol-quality"); sp.add_argument("--source", type=str, default=None, help="逗号分隔，子集 of reddit,x,xueqiu；省略=全部(+youtube)"); sp.add_argument("--per-source", type=int, default=800, help="每标的每源前 N 条(镜像展示范围；质量按 source+item 去重)"); sp.add_argument("--since-days", type=int, default=35, help="只打近 N 天；0=不限"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker"); sp.add_argument("--workers", type=int, default=8, help="LLM 并发数"); sp.add_argument("--no-youtube", action="store_true", help="跳过 youtube 源"); sp.add_argument("--force", action="store_true", help="重打全部（默认只补未打分的）"); sp.set_defaults(func=cmd_kol_quality)
+    sp = sub.add_parser("kol-translate"); sp.add_argument("--source", type=str, default=None, help="逗号分隔，子集 of reddit,x,xueqiu,toss,yahoojp；省略=全部"); sp.add_argument("--per-source", type=int, default=40, help="每标的每源前 N 条(镜像提炼/展示范围)"); sp.add_argument("--since-days", type=int, default=20, help="只译近 N 天；0=不限"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker"); sp.add_argument("--workers", type=int, default=6, help="LLM 并发数"); sp.add_argument("--force", action="store_true", help="重译全部（默认只补未译的）"); sp.set_defaults(func=cmd_kol_translate)
+    sp = sub.add_parser("kol-relevance"); sp.add_argument("--source", type=str, default=None, help="逗号分隔，子集 of reddit,x,xueqiu,toss,yahoojp；省略=全部(+youtube)"); sp.add_argument("--per-source", type=int, default=200, help="每标的每源前 N 条(镜像展示范围)"); sp.add_argument("--since-days", type=int, default=30, help="只打近 N 天；0=不限"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker"); sp.add_argument("--workers", type=int, default=8, help="LLM 并发数"); sp.add_argument("--no-youtube", action="store_true", help="跳过 youtube 源"); sp.add_argument("--force", action="store_true", help="重打全部（默认只补未打分的）"); sp.set_defaults(func=cmd_kol_relevance)
+    sp = sub.add_parser("kol-quality"); sp.add_argument("--source", type=str, default=None, help="逗号分隔，子集 of reddit,x,xueqiu,toss,yahoojp；省略=全部(+youtube)"); sp.add_argument("--per-source", type=int, default=800, help="每标的每源前 N 条(镜像展示范围；质量按 source+item 去重)"); sp.add_argument("--since-days", type=int, default=35, help="只打近 N 天；0=不限"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker"); sp.add_argument("--workers", type=int, default=8, help="LLM 并发数"); sp.add_argument("--no-youtube", action="store_true", help="跳过 youtube 源"); sp.add_argument("--force", action="store_true", help="重打全部（默认只补未打分的）"); sp.set_defaults(func=cmd_kol_quality)
     return p
 
 

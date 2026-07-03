@@ -1,69 +1,165 @@
 "use client";
 
-// 标的「值得参考的投资者」简单排行榜：覆盖该标的的博主，按【跨标的验证过的选股技能 z】排名。
-// 每行：名次 + 头像 + @handle + 当前立场 + 最近一条观点(一句话) + 技能分 z。
-import { useState } from "react";
-import type { TopInvestorBoard, InvestorStance } from "@/lib/topInvestors";
+// 标的「值得参考的投资者」图表：按跨标的验证过的选股技能 z 排名。
+// 主视觉用横向条形图承载技能分，颜色表示该投资者近 30 天对本标的的立场。
+import { useMemo } from "react";
+import ReactECharts from "echarts-for-react";
+import type { TopInvestorBoard, TopInvestor, InvestorStance } from "@/lib/topInvestors";
 
-const STANCE: Record<InvestorStance, { zh: string; en: string; cls: string }> = {
-  bull: { zh: "看多", en: "Bull", cls: "text-bull bg-bull/10 ring-bull/25" },
-  bear: { zh: "看空", en: "Bear", cls: "text-bear bg-bear/10 ring-bear/25" },
-  neutral: { zh: "中性", en: "Neutral", cls: "text-neutral-400 bg-white/[.05] ring-line" },
+const STANCE: Record<InvestorStance, { zh: string; en: string; color: string; soft: string }> = {
+  bull: { zh: "看多", en: "Bull", color: "#57D7BA", soft: "bg-bull/10 text-bull ring-bull/25" },
+  bear: { zh: "看空", en: "Bear", color: "#FF5C6C", soft: "bg-bear/10 text-bear ring-bear/25" },
+  neutral: { zh: "中性", en: "Neutral", color: "#8A949E", soft: "bg-white/[.05] text-neutral-400 ring-line" },
 };
 
-function Avatar({ src, name }: { src: string; name: string }) {
-  const [err, setErr] = useState(false);
-  if (err || !src)
-    return (
-      <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-elevated text-[13px] font-semibold text-neutral-400 ring-1 ring-inset ring-line">
-        {name.charAt(0).toUpperCase()}
-      </div>
-    );
-  return (
-    <img src={src} alt={name} onError={() => setErr(true)}
-      className="h-8 w-8 shrink-0 rounded-full bg-elevated object-cover ring-1 ring-inset ring-line" />
-  );
+const AXIS = "#73757a";
+const LINE = "#2a2d2f";
+const CREAM = "#F1F3F4";
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function callCount(inv: TopInvestor) {
+  return inv.tickerCalls ?? inv.pltrCalls;
+}
+
+function hitRate(inv: TopInvestor) {
+  return inv.tickerHit ?? inv.pltrHit;
 }
 
 export function TopInvestors({ board, zh }: { board: TopInvestorBoard; zh: boolean }) {
-  return (
-    <div>
-      <ol className="divide-y divide-line">
-        {board.investors.map((inv, i) => {
+  const investors = board.investors.slice(0, 8);
+  const chartHeight = Math.max(206, investors.length * 34 + 58);
+  const totalCalls = investors.reduce((sum, inv) => sum + (callCount(inv) ?? 0), 0);
+
+  const option = useMemo(() => {
+    const maxZ = Math.max(1, ...investors.map((inv) => inv.skillZ));
+    const maxAxis = Math.ceil((maxZ + 0.4) * 10) / 10;
+
+    return {
+      backgroundColor: "transparent",
+      grid: { left: 118, right: 54, top: 8, bottom: 24, containLabel: false },
+      tooltip: {
+        trigger: "item",
+        backgroundColor: "rgba(20,20,20,0.96)",
+        borderColor: LINE,
+        borderWidth: 1,
+        padding: [8, 10],
+        textStyle: { color: "#e5e5e5", fontSize: 11 },
+        extraCssText: "border-radius:8px;max-width:320px;white-space:normal",
+        formatter: (p: any) => {
+          const inv: TopInvestor | undefined = investors[p.dataIndex];
+          if (!inv) return "";
           const st = STANCE[inv.stance];
           const latest = inv.latest?.[0];
+          const calls = callCount(inv);
+          const hit = hitRate(inv);
+          const hitText = hit == null ? "—" : `${Math.round(hit * 100)}%`;
+          let html = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">`;
+          html += `<b style="color:${CREAM}">@${escapeHtml(inv.handle)}</b>`;
+          html += `<span style="color:${st.color};font-weight:600">${zh ? st.zh : st.en}</span>`;
+          html += `</div>`;
+          html += `<div style="color:#9a9da1">${zh ? "技能 z" : "Skill z"} <b style="color:${st.color}">${inv.skillZ.toFixed(1)}</b>`;
+          html += ` · ${zh ? "命中率" : "hit"} <b style="color:${CREAM}">${hitText}</b>`;
+          if (calls != null) html += ` · ${calls} ${zh ? "次" : "calls"}`;
+          html += `</div>`;
+          if (latest?.text) {
+            html += `<div style="margin-top:6px;border-top:1px solid ${LINE};padding-top:6px;color:#b8babd;line-height:1.45">${escapeHtml(latest.text).slice(0, 180)}</div>`;
+          }
+          return html;
+        },
+      },
+      xAxis: {
+        type: "value",
+        min: 0,
+        max: maxAxis,
+        axisLine: { show: false },
+        axisTick: { show: false },
+        axisLabel: { color: AXIS, fontSize: 10, formatter: (v: number) => v.toFixed(1) },
+        splitLine: { lineStyle: { color: "rgba(127,127,127,0.1)" } },
+      },
+      yAxis: {
+        type: "category",
+        inverse: true,
+        data: investors.map((inv) => inv.handle),
+        axisTick: { show: false },
+        axisLine: { show: false },
+        axisLabel: {
+          color: CREAM,
+          fontSize: 11,
+          fontWeight: 700,
+          width: 104,
+          overflow: "truncate",
+          formatter: (value: string, index: number) => `{rank|${index + 1}}  @${value}`,
+          rich: {
+            rank: { color: "#57D7BA", fontFamily: "Roboto", fontWeight: 800, width: 14, align: "center" },
+          },
+        },
+      },
+      series: [
+        {
+          type: "bar",
+          name: zh ? "选股技能" : "Skill",
+          barWidth: 14,
+          data: investors.map((inv) => ({
+            value: inv.skillZ,
+            handle: inv.handle,
+            itemStyle: { color: STANCE[inv.stance].color, borderRadius: [0, 6, 6, 0] },
+          })),
+          label: {
+            show: true,
+            position: "right",
+            color: CREAM,
+            fontSize: 11,
+            fontFamily: "Roboto",
+            fontWeight: 800,
+            formatter: (p: any) => `z ${Number(p.value).toFixed(1)}`,
+          },
+          emphasis: { focus: "self" },
+        },
+      ],
+    };
+  }, [investors, zh]);
+
+  return (
+    <div>
+      <ReactECharts
+        option={option}
+        style={{ height: chartHeight, width: "100%" }}
+        opts={{ renderer: "canvas" }}
+        notMerge
+        onEvents={{
+          click: (p: any) => {
+            const handle = p?.data?.handle;
+            if (handle) window.open(`https://x.com/${handle}`, "_blank", "noopener,noreferrer");
+          },
+        }}
+      />
+      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-line/70 pt-2 text-[10.5px] text-neutral-600">
+        <span>
+          {zh ? "盲多基准" : "base"} <b className="font-mono text-neutral-400">{Math.round(board.base * 100)}%</b>
+        </span>
+        <span>
+          {zh ? "样本" : "sample"} <b className="font-mono text-neutral-400">{totalCalls || "—"}</b>
+        </span>
+        {(["bull", "neutral", "bear"] as InvestorStance[]).map((key) => {
+          const st = STANCE[key];
           return (
-            <li key={inv.handle} className="flex items-center gap-3 py-2.5">
-              <span
-                className="w-5 shrink-0 text-center font-mono text-[13px] font-bold tabular"
-                style={{ color: i < 3 ? "#57D7BA" : "#6b6d70" }}
-              >
-                {i + 1}
-              </span>
-              <Avatar src={inv.avatar} name={inv.name} />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <a
-                    href={`https://x.com/${inv.handle}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="min-w-0 truncate text-[13.5px] font-semibold text-cream transition hover:text-reddit"
-                  >
-                    @{inv.handle}
-                  </a>
-                  <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] ring-1 ring-inset ${st.cls}`}>{zh ? st.zh : st.en}</span>
-                </div>
-                {latest && <p className="mt-0.5 truncate text-[11.5px] text-neutral-500">{latest.text}</p>}
-              </div>
-              <div className="shrink-0 text-right">
-                <div className="font-mono text-[14px] font-bold tabular text-[#57D7BA]">z {inv.skillZ.toFixed(1)}</div>
-                <div className="text-[10px] text-neutral-600">{zh ? "选股技能" : "skill"}</div>
-              </div>
-            </li>
+            <span key={key} className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 ring-1 ring-inset ${st.soft}`}>
+              <span className="h-1.5 w-1.5 rounded-full" style={{ background: st.color }} />
+              {zh ? st.zh : st.en}
+            </span>
           );
         })}
-      </ol>
-      <p className="mt-3 border-t border-line pt-2.5 text-[10.5px] text-neutral-600">
+        <span className="ml-auto">{zh ? "点击条形打开 X 主页" : "Click a bar to open X"}</span>
+      </div>
+      <p className="mt-2 text-[10.5px] text-neutral-600">
         {zh
           ? "按博主「跨标的选股技能 z」排名（样本外验证，非单票运气）。参考信号，非投资建议。"
           : "Ranked by cross-ticker stock-picking skill (z, out-of-sample validated). Reference signal, not advice."}

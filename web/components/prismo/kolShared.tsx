@@ -10,19 +10,21 @@ export const SOURCE: Record<KolSource, { color: string; label: string }> = {
   youtube: { color: "#E0A33E", label: "YouTube" },
   reddit: { color: "#E07A55", label: "Reddit" },
   xueqiu: { color: "#5BA3C4", label: "雪球" },
+  toss: { color: "#D6A24A", label: "Toss" },
+  yahoojp: { color: "#C77B9A", label: "Yahoo JP" },
 };
-export const SOURCE_ORDER: KolSource[] = ["x", "youtube", "reddit", "xueqiu"];
+export const SOURCE_ORDER: KolSource[] = ["x", "youtube", "reddit", "xueqiu", "toss", "yahoojp"];
 
 // 每日讨论度堆叠条形图的「平台层」配置（自底向上）。VolumePanel 据此渲染，两种人群口径各一套。
 export interface VolStackItem { key: string; zh: string; en: string; color: string }
-// KOL 视图：X / YouTube / Reddit / 雪球（沿用 SOURCE 配色）。
+// KOL 视图：X / YouTube / Reddit / 雪球（Toss/Yahoo JP 属于散户社区，观点检索单独展示；讨论度仍走整体散户）。
 export const KOL_VOL_STACK: VolStackItem[] = [
   { key: "reddit", zh: "Reddit", en: "Reddit", color: SOURCE.reddit.color },
   { key: "x", zh: "X", en: "X", color: SOURCE.x.color },
   { key: "xueqiu", zh: "雪球", en: "Xueqiu", color: SOURCE.xueqiu.color },
   { key: "youtube", zh: "YouTube", en: "YouTube", color: SOURCE.youtube.color },
 ];
-// 整体散户视图：X / Reddit / 雪球 + 本土散户论坛 Naver(韩) / Yahoo JP / PTT(台) / Toss(韩，预留)。不含 YouTube。
+// 整体散户视图：X / Reddit / 雪球 + 本土散户论坛 Naver(韩) / Yahoo JP / PTT(台) / Toss(韩)。不含 YouTube。
 export const RETAIL_VOL_STACK: VolStackItem[] = [
   { key: "reddit", zh: "Reddit", en: "Reddit", color: SOURCE.reddit.color },
   { key: "x", zh: "X", en: "X", color: SOURCE.x.color },
@@ -72,18 +74,27 @@ export const opinionPoints = (o: KolOpinion, zh: boolean) =>
   (o.points ? (zh ? o.points.zh : o.points.en) : []).filter(Boolean).slice(0, 3);
 
 // 「原文 + 译」取文（原帖卡通用，原帖流与「按 KOL」共用）。
-// 当原文非当前界面语言（CJK 粗判）且有该语言的忠实译文时，默认展示译文，给「看原文」选项。
+// 当原文非当前界面语言且有该语言的忠实译文时，默认展示译文，给「看原文」选项。
+// 不能把 CJK 当成一个桶：中文页面下，韩文/日文原文仍然需要显示中文译文。
 export const CJK_RE = /[一-鿿぀-ヿ가-힯]/;
+const HAN_RE = /[一-鿿]/;
+const JA_KANA_RE = /[぀-ヿ]/;
+const KO_RE = /[가-힯]/;
+const LATIN_RE = /[A-Za-z]/;
+const looksChinese = (s: string) => HAN_RE.test(s) && !JA_KANA_RE.test(s) && !KO_RE.test(s);
+const looksEnglish = (s: string) => LATIN_RE.test(s) && !CJK_RE.test(s);
 export function pickOriginal(
-  o: { orig?: string; text?: Bi; trans?: Bi; quote?: Bi },
+  o: { orig?: string; text?: Bi; trans?: Bi; quote?: Bi; source?: KolSource },
   zh: boolean
 ): { base: string; trans: string; canTranslate: boolean } {
   const pick = (b?: Bi) => (b ? (zh ? b.zh : b.en) : "");
   const base = o.orig || pick(o.text) || pick(o.trans) || pick(o.quote);
   const tr = pick(o.trans) || pick(o.quote) || pick(o.text);
-  const cjk = CJK_RE.test(base);
+  const targetMatches = zh ? looksChinese(tr) : looksEnglish(tr);
+  const sourceIsNonChineseCjk = o.source === "yahoojp" || o.source === "toss";
+  const baseAlreadyTarget = zh ? looksChinese(base) && !sourceIsNonChineseCjk : looksEnglish(base);
   const canTranslate =
-    (zh ? !cjk : cjk) && !!tr && tr.trim() !== base.trim() && (zh ? CJK_RE.test(tr) : !CJK_RE.test(tr));
+    !baseAlreadyTarget && !!tr && tr.trim() !== base.trim() && targetMatches;
   return { base, trans: tr, canTranslate };
 }
 

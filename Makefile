@@ -154,7 +154,8 @@ gr-quote:
 	$(MANAGE) gr-quote
 
 # Toss(토스증권) 종목 커뮤니티评论 → gr_post(source='toss', region='kr')。逆向 Web API、游标翻页 RECENT，无需登录。
-# 标的映射在 pipeline/ingest/toss.py 的 TOSS_STOCKS（先 PLTR）。落库后跑 gr-tag(打情绪)→retail-sentiment/-volume(进散户图)。
+# 标的映射在 pipeline/ingest/toss.py 的 TOSS_STOCKS；大体量标的可调 --resume/--max-pages/--sleep/--commit-pages。
+# 落库后跑 gr-tag(打情绪)→retail-sentiment/-volume/-newcomers(进散户图)。
 # 本地：DATABASE_URL='sqlite:///./data/dev.db' make toss
 toss:
 	$(MANAGE) toss --days 14
@@ -197,7 +198,7 @@ youtube-creator-view:
 	$(MANAGE) youtube-creator-view
 	@echo "" && echo "✅ YouTube 作者×标的综合完成。出站：make site。"
 
-# KOL 个体观点 AI 提炼+双语：把 reddit/x/雪球 照搬的原文 → 「为什么看多/看空 + 2-3 要点」(zh/en) → kol_refined。
+# KOL 个体观点 AI 提炼+双语：把 reddit/x/雪球/Toss 照搬的原文 → 「为什么看多/看空 + 2-3 要点」(zh/en) → kol_refined。
 # 只提炼每标的每源 top-N(默认 20)；增量(只补未提炼)。YouTube 复用 yt_analysis 无需在此。需 DEEPSEEK_API_KEY。
 # 本地：DATABASE_URL='sqlite:///./data/dev.db' make kol-refine
 kol-refine:
@@ -211,7 +212,7 @@ kol-viewpoint:
 	$(MANAGE) kol-viewpoint
 	@echo "" && echo "✅ KOL 视角分类完成。出站：make site（标的页 KOL 模块『按视角』视图）。"
 
-# KOL 目标价+操作周期 抽取：从 reddit/x/雪球 原帖**只抽作者明说**的 买入/卖出/目标价 + 周期 → kol_judgment。
+# KOL 目标价+操作周期 抽取：从 reddit/x/雪球/Toss 原帖**只抽作者明说**的 买入/卖出/目标价 + 周期 → kol_judgment。
 # 反臆造(没明说=空)；增量(只补未抽)。YouTube 复用 yt_judgment 无需在此。需 QWEN_API_KEY(LOW档)。先跑 kol-refine。
 # 本地：DATABASE_URL='sqlite:///./data/dev.db' make kol-judgment（单标的调试 python -m pipeline.analyze.kol_judgment --only NFLX）
 kol-judgment:

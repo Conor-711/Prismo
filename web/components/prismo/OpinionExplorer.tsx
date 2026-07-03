@@ -3,8 +3,8 @@
 // 标的页「个体观点 · KOL」的观点浏览器（替代原 按KOL/按视角/按热度 三 tab）：
 //   顶部 = 筛选条（平台[品牌 logo] / 时间[指定起始日期 + 5 个区间模板] / 语言[简中·英·日·韩·繁中] / 质量）
 //   下方 = 主从布局：左窄列 = 帖文卡列表（头像+handle+开头），右宽栏 = 选中帖的完整正文（含原文/译文切换 + 回原帖）
-// 全部筛选在前端做；默认按「相关性」降序排（最相关的在前）。数据来自 lib/kolQueries.getKolOpinions（近 ~30 天扁平池）。
-import { useMemo, useState } from "react";
+// 全部筛选在前端做；默认按「相关性」降序排（最相关的在前）。数据来自 lib/kolQueries.getKolOpinions。
+import { useEffect, useMemo, useState } from "react";
 import type { KolOpinion, KolSource, KolJudgment, Stance, TweetMetrics, TweetReply } from "@/lib/mockDetail";
 import { Avatar, SOURCE, STANCE, pickOriginal, mmdd } from "./kolShared";
 import { YtReader } from "./YtReader";
@@ -93,7 +93,7 @@ const LENSES: { k: LensKey; zh: string; en: string }[] = [
 const LENS_LABEL: Record<string, { zh: string; en: string }> = Object.fromEntries(
   LENSES.map((l) => [l.k, { zh: l.zh, en: l.en }])
 );
-const PLATFORMS: KolSource[] = ["x", "youtube", "reddit", "xueqiu"];
+const PLATFORMS: KolSource[] = ["x", "youtube", "reddit", "xueqiu", "toss", "yahoojp"];
 // 时间「模板」：一键把常用区间填进起始日期（24h / 3d / 7d / 14d / 1mo）。
 const WINDOWS: { k: string; days: number; zh: string; en: string }[] = [
   { k: "24h", days: 1, zh: "24 小时", en: "24h" },
@@ -105,7 +105,7 @@ const WINDOWS: { k: string; days: number; zh: string; en: string }[] = [
 const DEFAULT_WIN_DAYS = 31; // 默认起始 = 池中最新日往前 1 个月
 // 「只看高质量」不是单一分数线：YouTube 长视频基于完整口播/摘要，65 分已可读；
 // 社区短帖噪声更高，必须更严格，并且要有可见正文或 AI 提炼支撑。
-const QUALITY_MIN_BY_SOURCE: Record<KolSource, number> = { youtube: 65, reddit: 80, x: 80, xueqiu: 80 };
+const QUALITY_MIN_BY_SOURCE: Record<KolSource, number> = { youtube: 65, reddit: 80, x: 80, xueqiu: 80, toss: 80, yahoojp: 80 };
 // 五种完整语言：简体中文 / 英文 / 日语 / 韩文 / 繁体中文
 const LANGS: { k: string; zh: string; en: string }[] = [
   { k: "zh-Hans", zh: "简体中文", en: "简" },
@@ -170,12 +170,14 @@ function Chip({ active, dim, onClick, children }: { active: boolean; dim?: boole
     </button>
   );
 }
-// 平台品牌 logo（用户提供的 PNG，web/public/platform/）：X / YouTube / Reddit / 雪球。圆角小图标。
+// 平台品牌 logo（web/public/platform/）：X / YouTube / Reddit / 雪球 / Toss / Yahoo JP。圆角小图标。
 const PLAT_LOGO: Record<KolSource, string> = {
   x: "/platform/x.png",
   youtube: "/platform/youtube.png",
   reddit: "/platform/reddit.png",
   xueqiu: "/platform/xueqiu.png",
+  toss: "/platform/toss.svg",
+  yahoojp: "/platform/yahoojp.svg",
 };
 function PlatformIcon({ src, size = 14 }: { src: KolSource; size?: number }) {
   return (
@@ -336,11 +338,31 @@ export function OpinionExplorer({
     setShowT(false);
   };
 
+  useEffect(() => {
+    const openOpinion = (event: Event) => {
+      const detail = (event as CustomEvent<{ opinionId?: string; day?: string }>).detail;
+      if (!detail?.opinionId) return;
+      const target = opinions.find((o) => o.id === detail.opinionId);
+      if (!target) return;
+      setQuery("");
+      setPlat(new Set());
+      setLangs(new Set());
+      setStanceFilter(new Set());
+      setSince(detail.day || target.day || "");
+      setHiQ(false);
+      setSort("rel");
+      setSelId(target.id);
+      setShowT(false);
+    };
+    window.addEventListener("prismo:open-opinion", openOpinion);
+    return () => window.removeEventListener("prismo:open-opinion", openOpinion);
+  }, [opinions]);
+
   return (
     <div className={fill ? "flex h-full min-h-0 flex-col" : ""}>
-      {/* Kaito 式顶部工具条：搜索 · 情绪 · 时间 · 语言 · 质量 · 清空。 */}
-      <div className="flex shrink-0 items-center gap-2.5 px-0 py-0">
-        <label className="relative min-w-[300px] max-w-[460px] flex-[1_1_420px]">
+      {/* Kaito 式顶部工具条：左列搜索与观点流对齐；右列承载筛选器。 */}
+      <div className={`grid shrink-0 gap-3 px-0 py-0 lg:items-center ${fill ? "lg:grid-cols-[392px_minmax(0,1fr)]" : "lg:grid-cols-[320px_minmax(0,1fr)]"}`}>
+        <label className="relative min-w-0">
           <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-neutral-600">
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <circle cx="11" cy="11" r="8" />
@@ -354,100 +376,96 @@ export function OpinionExplorer({
             className="h-11 w-full rounded-md bg-elevated/70 pl-9 pr-3 text-[13px] text-cream outline-none ring-1 ring-inset ring-line placeholder:text-neutral-600 focus:ring-reddit/70"
           />
         </label>
-        <button
-          type="button"
-          className="h-11 min-w-[72px] shrink-0 rounded-md bg-reddit px-4 text-[13px] font-bold text-black transition hover:bg-reddit/90"
-        >
-          {zh ? "搜索" : "Search"}
-        </button>
-        <div className="inline-flex h-11 min-w-[342px] shrink-0 items-center gap-1 rounded-md bg-elevated/50 p-1 ring-1 ring-inset ring-line">
-          {STANCE_FILTERS.map((key) => {
-            const meta = STANCE[key];
-            const active = stanceFilter.has(key);
-            return (
-              <button
-                key={key}
-                type="button"
-                onClick={() => { toggle(stanceFilter, setStanceFilter, key); setSelId(null); }}
-                aria-pressed={active}
-                className={`inline-flex h-9 min-w-[106px] flex-1 items-center justify-center gap-1.5 rounded px-3 text-[13px] font-semibold transition ${
-                  active
-                    ? "border border-[#57D7BA]/80 bg-[#57D7BA]/10 text-cream shadow-[0_0_14px_rgb(87_215_186_/_0.12)] ring-1 ring-inset ring-[#57D7BA]/45"
-                    : "border border-transparent text-neutral-500 hover:border-line/80 hover:text-neutral-300"
-                }`}
-              >
-                <span className="h-1.5 w-1.5 rounded-full" style={{ background: meta.color }} />
-                {zh ? meta.zh : meta.en}
-              </button>
-            );
-          })}
-        </div>
-        <Dropdown label={zh ? "时间" : "Time"} value={timeLabel}>
-          {(close) => (
-            <div className="min-w-[150px]">
-              {WINDOWS.map((w) => {
-                const d = shiftDay(maxDay, -(w.days - 1));
-                return (
-                  <MenuItem key={w.k} active={!!d && sinceEff === d} onClick={() => { setSince(d); setSelId(null); close(); }}>
-                    {zh ? w.zh : w.en}
-                  </MenuItem>
-                );
-              })}
-              <div className="my-1 border-t border-line" />
-              <div className="px-2 pb-1 pt-0.5">
-                <span className="text-[10px] uppercase tracking-wide text-neutral-500">{zh ? "自定义起始" : "Custom from"}</span>
-                <input
-                  type="date"
-                  value={sinceEff}
-                  min={minDay || undefined}
-                  max={maxDay || undefined}
-                  onChange={(e) => { setSince(e.target.value); setSelId(null); }}
-                  className="mt-1 w-full rounded-md bg-card px-2 py-1 text-[11.5px] text-cream ring-1 ring-inset ring-line [color-scheme:dark]"
-                />
+        <div className="flex min-w-0 items-center gap-2.5 overflow-x-auto">
+          <div className="inline-flex h-11 min-w-[342px] shrink-0 items-center gap-1 rounded-md bg-elevated/50 p-1 ring-1 ring-inset ring-line">
+            {STANCE_FILTERS.map((key) => {
+              const meta = STANCE[key];
+              const active = stanceFilter.has(key);
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => { toggle(stanceFilter, setStanceFilter, key); setSelId(null); }}
+                  aria-pressed={active}
+                  className={`inline-flex h-9 min-w-[106px] flex-1 items-center justify-center gap-1.5 rounded px-3 text-[13px] font-semibold transition ${
+                    active
+                      ? "border border-[#57D7BA]/80 bg-[#57D7BA]/10 text-cream shadow-[0_0_14px_rgb(87_215_186_/_0.12)] ring-1 ring-inset ring-[#57D7BA]/45"
+                      : "border border-transparent text-neutral-500 hover:border-line/80 hover:text-neutral-300"
+                  }`}
+                >
+                  <span className="h-1.5 w-1.5 rounded-full" style={{ background: meta.color }} />
+                  {zh ? meta.zh : meta.en}
+                </button>
+              );
+            })}
+          </div>
+          <Dropdown label={zh ? "时间" : "Time"} value={timeLabel}>
+            {(close) => (
+              <div className="min-w-[150px]">
+                {WINDOWS.map((w) => {
+                  const d = shiftDay(maxDay, -(w.days - 1));
+                  return (
+                    <MenuItem key={w.k} active={!!d && sinceEff === d} onClick={() => { setSince(d); setSelId(null); close(); }}>
+                      {zh ? w.zh : w.en}
+                    </MenuItem>
+                  );
+                })}
+                <div className="my-1 border-t border-line" />
+                <div className="px-2 pb-1 pt-0.5">
+                  <span className="text-[10px] uppercase tracking-wide text-neutral-500">{zh ? "自定义起始" : "Custom from"}</span>
+                  <input
+                    type="date"
+                    value={sinceEff}
+                    min={minDay || undefined}
+                    max={maxDay || undefined}
+                    onChange={(e) => { setSince(e.target.value); setSelId(null); }}
+                    className="mt-1 w-full rounded-md bg-card px-2 py-1 text-[11.5px] text-cream ring-1 ring-inset ring-line [color-scheme:dark]"
+                  />
+                </div>
               </div>
-            </div>
-          )}
-        </Dropdown>
-        {/* 语言：单下拉（多选） */}
-        <Dropdown label={zh ? "语言" : "Lang"} value={langLabel}>
-          {() => (
-            <div className="min-w-[140px]">
-              <MenuItem active={langs.size === 0} onClick={() => { setLangs(new Set()); setSelId(null); }}>{zh ? "全部" : "All"}</MenuItem>
-              <div className="my-1 border-t border-line" />
-              {LANGS.map((l) => {
-                const on = langs.has(l.k);
-                const dim = !avail.lang.has(l.k);
-                return (
-                  <MenuItem key={l.k} active={on} disabled={dim} onClick={() => { toggle(langs, setLangs, l.k); setSelId(null); }}>
-                    <span className={`grid h-3 w-3 place-items-center rounded-[3px] ring-1 ring-inset ${on ? "bg-[#57D7BA] ring-[#57D7BA]" : "ring-line"}`}>
-                      {on && <svg viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="#0d0d0d" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M5 12l5 5L20 7" /></svg>}
-                    </span>
-                    {zh ? l.zh : l.en}
-                  </MenuItem>
-                );
-              })}
-            </div>
-          )}
-        </Dropdown>
-        <button
-          onClick={() => { setHiQ(!hiQ); setSelId(null); }}
-          className="flex h-11 min-w-[148px] shrink-0 items-center justify-center gap-2 rounded-md px-3.5 text-[13px] font-medium ring-1 ring-inset ring-line transition hover:text-neutral-200"
-          title={zh ? "只展示 AI 判定为高质量(有实质分析)的帖子" : "Only AI-rated high-quality posts"}
-          aria-pressed={hiQ}
-        >
-          <span className={`relative h-3.5 w-6 shrink-0 rounded-full transition ${hiQ ? "bg-[#57D7BA]" : "bg-elevated"}`}>
-            <span className={`absolute top-[3px] h-2 w-2 rounded-full bg-white transition-all ${hiQ ? "left-[13px]" : "left-[3px]"}`} />
-          </span>
-          <span className={hiQ ? "text-cream" : "text-neutral-400"}>{zh ? "高质量" : "Quality"}</span>
-        </button>
-        <button
-          type="button"
-          onClick={resetFilters}
-          disabled={!hasFilter}
-          className="h-11 shrink-0 rounded-md px-3.5 text-[13px] font-semibold text-reddit transition hover:text-cream disabled:text-neutral-700"
-        >
-          {zh ? "清空" : "Clear All"}
-        </button>
+            )}
+          </Dropdown>
+          {/* 语言：单下拉（多选） */}
+          <Dropdown label={zh ? "语言" : "Lang"} value={langLabel}>
+            {() => (
+              <div className="min-w-[140px]">
+                <MenuItem active={langs.size === 0} onClick={() => { setLangs(new Set()); setSelId(null); }}>{zh ? "全部" : "All"}</MenuItem>
+                <div className="my-1 border-t border-line" />
+                {LANGS.map((l) => {
+                  const on = langs.has(l.k);
+                  const dim = !avail.lang.has(l.k);
+                  return (
+                    <MenuItem key={l.k} active={on} disabled={dim} onClick={() => { toggle(langs, setLangs, l.k); setSelId(null); }}>
+                      <span className={`grid h-3 w-3 place-items-center rounded-[3px] ring-1 ring-inset ${on ? "bg-[#57D7BA] ring-[#57D7BA]" : "ring-line"}`}>
+                        {on && <svg viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="#0d0d0d" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M5 12l5 5L20 7" /></svg>}
+                      </span>
+                      {zh ? l.zh : l.en}
+                    </MenuItem>
+                  );
+                })}
+              </div>
+            )}
+          </Dropdown>
+          <button
+            onClick={() => { setHiQ(!hiQ); setSelId(null); }}
+            className="flex h-11 min-w-[148px] shrink-0 items-center justify-center gap-2 rounded-md px-3.5 text-[13px] font-medium ring-1 ring-inset ring-line transition hover:text-neutral-200"
+            title={zh ? "只展示 AI 判定为高质量(有实质分析)的帖子" : "Only AI-rated high-quality posts"}
+            aria-pressed={hiQ}
+          >
+            <span className={`relative h-3.5 w-6 shrink-0 rounded-full transition ${hiQ ? "bg-[#57D7BA]" : "bg-elevated"}`}>
+              <span className={`absolute top-[3px] h-2 w-2 rounded-full bg-white transition-all ${hiQ ? "left-[13px]" : "left-[3px]"}`} />
+            </span>
+            <span className={hiQ ? "text-cream" : "text-neutral-400"}>{zh ? "高质量" : "Quality"}</span>
+          </button>
+          <button
+            type="button"
+            onClick={resetFilters}
+            disabled={!hasFilter}
+            className="h-11 shrink-0 rounded-md px-3.5 text-[13px] font-semibold text-reddit transition hover:text-cream disabled:text-neutral-700"
+          >
+            {zh ? "清空" : "Clear All"}
+          </button>
+        </div>
       </div>
 
       {/* 主从：左列表 / 右侧 overview 或正文。 */}

@@ -280,7 +280,7 @@ def _text_input(v: YtVideo) -> str:
     return f"标的 {v.ticker}。频道《{v.channel}》。\n标题：{v.title}\n简介：{desc}"
 
 
-def tag_text(per_ticker: int = 20, workers: int = 6) -> int:
+def tag_text(per_ticker: int = 20, workers: int = 6, only: set[str] | None = None) -> int:
     """无 Gemini 配额的兜底分析：用 **标题+简介** 跑 DeepSeek(flash) 出双语观点 → yt_analysis(mode=text)。
 
     覆盖 Gemini 没看的视频，至少做到「翻译 + 立场/理由推断」而非照搬原标题。
@@ -290,13 +290,16 @@ def tag_text(per_ticker: int = 20, workers: int = 6) -> int:
     """
     _ensure_tables()
     if not llm.available(llm.LOW):
-        print("[yt-text] 无 DeepSeek key（DEEPSEEK_API_KEY），跳过。", flush=True)
+        print("[yt-text] 无 LOW 档 key，跳过。", flush=True)
         return 0
+    only = {t.strip().upper() for t in only} if only else None
     with session_scope() as s:
         all_vids = list(s.execute(select(YtVideo)).scalars())
         have = set(s.execute(select(YtAnalysis.video_id)).scalars())
     by_tk: dict[str, list[YtVideo]] = {}
     for v in all_vids:
+        if only and (v.ticker or "").upper() not in only:
+            continue
         if v.id in have:
             continue
         by_tk.setdefault(v.ticker, []).append(v)
@@ -319,7 +322,7 @@ def tag_text(per_ticker: int = 20, workers: int = 6) -> int:
         with session_scope() as s:
             for v, res in buf:
                 s.merge(YtAnalysis(video_id=v.id, ticker=v.ticker, mode="text",
-                                   model=f"deepseek:{settings.deepseek_model_low}",
+                                   model=llm.model_label(llm.LOW),
                                    analyzed_at=dt.datetime.utcnow(), **res))
         done += len(buf)
         buf.clear()

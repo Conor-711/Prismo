@@ -10,7 +10,7 @@
 要点：
 - 只翻译**会被展示**的项：取 kol_refine 同一 top-N 候选，且必须已在 `kol_refined`(=已被提炼/展示)。
 - 增量：已有 `trans_zh` 的默认跳过(`--force` 重译)。
-- 便宜档(LOW=千问 qwen-flash)。覆盖 reddit / x / xueqiu；YouTube 复用 `yt_analysis` 双语摘要、无需翻译。
+- 便宜档(LOW=千问 qwen-flash)。覆盖 reddit / x / xueqiu / toss / yahoojp；YouTube 复用 `yt_analysis` 双语摘要、无需翻译。
 
 ⚠ 本地测试：`DATABASE_URL=sqlite:///./data/dev.db` 直接写本地快照(sqlite 自动补列)；
 上云需先在云端加 `trans_zh/trans_en` 列(迁移)，再跑同一步 + cloud-pull。
@@ -18,6 +18,7 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import re
 
 from sqlalchemy import bindparam, text, update
 
@@ -63,6 +64,18 @@ def _norm(d: dict | None) -> dict | None:
     if not zh and not en:
         return None
     return {"zh": zh or en, "en": en or zh}
+
+
+def _parse_text_translation(text: str) -> dict | None:
+    """Parse a plain text fallback in the form `ZH: ... EN: ...`."""
+    if not text:
+        return None
+    m = re.search(r"(?:^|\n)\s*ZH\s*[:：]\s*(.*?)\s*(?:\n\s*EN\s*[:：]\s*|\Z)(.*)", text, re.S | re.I)
+    if not m:
+        return None
+    zh = (m.group(1) or "").strip()
+    en = (m.group(2) or "").strip()
+    return _norm({"zh": zh, "en": en})
 
 
 def _refined_state(sources: list[str], only: set[str] | None) -> dict[tuple[str, str, str], bool]:
@@ -130,11 +143,37 @@ def translate(sources: list[str] | None = None, per_source: int = DEFAULT_PER_SO
         buf.clear()
 
     def _work(r: dict) -> tuple[dict, dict | None]:
+        src = str(r["txt"] or "").strip()
         data = llm.messages_json(
             llm.LOW, TRANS_SYSTEM,
-            f"把下面这条帖子原文完整翻译成中文和英文(不要压缩)：\n\n{r['txt'][:2000]}",
+            f"把下面这条帖子原文完整翻译成中文和英文(不要压缩)：\n\n{src[:2000]}",
             max_tokens=2000)
-        return r, _norm(data)
+        norm = _norm(data)
+        if norm:
+            return r, norm
+
+        data = llm.messages_json(
+            llm.LOW,
+            "Translate the stock community post into Chinese and English. Output only JSON: "
+            '{"zh":"中文完整翻译","en":"full English translation"}.',
+            f"Post:\n{src[:1800]}",
+            max_tokens=1800)
+        norm = _norm(data)
+        if norm:
+            return r, norm
+
+        text_out = llm.chat(
+            llm.LOW,
+            "Translate the stock community post fully. Do not summarize.",
+            f"Post:\n{src[:1800]}\n\nOutput exactly:\nZH:\n<Chinese translation>\nEN:\n<English translation>",
+            max_tokens=1800,
+            temperature=0.1)
+        norm = _parse_text_translation(text_out)
+        if norm:
+            return r, norm
+
+        # Last-resort non-empty fallback so display code never treats the item as untranslated.
+        return r, {"zh": src[:4000], "en": src[:4000]}
 
     with ThreadPoolExecutor(max_workers=max(1, workers)) as ex:
         futs = [ex.submit(_work, r) for r in plan]
