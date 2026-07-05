@@ -25,8 +25,8 @@ export default function TickersPage({ params }: { params: { lang: string } }) {
         title={zh ? "标的总览" : "Tickers"}
         subtitle={
           zh
-            ? `${rows.length} 支跨区美股 · 五社区平均情绪、覆盖地区与跨区分歧。点表头排序、上方框筛选。`
-            : `${rows.length} cross-region US tickers — avg sentiment, regions covered and cross-region spread. Click headers to sort.`
+            ? `${rows.length} 支美股标的 · 已接入 12 个月本地 X/Twitter 原始帖文。点表头排序、上方框筛选。`
+            : `${rows.length} US tickers with 12 months of local X/Twitter posts. Click headers to sort.`
         }
       />
       {/* KOL 看多 / 看空 / 情绪变化最大 标的排行榜（各前 5，按近 14 天 KOL 净情绪 / 看多占比变化） */}

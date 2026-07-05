@@ -5,6 +5,7 @@ import { SentScore } from "@/components/prismo/Bits";
 import { TickerLogo } from "@/components/prismo/TickerLogo";
 import { Module, Counter, Counters, flag } from "@/components/prismo/DetailBits";
 import { NarrativeDetailTimeline } from "@/components/prismo/NarrativeRotationCharts";
+import { SmartVoicePortfolioModule } from "@/components/prismo/SmartVoiceModules";
 import { ViewportWorkspace } from "@/components/prismo/ViewportWorkspace";
 import { fmtCompact, fmtPct } from "@/lib/format";
 import {
@@ -160,6 +161,15 @@ export default function NarrativeDetailPage({ params }: { params: { lang: string
               <p className="text-sm text-neutral-600">{zh ? "暂无关联标的。" : "No linked tickers."}</p>
             )}
           </Module>
+
+          <SmartVoicePortfolioModule
+            symbols={detail.topTickers.map((t) => t.ticker)}
+            zh={zh}
+            titleZh="该叙事该听谁"
+            titleEn="Best voices for this narrative"
+            descZh="按该叙事关联标的等权计算，用于模拟叙事场景下的 SV 排名。"
+            descEn="Equal-weighted by linked tickers to simulate narrative-context SV ranking."
+          />
         </aside>
 
         <Module

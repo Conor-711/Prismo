@@ -26,7 +26,8 @@ def _endpoint(model: str) -> str:
 
 
 def _gen(parts: list, system: str | None, max_tokens: int, temperature: float,
-         low_res: bool, model: str | None, retries: int, timeout: int) -> str:
+         low_res: bool, model: str | None, retries: int, timeout: int,
+         max_rate_waits: int = 12) -> str:
     model = model or settings.gemini_model
     # 关思考(thinkingBudget=0)：本项目都是结构化抽取/总结，直接出答案——省 token、避免思考型 flash
     # 把 maxOutputTokens 全耗在 thoughtSignature 上而 MAX_TOKENS 截断（实测 3.5-flash 默认开思考会截断）。
@@ -40,7 +41,6 @@ def _gen(parts: list, system: str | None, max_tokens: int, temperature: float,
     last = ""
     tries = 0          # 普通错误（5xx/网络）重试预算
     rate_waits = 0     # 429 限流等待次数（独立、更耐心——限流是 per-minute、会过去）
-    MAX_RATE_WAITS = 12
     while True:
         try:
             r = requests.post(_endpoint(model), json=body, timeout=timeout)
@@ -51,7 +51,7 @@ def _gen(parts: list, system: str | None, max_tokens: int, temperature: float,
                 out = (cands[0].get("content") or {}).get("parts") or []
                 return "".join(p.get("text", "") for p in out)
             if r.status_code == 429:  # 限流：按 Google 给的 retryDelay 耐心等，不消耗普通重试预算
-                if rate_waits >= MAX_RATE_WAITS:
+                if rate_waits >= max_rate_waits:
                     last = f"HTTP 429 限流，已等 {rate_waits} 次仍未通过"
                     break
                 m = _RETRY_DELAY_RE.search(r.text)
@@ -75,10 +75,12 @@ def chat(system: str, user: str, model: str | None = None, max_tokens: int = 150
 
 
 def analyze_video(url: str, prompt: str, system: str | None = None, low_res: bool = False,
-                  model: str | None = None, max_tokens: int = 1500, timeout: int = 600) -> str:
+                  model: str | None = None, max_tokens: int = 1500, timeout: int = 600,
+                  retries: int = 8, max_rate_waits: int = 12) -> str:
     """把 YouTube URL 交给 Gemini 看（画面+音频）并按 prompt 输出。"""
     parts = [{"file_data": {"file_uri": url}}, {"text": prompt}]
-    return _gen(parts, system, max_tokens, 0.2, low_res, model, 8, timeout)  # 多重试穿过 flaky egress
+    return _gen(parts, system, max_tokens, 0.2, low_res, model, retries, timeout,
+                max_rate_waits=max_rate_waits)  # 多重试穿过 flaky egress
 
 
 def messages_json(system: str, user: str, model: str | None = None, max_tokens: int = 1500):
@@ -86,6 +88,8 @@ def messages_json(system: str, user: str, model: str | None = None, max_tokens: 
 
 
 def video_json(url: str, prompt: str, system: str | None = None, low_res: bool = False,
-               model: str | None = None, max_tokens: int = 1500):
+               model: str | None = None, max_tokens: int = 1500, timeout: int = 600,
+               retries: int = 8, max_rate_waits: int = 12):
     return extract_json(analyze_video(url, prompt, system=system, low_res=low_res,
-                                      model=model, max_tokens=max_tokens))
+                                      model=model, max_tokens=max_tokens, timeout=timeout,
+                                      retries=retries, max_rate_waits=max_rate_waits))

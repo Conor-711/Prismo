@@ -4,7 +4,7 @@ MANAGE := $(PY) -m pipeline.manage
 
 .PHONY: install venv db-init migrate seed seed-cn sample ingest refresh extract analyze analyze-mock \
         rollup narratives narrative-rotation brief worker daily daily-build cn-backfill demo stats test web-install web-dev clean help \
-        asia asia-mock mindshare-dashboard
+        asia asia-mock mindshare-dashboard sv-price-history sv-v0-candidates sv-v0 sv-v0-prod
 
 help:
 	@echo "Reddit 版 Kaito Pro — 常用命令"
@@ -25,6 +25,9 @@ help:
 	@echo "  make cn-backfill   回填中概·港股语料（爬30天+AI打标+双market聚合+翻译）"
 	@echo "  make worker        启动调度：每天 UTC+8 08:00 自动跑 daily-build"
 	@echo "  make mindshare-dashboard  从 SQLite + 可选 forum_mindshare.json 生成纯 HTML 实验面板"
+	@echo "  make sv-price-history     补齐 SV 所需日线价格"
+	@echo "  make sv-v0                运行 Smart Voice v0：候选召回 → LLM 结构化 → 结算 → 导出"
+	@echo "  make sv-v0-prod           生产级 SV：更大候选池 + 作者均衡 LLM 抽样"
 	@echo "  --- Web ---"
 	@echo "  make web-install   安装前端依赖    make web-dev  启动 Next.js"
 
@@ -152,6 +155,11 @@ gr:
 # 本地：DATABASE_URL='sqlite:///./data/dev.db' make gr-quote
 gr-quote:
 	$(MANAGE) gr-quote
+
+# SV scoring price history: backfill Nasdaq daily OHLC into local price_daily.
+# 可局部补齐：make sv-price-history ONLY=MU,NVDA
+sv-price-history:
+	$(PY) -m pipeline.ingest.sv_price_history --start $(or $(START),2025-06-01) --top-n $(or $(TOP_N),1000) --min-count $(or $(MIN_COUNT),25) --workers $(or $(WORKERS),8) --sleep $(or $(SLEEP),0.02) $(if $(ONLY),--only $(ONLY),)
 
 # Toss(토스증권) 종목 커뮤니티评论 → gr_post(source='toss', region='kr')。逆向 Web API、游标翻页 RECENT，无需登录。
 # 标的映射在 pipeline/ingest/toss.py 的 TOSS_STOCKS；大体量标的可调 --resume/--max-pages/--sleep/--commit-pages。
@@ -363,6 +371,21 @@ test:
 # 可用 python3 -m http.server 8787 --directory . 打开 /dashboard.html。
 mindshare-dashboard:
 	$(PY) experiments/build_mindshare_dashboard.py
+
+# ---------- Smart Voice v0 ----------
+# 只做规则候选召回，不调用 LLM，便于先检查覆盖范围。
+sv-v0-candidates:
+	$(PY) -m pipeline.analyze.sv_v0 --stage candidates --candidate-limit $(or $(LIMIT),50000)
+
+# 混合版：规则召回 + LLM 结构化 + 价格结算 + SV 打分 + 前端 JSON 导出。
+# 可覆盖参数：make sv-v0 LIMIT=50000 EXTRACT=2000 WORKERS=4
+sv-v0:
+	$(PY) -m pipeline.analyze.sv_v0 --stage all --candidate-limit $(or $(LIMIT),50000) --extract-limit $(or $(EXTRACT),1000) --workers $(or $(WORKERS),4)
+
+# 生产级 v0：扩大候选池后，按作者均衡分配 LLM 额度，避免少数高互动/多 ticker 作者吃掉样本。
+# 可覆盖参数：make sv-v0-prod LIMIT=50000 EXTRACT=10000 MIN=20 MAX=80 WORKERS=4
+sv-v0-prod:
+	$(PY) -m pipeline.analyze.sv_v0 --stage all --candidate-limit $(or $(LIMIT),50000) --extract-limit $(or $(EXTRACT),10000) --extract-mode author-balanced --per-author-min $(or $(MIN),20) --per-author-max $(or $(MAX),80) --workers $(or $(WORKERS),4)
 
 # ---------- Web ----------
 web-install:

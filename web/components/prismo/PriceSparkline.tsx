@@ -32,7 +32,7 @@ export function PriceSparkline({ days, height = 48 }: { days: KolCandle[]; heigh
             symbol: "circle",
             symbolSize: 6,
             silent: true,
-            itemStyle: { color, borderColor: "#121212", borderWidth: 1.5 },
+            itemStyle: { color, borderColor: "#17191C", borderWidth: 1.5 },
             label: { show: false },
             data: closes.length ? [{ coord: [days[days.length - 1].day, closes[closes.length - 1]] }] : [],
           },

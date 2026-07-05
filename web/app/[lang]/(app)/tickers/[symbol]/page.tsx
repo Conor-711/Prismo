@@ -9,8 +9,8 @@ import { StageBadge } from "@/components/prismo/DetailBits";
 import { getGrTickerSymbols, getGrTickerDetail, getGrQuote } from "@/lib/globalQueries";
 import { getTickerMock, getKolFlow } from "@/lib/mockDetail";
 import { getKolArguments, getKolFlowReal, getKolNewcomersDaily, getKolOpinions, getKolSentimentDaily, getKolVolumeDaily, getRetailSentimentDaily, getRetailVolumeDaily, getRetailNewcomersDaily, getKolTargetPrices } from "@/lib/kolQueries";
-import { getTopInvestors } from "@/lib/topInvestors";
 import { getOverallData } from "@/lib/overallData";
+import { getTickerSmartVoice, getTickerSmartVoicePool } from "@/lib/svMock";
 import { tickerExchange, TICKER_UNIVERSE } from "@/lib/tickerMeta";
 import { fmtCompact } from "@/lib/format";
 import { isLocale, defaultLocale, type Locale } from "@/lib/i18n";
@@ -45,7 +45,8 @@ export default function TickerDetail({ params }: { params: { lang: string; symbo
   // 观点检索池：真实近 ~30 天扁平池优先，不足回退图表 opinions
   const kolPool = getKolOpinions(ticker.ticker);
   const explorerPool = kolPool && kolPool.length ? kolPool : flow.opinions;
-  const topInv = getTopInvestors(ticker.ticker);
+  const smartVoice = getTickerSmartVoice(ticker.ticker);
+  const smartVoicePool = getTickerSmartVoicePool(ticker.ticker);
   // 整体数据派生信号：情绪/讨论度异动归因 + 近期 KOL 最密集讨论方面（离线 overall_signals 产出）
   const overall = getOverallData(ticker.ticker);
   const topDim = [...m.anomaly.dims].sort((a, b) => b.sigma - a.sigma)[0];
@@ -99,9 +100,12 @@ export default function TickerDetail({ params }: { params: { lang: string; symbo
 
       <div className="min-h-0 overflow-hidden">
         <OpinionExplorer
+          symbol={ticker.ticker}
           opinions={explorerPool}
           zh={zh}
           fill
+          currentPrice={quote?.price ?? null}
+          svBoard={smartVoicePool}
           overview={
             <TickerOverviewPanel
               zh={zh}
@@ -115,7 +119,7 @@ export default function TickerDetail({ params }: { params: { lang: string; symbo
               overall={overall}
               targetPrices={getKolTargetPrices(ticker.ticker)}
               argumentsData={getKolArguments(ticker.ticker)}
-              topInvestors={topInv}
+              smartVoice={smartVoice}
             />
           }
         />

@@ -5,9 +5,11 @@ import { SentScore, RegionBadge, StanceBar } from "@/components/prismo/Bits";
 import { TickerLogo } from "@/components/prismo/TickerLogo";
 import { AsiaHeatmap } from "@/components/asia/AsiaCharts";
 import { Module, Counter, Counters } from "@/components/prismo/DetailBits";
+import { SmartVoiceLeaderboard } from "@/components/prismo/SmartVoiceModules";
 import {
   getGrMeta, getGrTickers, getGrTickerRegions, getGrRegionSummary, getGrQuotes,
 } from "@/lib/globalQueries";
+import { getSmartVoiceBoard } from "@/lib/svMock";
 import { REGION_ORDER, regionLabel, regionSource } from "@/lib/regions";
 import { fmtInt, fmtCompact, timeAgo } from "@/lib/format";
 import { isLocale, defaultLocale, type Locale } from "@/lib/i18n";
@@ -42,6 +44,7 @@ export default function Overview({ params }: { params: { lang: string } }) {
   const summary = getGrRegionSummary();
   const cells = getGrTickerRegions();
   const quotes = getGrQuotes();
+  const svBoard = getSmartVoiceBoard();
 
   const name = (t: { name_zh: string; name_en: string }) => (zh ? t.name_zh || t.name_en : t.name_en || t.name_zh);
   const sumByRegion = new Map(summary.map((s) => [s.region, s]));
@@ -121,6 +124,8 @@ export default function Overview({ params }: { params: { lang: string } }) {
             <Counter label={zh ? "今日领跌" : "Top loser"} value={topLoser ? `${topLoser.change_pct.toFixed(2)}%` : "—"} sub={topLoser?.ticker ?? "—"} tone="text-bear" />
             <Counter label={zh ? "最大分歧" : "Top divergence"} value={topDiv ? `Δ${(topDiv.spread ?? 0).toFixed(2)}` : "—"} sub={topDiv?.ticker ?? "—"} tone="text-amber" />
           </Counters>
+
+          <SmartVoiceLeaderboard board={svBoard} />
 
           {/* 跨区分歧 · 最看多 · 最看空 */}
           <div className="grid lg:grid-cols-3 gap-5 items-start">

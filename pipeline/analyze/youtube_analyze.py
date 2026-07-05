@@ -70,8 +70,10 @@ def _normalize(data: dict) -> dict | None:
     if not isinstance(data, dict):
         return None
     sc = max(-1.0, min(1.0, float(data.get("sentiment", 0) or 0)))
+    raw_stance = str(data.get("stance") or "").strip().lower()
+    stance = raw_stance if raw_stance in {"bull", "bear", "neutral"} else _stance_from(sc)
     return dict(
-        stance=(data.get("stance") or _stance_from(sc)), sentiment=sc,
+        stance=stance, sentiment=sc,
         conviction=max(0.0, min(1.0, float(data.get("conviction", 0) or 0))),
         summary_zh=(data.get("summary_zh") or "")[:800], summary_en=(data.get("summary_en") or "")[:800],
         key_points_zh=data.get("key_points_zh") or [], key_points_en=data.get("key_points_en") or [],
@@ -594,68 +596,99 @@ def gen_fulltext(only: set[str] | None = None, per_ticker: int = 10, workers: in
     if not total:
         return 0
 
-    done = fail = skip = 0
-    for i, v in enumerate(plan, 1):
-        try:
-            prompt = f"标的 {v.ticker}。频道《{v.channel}》。按系统要求结构化还原该视频。"
-            data = gemini.video_json(v.url, prompt, system=SYSTEM_FULLTEXT, low_res=low_res, max_tokens=8000)
-            segs = (data or {}).get("segments") if isinstance(data, dict) else None
-            if not isinstance(segs, list) or not segs:
-                skip += 1
-                print(f"  [yt-full] – {v.ticker} {v.id} 无段落", flush=True)
+    def _process(v: YtVideo) -> tuple[YtVideo, str, list[dict], int] | None:
+        prompt = f"标的 {v.ticker}。频道《{v.channel}》。按系统要求结构化还原该视频。"
+        data = gemini.video_json(v.url, prompt, system=SYSTEM_FULLTEXT, low_res=low_res,
+                                 max_tokens=8000, timeout=180, retries=2, max_rate_waits=1)
+        segs = (data or {}).get("segments") if isinstance(data, dict) else None
+        if not isinstance(segs, list) or not segs:
+            return None
+        norm: list[dict] = []
+        visuals: list[dict] = []
+        for sg in segs:
+            if not isinstance(sg, dict):
                 continue
-            norm: list[dict] = []
-            visuals: list[dict] = []
-            for sg in segs:
-                if not isinstance(sg, dict):
-                    continue
-                if sg.get("type") == "speech":
-                    tx = str(sg.get("text") or "").strip()
-                    if tx:
-                        spk = str(sg.get("speaker") or "").strip()  # 多人(访谈/播客)才有；独白留空
-                        for para in _split_speech_text(tx):  # 兜底拆分过长段落，保证可读
-                            seg = {"type": "speech", "text": para}
-                            if spk:
-                                seg["speaker"] = spk
-                            norm.append(seg)
-                elif sg.get("type") == "visual" and isinstance(sg.get("sec"), (int, float)):  # 旧档兼容；新提示只产口播
-                    seg = {"type": "visual", "sec": int(sg["sec"]), "caption": str(sg.get("caption") or "").strip()}
-                    norm.append(seg)
-                    visuals.append(seg)
-            flat = "\n\n".join(  # 扁平兜底文本去掉 Markdown（卡片/搜索用纯文本；富文本只在 segments）
-                (f"{s['speaker']}：{_strip_md(s['text'])}" if s.get("speaker") else _strip_md(s["text"]))
-                for s in norm if s["type"] == "speech"
-            )
+            if sg.get("type") == "speech":
+                tx = str(sg.get("text") or "").strip()
+                if tx:
+                    spk = str(sg.get("speaker") or "").strip()  # 多人(访谈/播客)才有；独白留空
+                    for para in _split_speech_text(tx):  # 兜底拆分过长段落，保证可读
+                        seg = {"type": "speech", "text": para}
+                        if spk:
+                            seg["speaker"] = spk
+                        norm.append(seg)
+            elif sg.get("type") == "visual" and isinstance(sg.get("sec"), (int, float)):  # 旧档兼容；新提示只产口播
+                seg = {"type": "visual", "sec": int(sg["sec"]), "caption": str(sg.get("caption") or "").strip()}
+                norm.append(seg)
+                visuals.append(seg)
+        flat = "\n\n".join(  # 扁平兜底文本去掉 Markdown（卡片/搜索用纯文本；富文本只在 segments）
+            (f"{s['speaker']}：{_strip_md(s['text'])}" if s.get("speaker") else _strip_md(s["text"]))
+            for s in norm if s["type"] == "speech"
+        )
 
-            mp4 = _download_video(v.url, str(tmpdir / v.id)) if (visuals and frames) else None
-            if visuals and mp4:
-                viddir = frames_root / v.id
-                if viddir.exists():
-                    shutil.rmtree(viddir)
-                viddir.mkdir(parents=True, exist_ok=True)
-                _select_frames(mp4, visuals, viddir, ffmpeg, tesseract)  # OCR 按内容匹配真正的幻灯片
+        mp4 = _download_video(v.url, str(tmpdir / v.id)) if (visuals and frames) else None
+        if visuals and mp4:
+            viddir = frames_root / v.id
+            if viddir.exists():
+                shutil.rmtree(viddir)
+            viddir.mkdir(parents=True, exist_ok=True)
+            _select_frames(mp4, visuals, viddir, ffmpeg, tesseract)  # OCR 按内容匹配真正的幻灯片
+            try:
+                os.remove(mp4)
+            except OSError:
+                pass
+        else:
+            for seg in visuals:  # 无帧（无 visual 或下载失败）→ 去掉视觉段，保留口播
+                seg["_drop"] = True
+
+        final = [s for s in norm if not (s.get("type") == "visual" and (s.get("_drop") or not s.get("frame")))]
+        for s in final:
+            s.pop("_drop", None)
+            s.pop("sec", None)
+        nframes = sum(1 for s in final if s.get("type") == "visual")
+        return v, flat, final, nframes
+
+    def _save(v: YtVideo, flat: str, final: list[dict]) -> None:
+        with session_scope() as s:
+            s.merge(YtFulltext(video_id=v.id, ticker=v.ticker, content_zh=flat, content_en="",
+                               segments=final, model=f"gemini:{settings.gemini_model}",
+                               created_at=dt.datetime.utcnow()))
+
+    done = fail = skip = 0
+    if workers > 1:
+        with ThreadPoolExecutor(max_workers=max(1, workers)) as ex:
+            futs = {ex.submit(_process, v): v for v in plan}
+            for fut in as_completed(futs):
+                v = futs[fut]
                 try:
-                    os.remove(mp4)
-                except OSError:
-                    pass
-            else:
-                for seg in visuals:  # 无帧（无 visual 或下载失败）→ 去掉视觉段，保留口播
-                    seg["_drop"] = True
-
-            final = [s for s in norm if not (s.get("type") == "visual" and (s.get("_drop") or not s.get("frame")))]
-            for s in final:
-                s.pop("_drop", None)
-                s.pop("sec", None)
-            nframes = sum(1 for s in final if s.get("type") == "visual")
-            with session_scope() as s:
-                s.merge(YtFulltext(video_id=v.id, ticker=v.ticker, content_zh=flat, content_en="",
-                                   segments=final, model=f"gemini:{settings.gemini_model}",
-                                   created_at=dt.datetime.utcnow()))
-            done += 1
-            print(f"  [yt-full] ✓ {v.ticker} {v.id} 段{len(final)}/帧{nframes} [{done}/{total}] skip={skip} fail={fail}", flush=True)
-        except Exception as e:  # noqa: BLE001
-            fail += 1
-            print(f"  [yt-full] ✗ {v.ticker} {v.id}: {str(e)[:100]}", flush=True)
+                    out = fut.result()
+                except Exception as e:  # noqa: BLE001
+                    fail += 1
+                    print(f"  [yt-full] ✗ {v.ticker} {v.id}: {str(e)[:100]}", flush=True)
+                    continue
+                if out is None:
+                    skip += 1
+                    print(f"  [yt-full] – {v.ticker} {v.id} 无段落", flush=True)
+                    continue
+                vv, flat, final, nframes = out
+                _save(vv, flat, final)
+                done += 1
+                print(f"  [yt-full] ✓ {vv.ticker} {vv.id} 段{len(final)}/帧{nframes} [{done}/{total}] skip={skip} fail={fail}", flush=True)
+    else:
+        for i, v in enumerate(plan, 1):
+            try:
+                out = _process(v)
+                if out is None:
+                    skip += 1
+                    print(f"  [yt-full] – {v.ticker} {v.id} 无段落", flush=True)
+                    continue
+                vv, flat, final, nframes = out
+                _save(vv, flat, final)
+                done += 1
+                print(f"  [yt-full] ✓ {vv.ticker} {vv.id} 段{len(final)}/帧{nframes} [{done}/{total}] skip={skip} fail={fail}", flush=True)
+            except Exception as e:  # noqa: BLE001
+                fail += 1
+                print(f"  [yt-full] ✗ {v.ticker} {v.id}: {str(e)[:100]}", flush=True)
     print(f"[yt-full] 完成 {done}（跳过 {skip}，失败 {fail}）", flush=True)
     return done
 

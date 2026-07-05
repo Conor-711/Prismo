@@ -13,7 +13,7 @@ const STANCE: Record<InvestorStance, { zh: string; en: string; color: string; so
 };
 
 const AXIS = "#73757a";
-const LINE = "#2a2d2f";
+const LINE = "#343A42";
 const CREAM = "#F1F3F4";
 
 function escapeHtml(value: string) {
@@ -47,7 +47,7 @@ export function TopInvestors({ board, zh }: { board: TopInvestorBoard; zh: boole
       grid: { left: 118, right: 54, top: 8, bottom: 24, containLabel: false },
       tooltip: {
         trigger: "item",
-        backgroundColor: "rgba(20,20,20,0.96)",
+        backgroundColor: "#20242A",
         borderColor: LINE,
         borderWidth: 1,
         padding: [8, 10],

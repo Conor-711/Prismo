@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { KolModule } from "./KolModule";
-import { TopInvestors } from "./TopInvestors";
+import { SmartVoiceTickerModule } from "./SmartVoiceModules";
 import type { KolFlow, KolTargetData } from "@/lib/mockDetail";
 import type { DailyNet, DailyVol, KolNew, RetailVol, RetailNew, WindowedArguments } from "@/lib/kolQueries";
 import type { OverallData } from "@/lib/overallData";
-import type { TopInvestorBoard } from "@/lib/topInvestors";
+import type { SvTickerBoard } from "@/lib/svMock";
 
 function InfoHint({ text }: { text: string }) {
   return (
@@ -60,7 +60,7 @@ type Props = {
   overall?: OverallData | null;
   targetPrices?: KolTargetData;
   argumentsData?: WindowedArguments;
-  topInvestors?: TopInvestorBoard | null;
+  smartVoice?: SvTickerBoard | null;
 };
 
 export function TickerOverviewPanel({
@@ -75,16 +75,13 @@ export function TickerOverviewPanel({
   overall,
   targetPrices,
   argumentsData,
-  topInvestors,
+  smartVoice,
 }: Props) {
   const [full, setFull] = useState(false);
   const [mounted, setMounted] = useState(false);
   const overviewHint = zh
-    ? "展示该标的在近一年里的净情绪、讨论度、聪明钱减散户分歧差、多空结构、新增参与者与拥挤度、观点视角多空分布、目标价分布，以及 AI 识别的异常波动归因。当前更早日期使用稳定 mock 补全，用于呈现一年尺度。"
-    : "Shows one-year net sentiment, discussion volume, smart-money minus retail divergence, bull/bear structure, newcomers and crowding, viewpoint-by-stance distribution, target price distribution, and AI anomaly attribution. Earlier missing dates are filled with stable mock data for the one-year view.";
-  const investorHint = zh
-    ? "覆盖本标的的博主列表，按跨标的选股技能和相关覆盖质量排序。"
-    : "Authors covering this ticker, ranked by cross-ticker stock-picking skill and coverage quality.";
+    ? "展示该标的在近一年里的净情绪、讨论度、聪明钱减散户分歧差、新增参与者与拥挤度、观点视角多空分布、目标价分布，以及 AI 识别的异常波动归因。当前更早日期使用稳定 mock 补全，用于呈现一年尺度。"
+    : "Shows one-year net sentiment, discussion volume, smart-money minus retail divergence, newcomers and crowding, viewpoint-by-stance distribution, target price distribution, and AI anomaly attribution. Earlier missing dates are filled with stable mock data for the one-year view.";
 
   useEffect(() => setMounted(true), []);
 
@@ -122,24 +119,10 @@ export function TickerOverviewPanel({
     />
   );
 
-  const investorModule = topInvestors && topInvestors.investors.length > 0 ? (
-    <div className="overflow-hidden rounded-xl bg-ink/35 ring-1 ring-inset ring-line">
-      <div className="border-b border-line px-4 py-3">
-        <h3 className="flex items-center gap-1.5 font-display text-[14px] font-bold text-cream">
-          {zh ? "该标的值得参考的投资者" : "Investors worth following on this ticker"}
-          <InfoHint text={investorHint} />
-        </h3>
-      </div>
-      <div className="px-4 py-2">
-        <TopInvestors board={topInvestors} zh={zh} />
-      </div>
-    </div>
-  ) : null;
-
   const panelBody = (
     <>
       {dataModule}
-      {investorModule && <div className="mt-4">{investorModule}</div>}
+      {smartVoice && <div className="mt-4"><SmartVoiceTickerModule board={smartVoice} zh={zh} /></div>}
       <p className="mt-3 border-t border-line/70 pt-2 text-[10.5px] text-neutral-600">
         {zh ? "异动 / 信号 / 风险等模块为演示数据（mock），用于展示模块设计；接入真实管线后替换。" : "Modules use mock demo data to showcase the design; to be wired to the real pipeline."}
       </p>
@@ -178,7 +161,7 @@ export function TickerOverviewPanel({
 
       {mounted && full
         ? createPortal(
-            <div className="fixed inset-0 z-[140] bg-[#121212] text-cream">
+            <div className="fixed inset-0 z-[140] bg-ink text-cream">
               <div className="grid h-screen min-h-0 grid-rows-[auto_minmax(0,1fr)]">
                 <div className="flex items-center justify-between gap-4 border-b border-line bg-surface px-5 py-3">
                   <div className="min-w-0">
@@ -202,9 +185,11 @@ export function TickerOverviewPanel({
                       {dataModule}
                     </div>
                     <div className="min-w-0">
-                      {investorModule ?? (
+                      {smartVoice ? (
+                        <SmartVoiceTickerModule board={smartVoice} zh={zh} />
+                      ) : (
                         <div className="rounded-xl bg-card/45 p-6 text-sm text-neutral-600 ring-1 ring-inset ring-line">
-                          {zh ? "暂无投资者数据" : "No investor data"}
+                          {zh ? "暂无 SV 投资者数据" : "No SV investor data"}
                         </div>
                       )}
                     </div>

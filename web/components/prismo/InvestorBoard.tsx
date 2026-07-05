@@ -8,8 +8,10 @@ import { useLocale } from "@/components/i18n/LocaleProvider";
 import { Panel } from "@/components/ui";
 import { fmtCompact } from "@/lib/format";
 import { Avatar, SOURCE, SOURCE_ORDER } from "./kolShared";
+import { SmartVoiceLeaderboard } from "./SmartVoiceModules";
 import type { Investor, InvestorBoard as Board } from "@/lib/investorQueries";
 import type { KolSource } from "@/lib/mockDetail";
+import type { SvBoard } from "@/lib/svMock";
 
 const PREVIEW = 6; // 「全部」视图下每平台预览名额
 
@@ -113,7 +115,7 @@ function FilterChip({
   );
 }
 
-export function InvestorBoardView({ board }: { board: Board }) {
+export function InvestorBoardView({ board, svBoard }: { board: Board; svBoard?: SvBoard }) {
   const { lang, dict } = useLocale();
   const zh = lang === "zh";
   const t = dict.investors;
@@ -133,6 +135,16 @@ export function InvestorBoardView({ board }: { board: Board }) {
 
   return (
     <div className="space-y-7">
+      {svBoard && <SmartVoiceLeaderboard board={svBoard} />}
+
+      <div className="flex items-center gap-3">
+        <div className="h-px flex-1 bg-line/70" />
+        <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-600">
+          {zh ? "活跃作者 / 互动榜" : "Active authors / engagement"}
+        </span>
+        <div className="h-px flex-1 bg-line/70" />
+      </div>
+
       <div className="flex flex-wrap gap-2">
         <FilterChip on={active === "all"} onClick={() => setActive("all")} label={t.all} />
         {SOURCE_ORDER.map((s) => (

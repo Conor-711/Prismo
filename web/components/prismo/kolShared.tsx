@@ -75,6 +75,8 @@ export const opinionPoints = (o: KolOpinion, zh: boolean) =>
 
 // 「原文 + 译」取文（原帖卡通用，原帖流与「按 KOL」共用）。
 // 当原文非当前界面语言且有该语言的忠实译文时，默认展示译文，给「看原文」选项。
+// 注意：译文只能来自 kol_refined.trans_*。quote/reason/text 可能是提炼后的代表句或摘要，
+// 不能作为译文回退，否则推文会错误显示成 TLDR。
 // 不能把 CJK 当成一个桶：中文页面下，韩文/日文原文仍然需要显示中文译文。
 export const CJK_RE = /[一-鿿぀-ヿ가-힯]/;
 const HAN_RE = /[一-鿿]/;
@@ -88,8 +90,9 @@ export function pickOriginal(
   zh: boolean
 ): { base: string; trans: string; canTranslate: boolean } {
   const pick = (b?: Bi) => (b ? (zh ? b.zh : b.en) : "");
-  const base = o.orig || pick(o.text) || pick(o.trans) || pick(o.quote);
-  const tr = pick(o.trans) || pick(o.quote) || pick(o.text);
+  const explicitTrans = pick(o.trans);
+  const base = o.orig || pick(o.text) || explicitTrans || pick(o.quote);
+  const tr = explicitTrans;
   const targetMatches = zh ? looksChinese(tr) : looksEnglish(tr);
   const sourceIsNonChineseCjk = o.source === "yahoojp" || o.source === "toss";
   const baseAlreadyTarget = zh ? looksChinese(base) && !sourceIsNonChineseCjk : looksEnglish(base);

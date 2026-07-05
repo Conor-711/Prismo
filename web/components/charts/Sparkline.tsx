@@ -24,8 +24,8 @@ export function Sparkline({
     yAxis: { type: "value", show: false, ...(metric === "sentiment" ? { min: -1, max: 1 } : { min: 0 }) },
     tooltip: {
       trigger: "axis",
-      backgroundColor: "#18171C",
-      borderColor: "#2A2930",
+      backgroundColor: "#20242A",
+      borderColor: "#343A42",
       textStyle: { color: "#e5e5e5", fontSize: 11 },
       formatter: (p: any) =>
         metric === "sentiment"

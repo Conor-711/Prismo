@@ -10,7 +10,7 @@ import { KOL_NEW_STACK, KOL_VOL_STACK, RETAIL_NEW_STACK, RETAIL_VOL_STACK, type 
 import type { VolRow } from "./VolumePanel";
 import type { ChartMarker } from "./SentimentPanel";
 import { TargetPricePanel } from "./TargetPricePanel";
-import { BullBearStructureChart, CrowdingChart, ViewpointStanceChart } from "./OverallStructureCharts";
+import { CrowdingChart, ViewpointStanceChart } from "./OverallStructureCharts";
 import type { KolFlow, KolTargetData } from "@/lib/mockDetail";
 import type { DailyNet, DailyVol, KolNew, RetailVol, RetailNew, WindowedArguments } from "@/lib/kolQueries";
 import type { OverallData, AnomalyMetric, Divergence, SentStance } from "@/lib/overallData";
@@ -215,8 +215,7 @@ export function KolModule({
         volMarkers={volMarkers}
       />
 
-      <div className="mt-3 grid gap-3 xl:grid-cols-3">
-        <BullBearStructureChart data={yearSentiment} zh={zh} />
+      <div className="mt-3 grid gap-3 xl:grid-cols-2">
         <CrowdingChart newcomers={yearNewcomers} volume={yearVolume} stack={curNewStack} zh={zh} />
         <ViewpointStanceChart data={argumentsData} zh={zh} />
       </div>

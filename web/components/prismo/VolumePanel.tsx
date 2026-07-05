@@ -16,6 +16,9 @@ const mmdd = (d: string) => {
   return m ? `${+m}/${+dd}` : "";
 };
 const GOLD = "#F2B544"; // 异动标记色（与情绪面板一致；区别于绿/红情绪）
+const LINE = "#343A42";
+const TIP_BG = "#20242A";
+const CHART_BG = "#17191C";
 
 // 通用「每日各平台计数」行：day + total + 任意平台键。DailyVol / RetailVol 均可直接传入。
 export interface VolRow { day: string; total: number; [key: string]: number | string }
@@ -85,8 +88,8 @@ export function VolumePanel({
     tooltip: {
       trigger: "axis",
       axisPointer: { type: "shadow" },
-      backgroundColor: "rgba(20,20,20,0.96)",
-      borderColor: "#2a2d2f",
+      backgroundColor: TIP_BG,
+      borderColor: LINE,
       borderWidth: 1,
       textStyle: { color: "#e5e5e5", fontSize: 11 },
       extraCssText: "border-radius:8px",
@@ -102,7 +105,7 @@ export function VolumePanel({
         let html = `<b>${mmdd(axisVal)}</b> · ${zh ? "共" : "total"} ${fmtCompact(total)}${unitStr}<br/>${lines}`;
         const mk = markerMap.get(axisVal);
         const r = mk && (zh ? mk.reason.zh : mk.reason.en);
-        if (r) html += `<div style="margin-top:6px;max-width:240px;white-space:normal;border-top:1px solid #2a2d2f;padding-top:5px"><span style="color:${GOLD}">⚑ ${zh ? "异动归因" : "Why"}</span><br/><span style="color:#cfcfcf">${r}</span></div>`;
+        if (r) html += `<div style="margin-top:6px;max-width:240px;white-space:normal;border-top:1px solid ${LINE};padding-top:5px"><span style="color:${GOLD}">⚑ ${zh ? "异动归因" : "Why"}</span><br/><span style="color:#d6d9dd">${r}</span></div>`;
         return html;
       },
     },
@@ -138,7 +141,7 @@ export function VolumePanel({
             data: markerData,
             symbol: "diamond",
             symbolSize: 9,
-            itemStyle: { color: GOLD, borderColor: "#141414", borderWidth: 1 },
+            itemStyle: { color: GOLD, borderColor: CHART_BG, borderWidth: 1 },
             label: { show: true, position: "top", distance: 3, formatter: "⚑", color: GOLD, fontSize: 11 },
             emphasis: { scale: 1.5 },
             tooltip: { show: false },

@@ -14,6 +14,9 @@ const mmdd = (d: string) => {
 // 异动标记：当天净情绪偏离基线（pipeline overall_signals 产出），金色 ⚑ 标在折线上、hover 出 AI 归因。
 export interface ChartMarker { day: string; direction?: "up" | "down"; reason: { zh: string; en: string } }
 const GOLD = "#F2B544";
+const LINE = "#343A42";
+const TIP_BG = "#20242A";
+const CHART_BG = "#17191C";
 
 export function SentimentPanel({
   days, data, markers,
@@ -57,8 +60,8 @@ export function SentimentPanel({
       grid: { left: 4, right: 16, top: 8, bottom: 6, containLabel: true },
       tooltip: {
         trigger: "axis",
-        backgroundColor: "rgba(20,20,20,0.96)",
-        borderColor: "#2a2d2f",
+        backgroundColor: TIP_BG,
+        borderColor: LINE,
         borderWidth: 1,
         textStyle: { color: "#e5e5e5", fontSize: 11 },
         extraCssText: "border-radius:8px",
@@ -74,7 +77,7 @@ export function SentimentPanel({
           let html = `<b>${mmdd(axisVal)}</b><br/><span style="color:${c}">${zh ? "净情绪" : "Net sentiment"} ${v >= 0 ? "+" : ""}${v}</span>`;
           const mk = markerMap.get(axisVal);
           const r = mk && (zh ? mk.reason.zh : mk.reason.en);
-          if (r) html += `<div style="margin-top:6px;max-width:240px;white-space:normal;border-top:1px solid #2a2d2f;padding-top:5px"><span style="color:${GOLD}">⚑ ${zh ? "异动归因" : "Why"}</span><br/><span style="color:#cfcfcf">${r}</span></div>`;
+          if (r) html += `<div style="margin-top:6px;max-width:240px;white-space:normal;border-top:1px solid ${LINE};padding-top:5px"><span style="color:${GOLD}">⚑ ${zh ? "异动归因" : "Why"}</span><br/><span style="color:#d6d9dd">${r}</span></div>`;
           return html;
         },
       },
@@ -130,7 +133,7 @@ export function SentimentPanel({
               data: markerData,
               symbol: "diamond",
               symbolSize: 9,
-              itemStyle: { color: GOLD, borderColor: "#141414", borderWidth: 1 },
+              itemStyle: { color: GOLD, borderColor: CHART_BG, borderWidth: 1 },
               label: { show: true, position: "top", distance: 3, formatter: "⚑", color: GOLD, fontSize: 11 },
               emphasis: { scale: 1.5 },
               tooltip: { show: false },

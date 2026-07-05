@@ -505,3 +505,56 @@ tickers:
   - jpmorgan
   - 摩根
   - 摩根大通
+- ticker: SPY
+  name_en: SPDR S&P 500 ETF
+  name_zh: 标普500 ETF
+  yahoo_jp: SPY
+  aliases:
+  - SPY
+  - spy
+  - spdr s&p 500
+  - s&p 500
+  - 标普500
+  - 標普500
+- ticker: QQQ
+  name_en: Invesco QQQ ETF
+  name_zh: 纳斯达克100 ETF
+  yahoo_jp: QQQ
+  aliases:
+  - QQQ
+  - qqq
+  - invesco qqq
+  - nasdaq 100
+  - 纳斯达克100
+  - 納斯達克100
+  - 纳指
+  - 納指
+- ticker: IREN
+  name_en: IREN Ltd
+  name_zh: IREN
+  yahoo_jp: IREN
+  aliases:
+  - IREN
+  - iren
+  - iris energy
+  - iren ltd
+- ticker: NBIS
+  name_en: Nebius Group
+  name_zh: Nebius
+  yahoo_jp: NBIS
+  aliases:
+  - NBIS
+  - nbis
+  - nebius
+  - nebius group
+- ticker: ASTS
+  name_en: AST SpaceMobile
+  name_zh: AST SpaceMobile
+  yahoo_jp: ASTS
+  aliases:
+  - ASTS
+  - asts
+  - ast spacemobile
+  - space mobile
+  - 卫星通信
+  - 衛星通信

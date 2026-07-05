@@ -13,7 +13,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#121212", // 深色唯一主题（已停用白天模式）
+  themeColor: "#17191c", // 深色唯一主题（已停用白天模式）
 };
 
 const SITE_TITLE = "Prismo · 多社区美股舆情聚合";

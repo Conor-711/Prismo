@@ -8,8 +8,10 @@ import { LocaleLink } from "@/components/i18n/LocaleLink";
 import { Panel } from "@/components/ui";
 import { fmtCompact } from "@/lib/format";
 import { Avatar } from "./kolShared";
+import { SmartVoiceCreatorModule } from "./SmartVoiceModules";
 import type { YoutubeCreator, TickerJudgments, Judgment, CreatorVideo } from "@/lib/creatorQueries";
 import type { Stance } from "@/lib/mockDetail";
+import type { SvInvestor } from "@/lib/svMock";
 
 const YT = "#E0A33E";
 // 本地立场配色/文案与日期格式：不从 "use client" 的 kolShared dot 进来——其导出在 RSC（generateStaticParams
@@ -283,11 +285,22 @@ function TopVideos({ items, zh, fill = false }: { items: CreatorVideo[]; zh: boo
   );
 }
 
-export function CreatorProfile({ creator, zh, fill = false }: { creator: YoutubeCreator; zh: boolean; fill?: boolean }) {
+export function CreatorProfile({
+  creator,
+  zh,
+  fill = false,
+  smartVoice,
+}: {
+  creator: YoutubeCreator;
+  zh: boolean;
+  fill?: boolean;
+  smartVoice?: SvInvestor;
+}) {
   if (fill) {
     return (
-      <div className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-3">
+      <div className="grid h-full min-h-0 grid-rows-[auto_auto_minmax(0,1fr)] gap-3">
         <Header p={creator.profile} zh={zh} />
+        {smartVoice && <SmartVoiceCreatorModule profile={smartVoice} zh={zh} />}
         <div className="grid min-h-0 gap-3 lg:grid-cols-[minmax(0,1fr)_390px]">
           <Judgments creator={creator} zh={zh} fill />
           <TopVideos items={creator.topVideos} zh={zh} fill />
@@ -299,6 +312,7 @@ export function CreatorProfile({ creator, zh, fill = false }: { creator: Youtube
   return (
     <div className="space-y-5">
       <Header p={creator.profile} zh={zh} />
+      {smartVoice && <SmartVoiceCreatorModule profile={smartVoice} zh={zh} />}
       <Judgments creator={creator} zh={zh} />
       <TopVideos items={creator.topVideos} zh={zh} />
     </div>

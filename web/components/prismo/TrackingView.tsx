@@ -12,6 +12,7 @@ import { SaveButton } from "@/components/favorites/SaveButton";
 import { listCollection } from "@/lib/favorites";
 import { Panel } from "@/components/ui";
 import { SentScore, Consensus, StanceBar } from "./Bits";
+import { SmartVoicePortfolioModule } from "./SmartVoiceModules";
 import { TickerLogo } from "./TickerLogo";
 import { fmtCompact } from "@/lib/format";
 import { regionColor, regionLabel } from "@/lib/regions";
@@ -96,6 +97,8 @@ export function TrackingView({
 
   return (
     <div className="space-y-4">
+      <SmartVoicePortfolioModule symbols={tracked.map((x) => x.symbol)} zh={lang === "zh"} />
+
       <div className="flex items-center justify-between gap-3">
         <span className="text-xs text-neutral-500 tabular">
           {tracked.length} {t.unit}

@@ -119,6 +119,9 @@ interface RawOp {
   points?: { zh: string[]; en: string[] };
   metrics?: TweetMetrics; // X 逐项互动数（赞/转/评/引/看/藏）
   ytSegments?: YtSeg[]; // YouTube 完整口播段落（yt_fulltext.segments；多人带说话人）
+  relevance?: number; // 没有 kol_relevance 时的源侧兜底相关度（SV X call）
+  quality?: number; // 没有 kol_quality 时的源侧兜底质量分（SV X call）
+  judgment?: KolJudgment; // 源侧直接结构化出的目标价/周期（SV X call）
 }
 
 // kol_refined（pipeline kol-refine 产出）：source:item_id -> 提炼结果。
@@ -481,6 +484,123 @@ function xOps(symbol: string, since: string, limit = 40): RawOp[] {
   }));
 }
 
+function svDirectionToStance(direction?: string | null): Stance {
+  const d = String(direction || "").toLowerCase();
+  if (d === "bull") return "bull";
+  if (d === "bear") return "bear";
+  return "neutral";
+}
+
+function svHorizon(bucket?: string | null): { horizon?: Bi; bucket?: KolJudgment["bucket"] } {
+  const b = String(bucket || "").toUpperCase();
+  if (!b || b === "UNKNOWN") return {};
+  const days = Number((b.match(/\d+/) || [])[0]);
+  const horizon = Number.isFinite(days) && days > 0
+    ? { zh: `${days} 天`, en: `${days}D` }
+    : { zh: b, en: b };
+  const outBucket: KolJudgment["bucket"] =
+    days <= 5 ? "short" : days <= 20 ? "mid" : "long";
+  return { horizon, bucket: outBucket };
+}
+
+function svFallbackRelevance(heuristic: number, conviction: number, specificity: number): number {
+  const h = Math.max(0, Math.min(1, (heuristic - 46) / 12));
+  return Math.round(Math.max(62, Math.min(96, 62 + h * 18 + conviction * 10 + specificity * 6)));
+}
+
+function svFallbackQuality(conviction: number, evidence: number, specificity: number): number {
+  return Math.round(Math.max(50, Math.min(95, 45 + evidence * 22 + specificity * 18 + conviction * 12)));
+}
+
+// SV v0 结构化池中的 X/Twitter call：它来自更长周期的历史推文结构化结果。
+// 在产品层仍按 X 展示；只作为 x_opinion 的补充，不暴露 SV 中间概念。
+function xSvOps(symbol: string, since: string, limit = 400): RawOp[] {
+  const rows = safe(
+    () =>
+      all<any>(
+        `SELECT cc.candidate_id, cc.tweet_id, cc.author_handle AS handle, cc.text,
+                COALESCE(cc.like_count,0) AS likes, COALESCE(cc.retweet_count,0) AS retweets,
+                COALESCE(cc.reply_count,0) AS replies, COALESCE(cc.quote_count,0) AS quotes,
+                COALESCE(cc.view_count,0) AS views, COALESCE(cc.bookmark_count,0) AS bookmarks,
+                COALESCE(cc.interactions,0) AS interactions, COALESCE(cc.heuristic_score,50) AS heuristic_score,
+                cc.created_at AS created, COALESCE(cc.created_day, substr(cc.created_at,1,10)) AS day,
+                cc.url, c.direction, c.horizon_bucket, c.target_price,
+                COALESCE(c.conviction_score,0) AS conviction_score,
+                COALESCE(c.evidence_score,0) AS evidence_score,
+                COALESCE(c.specificity_score,0) AS specificity_score,
+                COALESCE(c.summary_zh,'') AS summary_zh, COALESCE(c.summary_en,'') AS summary_en
+           FROM sv_call_candidate cc
+           JOIN sv_call c ON c.candidate_id = cc.candidate_id
+          WHERE cc.ticker = ? AND COALESCE(cc.created_day, substr(cc.created_at,1,10)) >= ?
+            AND c.is_actionable_call = 1
+            AND COALESCE(cc.text,'') NOT GLOB 'RT @*'
+          ORDER BY COALESCE(cc.interactions,0) DESC, cc.created_at DESC
+          LIMIT ${limit | 0}`,
+        symbol,
+        since
+      ),
+    []
+  );
+  return rows.map((r) => {
+    const handle = String(r.handle || "").replace(/^@/, "");
+    const text = String(r.text || "");
+    const summary: Bi | undefined =
+      r.summary_zh || r.summary_en ? { zh: r.summary_zh || r.summary_en, en: r.summary_en || r.summary_zh } : undefined;
+    const { horizon, bucket } = svHorizon(r.horizon_bucket);
+    const target = Number(r.target_price);
+    const judgment: KolJudgment | undefined =
+      (Number.isFinite(target) && target > 0)
+        ? { sellLo: target, sellHi: target, priceRaw: `$${target}`, horizon, bucket }
+        : (horizon ? { horizon, bucket } : undefined);
+    const interactions =
+      Number(r.interactions) ||
+      (Number(r.likes) || 0) + (Number(r.retweets) || 0) + (Number(r.replies) || 0) + (Number(r.quotes) || 0);
+    return {
+      id: "x-" + r.tweet_id,
+      day: String(r.day || dayOf(r.created)),
+      source: "x" as KolSource,
+      author: handle ? "@" + handle : "@—",
+      interactions,
+      stance: svDirectionToStance(r.direction),
+      zh: summary?.zh || text,
+      en: summary?.en || text,
+      url: r.url || (handle && r.tweet_id ? `https://x.com/${handle}/status/${r.tweet_id}` : "#"),
+      avatarKey: handle,
+      refKey: String(r.tweet_id),
+      orig: text,
+      reason: summary,
+      relevance: svFallbackRelevance(Number(r.heuristic_score) || 50, Number(r.conviction_score) || 0, Number(r.specificity_score) || 0),
+      quality: svFallbackQuality(Number(r.conviction_score) || 0, Number(r.evidence_score) || 0, Number(r.specificity_score) || 0),
+      judgment,
+      metrics: {
+        replies: Number(r.replies) || 0,
+        retweets: Number(r.retweets) || 0,
+        likes: Number(r.likes) || 0,
+        quotes: Number(r.quotes) || 0,
+        views: Number(r.views) || 0,
+        bookmarks: Number(r.bookmarks) || 0,
+      } as TweetMetrics,
+    };
+  });
+}
+
+function mergeRawOps(ops: RawOp[], limit?: number): RawOp[] {
+  const seen = new Set<string>();
+  const out: RawOp[] = [];
+  for (const op of ops) {
+    const key = `${op.source}:${op.refKey || op.id}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(op);
+  }
+  out.sort((a, b) => (b.interactions || 0) - (a.interactions || 0) || (a.day < b.day ? 1 : a.day > b.day ? -1 : 0));
+  return typeof limit === "number" ? out.slice(0, limit) : out;
+}
+
+function xMergedOps(symbol: string, since: string, limit = 500): RawOp[] {
+  return mergeRawOps([...xSvOps(symbol, since, limit), ...xOps(symbol, since, limit)], limit);
+}
+
 export function getKolFlowReal(symbol: string): KolFlow | null {
   const days = priceDays(symbol);
   if (days.length < 4) return null; // 价格历史不足 → 回退 mock
@@ -493,7 +613,7 @@ export function getKolFlowReal(symbol: string): KolFlow | null {
     ...xueqiuOps(symbol, since),
     ...tossOps(symbol, since),
     ...yahooJpOps(symbol, since),
-    ...xOps(symbol, since),
+    ...xMergedOps(symbol, since),
   ];
   const refined = refinedMap(symbol);
   const vpMap = viewpointMap(symbol);
@@ -543,6 +663,9 @@ export function getKolFlowReal(symbol: string): KolFlow | null {
         avatars.get(`${r.source}:${r.avatarKey}`) ||
         (r.source === "x" && r.avatarKey ? `https://unavatar.io/twitter/${r.avatarKey}` : undefined),
       viewpoints: vpMap.get(`${r.source}:${r.refKey}`),
+      relevance: r.relevance,
+      quality: r.quality,
+      judgment: r.judgment,
     });
   }
   if (!opinions.length) return null;
@@ -659,18 +782,20 @@ function repliesByTweet(symbol: string): Map<string, TweetReply[]> {
 }
 
 // 标的页「观点浏览器」（OpinionExplorer，筛选+主从阅读）的扁平观点池。
-// 与折线图的 getKolFlowReal 不同：① 取近 ~95 天（覆盖目标价时间线点击回正文）② 不 snap 到交易日（用真实发布日）
+// 与折线图的 getKolFlowReal 不同：① 取近 ~1 年（覆盖新接入的历史 X 帖文；默认筛选仍看近 1 月）
+// ② 不 snap 到交易日（用真实发布日）
 // ③ 每条带 relevance（kol_relevance）。源/立场/视角/时间/语言/相关性 的筛选全在前端做。
+const COMPLETE_X_OPINION_LIMIT = 1_000_000;
 export function getKolOpinions(symbol: string): KolOpinion[] {
   return safe(() => {
-    const since = new Date(Date.now() - 95 * 864e5).toISOString().slice(0, 10);
+    const since = new Date(Date.now() - 370 * 864e5).toISOString().slice(0, 10);
     const raw = [
       ...redditOps(symbol, since, 200),
       ...youtubeOps(symbol, since, 80),
       ...xueqiuOps(symbol, since, 200),
       ...tossOps(symbol, since, 200),
       ...yahooJpOps(symbol, since, 200),
-      ...xOps(symbol, since, 500),
+      ...xMergedOps(symbol, since, COMPLETE_X_OPINION_LIMIT),
     ];
     const refined = refinedMap(symbol);
     const vpMap = viewpointMap(symbol);
@@ -720,14 +845,14 @@ export function getKolOpinions(symbol: string): KolOpinion[] {
           avatars.get(`${r.source}:${r.avatarKey}`) ||
           (r.source === "x" && r.avatarKey ? `https://unavatar.io/twitter/${r.avatarKey}` : undefined),
         viewpoints: vpMap.get(`${r.source}:${r.refKey}`),
-        relevance: relMap.get(`${r.source}:${r.refKey}`),
-        quality: qualMap.get(`${r.source}:${r.refKey}`),
+        relevance: relMap.get(`${r.source}:${r.refKey}`) ?? r.relevance,
+        quality: qualMap.get(`${r.source}:${r.refKey}`) ?? r.quality,
         metrics: r.source === "x" ? r.metrics : undefined,
         replies: r.source === "x" ? repMap.get(r.refKey) : undefined,
         ytSegments: r.source === "youtube" ? r.ytSegments : undefined,
         channel: r.source === "youtube" ? ytChans.get(r.avatarKey) : undefined,
         ytDigest: r.source === "youtube" ? ytDigests.get(r.refKey) : undefined,
-        judgment: jMap.get(`${r.source}:${r.refKey}`),
+        judgment: jMap.get(`${r.source}:${r.refKey}`) ?? r.judgment,
       });
     }
     return out;
@@ -805,6 +930,41 @@ export function getKolTargetPrices(symbol: string): KolTargetData {
           if (r.sell_lo != null && inBand((r.sell_lo + (r.sell_hi ?? r.sell_lo)) / 2))
             marks.push({ ...base, kind: "sell", lo: r.sell_lo, hi: r.sell_hi ?? r.sell_lo });
         }
+      }
+      // SV X call：直接使用结构化出的 target_price / horizon_bucket，补齐 x_opinion 未覆盖的推特目标价点。
+      const svTargets = safe(
+        () => all<any>(
+          `SELECT cc.tweet_id AS tweet_id, cc.author_handle AS author, cc.url AS url,
+                  COALESCE(cc.created_day, substr(cc.created_at,1,10)) AS day,
+                  c.target_price AS target_price, c.horizon_bucket AS horizon_bucket,
+                  COALESCE(c.summary_zh,'') AS summary_zh, COALESCE(c.summary_en,'') AS summary_en
+             FROM sv_call_candidate cc
+             JOIN sv_call c ON c.candidate_id = cc.candidate_id
+            WHERE cc.ticker = ? AND COALESCE(cc.created_day, substr(cc.created_at,1,10)) >= ?
+              AND c.is_actionable_call = 1 AND c.target_price IS NOT NULL`,
+          symbol,
+          cutoff
+        ),
+        []
+      );
+      for (const r of svTargets) {
+        const target = Number(r.target_price);
+        if (!Number.isFinite(target) || target <= 0 || !inBand(target)) continue;
+        const h = svHorizon(r.horizon_bucket);
+        marks.push({
+          source: "x",
+          opinionId: opinionId("x", r.tweet_id),
+          author: r.author ? "@" + String(r.author).replace(/^@/, "") : "@—",
+          kind: "sell",
+          lo: target,
+          hi: target,
+          priceRaw: `$${target}`,
+          horizon: h.horizon,
+          bucket: h.bucket,
+          reason: bi(r.summary_zh || "", r.summary_en || ""),
+          date: String(r.day || "").slice(0, 10),
+          url: r.url || "#",
+        });
       }
       // youtube：yt_judgment ⋈ yt_video / yt_analysis → 卖出/目标侧
       const yt = safe(
@@ -906,7 +1066,7 @@ export function getKolArguments(symbol: string): WindowedArguments {
       ...xueqiuOps(symbol, cutoff, 200),
       ...tossOps(symbol, cutoff, 200),
       ...yahooJpOps(symbol, cutoff, 200),
-      ...xOps(symbol, cutoff, 200),
+      ...xMergedOps(symbol, cutoff, 200),
     ]) rawIdx.set(`${op.source}:${op.refKey}`, op);
     const refined = refinedMap(symbol);
     const avatars = avatarMap();
@@ -989,14 +1149,64 @@ export function getKolArguments(symbol: string): WindowedArguments {
 // 每日净情绪（kol_sentiment_daily，pipeline `make kol-sentiment`）：折线图下方绿/红面积子面板用。
 // 跨平台 情绪×ln(1+互动)×相关性 加权净值；表缺失→空数组（子面板自降级不崩）。
 export interface DailyNet { day: string; net: number; nPosts: number; nBull: number; nBear: number }
-export function getKolSentimentDaily(symbol: string): DailyNet[] {
+function svSentimentDaily(symbol: string): DailyNet[] {
   return safe(
     () =>
       all<any>(
+        `SELECT COALESCE(cc.created_day, substr(cc.created_at,1,10)) AS day,
+                COUNT(*) AS nPosts,
+                SUM(CASE WHEN c.direction='bull' THEN 1 ELSE 0 END) AS nBull,
+                SUM(CASE WHEN c.direction='bear' THEN 1 ELSE 0 END) AS nBear,
+                SUM((CASE WHEN c.direction='bull' THEN 1 WHEN c.direction='bear' THEN -1 ELSE 0 END) *
+                    CASE WHEN COALESCE(c.call_weight,0) > 0 THEN c.call_weight ELSE 0.1 END) AS weightedNet,
+                SUM(CASE WHEN COALESCE(c.call_weight,0) > 0 THEN c.call_weight ELSE 0.1 END) AS weight
+           FROM sv_call_candidate cc
+           JOIN sv_call c ON c.candidate_id = cc.candidate_id
+          WHERE cc.ticker = ? AND c.is_actionable_call = 1
+          GROUP BY day
+          ORDER BY day`,
+        symbol
+      ).map((r) => ({
+        day: r.day,
+        net: r.weight ? +(r.weightedNet / r.weight).toFixed(3) : 0,
+        nPosts: +r.nPosts || 0,
+        nBull: +r.nBull || 0,
+        nBear: +r.nBear || 0,
+      })),
+    []
+  );
+}
+function mergeDailyNet(base: DailyNet[], extra: DailyNet[]): DailyNet[] {
+  const m = new Map(base.map((r) => [r.day, { ...r }]));
+  for (const e of extra) {
+    const b = m.get(e.day);
+    if (!b) {
+      m.set(e.day, { ...e });
+      continue;
+    }
+    const bWeight = Math.max(0, b.nPosts || 0);
+    const eWeight = Math.max(0, e.nPosts || 0);
+    const total = bWeight + eWeight;
+    m.set(e.day, {
+      day: e.day,
+      net: total ? +(((b.net || 0) * bWeight + (e.net || 0) * eWeight) / total).toFixed(3) : 0,
+      nPosts: (b.nPosts || 0) + (e.nPosts || 0),
+      nBull: (b.nBull || 0) + (e.nBull || 0),
+      nBear: (b.nBear || 0) + (e.nBear || 0),
+    });
+  }
+  return [...m.values()].sort((a, b) => a.day.localeCompare(b.day));
+}
+export function getKolSentimentDaily(symbol: string): DailyNet[] {
+  return safe(
+    () => {
+      const base = all<any>(
         `SELECT day, net, n_posts AS nPosts, n_bull AS nBull, n_bear AS nBear
            FROM kol_sentiment_daily WHERE ticker = ? ORDER BY day`,
         symbol
-      ).map((r) => ({ day: r.day, net: +r.net || 0, nPosts: +r.nPosts || 0, nBull: +r.nBull || 0, nBear: +r.nBear || 0 })),
+      ).map((r) => ({ day: r.day, net: +r.net || 0, nPosts: +r.nPosts || 0, nBull: +r.nBull || 0, nBear: +r.nBear || 0 }));
+      return mergeDailyNet(base, svSentimentDaily(symbol));
+    },
     []
   );
 }
@@ -1004,15 +1214,53 @@ export function getKolSentimentDaily(symbol: string): DailyNet[] {
 // 每日讨论度（kol_volume_daily，pipeline kol-volume 产出）：每 (ticker,day) 跨平台帖子/视频**计数**。
 // 供 KOL 模块「每日讨论度」堆叠条形子面板（VolumePanel）。按 day 升序。
 export interface DailyVol { day: string; total: number; reddit: number; x: number; xueqiu: number; youtube: number; [key: string]: number | string }
-export function getKolVolumeDaily(symbol: string): DailyVol[] {
+function svVolumeDaily(symbol: string): DailyVol[] {
   return safe(
     () =>
       all<any>(
+        `SELECT COALESCE(cc.created_day, substr(cc.created_at,1,10)) AS day, COUNT(*) AS n
+           FROM sv_call_candidate cc
+           JOIN sv_call c ON c.candidate_id = cc.candidate_id
+          WHERE cc.ticker = ? AND c.is_actionable_call = 1
+          GROUP BY day
+          ORDER BY day`,
+        symbol
+      ).map((r) => ({
+        day: r.day,
+        total: +r.n || 0,
+        reddit: 0,
+        x: +r.n || 0,
+        xueqiu: 0,
+        youtube: 0,
+      })),
+    []
+  );
+}
+function mergeDailyVol(base: DailyVol[], extra: DailyVol[]): DailyVol[] {
+  const m = new Map(base.map((r) => [r.day, { ...r }]));
+  for (const e of extra) {
+    const b = m.get(e.day);
+    if (!b) {
+      m.set(e.day, { ...e });
+      continue;
+    }
+    b.x = (+b.x || 0) + (+e.x || 0);
+    b.total = (+b.total || 0) + (+e.total || 0);
+    m.set(e.day, b);
+  }
+  return [...m.values()].sort((a, b) => a.day.localeCompare(b.day));
+}
+export function getKolVolumeDaily(symbol: string): DailyVol[] {
+  return safe(
+    () => {
+      const base = all<any>(
         `SELECT day, COALESCE(n_total,0) AS total, COALESCE(n_reddit,0) AS reddit, COALESCE(n_x,0) AS x,
                 COALESCE(n_xueqiu,0) AS xueqiu, COALESCE(n_youtube,0) AS youtube
            FROM kol_volume_daily WHERE ticker = ? ORDER BY day`,
         symbol
-      ).map((r) => ({ day: r.day, total: +r.total || 0, reddit: +r.reddit || 0, x: +r.x || 0, xueqiu: +r.xueqiu || 0, youtube: +r.youtube || 0 })),
+      ).map((r) => ({ day: r.day, total: +r.total || 0, reddit: +r.reddit || 0, x: +r.x || 0, xueqiu: +r.xueqiu || 0, youtube: +r.youtube || 0 }));
+      return mergeDailyVol(base, svVolumeDaily(symbol));
+    },
     []
   );
 }
@@ -1076,17 +1324,60 @@ export function getRetailNewcomersDaily(symbol: string): RetailNew[] {
 // 每日『新增 KOL』（kol_newcomers_daily，pipeline kol-newcomers）：X / YouTube / 雪球（有身份/粉丝象征的平台）
 // **首次参与该标的讨论**的去重作者数。供 VolumePanel + KOL_NEW_STACK 堆叠（仅 KOL 视图显示）。
 export interface KolNew { day: string; total: number; x: number; youtube: number; xueqiu: number; [key: string]: number | string }
-export function getKolNewcomersDaily(symbol: string): KolNew[] {
+function svNewcomersDaily(symbol: string): KolNew[] {
   return safe(
     () =>
       all<any>(
+        `WITH firsts AS (
+           SELECT cc.author_handle AS handle, MIN(COALESCE(cc.created_day, substr(cc.created_at,1,10))) AS first_day
+             FROM sv_call_candidate cc
+             JOIN sv_call c ON c.candidate_id = cc.candidate_id
+            WHERE cc.ticker = ? AND c.is_actionable_call = 1
+              AND COALESCE(cc.author_handle,'') <> ''
+            GROUP BY cc.author_handle
+         )
+         SELECT first_day AS day, COUNT(*) AS n
+           FROM firsts
+          GROUP BY first_day
+          ORDER BY first_day`,
+        symbol
+      ).map((r) => ({
+        day: r.day,
+        total: +r.n || 0,
+        x: +r.n || 0,
+        youtube: 0,
+        xueqiu: 0,
+      })),
+    []
+  );
+}
+function mergeKolNew(base: KolNew[], extra: KolNew[]): KolNew[] {
+  const m = new Map(base.map((r) => [r.day, { ...r }]));
+  for (const e of extra) {
+    const b = m.get(e.day);
+    if (!b) {
+      m.set(e.day, { ...e });
+      continue;
+    }
+    b.x = (+b.x || 0) + (+e.x || 0);
+    b.total = (+b.total || 0) + (+e.total || 0);
+    m.set(e.day, b);
+  }
+  return [...m.values()].sort((a, b) => a.day.localeCompare(b.day));
+}
+export function getKolNewcomersDaily(symbol: string): KolNew[] {
+  return safe(
+    () => {
+      const base = all<any>(
         `SELECT day, COALESCE(n_total,0) AS total, COALESCE(n_x,0) AS x,
                 COALESCE(n_youtube,0) AS youtube, COALESCE(n_xueqiu,0) AS xueqiu
            FROM kol_newcomers_daily WHERE ticker = ? ORDER BY day`,
         symbol
       ).map((r) => ({
         day: r.day, total: +r.total || 0, x: +r.x || 0, youtube: +r.youtube || 0, xueqiu: +r.xueqiu || 0,
-      })),
+      }));
+      return mergeKolNew(base, svNewcomersDaily(symbol));
+    },
     []
   );
 }

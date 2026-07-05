@@ -10,8 +10,8 @@ const AXIS = "#73757a";
 const GRID = { left: 6, right: 16, top: 28, bottom: 24, containLabel: true };
 const TIP = {
   trigger: "axis",
-  backgroundColor: "rgba(20,20,20,0.96)",
-  borderColor: "#2a2d2f",
+  backgroundColor: "#20242A",
+  borderColor: "#343A42",
   borderWidth: 1,
   textStyle: { color: "#e5e5e5", fontSize: 11 },
   extraCssText: "border-radius:8px",
