@@ -263,7 +263,8 @@ def cmd_youtube_crawl(args):
     # YouTube 观点：按标的搜近 24h、浏览量>阈值的视频 → yt_video（全语种）。缺 key/--mock 出样本。
     from .ingest.youtube_crawl import crawl
     only = [t.strip() for t in args.only.split(",")] if getattr(args, "only", None) else None
-    crawl(only=only, since_hours=args.since_hours, min_views=args.min_views, mock=args.mock)
+    crawl(only=only, since_hours=args.since_hours, min_views=args.min_views,
+          per_ticker_results=args.per_ticker_results, max_pages=args.max_pages, mock=args.mock)
 
 
 def cmd_yt_channels(args):
@@ -475,7 +476,7 @@ def build_parser() -> argparse.ArgumentParser:
     sp = sub.add_parser("gr-xueqiu"); sp.add_argument("--path", type=str, default="data/exports/gr_cn_xueqiu.json", help="浏览器导出的雪球帖 JSON"); sp.add_argument("--since-days", type=int, default=14); sp.set_defaults(func=cmd_gr_xueqiu)
     sub.add_parser("gr-quote").set_defaults(func=cmd_gr_quote)
     sp = sub.add_parser("toss"); sp.add_argument("--days", type=int, default=14, help="爬近 N 天"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker（省略=TOSS_STOCKS 全部）"); sp.add_argument("--max-pages", type=int, default=1500, help="每标的最多翻页数（每页 11 条）"); sp.add_argument("--sleep", type=float, default=0.3, help="分页请求间隔秒数"); sp.add_argument("--commit-pages", type=int, default=100, help="每 N 页提交一次，避免大体量标的长跑回滚"); sp.add_argument("--resume", action="store_true", help="基于本地已有 Toss 数据补新并从最旧游标继续向前抓"); sp.set_defaults(func=cmd_toss)
-    sp = sub.add_parser("youtube-crawl"); sp.add_argument("--since-hours", type=int, default=24); sp.add_argument("--min-views", type=int, default=None, help="浏览量门槛，省略=用 YT_MIN_VIEWS(默认1000)"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker"); sp.add_argument("--mock", action="store_true", help="无 key 时生成多语种样本"); sp.set_defaults(func=cmd_youtube_crawl)
+    sp = sub.add_parser("youtube-crawl"); sp.add_argument("--since-hours", type=int, default=24); sp.add_argument("--min-views", type=int, default=None, help="浏览量门槛，省略=用 YT_MIN_VIEWS(默认1000)"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker"); sp.add_argument("--per-ticker-results", type=int, default=50, help="每个搜索页返回条数，YouTube 上限 50"); sp.add_argument("--max-pages", type=int, default=2, help="每标的搜索分页数"); sp.add_argument("--mock", action="store_true", help="无 key 时生成多语种样本"); sp.set_defaults(func=cmd_youtube_crawl)
     sub.add_parser("yt-channels").set_defaults(func=cmd_yt_channels)
     sp = sub.add_parser("youtube-tag"); sp.add_argument("--top-native", type=int, default=2, help="每标的用 Gemini 原生看视频的前 N 条（其余走字幕）"); sp.add_argument("--per-ticker", type=int, default=None, help="每标的最多分析前 N 条(按播放量)；省略=全部。配合 8h/天预算用，按档位跨标的铺开"); sp.add_argument("--force", action="store_true", help="重分析全部（默认只分析未分析的）"); sp.add_argument("--workers", type=int, default=1, help="并发线程数(>1 走并发真看视频，billing 解锁 8h 后用)"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker，只跑这些（如前十讨论度）"); sp.add_argument("--mock", action="store_true"); sp.set_defaults(func=cmd_youtube_tag)
     sp = sub.add_parser("youtube-tag-text"); sp.add_argument("--per-ticker", type=int, default=20, help="每标的按播放量取前 N（默认 20=前端 LIMIT）"); sp.add_argument("--workers", type=int, default=6, help="LLM 并发数"); sp.set_defaults(func=cmd_youtube_tag_text)
