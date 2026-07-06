@@ -6,6 +6,8 @@
 // 全部筛选在前端做；默认按「相关性」降序排（最相关的在前）。数据来自 lib/kolQueries.getKolOpinions。
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { SaveButton } from "@/components/favorites/SaveButton";
+import { useFavorites } from "@/components/favorites/FavoritesProvider";
 import type { KolOpinion, KolSource, KolJudgment, Stance, TweetMetrics, TweetReply } from "@/lib/mockDetail";
 import type { SvSource, SvTickerBoard } from "@/lib/svMock";
 import { Avatar, SOURCE, STANCE, pickOriginal, mmdd } from "./kolShared";
@@ -238,6 +240,14 @@ const normalizeSvKey = (value?: string): string =>
     .replace(/^@/, "")
     .replace(/^u\//, "")
     .replace(/\s+/g, "");
+const normalizeAuthorKey = (value?: string): string =>
+  String(value || "")
+    .trim()
+    .replace(/^@/, "")
+    .replace(/^u\//, "")
+    .replace(/\s+/g, " ");
+const opinionAuthorRefId = (o: KolOpinion): string =>
+  o.authorRefId || `${o.source}:${normalizeAuthorKey(o.author) || "unknown"}`;
 const svKeysForInvestor = (inv: SvTickerBoard["investors"][number]): string[] => {
   const idTail = inv.id.replace(/^(x|yt|youtube):/i, "");
   return Array.from(new Set([inv.handle, inv.name, idTail].map(normalizeSvKey).filter(Boolean)));
@@ -340,7 +350,7 @@ function personalRecommendation(o: KolOpinion, prefs: PersonalPrefs, currentPric
       withReason(reasons, { zh: `周期匹配你的${STYLE_LABEL[prefs.style].zh}风格`, en: `Horizon matches your ${STYLE_LABEL[prefs.style].en} style` });
     } else if (prefs.style === "dca" && (lenses.includes("valuation") || lenses.includes("growth") || lenses.includes("management"))) {
       score += 12;
-      withReason(reasons, { zh: "更适合定投关注的基本面视角", en: "Fundamental lens fits DCA review" });
+      withReason(reasons, { zh: "更适合定投复盘的基本面视角", en: "Fundamental lens fits DCA review" });
     }
   }
 
@@ -737,6 +747,8 @@ export function OpinionExplorer({
   const [selId, setSelId] = useState<string | null>(null);
   const [personal, setPersonal] = useState<PersonalPrefs>(EMPTY_PERSONAL_PREFS);
   const [personalDraft, setPersonalDraft] = useState<PersonalPrefs>(EMPTY_PERSONAL_PREFS);
+  const [trackedAuthorsOnly, setTrackedAuthorsOnly] = useState(false);
+  const { configured: trackingConfigured, signedIn: trackingSignedIn, isSaved } = useFavorites();
   const personalConfigured = isPersonalConfigured(personal);
   const defaultSort: SortMode = personalConfigured ? "personal" : "rel";
   const personalKey = `prismo:opinion-personal:${symbol || "global"}`;
@@ -839,6 +851,7 @@ export function OpinionExplorer({
   const baseFiltered = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return opinions.filter((o) => {
+      if (trackedAuthorsOnly && (o.source === "yahoojp" || !isSaved("author", opinionAuthorRefId(o)))) return false;
       if (langs.size && !langs.has(langOf(o))) return false;
       if (stanceFilter.size && !stanceFilter.has(o.stance)) return false;
       if (sinceEff && o.day < sinceEff) return false;
@@ -864,7 +877,7 @@ export function OpinionExplorer({
       }
       return true;
     });
-  }, [opinions, langs, stanceFilter, sinceEff, hiQ, svEnabled, svIndex.byKey, svLowBound, svHighBound, query]);
+  }, [opinions, trackedAuthorsOnly, isSaved, langs, stanceFilter, sinceEff, hiQ, svEnabled, svIndex.byKey, svLowBound, svHighBound, query]);
 
   const personalRank = useMemo(() => {
     const m = new Map<string, RecommendationMeta>();
@@ -896,12 +909,13 @@ export function OpinionExplorer({
 
   const selected = selId ? filtered.find((o) => o.id === selId) ?? null : overview ? null : filtered[0] ?? null;
   const availablePlatforms = PLATFORMS.filter((p) => avail.plat.has(p));
-  const hasFilter = Boolean(query.trim() || plat.size || langs.size || stanceFilter.size || since || !hiQ || svFilter.enabled || sort !== defaultSort);
+  const hasFilter = Boolean(query.trim() || plat.size || langs.size || stanceFilter.size || trackedAuthorsOnly || since || !hiQ || svFilter.enabled || sort !== defaultSort);
   const resetFilters = () => {
     setQuery("");
     setPlat(new Set());
     setLangs(new Set());
     setStanceFilter(new Set());
+    setTrackedAuthorsOnly(false);
     setSince("");
     setHiQ(true);
     setSvFilter(DEFAULT_SV_FILTER);
@@ -920,6 +934,7 @@ export function OpinionExplorer({
       setPlat(new Set());
       setLangs(new Set());
       setStanceFilter(new Set());
+      setTrackedAuthorsOnly(false);
       setSince(detail.day || target.day || "");
       setHiQ(true);
       setSvFilter(DEFAULT_SV_FILTER);
@@ -1055,6 +1070,29 @@ export function OpinionExplorer({
             onClear={clearPersonal}
             currentPrice={currentPrice}
           />
+          <button
+            type="button"
+            onClick={() => { setTrackedAuthorsOnly(!trackedAuthorsOnly); setSelId(null); }}
+            disabled={!trackingConfigured}
+            className={`flex h-11 min-w-[150px] shrink-0 items-center justify-center gap-2 rounded-md px-3.5 text-[13px] font-medium ring-1 ring-inset transition ${
+              trackedAuthorsOnly
+                ? "bg-[#57D7BA]/12 text-[#57D7BA] ring-[#57D7BA]/70"
+                : "text-neutral-400 ring-line hover:text-neutral-200"
+            } disabled:cursor-not-allowed disabled:text-neutral-700 disabled:ring-line/60`}
+            title={
+              !trackingConfigured
+                ? (zh ? "当前未配置追踪功能" : "Tracking is not configured")
+                : !trackingSignedIn
+                  ? (zh ? "登录后可筛选已追踪作者" : "Sign in to filter tracked authors")
+                  : (zh ? "只展示已追踪作者发布的观点" : "Only show opinions from tracked authors")
+            }
+            aria-pressed={trackedAuthorsOnly}
+          >
+            <span className={`relative h-3.5 w-6 shrink-0 rounded-full transition ${trackedAuthorsOnly ? "bg-[#57D7BA]" : "bg-elevated"}`}>
+              <span className={`absolute top-[3px] h-2 w-2 rounded-full bg-white transition-all ${trackedAuthorsOnly ? "left-[13px]" : "left-[3px]"}`} />
+            </span>
+            <span>{zh ? "已追踪作者" : "Tracked authors"}</span>
+          </button>
           <Dropdown label={zh ? "时间" : "Time"} value={timeLabel}>
             {(close) => (
               <div className="min-w-[150px]">
@@ -1220,33 +1258,37 @@ function ListCard({
   const excerpt = preview.replace(/\s+/g, " ").trim().slice(0, 84);
   return (
     <li>
-      <button
-        onClick={onClick}
-        title={zh ? st.zh : st.en}
-        className={`relative flex w-full gap-2.5 overflow-hidden border-b border-line/70 py-3 pl-4 pr-3 text-left transition ${
+      <div
+        className={`relative flex w-full overflow-hidden border-b border-line/70 transition ${
           active ? "bg-elevated/80" : "bg-transparent hover:bg-white/[.025]"
         }`}
       >
         <span className="absolute left-0 top-0 h-full w-[3px]" style={{ background: st.color }} aria-hidden />
         {active && <span className="absolute right-0 top-0 h-full w-[3px] bg-reddit" aria-hidden />}
-        <Avatar src={o.avatar} color={src.color} name={o.author} size={26} />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <span className="min-w-0 truncate text-[12.5px] font-medium text-cream">{o.author}</span>
-            <span className="ml-auto flex shrink-0 items-center gap-1.5">
-              <PlatformIcon src={o.source} size={12} />
-              <span className="font-mono tabular text-[10.5px] text-neutral-600">{mmdd(o.day)}</span>
-            </span>
-          </div>
-          <p className="mt-1 line-clamp-2 text-[12px] leading-snug text-neutral-400">{excerpt}</p>
-          {recReason && (
-            <div className="mt-1.5 inline-flex max-w-full items-center gap-1 rounded bg-[#57D7BA]/10 px-1.5 py-0.5 text-[10.5px] font-medium text-[#57D7BA] ring-1 ring-inset ring-[#57D7BA]/25">
-              <span className="h-1 w-1 shrink-0 rounded-full bg-[#57D7BA]" />
-              <span className="truncate">{zh ? recReason.zh : recReason.en}</span>
+        <button
+          onClick={onClick}
+          title={zh ? st.zh : st.en}
+          className="flex min-w-0 flex-1 gap-2.5 py-3 pl-4 pr-3 text-left"
+        >
+          <Avatar src={o.avatar} color={src.color} name={o.author} size={26} />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <span className="min-w-0 truncate text-[12.5px] font-medium text-cream">{o.author}</span>
+              <span className="ml-auto flex shrink-0 items-center gap-1.5">
+                <PlatformIcon src={o.source} size={12} />
+                <span className="font-mono tabular text-[10.5px] text-neutral-600">{mmdd(o.day)}</span>
+              </span>
             </div>
-          )}
-        </div>
-      </button>
+            <p className="mt-1 line-clamp-2 text-[12px] leading-snug text-neutral-400">{excerpt}</p>
+            {recReason && (
+              <div className="mt-1.5 inline-flex max-w-full items-center gap-1 rounded bg-[#57D7BA]/10 px-1.5 py-0.5 text-[10.5px] font-medium text-[#57D7BA] ring-1 ring-inset ring-[#57D7BA]/25">
+                <span className="h-1 w-1 shrink-0 rounded-full bg-[#57D7BA]" />
+                <span className="truncate">{zh ? recReason.zh : recReason.en}</span>
+              </div>
+            )}
+          </div>
+        </button>
+      </div>
     </li>
   );
 }
@@ -1312,6 +1354,8 @@ function Reader({
   const displayText = showOriginal ? base : (canTranslate ? trans : base);
   const hasLink = !!o.url && o.url !== "#";
   const lensKeys = lensesOf(o);
+  const authorRefId = opinionAuthorRefId(o);
+  const canTrackAuthor = o.source !== "yahoojp";
   return (
     <div
       data-reader-scroll
@@ -1329,7 +1373,10 @@ function Reader({
       <div className="flex items-center gap-2.5">
         <Avatar src={o.avatar} color={src.color} name={o.author} size={34} />
         <div className="min-w-0 flex-1">
-          <div className="truncate text-[14px] font-semibold text-cream">{o.author}</div>
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="truncate text-[14px] font-semibold text-cream">{o.author}</div>
+            {canTrackAuthor && <SaveButton kind="author" refId={authorRefId} variant="follow" size="xs" className="shrink-0" />}
+          </div>
           <div className="flex items-center gap-1.5 text-[11px]" style={{ color: src.color }}>
             <PlatformIcon src={o.source} size={12} />
             <span>{src.label} · {o.day}</span>

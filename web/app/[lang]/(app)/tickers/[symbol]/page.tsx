@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SaveButton } from "@/components/favorites/SaveButton";
 import { Consensus, PriceTag } from "@/components/prismo/Bits";
 import { TickerLogo } from "@/components/prismo/TickerLogo";
 import { OpinionExplorer } from "@/components/prismo/OpinionExplorer";
@@ -73,6 +74,7 @@ export default function TickerDetail({ params }: { params: { lang: string; symbo
                 {tickerExchange(ticker.ticker) && <span className="text-neutral-600">· {tickerExchange(ticker.ticker)}</span>}
                 <Consensus value={ticker.consensus} lang={lang} />
                 <StageBadge stage={m.risk.stage} lang={lang} />
+                <SaveButton kind="ticker" refId={ticker.ticker} variant="follow" size="xs" />
               </div>
             </div>
           </div>

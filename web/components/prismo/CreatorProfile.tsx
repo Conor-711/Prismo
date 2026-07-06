@@ -5,6 +5,7 @@
 // 两块（对应用户需求）：① 标的判断（每标的综合成几点关键判断 + 代表性目标价/周期/关键位 + 当时价→现在价回测）
 // ② 互动最高视频。诚实定位：回测基于近一个月价格 → 短窗、样本少，页面显式标注，不包装成长期战绩。
 import { LocaleLink } from "@/components/i18n/LocaleLink";
+import { SaveButton } from "@/components/favorites/SaveButton";
 import { Panel } from "@/components/ui";
 import { fmtCompact } from "@/lib/format";
 import { Avatar } from "./kolShared";
@@ -80,6 +81,7 @@ function Header({ p, zh }: { p: YoutubeCreator["profile"]; zh: boolean }) {
             <span className="rounded px-1.5 py-px text-[10px] font-medium" style={{ background: `${YT}22`, color: YT }}>
               YouTube
             </span>
+            <SaveButton kind="author" refId={`youtube:${p.channelId}`} variant="follow" size="xs" />
           </div>
           <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px] text-neutral-500">
             {p.handle && <span className="font-mono text-neutral-400">{p.handle}</span>}

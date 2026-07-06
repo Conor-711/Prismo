@@ -1,5 +1,6 @@
--- 账户系统：用户私有「收藏 / 追踪」。一张表承载 5 类对象，kind 区分：
---   post / comment（收藏，snapshot 存展示快照）；subreddit / ticker / author（追踪，snapshot 为 null）。
+-- 账户系统：用户私有「收藏 / 追踪」。一张表承载多类对象，kind 区分：
+--   post / comment（收藏，snapshot 存展示快照）；
+--   subreddit / ticker / author / narrative / region（追踪，snapshot 为 null）。
 -- 站点是静态导出（运行时不连库），用户数据由前端经 anon key + RLS 直接读写本表。
 --
 -- 安全模型：
@@ -10,8 +11,8 @@
 
 create table if not exists public.user_collections (
   user_id    uuid        not null references auth.users(id) on delete cascade,
-  kind       text        not null check (kind in ('post','comment','subreddit','ticker','author')),
-  ref_id     text        not null,            -- posts.id / comments.id / subreddits.id / ticker / author 用户名
+  kind       text        not null check (kind in ('post','comment','subreddit','ticker','author','narrative','region')),
+  ref_id     text        not null,            -- posts.id / comments.id / subreddits.id / ticker / author / narrative slug / region
   snapshot   jsonb,                            -- 帖子/评论的展示快照；追踪类为 null
   created_at timestamptz not null default now(),
   primary key (user_id, kind, ref_id)

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { LocaleLink } from "@/components/i18n/LocaleLink";
+import { SaveButton } from "@/components/favorites/SaveButton";
 import { SentScore } from "@/components/prismo/Bits";
 import { TickerLogo } from "@/components/prismo/TickerLogo";
 import { Module, Counter, Counters, flag } from "@/components/prismo/DetailBits";
@@ -99,9 +100,12 @@ export default function NarrativeDetailPage({ params }: { params: { lang: string
             <p className="mt-1 max-w-4xl truncate text-sm text-neutral-500">{narrativeText(category.description, lang)}</p>
           </div>
         </div>
-        <span className="shrink-0 rounded-md bg-white/[.04] px-2.5 py-1 text-[12px] text-neutral-400 ring-1 ring-inset ring-white/10">
-          {trendLabel(current.trend, lang)}
-        </span>
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="rounded-md bg-white/[.04] px-2.5 py-1 text-[12px] text-neutral-400 ring-1 ring-inset ring-white/10">
+            {trendLabel(current.trend, lang)}
+          </span>
+          <SaveButton kind="narrative" refId={category.slug} variant="follow" size="xs" />
+        </div>
       </div>
 
       <Counters>

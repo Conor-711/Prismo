@@ -17,7 +17,7 @@ import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, select, text, update
 
 from ..common import gemini, llm
 from ..common.config import ROOT, settings
@@ -417,6 +417,51 @@ _NODE_DIR = os.path.expanduser("~/.nvm/versions/node/v22.22.2/bin")
 
 def _ensure_fulltext_table() -> None:
     YtFulltext.__table__.create(engine, checkfirst=True)
+    with session_scope() as s:
+        s.execute(text(
+            """CREATE TABLE IF NOT EXISTS yt_fulltext_fail (
+                 video_id TEXT PRIMARY KEY,
+                 ticker TEXT NOT NULL DEFAULT '',
+                 attempts INTEGER NOT NULL DEFAULT 0,
+                 reason TEXT NOT NULL DEFAULT '',
+                 updated_at TEXT NOT NULL DEFAULT ''
+               )"""
+        ))
+
+
+def _load_fulltext_failures(max_attempts: int) -> set[str]:
+    if max_attempts <= 0:
+        return set()
+    with session_scope() as s:
+        rows = s.execute(
+            text("SELECT video_id FROM yt_fulltext_fail WHERE attempts >= :max_attempts"),
+            {"max_attempts": max_attempts},
+        ).all()
+    return {str(r[0]) for r in rows}
+
+
+def _record_fulltext_failure(video_id: str, ticker: str, reason: str) -> None:
+    now = dt.datetime.utcnow().isoformat()
+    with session_scope() as s:
+        s.execute(text(
+            """INSERT INTO yt_fulltext_fail(video_id,ticker,attempts,reason,updated_at)
+               VALUES(:video_id,:ticker,1,:reason,:updated_at)
+               ON CONFLICT(video_id) DO UPDATE SET
+                 ticker=excluded.ticker,
+                 attempts=yt_fulltext_fail.attempts + 1,
+                 reason=excluded.reason,
+                 updated_at=excluded.updated_at"""
+        ), {
+            "video_id": video_id,
+            "ticker": ticker,
+            "reason": reason[:500],
+            "updated_at": now,
+        })
+
+
+def _clear_fulltext_failure(video_id: str) -> None:
+    with session_scope() as s:
+        s.execute(text("DELETE FROM yt_fulltext_fail WHERE video_id=:video_id"), {"video_id": video_id})
 
 
 def _tool_env() -> dict:
@@ -557,7 +602,8 @@ def _split_speech_text(text: str, target: int = 220, hard: int = 320) -> list[st
 
 def gen_fulltext(only: set[str] | None = None, per_ticker: int = 10, workers: int = 4,
                  force: bool = False, low_res: bool = False, max_native_min: int = 150,
-                 frames: bool = True) -> int:
+                 frames: bool = True, limit: int | None = None, fail_after: int = 3,
+                 max_rate_waits: int = 4) -> int:
     """Gemini 真看视频 → 结构化「完整内容」（优化口播 + 关键画面**真实视频帧**）→ yt_fulltext。
 
     每视频：① Gemini 出有序段落(口播/画面+文案，剔宣传) → ② yt-dlp 下载(360p,瞬时,截完即删)
@@ -580,6 +626,7 @@ def gen_fulltext(only: set[str] | None = None, per_ticker: int = 10, workers: in
     with session_scope() as s:
         all_vids = list(s.execute(select(YtVideo)).scalars())
         have = set(s.execute(select(YtFulltext.video_id)).scalars()) if not force else set()
+    failed = _load_fulltext_failures(fail_after) if not force else set()
     grouped: dict[str, list[YtVideo]] = {}
     for v in all_vids:
         if only and (v.ticker or "").upper() not in only:
@@ -588,18 +635,20 @@ def gen_fulltext(only: set[str] | None = None, per_ticker: int = 10, workers: in
     plan: list[YtVideo] = []
     for lst in grouped.values():
         for v in sorted(lst, key=lambda x: -x.view_count)[:per_ticker]:
-            if v.id not in have and (v.duration_s or 0) <= cap_s:
+            if v.id not in have and v.id not in failed and (v.duration_s or 0) <= cap_s:
                 plan.append(v)
+    if limit and limit > 0:
+        plan = plan[:limit]
 
     total = len(plan)
-    print(f"[yt-full] 计划 {total} 视频 / {len(grouped)} 标的（结构化+真帧, model={settings.gemini_model}, force={force}）", flush=True)
+    print(f"[yt-full] 计划 {total} 视频 / {len(grouped)} 标的（结构化+真帧, model={settings.gemini_model}, force={force}, limit={limit or 'all'}, fail_after={fail_after}, rate_waits={max_rate_waits}）", flush=True)
     if not total:
         return 0
 
     def _process(v: YtVideo) -> tuple[YtVideo, str, list[dict], int] | None:
         prompt = f"标的 {v.ticker}。频道《{v.channel}》。按系统要求结构化还原该视频。"
         data = gemini.video_json(v.url, prompt, system=SYSTEM_FULLTEXT, low_res=low_res,
-                                 max_tokens=8000, timeout=180, retries=2, max_rate_waits=1)
+                                 max_tokens=8000, timeout=180, retries=2, max_rate_waits=max_rate_waits)
         segs = (data or {}).get("segments") if isinstance(data, dict) else None
         if not isinstance(segs, list) or not segs:
             return None
@@ -664,14 +713,17 @@ def gen_fulltext(only: set[str] | None = None, per_ticker: int = 10, workers: in
                     out = fut.result()
                 except Exception as e:  # noqa: BLE001
                     fail += 1
+                    _record_fulltext_failure(v.id, v.ticker, str(e))
                     print(f"  [yt-full] ✗ {v.ticker} {v.id}: {str(e)[:100]}", flush=True)
                     continue
                 if out is None:
                     skip += 1
+                    _record_fulltext_failure(v.id, v.ticker, "no_segments")
                     print(f"  [yt-full] – {v.ticker} {v.id} 无段落", flush=True)
                     continue
                 vv, flat, final, nframes = out
                 _save(vv, flat, final)
+                _clear_fulltext_failure(vv.id)
                 done += 1
                 print(f"  [yt-full] ✓ {vv.ticker} {vv.id} 段{len(final)}/帧{nframes} [{done}/{total}] skip={skip} fail={fail}", flush=True)
     else:
@@ -680,14 +732,17 @@ def gen_fulltext(only: set[str] | None = None, per_ticker: int = 10, workers: in
                 out = _process(v)
                 if out is None:
                     skip += 1
+                    _record_fulltext_failure(v.id, v.ticker, "no_segments")
                     print(f"  [yt-full] – {v.ticker} {v.id} 无段落", flush=True)
                     continue
                 vv, flat, final, nframes = out
                 _save(vv, flat, final)
+                _clear_fulltext_failure(vv.id)
                 done += 1
                 print(f"  [yt-full] ✓ {vv.ticker} {vv.id} 段{len(final)}/帧{nframes} [{done}/{total}] skip={skip} fail={fail}", flush=True)
             except Exception as e:  # noqa: BLE001
                 fail += 1
+                _record_fulltext_failure(v.id, v.ticker, str(e))
                 print(f"  [yt-full] ✗ {v.ticker} {v.id}: {str(e)[:100]}", flush=True)
     print(f"[yt-full] 完成 {done}（跳过 {skip}，失败 {fail}）", flush=True)
     return done

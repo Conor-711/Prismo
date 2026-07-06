@@ -265,103 +265,12 @@ class DailyBrief(Base):
     created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
 
 
-# ----------------------------- 亚洲散户舆情实验（日本/韩国本土社区，隔离表，不污染 us/cn） -----------------------------
-# 独立 market 标识 jp|kr；与 Reddit 主管线的 posts/item_analysis/聚合表完全分离，
-# 实时舆情 feed / rollups / mood 一律不读这些表。只供隐藏页 /[lang]/lab/asia-pulse 使用。
-class AsiaPost(Base):
-    __tablename__ = "asia_posts"
-    id: Mapped[str] = mapped_column(String(96), primary_key=True)  # f"{source}:{ticker}:{native_id}"
-    market: Mapped[str] = mapped_column(String(8), index=True)  # jp | kr
-    source: Mapped[str] = mapped_column(String(16), index=True)  # yahoo_jp | naver_kr | naver_world
-    ticker: Mapped[str] = mapped_column(String(16), index=True)  # 标准内部键：NVDA | MU | HYNIX
-    board_code: Mapped[str] = mapped_column(String(24), default="")  # 站点原生代码（NVDA / 000660 / NVDA.O）
-    # 来源真实性：live=本土板实抓；sample=无本土板时的清晰标注样本（仅 JP-海力士等缺口/抓取失败兜底）。
-    origin: Mapped[str] = mapped_column(String(8), default="live", index=True)
-    author: Mapped[str] = mapped_column(String(120), default="")
-    title: Mapped[str] = mapped_column(Text, default="")
-    body: Mapped[str] = mapped_column(Text, default="")
-    label: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)  # 原生情绪标签（強気/弱気/매수…）
-    url: Mapped[str] = mapped_column(Text, default="")
-    likes: Mapped[int] = mapped_column(Integer, default=0)  # そう思う(はい) / 추천(공감)
-    dislikes: Mapped[int] = mapped_column(Integer, default=0)  # いいえ / 비추천
-    reply_count: Mapped[int] = mapped_column(Integer, default=0)  # 兼容旧列（= comments）
-    # 丰富维度（按需，缺省 0/False）：浏览量 / 评论数(讨论深度) / 附图数(图表截图) / 作者持股认证
-    views: Mapped[int] = mapped_column(Integer, default=0)
-    comments: Mapped[int] = mapped_column(Integer, default=0)
-    images: Mapped[int] = mapped_column(Integer, default=0)
-    verified: Mapped[bool] = mapped_column(Boolean, default=False)
-    # 全量情绪分（-1..1）：DeepSeek flash 给**每一帖**打的轻量分，供「每日情绪时间序列/变化」用。
-    # 与 asia_analysis（仅 Top 帖的千问深析）互补；NULL=未打分。
-    sentiment: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    created_utc: Mapped[dt.datetime] = mapped_column(DateTime, index=True)
-    fetched_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
-
-
-class AsiaAnalysis(Base):
-    __tablename__ = "asia_analysis"
-    post_id: Mapped[str] = mapped_column(String(96), primary_key=True)  # → asia_posts.id
-    lang: Mapped[str] = mapped_column(String(8), default="")  # 源文语言 ja | ko
-    sentiment_label: Mapped[str] = mapped_column(String(16), default="neutral")
-    sentiment_score: Mapped[float] = mapped_column(Float, default=0.0)  # -1..1
-    stance: Mapped[str] = mapped_column(String(16), default="neutral")  # bull|bear|neutral
-    quality_score: Mapped[float] = mapped_column(Float, default=0.0)
-    themes: Mapped[Optional[list]] = mapped_column(JSONText, nullable=True)
-    # 双语：站点是 zh/en，源文是日/韩，故 AI 直接产出中英两版摘要与论点。
-    tldr_zh: Mapped[str] = mapped_column(Text, default="")
-    tldr_en: Mapped[str] = mapped_column(Text, default="")
-    bull_points_zh: Mapped[Optional[list]] = mapped_column(JSONText, nullable=True)
-    bull_points_en: Mapped[Optional[list]] = mapped_column(JSONText, nullable=True)
-    bear_points_zh: Mapped[Optional[list]] = mapped_column(JSONText, nullable=True)
-    bear_points_en: Mapped[Optional[list]] = mapped_column(JSONText, nullable=True)
-    model: Mapped[str] = mapped_column(String(48), default="")
-    analyzed_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
-
-
-class AsiaTickerSummary(Base):
-    __tablename__ = "asia_ticker_summary"
-    __table_args__ = (UniqueConstraint("market", "ticker", name="uq_asia_summary"),)
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    market: Mapped[str] = mapped_column(String(8), index=True)  # jp | kr
-    ticker: Mapped[str] = mapped_column(String(16), index=True)
-    source: Mapped[str] = mapped_column(String(16), default="")
-    post_count: Mapped[int] = mapped_column(Integer, default=0)
-    analyzed_count: Mapped[int] = mapped_column(Integer, default=0)
-    bull_pct: Mapped[float] = mapped_column(Float, default=0.0)
-    bear_pct: Mapped[float] = mapped_column(Float, default=0.0)
-    neutral_pct: Mapped[float] = mapped_column(Float, default=0.0)
-    mood_score: Mapped[float] = mapped_column(Float, default=0.0)  # -1..1
-    mood_label: Mapped[str] = mapped_column(String(24), default="")
-    overview_zh: Mapped[str] = mapped_column(Text, default="")  # AI 汇总段落（DeepSeek）
-    overview_en: Mapped[str] = mapped_column(Text, default="")
-    top_bull_zh: Mapped[Optional[list]] = mapped_column(JSONText, nullable=True)
-    top_bull_en: Mapped[Optional[list]] = mapped_column(JSONText, nullable=True)
-    top_bear_zh: Mapped[Optional[list]] = mapped_column(JSONText, nullable=True)
-    top_bear_en: Mapped[Optional[list]] = mapped_column(JSONText, nullable=True)
-    top_themes: Mapped[Optional[list]] = mapped_column(JSONText, nullable=True)
-    updated_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
-
-
-class AsiaPrice(Base):
-    """标的日 K 收盘价（来自 Naver 日K接口），供「价格 vs 情绪/声量」叠加指数图。
-    SpaceX(SPCX) 为 pre-IPO 追踪价，历史稀疏。"""
-    __tablename__ = "asia_price"
-    __table_args__ = (UniqueConstraint("ticker", "day", name="uq_asia_price"),)
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    ticker: Mapped[str] = mapped_column(String(16), index=True)
-    day: Mapped[str] = mapped_column(String(10), index=True)  # YYYY-MM-DD
-    close: Mapped[float] = mapped_column(Float, default=0.0)
-    open: Mapped[float] = mapped_column(Float, default=0.0)
-    volume: Mapped[int] = mapped_column(Integer, default=0)
-    currency: Mapped[str] = mapped_column(String(8), default="USD")
-    updated_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
-
-
 # --------------------- 全球散户多区看板（US Reddit 复用 + 日韩台新爬） ---------------------
 # 4 个地区对同一批「精选跨区高共识美股」的情绪对比。隔离表 gr_*：
 #   - 与 us/cn Reddit 主管线隔离（US 区只**读**现有 TickerRollup/ItemAnalysis，不写）；
-#   - 与 asia_* 4 标的实验也隔离（这是 ticker 中心、~40 标的、含 US 的另一套）。
+#   - 这是 ticker 中心、~40 标的、含 US 的跨区散户数据。
 # 日韩台原始帖入 gr_post（US 不入库）；每 (region,ticker) 滚动入 gr_ticker_region；
-# 每 ticker 跨区派生（共识/分歧）入 gr_ticker。仅供隐藏页 /[lang]/lab/global-retail。
+# 每 ticker 跨区派生（共识/分歧）入 gr_ticker，供总览/标的/区域等正式页面读取。
 class GrPost(Base):
     __tablename__ = "gr_post"
     id: Mapped[str] = mapped_column(String(140), primary_key=True)  # region:source:ticker:native_id
@@ -679,8 +588,6 @@ ALL_TABLES = [
     Subreddit, Author, Post, Comment, TickerMeta, Mention, ItemAnalysis,
     TickerRollup, MarketMood, Trending, Narrative, NarrativeTicker,
     NarrativePost, DailyBrief,
-    # 亚洲实验隔离表：进 ALL_TABLES 让 cloud-pull 能快照；不进 sync.SOURCE_TABLES。
-    AsiaPost, AsiaAnalysis, AsiaTickerSummary, AsiaPrice,
     # 全球散户多区看板隔离表（同样进快照、不进 SOURCE_TABLES）。
     GrPost, GrTickerRegion, GrTicker, GrQuote,
     # YouTube 观点隔离表（同样进快照、不进 SOURCE_TABLES）。

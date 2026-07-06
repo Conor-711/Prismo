@@ -1,7 +1,7 @@
 // 标的「整体数据」派生信号的构建期数据层（离线管线 pipeline/analyze/overall_signals.py 产出）。
 //   ① anomalies —— 情绪/讨论度异常日 + AI 一句话归因（标在当天的折线/条状物上，hover 出原因）。
 //   ② aspects   —— 近 14 天 KOL 最密集讨论的 3 个方面（标签 + 多空倾向 + 代表性原推）。
-// 与 topInvestors 同范式：web 端按 ticker 直接读 JSON，不碰 dev.db。当前仅 PLTR 为真实数据。
+// Web 端按 ticker 直接读构建期 JSON，不碰 dev.db。当前仅 PLTR 为真实数据。
 import data from "./data/overallData.json";
 
 export type AnomalyMetric = "sentiment" | "volume";

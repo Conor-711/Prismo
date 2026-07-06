@@ -1,6 +1,6 @@
 import { all, get } from "./db";
 
-// 全球散户多区看板（隐藏页 /[lang]/lab/global-retail）取数层。
+// 全球散户多区数据取数层。
 // 隔离表 gr_*（pipeline 的 gr-crawl/gr-tag/gr-rollup 产出）；US 区由 rollup 读现有 Reddit。
 // 所有查询 try/catch 兜表缺失（云端快照未含 gr_* → 返回空，不让构建崩）。
 

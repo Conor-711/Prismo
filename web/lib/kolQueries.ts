@@ -124,6 +124,19 @@ interface RawOp {
   judgment?: KolJudgment; // 源侧直接结构化出的目标价/周期（SV X call）
 }
 
+function cleanAuthorKey(author: string): string {
+  return String(author || "")
+    .trim()
+    .replace(/^@/, "")
+    .replace(/^u\//, "")
+    .replace(/\s+/g, " ");
+}
+
+function authorRefIdFor(source: KolSource, author: string, avatarKey: string): string {
+  const key = (avatarKey || cleanAuthorKey(author)).trim();
+  return `${source}:${key || "unknown"}`;
+}
+
 // kol_refined（pipeline kol-refine 产出）：source:item_id -> 提炼结果。
 interface Refined {
   stance: Stance;
@@ -650,6 +663,7 @@ export function getKolFlowReal(symbol: string): KolFlow | null {
       day,
       source: r.source,
       author: r.author,
+      authorRefId: authorRefIdFor(r.source, r.author, r.avatarKey),
       interactions: r.interactions,
       stance,
       text: { zh: r.zh || r.en, en: r.en || r.zh },
@@ -832,6 +846,7 @@ export function getKolOpinions(symbol: string): KolOpinion[] {
         day: r.day,
         source: r.source,
         author: r.author,
+        authorRefId: authorRefIdFor(r.source, r.author, r.avatarKey),
         interactions: r.interactions,
         stance,
         text: { zh: r.zh || r.en, en: r.en || r.zh },

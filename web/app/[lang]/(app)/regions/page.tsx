@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LocaleLink } from "@/components/i18n/LocaleLink";
+import { SaveButton } from "@/components/favorites/SaveButton";
 import { Panel, PageHeader, SectionTitle } from "@/components/ui";
 import { SentScore, StanceBar } from "@/components/prismo/Bits";
 import { AsiaDivergingBars } from "@/components/asia/AsiaCharts";
@@ -53,17 +54,19 @@ export default function RegionsPage({ params }: { params: { lang: string } }) {
               const topBull = [...ranked].sort((a, b) => b.sentiment_avg - a.sentiment_avg)[0];
               const topBear = [...ranked].sort((a, b) => a.sentiment_avg - b.sentiment_avg)[0];
               return (
-                <LocaleLink
+                <div
                   key={r}
-                  href={`/regions/${r}`}
-                  className="group rounded-xl bg-card ring-1 ring-inset ring-line p-5 hover:ring-reddit/40 hover:-translate-y-0.5 transition"
+                  className="group rounded-xl bg-card p-5 ring-1 ring-inset ring-line transition hover:-translate-y-0.5 hover:ring-reddit/40"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="inline-flex items-center gap-2 font-display font-bold text-cream text-lg">
-                      <span className="w-3 h-3 rounded-full" style={{ background: regionColor(r) }} />
-                      {regionLabel(r, lang)}
-                    </span>
-                    <SentScore score={s.avg_sentiment} className="text-lg" />
+                    <LocaleLink href={`/regions/${r}`} className="inline-flex min-w-0 items-center gap-2 font-display text-lg font-bold text-cream transition hover:text-reddit">
+                      <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: regionColor(r) }} />
+                      <span className="truncate">{regionLabel(r, lang)}</span>
+                    </LocaleLink>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <SentScore score={s.avg_sentiment} className="text-lg" />
+                      <SaveButton kind="region" refId={r} variant="follow" size="xs" />
+                    </div>
                   </div>
                   <div className="text-[11px] text-neutral-600 mt-0.5">{regionSource(r)}</div>
 
@@ -87,7 +90,7 @@ export default function RegionsPage({ params }: { params: { lang: string } }) {
                       </div>
                     )}
                   </div>
-                </LocaleLink>
+                </div>
               );
             })}
           </div>

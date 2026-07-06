@@ -5,6 +5,7 @@
 import { useState } from "react";
 import { LocaleLink } from "@/components/i18n/LocaleLink";
 import { useLocale } from "@/components/i18n/LocaleProvider";
+import { SaveButton } from "@/components/favorites/SaveButton";
 import { Panel } from "@/components/ui";
 import { fmtCompact } from "@/lib/format";
 import { Avatar, SOURCE, SOURCE_ORDER } from "./kolShared";
@@ -61,6 +62,7 @@ function Card({ inv, rank }: { inv: Investor; rank: number }) {
           <span className="shrink-0 rounded px-1.5 py-px text-[10px] font-medium" style={{ background: `${c}22`, color: c }}>
             {SOURCE[inv.source].label}
           </span>
+          <SaveButton kind="author" refId={`${inv.source}:${inv.id}`} variant="follow" size="xs" className="shrink-0" />
         </div>
         {inv.tickers.length > 0 && (
           <div className="mt-1.5 flex flex-wrap items-center gap-1">

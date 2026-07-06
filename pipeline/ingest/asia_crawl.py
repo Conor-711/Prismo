@@ -1,31 +1,18 @@
-"""亚洲散户舆情实验爬虫：日本(Yahoo Finance JP) + 韩国(Naver) 本土社区。
+"""日韩台散户社区抓取函数。
 
-爬 NVIDIA / Micron / SK 海力士 三标的在日韩本土散户板的讨论，写入隔离表 asia_posts
-（不污染 Reddit 主管线）。沙箱出口 IP 可达这两站（不像 Reddit 被直连屏蔽）。
-
-三个数据通道（见 pipeline/data/asia_targets.yml）：
-  - yahoo_jp     : finance.yahoo.co.jp/quote/{CODE}/forum —— 服务端渲染 HTML，直接解析（NVDA/MU）。
-  - naver_kr     : finance.naver.com/item/board.naver?code={6位} —— 经典种子讨论板(종목토론방)，SSR（海力士 000660）。
-  - naver_world  : apis.naver.com cbox 评论（ticket=finance&pool=cbox12）—— 海外股(NVDA.O/MU.O)，
-                   需 objectId（Chrome 抓一次填入 asia_targets.yml 的 naver_object_id 即激活）。
-
-无本土板的缺口格（如 JP-海力士）与抓取失败时，从 pipeline/data/asia_samples.json 取清晰标注的
-样本（origin='sample'）兜底，保证页面网格完整、AI 全流程可演示——绝不冒充真实抓取。
+这里保留给全球散户管道复用的三类 fetch：
+- Yahoo Finance Japan forum
+- Naver mobile discussion
+- PTT Stock board
 """
 from __future__ import annotations
 
 import datetime as dt
 import html as _html
-import json
 import re
 import time
 
 import requests
-import yaml
-
-from ..common.config import PKG_DATA_DIR
-from ..common.db import session_scope
-from ..common.models import AsiaPost, Base
 
 UA_MOBILE = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
 UA_PC = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36"
@@ -41,12 +28,6 @@ NAVER_WEB = {"foreignStock": "https://m.stock.naver.com/worldstock/stock/{code}/
 
 # 日本/韩国均为 UTC+9（JST/KST）。
 TZ_OFFSET = dt.timedelta(hours=9)
-
-
-# ----------------------------- 工具 -----------------------------
-def load_targets() -> list[dict]:
-    with open(PKG_DATA_DIR / "asia_targets.yml", "r", encoding="utf-8") as f:
-        return yaml.safe_load(f)["tickers"]
 
 
 def _clean(html_fragment: str) -> str:
@@ -513,130 +494,3 @@ def _parse_iso(s: str) -> dt.datetime:
         return dt.datetime.utcnow()
     return _to_utc(dt.datetime(*(int(m.group(i)) for i in range(1, 6))))
 
-
-# ----------------------------- 落库 -----------------------------
-def _upsert(s, *, market: str, source: str, ticker: str, board_code: str, origin: str, rec: dict) -> None:
-    pid = f"{source}:{ticker}:{rec['native_id']}"
-    s.merge(AsiaPost(
-        id=pid, market=market, source=source, ticker=ticker, board_code=board_code, origin=origin,
-        author=rec.get("author", "—")[:120], title=rec.get("title", "") or "", body=rec.get("body", "") or "",
-        label=rec.get("label"), url=rec.get("url", "") or "",
-        likes=int(rec.get("likes", 0) or 0), dislikes=int(rec.get("dislikes", 0) or 0),
-        views=int(rec.get("views", 0) or 0), comments=int(rec.get("comments", 0) or 0),
-        images=int(rec.get("images", 0) or 0), verified=bool(rec.get("verified", False)),
-        reply_count=int(rec.get("comments", 0) or 0),  # 兼容旧列
-        created_utc=rec.get("created_utc") or dt.datetime.utcnow(),
-        fetched_at=dt.datetime.utcnow(),
-    ))
-
-
-def _load_samples() -> dict:
-    try:
-        with open(PKG_DATA_DIR / "asia_samples.json", "r", encoding="utf-8") as f:
-            return json.load(f)
-    except (FileNotFoundError, ValueError):
-        return {}
-
-
-def _ensure_tables() -> None:
-    """只建 asia 三表（幂等），并给已存在的 asia_posts 补新列（ADD COLUMN，幂等）。"""
-    from sqlalchemy import inspect
-    from ..common.db import engine
-    Base.metadata.create_all(engine, tables=[
-        AsiaPost.__table__,
-        Base.metadata.tables["asia_analysis"],
-        Base.metadata.tables["asia_ticker_summary"],
-        Base.metadata.tables["asia_price"],
-    ])
-    # 老库（无新列）→ 补列，避免重建丢数据。
-    try:
-        cols = {c["name"] for c in inspect(engine).get_columns("asia_posts")}
-    except Exception:  # noqa: BLE001
-        cols = set()
-    new_cols = (("views", "INTEGER DEFAULT 0"), ("comments", "INTEGER DEFAULT 0"),
-                ("images", "INTEGER DEFAULT 0"), ("verified", "BOOLEAN DEFAULT 0"),
-                ("sentiment", "FLOAT"))
-    missing = [(c, d) for c, d in new_cols if cols and c not in cols]
-    if missing:
-        with engine.begin() as conn:
-            for col, decl in missing:
-                conn.exec_driver_sql(f"ALTER TABLE asia_posts ADD COLUMN {col} {decl}")
-        print(f"[asia] asia_posts 补列：{[c for c,_ in missing]}")
-
-
-# ----------------------------- 主流程 -----------------------------
-def crawl(per_board: int = 200, sample_fallback: bool = True, markets: set[str] | None = None,
-          since_days: int = 7) -> dict:
-    _ensure_tables()
-    targets = load_targets()
-    samples = _load_samples() if sample_fallback else {}
-    since = dt.datetime.utcnow() - dt.timedelta(days=since_days) if since_days else None
-    stats = {"jp_live": 0, "kr_live": 0, "tw_live": 0, "sample": 0}
-    if since:
-        print(f"[asia-crawl] 时间窗：仅 {since:%Y-%m-%d %H:%M} (UTC) 之后的帖（近 {since_days} 天）。")
-
-    with session_scope() as s:
-        for tgt in targets:
-            tk = tgt["ticker"]
-
-            # 日本：Yahoo JP
-            if (not markets or "jp" in markets):
-                got = 0
-                if tgt.get("yahoo_jp"):
-                    recs = fetch_yahoo_jp(tgt["yahoo_jp"], per_board, since=since)
-                    for rec in recs:
-                        _upsert(s, market="jp", source="yahoo_jp", ticker=tk,
-                                board_code=tgt["yahoo_jp"], origin="live", rec=rec)
-                    got = len(recs)
-                    stats["jp_live"] += got
-                    print(f"  [jp] {tk}({tgt['yahoo_jp']}): {got} 帖 live")
-                if got == 0:  # 无本土板 / 抓取失败 → 标注样本兜底
-                    stats["sample"] += _insert_samples(s, samples, "jp", tk)
-
-            # 韩国：Naver 移动端讨论 front-api（国内 domesticStock / 海外 foreignStock 统一）
-            if (not markets or "kr" in markets):
-                kr_got = 0
-                if tgt.get("naver_type") and tgt.get("naver_code"):
-                    dtype = tgt["naver_type"]
-                    src = "naver_world" if dtype == "foreignStock" else "naver_kr"
-                    recs = fetch_naver_discussion(dtype, str(tgt["naver_code"]), per_board, since=since)
-                    for rec in recs:
-                        _upsert(s, market="kr", source=src, ticker=tk,
-                                board_code=str(tgt["naver_code"]), origin="live", rec=rec)
-                    kr_got = len(recs)
-                    stats["kr_live"] += kr_got
-                    print(f"  [kr] {tk}({tgt['naver_code']}/{dtype}): {kr_got} 帖 live")
-                if kr_got == 0:
-                    stats["sample"] += _insert_samples(s, samples, "kr", tk)
-
-        # 台湾：PTT Stock 综合板（board 级聚合，ticker=TWSTOCK；非按个股分板）
-        if not markets or "tw" in markets:
-            recs = fetch_ptt_stock(limit=max(per_board * 2, 400), since=since)
-            for rec in recs:
-                _upsert(s, market="tw", source="ptt", ticker="TWSTOCK", board_code="Stock", origin="live", rec=rec)
-            stats["tw_live"] = len(recs)
-            print(f"  [tw] PTT/Stock: {len(recs)} 帖 live")
-
-    print(f"[asia-crawl] 完成 {stats}")
-    return stats
-
-
-def _insert_samples(s, samples: dict, market: str, ticker: str) -> int:
-    key = f"{market}:{ticker}"
-    rows = samples.get(key) or []
-    n = 0
-    base = dt.datetime.utcnow()
-    for i, r in enumerate(rows):
-        rec = dict(r)
-        rec.setdefault("native_id", f"s{i}")
-        rec.setdefault("created_utc", base - dt.timedelta(hours=i + 1))
-        src = "yahoo_jp" if market == "jp" else "naver_kr"
-        _upsert(s, market=market, source=src, ticker=ticker, board_code="sample", origin="sample", rec=rec)
-        n += 1
-    if n:
-        print(f"  [{market}] {ticker}: 无 live，插入 {n} 条标注样本（origin=sample）")
-    return n
-
-
-if __name__ == "__main__":
-    crawl()

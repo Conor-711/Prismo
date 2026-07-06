@@ -1,12 +1,12 @@
 """全球散户多区看板——爬日(Yahoo JP)/韩(Naver)/台(PTT) 本土板对「精选跨区美股」的讨论。
 
-与 us/cn Reddit 主管线、asia_* 4 标的实验**均隔离**，写独立表 gr_post：
+与 us/cn Reddit 主管线隔离，写独立表 gr_post：
   - 日本 jp：finance.yahoo.co.jp/quote/{SYMBOL}/forum（美股代码直连，已验证）。
   - 韩国 kr：m.stock.naver.com front-api discussion（foreignStock + reutersCode，如 NVDA.O）。
   - 台湾 tw：ptt.cc/bbs/Stock 综合板抓一遍，再用别名（繁中名/英文代码）从标题+正文**抽取**精选标的。
 US 区不在此爬——其情绪/声量在 rollup 阶段直接读现有 Reddit TickerRollup（只读，不污染）。
 
-复用 asia_crawl.py 里成熟的 fetch_yahoo_jp / fetch_naver_discussion / fetch_ptt_stock。
+复用 asia_crawl.py 里的 fetch_yahoo_jp / fetch_naver_discussion / fetch_ptt_stock。
 打标在 analyze/global_retail_tag.py（DeepSeek flash，不用千问）。
 """
 from __future__ import annotations

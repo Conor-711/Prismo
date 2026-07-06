@@ -7,6 +7,8 @@ pipeline/.venv
 data/*.db
 !data/dev.db
 !data/dev.db.xz
+!data/dev.db.xz.part-*
+!data/dev.db.xz.parts
 data/*.db-wal
 data/*.db-shm
 *.log
