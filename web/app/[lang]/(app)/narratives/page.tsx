@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LocaleLink } from "@/components/i18n/LocaleLink";
+import { SaveButton } from "@/components/favorites/SaveButton";
 import { Panel } from "@/components/ui";
 import { NarrativeMindshareAreaChart } from "@/components/prismo/NarrativeRotationCharts";
 import { ViewportWorkspace } from "@/components/prismo/ViewportWorkspace";
@@ -111,12 +112,15 @@ function NarrativeMoveBoard({
             {sorted.map((row) => (
               <tr key={row.id} className="border-t border-line/70 transition hover:bg-white/[.025]">
                 <td className="py-2 pl-3 pr-2">
-                  <LocaleLink href={`/narratives/${row.slug}`} className="group flex items-center gap-2">
-                    <span className="h-2 w-2 shrink-0 rounded-sm" style={{ background: row.color }} />
-                    <span className="min-w-0 truncate font-semibold text-neutral-300 group-hover:text-reddit">
-                      {narrativeText(row.title, lang)}
-                    </span>
-                  </LocaleLink>
+                  <div className="flex min-w-0 items-center gap-2">
+                    <LocaleLink href={`/narratives/${row.slug}`} className="group flex min-w-0 flex-1 items-center gap-2">
+                      <span className="h-2 w-2 shrink-0 rounded-sm" style={{ background: row.color }} />
+                      <span className="min-w-0 truncate font-semibold text-neutral-300 group-hover:text-reddit">
+                        {narrativeText(row.title, lang)}
+                      </span>
+                    </LocaleLink>
+                    <SaveButton kind="narrative" refId={row.slug} variant="follow" size="xs" className="hidden xl:inline-flex" />
+                  </div>
                 </td>
                 <td className="px-1.5 py-2 text-right font-mono tabular text-neutral-300">{fmtPct(row.currentShare * 100, 2)}</td>
                 <td className="px-1.5 py-2 text-right"><Bps value={row.d1} /></td>

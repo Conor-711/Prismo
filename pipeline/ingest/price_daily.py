@@ -9,7 +9,7 @@ Yahoo: query1.finance.yahoo.com/v8/finance/chart/{TICKER}?interval=1d&range=1mo
 标的取自 dev.db 的 gr_ticker（+ ticker_meta 兜底）。每标的全量重刷（先删后插）。
 
 注：这是把价格历史灌进本地快照 dev.db 的务实做法；要长期/生产化，应改为 session_scope
-ingester 写云端 Supabase 再 cloud-pull（与 asia_price.py 同范式）。
+ingester 写云端 Supabase 再 cloud-pull。
 """
 from __future__ import annotations
 

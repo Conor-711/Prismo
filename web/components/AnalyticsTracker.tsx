@@ -97,13 +97,12 @@ export function AnalyticsTracker() {
     };
   }, [bank, resume, emit]);
 
-  // 路由变化：先结算上一页，再开新页 + page_view（仪表盘自身不统计）。
+  // 路由变化：先结算上一页，再开新页 + page_view。
   useEffect(() => {
     if (!pathname) return;
     const { lang, rest } = stripLang(pathname);
     const path = rest.replace(/\/+$/, "") || "/";
     emit();
-    if (path.startsWith("/insights")) { seg.current = null; return; }
     seg.current = { path, lang, activeMs: 0, runStart: Date.now(), clicks: 0, maxScroll: 0 };
     lastActivity.current = Date.now();
     const m = path.match(/\/ticker\/([^/]+)/);

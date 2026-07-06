@@ -13,13 +13,15 @@ const NEUTRAL = "#8A8D91";
 const GOLD = "#F2B544";
 const GRID = "rgba(127,127,127,0.11)";
 const AXIS = "#73757a";
+const LINE = "#343A42";
+const TIP_BG = "#20242A";
 const TIP = {
-  backgroundColor: "rgba(20,20,20,0.96)",
-  borderColor: "#2a2d2f",
+  backgroundColor: TIP_BG,
+  borderColor: LINE,
   borderWidth: 1,
   padding: [8, 10],
   textStyle: { color: "#e5e5e5", fontSize: 11 },
-  extraCssText: "border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,0.45)",
+  extraCssText: "border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,0.32)",
 };
 
 const md = (day: string) => {

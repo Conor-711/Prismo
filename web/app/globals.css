@@ -11,29 +11,29 @@
   --font-inter: "Figtree", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Roboto", ui-sans-serif, system-ui, sans-serif;
 
-  /* 底色族（空格分隔 RGB，配合 <alpha-value>）—— QuiverQuant 近黑 */
-  --c-ink: 18 18 18; /* #121212 页面底色 */
-  --c-surface: 22 22 22; /* #161616 导航 / 顶栏 */
-  --c-card: 22 22 22; /* #161616 卡片（中性近黑；#202630 仅留给图表底） */
-  --c-elevated: 28 29 31; /* #1C1D1F 悬停 / 抬升 */
-  --c-line: 42 45 47; /* #2A2D2F 发丝边 */
-  --c-navy: 31 36 45; /* #1F242D（兼容旧引用） */
-  --c-cream: 241 243 244; /* #F1F3F4 主文字 */
+  /* 底色族（空格分隔 RGB，配合 <alpha-value>）—— 低饱和冷灰黑，避免纯黑阅读疲劳。 */
+  --c-ink: 23 25 28; /* #17191C 页面底色 */
+  --c-surface: 29 32 36; /* #1D2024 导航 / 顶栏 */
+  --c-card: 32 35 40; /* #202328 卡片 / 阅读面 */
+  --c-elevated: 38 42 48; /* #262A30 悬停 / 抬升 */
+  --c-line: 52 58 66; /* #343A42 发丝边 */
+  --c-navy: 36 42 51; /* #242A33（兼容旧引用） */
+  --c-cream: 242 244 245; /* #F2F4F5 主文字 */
   --c-gold: 247 209 78;
   --c-silver: 197 214 226;
 
   /* 中性灰阶（低位=深、高位=浅） */
-  --n-50: 248 248 248;
-  --n-100: 240 240 240;
-  --n-200: 224 224 224;
-  --n-300: 209 211 213;
-  --n-400: 167 169 172;
-  --n-500: 132 134 137;
-  --n-600: 107 109 112;
-  --n-700: 82 84 87;
-  --n-800: 56 57 60;
-  --n-900: 38 39 42;
-  --n-950: 20 20 22;
+  --n-50: 249 250 250;
+  --n-100: 241 243 244;
+  --n-200: 225 228 231;
+  --n-300: 199 203 208;
+  --n-400: 173 177 182;
+  --n-500: 142 148 155;
+  --n-600: 112 119 128;
+  --n-700: 85 91 99;
+  --n-800: 58 62 69;
+  --n-900: 38 41 47;
+  --n-950: 27 29 33;
 
   /* 金属渐变 */
   --grad-gold: linear-gradient(149deg, #8c5a1d 6%, #fbe67b 38%, #cd9124 52%, #f7d14e 67%, #d4a041 84%);
@@ -41,15 +41,15 @@
   --grad-bronze: linear-gradient(141deg, #7a5e50 5%, #f6d0ab 35%, #9d774e 58%, #c99b70 78%, #795f52 96%);
   --grad-brand: linear-gradient(150deg, #57D7BA, #2f6f63); /* 品牌信号渐变：青绿→深松绿（去紫，黑+绿） */
 
-  /* 面板 / 滚动条 / 画布 —— 扁平中性近黑（靠 #2a2d2f 发丝边分层，不靠提亮填充） */
-  --panel-bg: #161616;
-  --panel-shadow: inset 0 0 0 1px #2a2d2f, 0 1px 2px rgba(0, 0, 0, 0.3);
-  --panel-shadow-hover: inset 0 0 0 1px rgba(87, 215, 186, 0.4), 0 1px 3px rgba(0, 0, 0, 0.45);
-  --metal-inner: #202630;
-  --sb-thumb: #2b2b2b;
-  --sb-thumb-hover: #3a3a3a;
-  --canvas-bg: #121212;
-  --canvas-image: none;
+  /* 面板 / 滚动条 / 画布 —— 画布 < 面板 < 抬升面，靠 3-5% 亮度差建立 SaaS 层级。 */
+  --panel-bg: #202328;
+  --panel-shadow: inset 0 0 0 1px rgba(52, 58, 66, 0.9), 0 1px 2px rgba(0, 0, 0, 0.22);
+  --panel-shadow-hover: inset 0 0 0 1px rgba(87, 215, 186, 0.42), 0 1px 4px rgba(0, 0, 0, 0.32);
+  --metal-inner: #252a31;
+  --sb-thumb: #3a4149;
+  --sb-thumb-hover: #4a535e;
+  --canvas-bg: #17191c;
+  --canvas-image: linear-gradient(180deg, rgba(255, 255, 255, 0.018), rgba(255, 255, 255, 0) 280px);
   --canvas-size: auto;
   --app-density: 1;
 
@@ -128,7 +128,7 @@ html[data-install] .theme-fab {
 }
 /* 头牌内卡片：略亮暖底 + 细描边，避免「近黑挖洞」观感 */
 .alpha-hero .alpha-card {
-  background-color: #201d1c;
+  background-color: #262523;
 }
 .panel-hover {
   transition: box-shadow 0.2s ease, transform 0.2s ease;

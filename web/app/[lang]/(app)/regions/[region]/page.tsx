@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { LocaleLink } from "@/components/i18n/LocaleLink";
+import { SaveButton } from "@/components/favorites/SaveButton";
 import { SentScore, StanceBar } from "@/components/prismo/Bits";
 import { TickerLogo } from "@/components/prismo/TickerLogo";
 import { AsiaRadar, AsiaDivergingBars } from "@/components/asia/AsiaCharts";
@@ -44,6 +45,7 @@ export default function RegionDetail({ params }: { params: { lang: string; regio
           <h1 className="font-display text-2xl font-extrabold leading-none tracking-tight text-cream sm:text-3xl">{regionLabel(region, lang)}</h1>
           <div className="mt-1 truncate text-sm text-neutral-500">{regionSource(region)}{summary ? ` · ${fmtCompact(summary.posts)} ${zh ? "帖" : "posts"} · ${summary.tickers} ${zh ? "标的" : "tickers"}` : ""}</div>
         </div>
+        <SaveButton kind="region" refId={region} variant="follow" size="xs" className="ml-auto" />
       </div>
 
       <Counters>

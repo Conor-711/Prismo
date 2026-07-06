@@ -4,7 +4,7 @@ MANAGE := $(PY) -m pipeline.manage
 
 .PHONY: install venv db-init migrate seed seed-cn sample ingest refresh extract analyze analyze-mock \
         rollup narratives narrative-rotation brief worker daily daily-build cn-backfill demo stats test web-install web-dev clean help \
-        asia asia-mock mindshare-dashboard
+        sv-price-history sv-v0-candidates sv-v0 sv-v0-prod
 
 help:
 	@echo "Reddit 版 Kaito Pro — 常用命令"
@@ -24,7 +24,9 @@ help:
 	@echo "  make seed-cn       seed 中概/港股/A 股字典"
 	@echo "  make cn-backfill   回填中概·港股语料（爬30天+AI打标+双market聚合+翻译）"
 	@echo "  make worker        启动调度：每天 UTC+8 08:00 自动跑 daily-build"
-	@echo "  make mindshare-dashboard  从 SQLite + 可选 forum_mindshare.json 生成纯 HTML 实验面板"
+	@echo "  make sv-price-history     补齐 SV 所需日线价格"
+	@echo "  make sv-v0                运行 Smart Voice v0：候选召回 → LLM 结构化 → 结算 → 导出"
+	@echo "  make sv-v0-prod           生产级 SV：更大候选池 + 作者均衡 LLM 抽样"
 	@echo "  --- Web ---"
 	@echo "  make web-install   安装前端依赖    make web-dev  启动 Next.js"
 
@@ -128,30 +130,24 @@ analyze-qwen:
 	$(MANAGE) trending
 	$(MANAGE) narratives --mock
 
-# ---------- 亚洲散户舆情实验（日本 Yahoo + 韩国 Naver；隐藏页 /[lang]/lab/asia-pulse）----------
-# 爬日韩本土散户板对 NVDA/美光/海力士的讨论，沿用现有架构做真实 AI 分析（千问逐帖 + DeepSeek 汇总）。
-# 隔离表 asia_*，不污染 us/cn。KR 海外股(NVDA/MU)需先把 cbox objectId 填进 pipeline/data/asia_targets.yml。
-asia:
-	$(MANAGE) asia-crawl --per-board 200 --since-days 7
-	$(MANAGE) asia-score
-	$(MANAGE) asia-analyze --limit-per 12
-	$(MANAGE) asia-summarize
-	$(MANAGE) asia-price
-	@echo "" && echo "✅ 亚洲看板完成。出站：make site（读 dev.db 渲染隐藏页 /lab/asia-pulse）。"
-
-# 全球散户多区看板：日韩台爬精选跨区美股 + DeepSeek flash 打标 + 跨区滚动(US 读现有 Reddit)。
-# 隔离表 gr_*，隐藏页 /lab/global-retail。本地跑：DATABASE_URL='sqlite:///./data/dev.db' make gr
+# 全球散户多区数据：日韩台爬精选跨区美股 + DeepSeek flash 打标 + 跨区滚动(US 读现有 Reddit)。
+# 隔离表 gr_*，供总览、标的、区域、追踪等正式页面读取。本地跑：DATABASE_URL='sqlite:///./data/dev.db' make gr
 gr:
 	$(MANAGE) gr-crawl --per-board 120 --since-days 14
 	$(MANAGE) gr-tag
 	$(MANAGE) gr-rollup
 	$(MANAGE) gr-quote
-	@echo "" && echo "✅ 全球散户看板完成。出站：make site（读 dev.db 渲染隐藏页 /lab/global-retail）。"
+	@echo "" && echo "✅ 全球散户数据完成。出站：make site（正式页面读取 dev.db 渲染）。"
 
 # 仅刷新各标的最新价（Yahoo 15m chart → gr_quote），供标的页展示最新价/涨跌幅。
 # 本地：DATABASE_URL='sqlite:///./data/dev.db' make gr-quote
 gr-quote:
 	$(MANAGE) gr-quote
+
+# SV scoring price history: backfill Nasdaq daily OHLC into local price_daily.
+# 可局部补齐：make sv-price-history ONLY=MU,NVDA
+sv-price-history:
+	$(PY) -m pipeline.ingest.sv_price_history --start $(or $(START),2025-06-01) --top-n $(or $(TOP_N),1000) --min-count $(or $(MIN_COUNT),25) --workers $(or $(WORKERS),8) --sleep $(or $(SLEEP),0.02) $(if $(ONLY),--only $(ONLY),)
 
 # Toss(토스증권) 종목 커뮤니티评论 → gr_post(source='toss', region='kr')。逆向 Web API、游标翻页 RECENT，无需登录。
 # 标的映射在 pipeline/ingest/toss.py 的 TOSS_STOCKS；大体量标的可调 --resume/--max-pages/--sleep/--commit-pages。
@@ -264,7 +260,7 @@ kol-newcomers:
 	$(MANAGE) kol-newcomers
 	@echo "" && echo "✅ KOL 每日新增 KOL 完成。出站：make site。"
 
-# 整体数据『异动归因 + 讨论方面』（仅 KOL）→ web/lib/data/overallData.json（构建期静态读，类似 topInvestors.json）。
+# 整体数据『异动归因 + 讨论方面』（仅 KOL）→ web/lib/data/overallData.json（构建期静态读）。
 # ① 情绪/讨论度异常日 + AI 一句话归因（标在当天折线/条状上，hover 出原因）；② 近 14 天 KOL 最密集讨论的 3 个方面。
 # 读本地 dev.db 的 daily 序列 + KOL 推文抽取(/tmp/<ticker>_x6m.jsonl)；用 qwen-flash 归因/提炼。需 QWEN_API_KEY。
 # 当前 PLTR 测试：make overall-signals（或 TICKER=XXX make overall-signals）。出站 make site。
@@ -306,12 +302,6 @@ kol-quality:
 	$(MANAGE) kol-quality --per-source 800 --since-days 35
 	@echo "" && echo "✅ KOL 帖子质量打分完成。出站：make site（标的页『只看高质量』开关）。"
 
-# 零成本版（mock 启发式，无需 AI key）
-asia-mock:
-	$(MANAGE) asia-crawl --per-board 80 --since-days 7
-	$(MANAGE) asia-analyze --limit-per 12 --mock
-	$(MANAGE) asia-summarize --mock
-
 rollup:
 	$(MANAGE) rollup
 	$(MANAGE) mood
@@ -326,14 +316,6 @@ brief:
 # 把帖子/AI 摘要/评论翻译成中文 → *_zh 列（增量、幂等，需 ANTHROPIC_API_KEY）。
 translate:
 	$(PY) -m pipeline.analyze.translate
-
-# 仅给 demo 数据灌入一批中文译文（无需 API key，用于演示「看广告解锁翻译」）。
-translate-demo:
-	$(PY) -m pipeline.analyze.seed_demo_zh
-
-# 让 AI 读懂帖子后重排版正文 → posts.selftext_fmt（提升可读性，需 ANTHROPIC_API_KEY）。
-format:
-	$(PY) -m pipeline.analyze.format_posts
 
 worker:
 	$(PY) -m pipeline.worker
@@ -359,10 +341,20 @@ stats:
 test:
 	$(PY) -m pytest -q
 
-# 从当前 SQLite 快照 + 可选 forum_mindshare.json 生成单文件实验看板：根目录 dashboard.html。
-# 可用 python3 -m http.server 8787 --directory . 打开 /dashboard.html。
-mindshare-dashboard:
-	$(PY) experiments/build_mindshare_dashboard.py
+# ---------- Smart Voice v0 ----------
+# 只做规则候选召回，不调用 LLM，便于先检查覆盖范围。
+sv-v0-candidates:
+	$(PY) -m pipeline.analyze.sv_v0 --stage candidates --candidate-limit $(or $(LIMIT),50000)
+
+# 混合版：规则召回 + LLM 结构化 + 价格结算 + SV 打分 + 前端 JSON 导出。
+# 可覆盖参数：make sv-v0 LIMIT=50000 EXTRACT=2000 WORKERS=4
+sv-v0:
+	$(PY) -m pipeline.analyze.sv_v0 --stage all --candidate-limit $(or $(LIMIT),50000) --extract-limit $(or $(EXTRACT),1000) --workers $(or $(WORKERS),4)
+
+# 生产级 v0：扩大候选池后，按作者均衡分配 LLM 额度，避免少数高互动/多 ticker 作者吃掉样本。
+# 可覆盖参数：make sv-v0-prod LIMIT=50000 EXTRACT=10000 MIN=20 MAX=80 WORKERS=4
+sv-v0-prod:
+	$(PY) -m pipeline.analyze.sv_v0 --stage all --candidate-limit $(or $(LIMIT),50000) --extract-limit $(or $(EXTRACT),10000) --extract-mode author-balanced --per-author-min $(or $(MIN),20) --per-author-max $(or $(MAX),80) --workers $(or $(WORKERS),4)
 
 # ---------- Web ----------
 web-install:

@@ -11,6 +11,9 @@ import { SOURCE } from "./kolShared";
 
 const BUY = "#57D7BA";
 const SELL = "#FF5C6C";
+const LINE = "#343A42";
+const TIP_BG = "#20242A";
+const CHART_BG = "#17191C";
 const fmtPrice = (n: number) => (n >= 10 ? Math.round(n).toLocaleString() : String(+n.toFixed(2)));
 const fmtRange = (lo: number, hi: number) => (hi > lo ? `$${fmtPrice(lo)}–$${fmtPrice(hi)}` : `$${fmtPrice(lo)}`);
 const BUCKET_ZH: Record<string, string> = { short: "短线", mid: "中线", long: "长线" };
@@ -61,8 +64,8 @@ function TargetDistributionChart({ marks, current, zh }: { marks: TargetMark[]; 
       tooltip: {
         trigger: "axis",
         axisPointer: { type: "shadow" },
-        backgroundColor: "rgba(20,20,20,0.96)",
-        borderColor: "#2a2d2f",
+        backgroundColor: TIP_BG,
+        borderColor: LINE,
         borderWidth: 1,
         textStyle: { color: "#e5e5e5", fontSize: 11 },
         extraCssText: "border-radius:8px;max-width:240px;white-space:normal",
@@ -74,7 +77,7 @@ function TargetDistributionChart({ marks, current, zh }: { marks: TargetMark[]; 
       xAxis: {
         type: "category",
         data: labels,
-        axisLine: { lineStyle: { color: "#2a2d2f" } },
+        axisLine: { lineStyle: { color: LINE } },
         axisTick: { show: false },
         axisLabel: { color: "#73757a", fontSize: 9, interval: 0, rotate: labels.length > 5 ? 18 : 0 },
       },
@@ -180,8 +183,8 @@ export function TargetPricePanel({ data, zh }: { data: KolTargetData; zh: boolea
       grid: { left: 6, right: 74, top: 12, bottom: 22, containLabel: true },
       tooltip: {
         trigger: "item",
-        backgroundColor: "rgba(20,20,20,0.96)",
-        borderColor: "#2a2d2f",
+        backgroundColor: TIP_BG,
+        borderColor: LINE,
         borderWidth: 1,
         textStyle: { color: "#e5e5e5", fontSize: 11 },
         extraCssText: "border-radius:8px;max-width:260px;white-space:normal",
@@ -200,7 +203,7 @@ export function TargetPricePanel({ data, zh }: { data: KolTargetData; zh: boolea
           html += `<div style="color:#9a9da1;margin:2px 0 4px">${plat} · ${m.date}</div>`;
           html += `<div><span style="color:#73757a">${kind} </span><b style="color:${color}">${fmtRange(m.lo, m.hi)}</b><span style="color:#73757a">${dl}</span></div>`;
           if (horizon || bk) html += `<div style="color:#cfcfcf;margin-top:2px">${zh ? "周期" : "Horizon"}: ${horizon}${bk ? `（${bk}）` : ""}</div>`;
-          if (reason) html += `<div style="color:#9a9da1;margin-top:3px;border-top:1px solid #2a2d2f;padding-top:4px">${reason.slice(0, 90)}</div>`;
+          if (reason) html += `<div style="color:#aeb4bb;margin-top:3px;border-top:1px solid ${LINE};padding-top:4px">${reason.slice(0, 90)}</div>`;
           else if (m.priceRaw) html += `<div style="color:#6b6e72;margin-top:3px;font-size:10px">“${m.priceRaw}”</div>`;
           if (m.opinionId) html += `<div style="color:#57D7BA;margin-top:5px;font-size:10px">${zh ? "点击在右侧打开正文" : "Click to open the post here"}</div>`;
           return html;
@@ -210,7 +213,7 @@ export function TargetPricePanel({ data, zh }: { data: KolTargetData; zh: boolea
         type: "time",
         min: tsAll.length ? Math.min(...tsAll) : undefined,
         max: tsAll.length ? Math.max(...tsAll) : undefined,
-        axisLine: { lineStyle: { color: "#2a2d2f" } },
+        axisLine: { lineStyle: { color: LINE } },
         axisTick: { show: false },
         axisLabel: { color: "#73757a", fontSize: 10, formatter: (v: number) => mmdd(new Date(v).toISOString().slice(0, 10)) },
         splitLine: { show: false },
@@ -240,7 +243,7 @@ export function TargetPricePanel({ data, zh }: { data: KolTargetData; zh: boolea
           showDataShadow: false,
           showDetail: false,
           brushSelect: false,
-          borderColor: "#2a2d2f",
+          borderColor: LINE,
           fillerColor: "rgba(87,215,186,0.14)",
           backgroundColor: "rgba(255,255,255,0.03)",
           handleSize: 14,
@@ -285,7 +288,7 @@ export function TargetPricePanel({ data, zh }: { data: KolTargetData; zh: boolea
             const pHi = api.coord([ts, api.value(2)]);
             const h = Math.abs(pLo[1] - pHi[1]);
             if (h < 5) {
-              return { type: "circle", cursor: "pointer", shape: { cx: pLo[0], cy: pLo[1], r: 4.5 }, style: { fill: color, stroke: "#141414", lineWidth: 1 } };
+              return { type: "circle", cursor: "pointer", shape: { cx: pLo[0], cy: pLo[1], r: 4.5 }, style: { fill: color, stroke: CHART_BG, lineWidth: 1 } };
             }
             const w = 7;
             return {

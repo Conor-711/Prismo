@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { LocaleLink } from "@/components/i18n/LocaleLink";
+import { SaveButton } from "@/components/favorites/SaveButton";
 import { SentScore, Consensus } from "./Bits";
 import { TickerLogo } from "./TickerLogo";
 import { fmtCompact } from "@/lib/format";
@@ -60,6 +61,7 @@ export function TickerTable({ rows, lang }: { rows: GrTickerRow[]; lang: Locale 
               <th className="text-right font-medium px-3 py-2.5">{th("avg_sentiment", zh ? "情绪" : "Sentiment")}</th>
               <th className="text-left font-medium px-3 py-2.5 hidden md:table-cell">{zh ? "共识" : "Consensus"}</th>
               <th className="text-right font-medium px-3 py-2.5">{th("spread", zh ? "分歧" : "Spread")}</th>
+              <th className="text-right font-medium px-3 py-2.5">{zh ? "追踪" : "Follow"}</th>
             </tr>
           </thead>
           <tbody>
@@ -77,11 +79,14 @@ export function TickerTable({ rows, lang }: { rows: GrTickerRow[]; lang: Locale 
                 <td className="px-3 py-2.5 text-right"><SentScore score={t.avg_sentiment} /></td>
                 <td className="px-3 py-2.5 hidden md:table-cell"><Consensus value={t.consensus} lang={lang} /></td>
                 <td className="px-3 py-2.5 text-right font-mono text-[12px] tabular text-neutral-400">{(t.spread ?? 0).toFixed(2)}</td>
+                <td className="px-3 py-2.5 text-right">
+                  <SaveButton kind="ticker" refId={t.ticker} variant="follow" size="xs" />
+                </td>
               </tr>
             ))}
             {sorted.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-3 py-8 text-center text-sm text-neutral-600">{zh ? "无匹配标的。" : "No matches."}</td>
+                <td colSpan={8} className="px-3 py-8 text-center text-sm text-neutral-600">{zh ? "无匹配标的。" : "No matches."}</td>
               </tr>
             )}
           </tbody>

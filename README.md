@@ -56,7 +56,6 @@ make worker     # 或：一键启动调度器，按节奏自动跑以上全部
 
 ## 目录结构
 ```
-legacy/        归档的旧科普原型
 pipeline/      Python：数据 + AI
   common/      config / db(SQLAlchemy) / models / reddit(PRAW) / claude
   ingest/      reddit_ingest / ticker_extract / seed_tickers / sample_loader / refresh

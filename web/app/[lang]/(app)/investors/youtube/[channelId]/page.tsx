@@ -3,6 +3,7 @@ import { LocaleLink } from "@/components/i18n/LocaleLink";
 import { CreatorProfile } from "@/components/prismo/CreatorProfile";
 import { ViewportWorkspace } from "@/components/prismo/ViewportWorkspace";
 import { getYoutubeCreator, getYoutubeChannelIds } from "@/lib/creatorQueries";
+import { getCreatorSmartVoice } from "@/lib/svMock";
 import { isLocale, defaultLocale, type Locale } from "@/lib/i18n";
 
 // YouTube 作者页（投资者榜单的下钻）。静态导出：枚举所有有视频的频道 id；[lang] 由 layout 提供。
@@ -24,6 +25,7 @@ export default function YoutubeCreatorPage({ params }: { params: { lang: string;
   const lang: Locale = isLocale(params.lang) ? params.lang : defaultLocale;
   const zh = lang === "zh";
   const creator = getYoutubeCreator(params.channelId);
+  const smartVoice = getCreatorSmartVoice(params.channelId, creator?.profile.name);
 
   return (
     <ViewportWorkspace className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-3 overflow-hidden" bottomOffset={16}>
@@ -34,7 +36,7 @@ export default function YoutubeCreatorPage({ params }: { params: { lang: string;
         <span className="text-[12px] font-medium text-neutral-500">{zh ? "投资者榜单" : "Investors"}</span>
       </div>
       {creator ? (
-        <CreatorProfile creator={creator} zh={zh} fill />
+        <CreatorProfile creator={creator} zh={zh} fill smartVoice={smartVoice} />
       ) : (
         <div className="panel rounded-xl p-10 text-center">
           <p className="text-sm text-neutral-400">{zh ? "暂无该作者数据" : "No data for this creator"}</p>

@@ -1,6 +1,6 @@
 import { all, get } from "./db";
 
-// 全球散户多区看板（隐藏页 /[lang]/lab/global-retail）取数层。
+// 全球散户多区数据取数层。
 // 隔离表 gr_*（pipeline 的 gr-crawl/gr-tag/gr-rollup 产出）；US 区由 rollup 读现有 Reddit。
 // 所有查询 try/catch 兜表缺失（云端快照未含 gr_* → 返回空，不让构建崩）。
 
@@ -20,7 +20,8 @@ export function getGrTickers(): GrTickerRow[] {
   return safe(() => all<GrTickerRow>(
     `SELECT ticker, name_en, name_zh, regions_present, total_posts, avg_sentiment,
             consensus, spread, divergent_region
-       FROM gr_ticker`
+       FROM gr_ticker
+      ORDER BY total_posts DESC, ticker ASC`
   ), []);
 }
 
@@ -39,13 +40,12 @@ export function getGrTickerRegions(): GrRegionCell[] {
 export interface GrMeta { tickers: number; posts: number; regions: number; lastUpdated: string | null; }
 export function getGrMeta(): GrMeta {
   return safe(() => {
-    const c = get<any>(
-      `SELECT (SELECT COUNT(*) FROM gr_ticker) AS tickers,
-              (SELECT COUNT(*) FROM gr_post) AS posts,
-              (SELECT COUNT(DISTINCT region) FROM gr_ticker_region) AS regions`
-    );
+    const tickers = get<{ n: number }>("SELECT COUNT(*) AS n FROM gr_ticker")?.n ?? 0;
+    const xPosts = safe(() => get<{ n: number }>("SELECT COUNT(*) AS n FROM x_opinion")?.n ?? 0, 0);
+    const grPosts = safe(() => get<{ n: number }>("SELECT COUNT(*) AS n FROM gr_post")?.n ?? 0, 0);
+    const regions = get<{ n: number }>("SELECT COUNT(DISTINCT region) AS n FROM gr_ticker_region")?.n ?? 0;
     const u = get<{ ts: string }>("SELECT MAX(updated_at) AS ts FROM gr_ticker");
-    return { tickers: c?.tickers ?? 0, posts: c?.posts ?? 0, regions: c?.regions ?? 0, lastUpdated: u?.ts ?? null };
+    return { tickers, posts: xPosts + grPosts, regions, lastUpdated: u?.ts ?? null };
   }, { tickers: 0, posts: 0, regions: 0, lastUpdated: null });
 }
 

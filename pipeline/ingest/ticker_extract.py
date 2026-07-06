@@ -29,6 +29,9 @@ ALIASES: dict[str, str] = {
     "soundhound": "SOUN", "draftkings": "DKNG", "celsius": "CELH",
     "enphase": "ENPH", "first solar": "FSLR", "constellation energy": "CEG",
     "nuscale": "SMR", "intuitive machines": "LUNR", "archer aviation": "ACHR",
+    "s&p 500": "SPY", "spdr s&p 500": "SPY", "nasdaq 100": "QQQ", "invesco qqq": "QQQ",
+    "iris energy": "IREN", "iren ltd": "IREN", "nebius": "NBIS", "nebius group": "NBIS",
+    "ast spacemobile": "ASTS", "space mobile": "ASTS",
 }
 
 CASHTAG_RE = re.compile(r"\$([A-Za-z]{1,5}(?:\.[A-Za-z])?)")

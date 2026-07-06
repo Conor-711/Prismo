@@ -14,6 +14,7 @@ import type { DailyNet } from "@/lib/kolQueries";
 import type { Divergence, SentStance } from "@/lib/overallData";
 
 const GREEN = "#57D7BA", RED = "#FF5C6C", GOLD = "#F2B544", VOL = "#8A8D91", SMART = "#F2B544", RETAIL = "#8A8D91", PRICE = "#9FB3C8";
+const LINE = "#343A42", TIP_BG = "#20242A", CHART_BG = "#17191C";
 const mmdd = (d: string) => { const [, m, dd] = (d || "").split("-"); return m ? `${+m}/${+dd}` : ""; };
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const monthLabel = (d: string, zh: boolean) => {
@@ -111,7 +112,7 @@ export function OverlayPanel({
     const series: any[] = [];
     const markPt = (data: any[], yIdx: number) => ({
       type: "scatter", data, yAxisIndex: yIdx, symbol: "diamond", symbolSize: 9,
-      itemStyle: { color: GOLD, borderColor: "#141414", borderWidth: 1 },
+      itemStyle: { color: GOLD, borderColor: CHART_BG, borderWidth: 1 },
       label: { show: true, position: "top", distance: 3, formatter: "⚑", color: GOLD, fontSize: 11 },
       emphasis: { scale: 1.4 }, tooltip: { show: false }, silent: true, z: 12,
     });
@@ -151,7 +152,7 @@ export function OverlayPanel({
       grid: { left: 6, right: 10, top: 16, bottom: 22, containLabel: true },
       tooltip: {
         trigger: "axis", axisPointer: { type: "line", lineStyle: { color: "rgba(127,127,127,0.3)", width: 1 } },
-        backgroundColor: "rgba(20,20,20,0.96)", borderColor: "#2a2d2f", borderWidth: 1, padding: [9, 11],
+        backgroundColor: TIP_BG, borderColor: LINE, borderWidth: 1, padding: [9, 11],
         textStyle: { color: "#e5e5e5", fontSize: 11 }, extraCssText: "border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,0.5)",
         formatter: (ps: any) => {
           const day = ps?.[0]?.axisValue;
@@ -179,7 +180,7 @@ export function OverlayPanel({
           let html = `<b>${mmdd(day)}</b><br/>${lines.join("<br/>")}`;
           const a = prep.anomByDay.get(day);
           const reasons = [on("sentiment") ? a?.sent : "", on("volume") ? a?.vol : ""].filter(Boolean);
-          if (reasons.length) html += `<div style="margin-top:6px;max-width:240px;white-space:normal;border-top:1px solid #2a2d2f;padding-top:5px"><span style="color:${GOLD}">⚑ ${zh ? "AI 异动归因" : "AI anomaly"}</span><br/><span style="color:#cfcfcf">${reasons.join("；")}</span></div>`;
+          if (reasons.length) html += `<div style="margin-top:6px;max-width:240px;white-space:normal;border-top:1px solid ${LINE};padding-top:5px"><span style="color:${GOLD}">⚑ ${zh ? "AI 异动归因" : "AI anomaly"}</span><br/><span style="color:#d6d9dd">${reasons.join("；")}</span></div>`;
           return html;
         },
       },
@@ -242,7 +243,7 @@ export function OverlayPanel({
               style={{
                 borderColor: "transparent",
                 background: active ? `${c.color}1f` : "transparent",
-                boxShadow: `inset 0 0 0 1px ${active ? c.color : "#2a2d2f"}`,
+                boxShadow: `inset 0 0 0 1px ${active ? c.color : LINE}`,
                 color: active ? "#F1F3F4" : "#73757a",
               }}
             >

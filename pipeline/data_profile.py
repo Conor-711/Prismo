@@ -25,7 +25,6 @@ ALL_TABLES = [
     "subreddits", "authors", "posts", "comments", "ticker_meta", "mentions",
     "item_analysis", "ticker_rollup", "market_mood", "trending", "narratives",
     "narrative_tickers", "narrative_posts", "daily_briefs",
-    "asia_posts", "asia_analysis", "asia_ticker_summary", "asia_price",
     "gr_post", "gr_ticker_region", "gr_ticker", "gr_quote",
 ]
 
@@ -115,21 +114,7 @@ with eng.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
             row = by_day[d]
             print(f"  {d}  " + "  ".join(f"{m}={n}" for m, n in sorted(row.items())))
 
-    section("⑥ 亚洲实验 asia_*（jp/kr）")
-    r = q(conn, "SELECT market, COUNT(*) FROM asia_posts GROUP BY market")
-    if r:
-        print("  asia_posts by market：", ", ".join(f"{m}={n}" for m, n in r))
-    r = q(conn, "SELECT ticker, COUNT(*) c FROM asia_posts GROUP BY ticker ORDER BY c DESC")
-    if r:
-        print("  by ticker：", ", ".join(f"{t}({c})" for t, c in r))
-    r = one(conn, "SELECT MIN(created_utc), MAX(created_utc) FROM asia_posts")
-    if r:
-        print(f"  时间跨度：{r[0]}  →  {r[1]}")
-    r = one(conn, "SELECT COUNT(*) FROM asia_posts WHERE sentiment IS NOT NULL")
-    if r:
-        print(f"  已打情绪分（sentiment 非空）：{r[0]}")
-
-    section("⑦ 全球散户 gr_*（us/cn/jp/kr/tw，新首页数据）")
+    section("⑥ 全球散户 gr_*（us/cn/jp/kr/tw，新首页数据）")
     r = q(conn, "SELECT region, COUNT(*) FROM gr_post GROUP BY region ORDER BY 2 DESC")
     if r:
         print("  gr_post by region：", ", ".join(f"{m}={n}" for m, n in r))

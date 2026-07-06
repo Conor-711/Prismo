@@ -18,12 +18,14 @@ stockCode 即页面 URL 里那段（如 Palantir = US20200930014）；映射到�
 from __future__ import annotations
 
 import datetime as dt
+import json
 import re
 import time
 
 import requests
 from sqlalchemy import select
 
+from ..common.config import ROOT
 from ..common.db import session_scope
 from ..common.models import Base, GrPost
 
@@ -42,6 +44,26 @@ TOSS_STOCKS: dict[str, str] = {
     "US19890516001": "MU",
     "US20200930014": "PLTR",
 }
+TOSS_CODES_PATH = ROOT / "data" / "exports" / "toss_codes.json"
+
+
+def _load_stock_map() -> dict[str, str]:
+    """Return Toss stockCode -> ticker, merging the repo-maintained export map."""
+    out = dict(TOSS_STOCKS)
+    if not TOSS_CODES_PATH.exists():
+        return out
+    try:
+        rows = json.loads(TOSS_CODES_PATH.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return out
+    if not isinstance(rows, dict):
+        return out
+    for ticker, code in rows.items():
+        tk = str(ticker or "").strip().upper()
+        cd = str(code or "").strip()
+        if tk and cd:
+            out[cd] = tk
+    return out
 
 _ISO = re.compile(r"(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?([+-]\d{2}:\d{2}|Z)?")
 
@@ -263,8 +285,9 @@ def crawl(days: int = 14, only: list[str] | None = None, max_pages: int = 1500,
     """爬 TOSS_STOCKS 里所有（或 only 指定 ticker）股票的近 days 天社区评论 → gr_post。"""
     _ensure_tables()
     total = 0
-    for code, ticker in TOSS_STOCKS.items():
-        if only and ticker not in only:
+    only_set = {t.strip().upper() for t in only or [] if t.strip()}
+    for code, ticker in _load_stock_map().items():
+        if only_set and ticker not in only_set:
             continue
         print(f"[toss] ▶ {ticker}（{code}）近 {days} 天 …", flush=True)
         total += crawl_stock(code, ticker, days=days, max_pages=max_pages, sleep=sleep,

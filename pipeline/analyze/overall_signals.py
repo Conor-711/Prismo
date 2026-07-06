@@ -1,7 +1,7 @@
 """整体数据 · 「异动归因」+「讨论方面」生成器（标的页『整体数据』模块的派生信号）。
 
 两个产出，都只用 **KOL** 数据，写进构建期 JSON `web/lib/data/overallData.json`（与
-`topInvestors.json` 同范式：离线算好、web 端按 ticker 直接读，不碰 dev.db）：
+离线算好、web 端按 ticker 直接读，不碰 dev.db）：
 
   ① anomalies —— 情绪/讨论度的异常日 + AI 一句话归因（标在当天的折线/条状物上，hover 出原因）。
      · 情绪异常跑在**交易日序列**上（与 SentimentPanel 的 x 轴一致；06-19 Juneteenth、周末不在轴上）。

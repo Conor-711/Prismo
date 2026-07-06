@@ -453,6 +453,7 @@ export interface KolOpinion {
   day: string; // YYYY-MM-DD
   source: KolSource;
   author: string;
+  authorRefId?: string; // user_collections(kind=author) 的稳定键：source:id/handle/author
   interactions: number; // 点赞 / 转发 / 评论合计
   stance: Stance;
   text: Bi; // 当前语言显示文本（原文/标题；x/雪球=原文，reddit/youtube=双语）
@@ -579,11 +580,13 @@ export function getKolFlow(symbol: string): KolFlow {
       const VK = ["valuation", "growth", "competition", "management", "macro", "catalyst", "flows"];
       const v1 = pick(VK, rnd);
       const viewpoints = rnd() > 0.78 ? ["other"] : rnd() > 0.55 ? [v1, pick(VK.filter((x) => x !== v1), rnd)] : [v1];
+      const author = pick(KOL_AUTHORS[source], rnd);
       opinions.push({
         id: `${symbol}-${day}-${k}`,
         day,
         source,
-        author: pick(KOL_AUTHORS[source], rnd),
+        author,
+        authorRefId: `${source}:${author.replace(/^@/, "").replace(/^u\//, "").trim()}`,
         interactions,
         stance,
         text: kolText(topic, stance),

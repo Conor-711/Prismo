@@ -6,7 +6,7 @@ import ReactECharts from "echarts-for-react";
 // 全部 client 组件：父级 server 页面只传可序列化 props（数字/字符串/数组），不传函数。
 
 const AXIS = "#7a8a96";
-const TIP = { backgroundColor: "#161616", borderColor: "#2a2d2f", textStyle: { color: "#e5e5e5", fontSize: 11 } };
+const TIP = { backgroundColor: "#20242A", borderColor: "#343A42", textStyle: { color: "#e5e5e5", fontSize: 11 } };
 const BULL = "#57D7BA";
 const BEAR = "#FF5C6C";
 
@@ -44,7 +44,7 @@ export function Donut({ data, height = 150, centerTop = "", centerBottom = "" }:
     series: [{
       type: "pie", radius: ["62%", "86%"], center: ["50%", "50%"], avoidLabelOverlap: false,
       label: { show: false }, labelLine: { show: false },
-      data: data.map((d) => ({ name: d.name, value: d.value, itemStyle: { color: d.color, borderColor: "#161616", borderWidth: 2 } })),
+      data: data.map((d) => ({ name: d.name, value: d.value, itemStyle: { color: d.color, borderColor: "#202328", borderWidth: 2 } })),
     }],
   };
   return <ReactECharts option={option} style={{ height }} opts={{ renderer: "canvas" }} notMerge />;

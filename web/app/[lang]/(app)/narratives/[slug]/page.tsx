@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { LocaleLink } from "@/components/i18n/LocaleLink";
+import { SaveButton } from "@/components/favorites/SaveButton";
 import { SentScore } from "@/components/prismo/Bits";
 import { TickerLogo } from "@/components/prismo/TickerLogo";
 import { Module, Counter, Counters, flag } from "@/components/prismo/DetailBits";
 import { NarrativeDetailTimeline } from "@/components/prismo/NarrativeRotationCharts";
+import { SmartVoicePortfolioModule } from "@/components/prismo/SmartVoiceModules";
 import { ViewportWorkspace } from "@/components/prismo/ViewportWorkspace";
 import { fmtCompact, fmtPct } from "@/lib/format";
 import {
@@ -98,9 +100,12 @@ export default function NarrativeDetailPage({ params }: { params: { lang: string
             <p className="mt-1 max-w-4xl truncate text-sm text-neutral-500">{narrativeText(category.description, lang)}</p>
           </div>
         </div>
-        <span className="shrink-0 rounded-md bg-white/[.04] px-2.5 py-1 text-[12px] text-neutral-400 ring-1 ring-inset ring-white/10">
-          {trendLabel(current.trend, lang)}
-        </span>
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="rounded-md bg-white/[.04] px-2.5 py-1 text-[12px] text-neutral-400 ring-1 ring-inset ring-white/10">
+            {trendLabel(current.trend, lang)}
+          </span>
+          <SaveButton kind="narrative" refId={category.slug} variant="follow" size="xs" />
+        </div>
       </div>
 
       <Counters>
@@ -160,6 +165,15 @@ export default function NarrativeDetailPage({ params }: { params: { lang: string
               <p className="text-sm text-neutral-600">{zh ? "暂无关联标的。" : "No linked tickers."}</p>
             )}
           </Module>
+
+          <SmartVoicePortfolioModule
+            symbols={detail.topTickers.map((t) => t.ticker)}
+            zh={zh}
+            titleZh="该叙事该听谁"
+            titleEn="Best voices for this narrative"
+            descZh="按该叙事关联标的等权计算，用于模拟叙事场景下的 SV 排名。"
+            descEn="Equal-weighted by linked tickers to simulate narrative-context SV ranking."
+          />
         </aside>
 
         <Module
