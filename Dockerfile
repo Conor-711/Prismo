@@ -2,7 +2,7 @@
 # 用明确的 Dockerfile，避免 Railway Nixpacks 对 Python+Node 混合仓库识别失败。
 FROM node:22-slim
 
-# 基础工具：xz 用于从仓库快照还原 data/dev.db。
+# 基础工具：xz 用于从仓库快照还原 data/dev.db，避免 Railway 未拉 Git LFS 时数据缺失。
 RUN apt-get update && apt-get install -y --no-install-recommends \
       ca-certificates xz-utils \
     && rm -rf /var/lib/apt/lists/*
