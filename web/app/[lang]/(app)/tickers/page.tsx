@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { PageHeader, Panel } from "@/components/ui";
 import { TickerTable } from "@/components/prismo/TickerTable";
-import { KolRankBoards } from "@/components/prismo/KolRankBoards";
+import { TickerSignalBoards } from "@/components/prismo/TickerSignalBoards";
 import { getGrTickers } from "@/lib/globalQueries";
 import { getKolBullBearBoards, getKolSentimentSwings } from "@/lib/kolQueries";
+import { getSmartVoiceTickerBoards } from "@/lib/smartVoiceQueries";
 import { isLocale, defaultLocale, type Locale } from "@/lib/i18n";
 
 export function generateMetadata({ params }: { params: { lang: string } }): Metadata {
@@ -17,6 +18,7 @@ export default function TickersPage({ params }: { params: { lang: string } }) {
   const rows = getGrTickers();
   const { bullish, bearish } = getKolBullBearBoards();
   const swings = getKolSentimentSwings();
+  const svBoards = getSmartVoiceTickerBoards();
 
   return (
     <div className="space-y-6">
@@ -29,8 +31,14 @@ export default function TickersPage({ params }: { params: { lang: string } }) {
             : `${rows.length} US tickers with 12 months of local X/Twitter posts. Click headers to sort.`
         }
       />
-      {/* KOL 看多 / 看空 / 情绪变化最大 标的排行榜（各前 5，按近 14 天 KOL 净情绪 / 看多占比变化） */}
-      <KolRankBoards bullish={bullish} bearish={bearish} swings={swings} />
+      <TickerSignalBoards
+        kolBullish={bullish}
+        kolBearish={bearish}
+        kolSwings={swings}
+        svBullish={svBoards.bullish}
+        svBearish={svBoards.bearish}
+        svContrast={svBoards.contrast}
+      />
       {rows.length ? (
         <TickerTable rows={rows} lang={lang} />
       ) : (

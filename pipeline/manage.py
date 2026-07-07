@@ -84,7 +84,17 @@ def cmd_scrape_comments(args):
 def cmd_crawl_authors(args):
     """作者库：爬「实力榜」Top 作者历史帖（两级漏斗：DeepSeek 粗筛 → 千问深析）。"""
     from .ingest.author_crawl import crawl_top_authors
-    crawl_top_authors(limit=args.limit, per_author_cap=args.per_author, refresh_days=args.refresh_days)
+    crawl_top_authors(
+        limit=args.limit,
+        per_author_cap=args.per_author,
+        refresh_days=args.refresh_days,
+        max_fetch_per=args.max_fetch_per,
+        since_days=args.since_days,
+        refresh_profiles=not args.no_profile_refresh,
+        pool=args.pool,
+        min_ticker_posts=args.min_ticker_posts,
+        quality_mode=args.quality_mode,
+    )
 
 
 def cmd_extract(args):
@@ -217,6 +227,68 @@ def cmd_gr_xueqiu(args):
     ingest(path=args.path, since_days=args.since_days)
 
 
+def cmd_gr_xueqiu_crawl(args):
+    # 雪球(中国大陆)讨论：不用 Codex Chrome 插件，直接用 Playwright-controlled Chrome 过 WAF 并导出+入库。
+    from .ingest.global_retail_xueqiu_direct import crawl
+    only = [t.strip().upper() for t in args.only.split(",")] if getattr(args, "only", None) else None
+    crawl(out_path=args.out, since_days=args.since_days, only=only, per_page=args.per_page,
+          max_pages=args.max_pages, sleep=args.sleep, headless=args.headless,
+          do_ingest=not args.no_ingest)
+
+
+def cmd_gr_xueqiu_backfill(args):
+    # 雪球长期管道：创建并运行回填任务。结果先入 raw/job/checkpoint，再同步到 gr_post。
+    from .ingest.xueqiu_pipeline import backfill, sync_to_gr_post
+    only = [t.strip().upper() for t in args.only.split(",")] if getattr(args, "only", None) else None
+    backfill(days=args.days, only=only, per_page=args.per_page, max_pages=args.max_pages,
+             max_jobs=args.max_jobs, sleep=args.sleep, headless=args.headless,
+             force=args.force, run=not args.plan_only)
+    if args.sync and not args.plan_only:
+        sync_to_gr_post(since_days=args.days, only=only)
+
+
+def cmd_gr_xueqiu_incremental(args):
+    # 雪球长期管道：日常增量任务，默认只补近 3 天。
+    from .ingest.xueqiu_pipeline import incremental, sync_to_gr_post
+    only = [t.strip().upper() for t in args.only.split(",")] if getattr(args, "only", None) else None
+    incremental(days=args.days, only=only, per_page=args.per_page, max_pages=args.max_pages,
+                max_jobs=args.max_jobs, sleep=args.sleep, headless=args.headless,
+                force=args.force, run=not args.plan_only)
+    if args.sync and not args.plan_only:
+        sync_to_gr_post(since_days=max(args.days, 14), only=only)
+
+
+def cmd_gr_xueqiu_run_jobs(args):
+    # 雪球长期管道：只运行已经创建的 pending/failed 任务。
+    from .ingest.xueqiu_pipeline import run_jobs
+    run_jobs(max_jobs=args.max_jobs, sleep=args.sleep, headless=args.headless, retry_failed=args.retry_failed,
+             recover_running_hours=args.recover_running_hours)
+
+
+def cmd_gr_xueqiu_sync(args):
+    # 雪球长期管道：把 raw + post_ticker 映射同步到产品正在读取的 gr_post。
+    from .ingest.xueqiu_pipeline import sync_to_gr_post
+    only = [t.strip().upper() for t in args.only.split(",")] if getattr(args, "only", None) else None
+    sync_to_gr_post(since_days=args.since_days, only=only)
+
+
+def cmd_gr_xueqiu_expand_related(args):
+    # 雪球长期管道：从 raw 正文抽关联标的，必要时为高频关联标的创建 related 回填任务。
+    from .ingest.xueqiu_pipeline import expand_related
+    expand_related(since_days=args.since_days, enqueue_top=args.enqueue_top)
+
+
+def cmd_gr_xueqiu_enrich_authors(args):
+    # 雪球长期管道：从 raw payload 重建作者粉丝数等快照。
+    from .ingest.xueqiu_pipeline import enrich_authors
+    enrich_authors(since_days=args.since_days)
+
+
+def cmd_gr_xueqiu_status(args):
+    from .ingest.xueqiu_pipeline import status
+    status()
+
+
 def cmd_gr_quote(args):
     # 各 gr 标的最新价（Yahoo 15m chart）→ gr_quote，供标的页展示最新价/涨跌幅。
     from .ingest.gr_quote import fetch_quotes
@@ -274,7 +346,8 @@ def cmd_youtube_fulltext(args):
 def cmd_youtube_digest(args):
     # YouTube 完整口播 → 投资者摘要 + 内容目录(章节) → 本地 yt_digest（LOW 档读文本，不重看视频）。
     from .analyze.youtube_digest import run
-    run(force=args.force, only={t.strip() for t in args.only.split(",")} if getattr(args, "only", None) else None)
+    run(force=args.force, only={t.strip() for t in args.only.split(",")} if getattr(args, "only", None) else None,
+        workers=getattr(args, "workers", 1))
 
 
 def cmd_youtube_judgment(args):
@@ -424,7 +497,7 @@ def build_parser() -> argparse.ArgumentParser:
     sp = sub.add_parser("scrape"); sp.add_argument("--days", type=int, default=3); sp.add_argument("--limit", type=int, default=300); sp.add_argument("--markets", type=str, default=None, help="逗号分隔，如 us,cn；省略=全部"); sp.set_defaults(func=cmd_scrape)
     sp = sub.add_parser("scrape-china"); sp.add_argument("--days", type=int, default=30); sp.add_argument("--limit", type=int, default=300); sp.add_argument("--subs", type=str, default=None, help="逗号分隔的来源版块；省略=默认综合中国社区"); sp.set_defaults(func=cmd_scrape_china)
     sp = sub.add_parser("scrape-comments"); sp.add_argument("--top", type=int, default=400); sp.add_argument("--per-post", type=int, default=15); sp.add_argument("--min-comments", type=int, default=4); sp.set_defaults(func=cmd_scrape_comments)
-    sp = sub.add_parser("crawl-authors"); sp.add_argument("--limit", type=int, default=50, help="爬实力榜 Top N 作者"); sp.add_argument("--per-author", type=int, default=20, help="每位作者最多并入作者库篇数"); sp.add_argument("--refresh-days", type=int, default=7, help="距上次爬取超过几天才重爬"); sp.set_defaults(func=cmd_crawl_authors)
+    sp = sub.add_parser("crawl-authors"); sp.add_argument("--limit", type=int, default=50, help="爬实力榜 Top N 作者"); sp.add_argument("--per-author", type=int, default=20, help="每位作者最多并入作者库篇数"); sp.add_argument("--refresh-days", type=int, default=7, help="距上次爬取超过几天才重爬"); sp.add_argument("--max-fetch-per", type=int, default=120, help="每位作者最多从 Arctic Shift 拉多少历史帖"); sp.add_argument("--since-days", type=int, default=365, help="只纳入近 N 天作者历史帖；0=不限"); sp.add_argument("--pool", choices=["leaderboard", "ticker-repeat"], default="leaderboard", help="作者池：旧实力榜或重复 ticker 作者池"); sp.add_argument("--min-ticker-posts", type=int, default=3, help="ticker-repeat 池最少 ticker 相关帖数"); sp.add_argument("--quality-mode", choices=["llm", "heuristic"], default="llm", help="作者历史帖质量过滤方式：llm 精筛或 heuristic 快速补数据"); sp.add_argument("--no-profile-refresh", action="store_true", help="跳过 Reddit 作者 profile/karma 刷新"); sp.set_defaults(func=cmd_crawl_authors)
     sp = sub.add_parser("extract"); sp.add_argument("--reextract", action="store_true"); sp.set_defaults(func=cmd_extract)
 
     sp = sub.add_parser("analyze"); sp.add_argument("--mock", action="store_true"); sp.add_argument("--qwen", action="store_true"); sp.add_argument("--force", action="store_true"); sp.add_argument("--workers", type=int, default=8); sp.add_argument("--limit", type=int, default=None); sp.set_defaults(func=cmd_analyze)
@@ -443,6 +516,14 @@ def build_parser() -> argparse.ArgumentParser:
     sp = sub.add_parser("gr-tag"); sp.add_argument("--batch", type=int, default=15); sp.add_argument("--workers", type=int, default=8); sp.add_argument("--force", action="store_true", help="重打全部（默认只打未打的）"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker"); sp.add_argument("--source", type=str, default=None, help="逗号分隔 gr_post.source，如 yahoo_jp,toss"); sp.add_argument("--regions", type=str, default=None, help="逗号分隔 region，如 jp,kr,tw"); sp.set_defaults(func=cmd_gr_tag)
     sp = sub.add_parser("gr-rollup"); sp.add_argument("--window-days", type=int, default=14); sp.set_defaults(func=cmd_gr_rollup)
     sp = sub.add_parser("gr-xueqiu"); sp.add_argument("--path", type=str, default="data/exports/gr_cn_xueqiu.json", help="浏览器导出的雪球帖 JSON"); sp.add_argument("--since-days", type=int, default=14); sp.set_defaults(func=cmd_gr_xueqiu)
+    sp = sub.add_parser("gr-xueqiu-crawl"); sp.add_argument("--out", type=str, default="data/exports/gr_cn_xueqiu_direct.json", help="导出的雪球 JSON"); sp.add_argument("--since-days", type=int, default=14); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker"); sp.add_argument("--per-page", type=int, default=20); sp.add_argument("--max-pages", type=int, default=80); sp.add_argument("--sleep", type=float, default=0.35); sp.add_argument("--headless", action="store_true", help="无头模式；雪球可能要求有头 Chrome 才能过 WAF"); sp.add_argument("--no-ingest", action="store_true", help="只导出 JSON，不入 gr_post"); sp.set_defaults(func=cmd_gr_xueqiu_crawl)
+    sp = sub.add_parser("gr-xueqiu-backfill"); sp.add_argument("--days", type=int, default=365, help="回填过去 N 天"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker"); sp.add_argument("--per-page", type=int, default=20); sp.add_argument("--max-pages", type=int, default=1600); sp.add_argument("--max-jobs", type=int, default=None, help="本轮最多运行 N 个任务；省略=全部 pending"); sp.add_argument("--sleep", type=float, default=0.35); sp.add_argument("--headless", action="store_true"); sp.add_argument("--force", action="store_true", help="重置同窗口已有任务"); sp.add_argument("--plan-only", action="store_true", help="只创建任务，不启动浏览器"); sp.add_argument("--sync", action="store_true", help="运行后同步 raw 到 gr_post"); sp.set_defaults(func=cmd_gr_xueqiu_backfill)
+    sp = sub.add_parser("gr-xueqiu-incremental"); sp.add_argument("--days", type=int, default=3, help="增量补近 N 天"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker"); sp.add_argument("--per-page", type=int, default=20); sp.add_argument("--max-pages", type=int, default=120); sp.add_argument("--max-jobs", type=int, default=None); sp.add_argument("--sleep", type=float, default=0.35); sp.add_argument("--headless", action="store_true"); sp.add_argument("--force", action="store_true"); sp.add_argument("--plan-only", action="store_true"); sp.add_argument("--sync", action="store_true", help="运行后同步 raw 到 gr_post"); sp.set_defaults(func=cmd_gr_xueqiu_incremental)
+    sp = sub.add_parser("gr-xueqiu-run-jobs"); sp.add_argument("--max-jobs", type=int, default=None); sp.add_argument("--sleep", type=float, default=0.35); sp.add_argument("--headless", action="store_true"); sp.add_argument("--retry-failed", action="store_true"); sp.add_argument("--recover-running-hours", type=int, default=0, help="把超过 N 小时仍 running 的任务恢复为 pending；0=不处理"); sp.set_defaults(func=cmd_gr_xueqiu_run_jobs)
+    sp = sub.add_parser("gr-xueqiu-sync"); sp.add_argument("--since-days", type=int, default=365); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker"); sp.set_defaults(func=cmd_gr_xueqiu_sync)
+    sp = sub.add_parser("gr-xueqiu-expand-related"); sp.add_argument("--since-days", type=int, default=365); sp.add_argument("--enqueue-top", type=int, default=0, help="为提及最多的 N 个关联标的创建 related 任务；0=只写映射"); sp.set_defaults(func=cmd_gr_xueqiu_expand_related)
+    sp = sub.add_parser("gr-xueqiu-enrich-authors"); sp.add_argument("--since-days", type=int, default=365); sp.set_defaults(func=cmd_gr_xueqiu_enrich_authors)
+    sub.add_parser("gr-xueqiu-status").set_defaults(func=cmd_gr_xueqiu_status)
     sub.add_parser("gr-quote").set_defaults(func=cmd_gr_quote)
     sp = sub.add_parser("toss"); sp.add_argument("--days", type=int, default=14, help="爬近 N 天"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker（省略=TOSS_STOCKS 全部）"); sp.add_argument("--max-pages", type=int, default=1500, help="每标的最多翻页数（每页 11 条）"); sp.add_argument("--sleep", type=float, default=0.3, help="分页请求间隔秒数"); sp.add_argument("--commit-pages", type=int, default=100, help="每 N 页提交一次，避免大体量标的长跑回滚"); sp.add_argument("--resume", action="store_true", help="基于本地已有 Toss 数据补新并从最旧游标继续向前抓"); sp.set_defaults(func=cmd_toss)
     sp = sub.add_parser("youtube-crawl"); sp.add_argument("--since-hours", type=int, default=24); sp.add_argument("--min-views", type=int, default=None, help="浏览量门槛，省略=用 YT_MIN_VIEWS(默认1000)"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker"); sp.add_argument("--per-ticker-results", type=int, default=50, help="每个搜索页返回条数，YouTube 上限 50"); sp.add_argument("--max-pages", type=int, default=2, help="每标的搜索分页数"); sp.add_argument("--mock", action="store_true", help="无 key 时生成多语种样本"); sp.set_defaults(func=cmd_youtube_crawl)
@@ -450,7 +531,7 @@ def build_parser() -> argparse.ArgumentParser:
     sp = sub.add_parser("youtube-tag"); sp.add_argument("--top-native", type=int, default=2, help="每标的用 Gemini 原生看视频的前 N 条（其余走字幕）"); sp.add_argument("--per-ticker", type=int, default=None, help="每标的最多分析前 N 条(按播放量)；省略=全部。配合 8h/天预算用，按档位跨标的铺开"); sp.add_argument("--force", action="store_true", help="重分析全部（默认只分析未分析的）"); sp.add_argument("--workers", type=int, default=1, help="并发线程数(>1 走并发真看视频，billing 解锁 8h 后用)"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker，只跑这些（如前十讨论度）"); sp.add_argument("--mock", action="store_true"); sp.set_defaults(func=cmd_youtube_tag)
     sp = sub.add_parser("youtube-tag-text"); sp.add_argument("--per-ticker", type=int, default=20, help="每标的按播放量取前 N（默认 20=前端 LIMIT）"); sp.add_argument("--workers", type=int, default=6, help="LLM 并发数"); sp.set_defaults(func=cmd_youtube_tag_text)
     sp = sub.add_parser("youtube-fulltext"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker，只跑这些（如 PLTR）"); sp.add_argument("--per-ticker", type=int, default=10, help="每标的按播放量取前 N"); sp.add_argument("--workers", type=int, default=4); sp.add_argument("--limit", type=int, default=None, help="本轮最多处理 N 条（用于长任务分批）"); sp.add_argument("--max-native-min", type=int, default=150, help="允许 Gemini 原生视频处理的最长分钟数"); sp.add_argument("--fail-after", type=int, default=3, help="同一视频失败/无段落达到 N 次后本轮跳过；0=不跳过"); sp.add_argument("--max-rate-waits", type=int, default=4, help="Gemini 429 限流时最多等待次数"); sp.add_argument("--low-res", action="store_true", help="低清看视频(省 token，图表细节略差)"); sp.add_argument("--no-frames", action="store_true", help="只出优化口播、不抽关键画面帧(快、免下载)"); sp.add_argument("--force", action="store_true", help="重生成已有的"); sp.set_defaults(func=cmd_youtube_fulltext)
-    sp = sub.add_parser("youtube-digest"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 video_id"); sp.add_argument("--force", action="store_true", help="重跑已有的"); sp.set_defaults(func=cmd_youtube_digest)
+    sp = sub.add_parser("youtube-digest"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 video_id"); sp.add_argument("--force", action="store_true", help="重跑已有的"); sp.add_argument("--workers", type=int, default=1, help="LLM 并发数"); sp.set_defaults(func=cmd_youtube_digest)
     sp = sub.add_parser("youtube-judgment"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker"); sp.add_argument("--workers", type=int, default=8, help="LLM 并发数"); sp.add_argument("--force", action="store_true", help="重抽已有的"); sp.set_defaults(func=cmd_youtube_judgment)
     sp = sub.add_parser("youtube-creator-view"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker"); sp.add_argument("--workers", type=int, default=8, help="LLM 并发数"); sp.add_argument("--force", action="store_true", help="重综合已有的"); sp.set_defaults(func=cmd_youtube_creator_view)
     sp = sub.add_parser("kol-refine"); sp.add_argument("--source", type=str, default=None, help="逗号分隔，子集 of reddit,x,xueqiu,toss,yahoojp；省略=全部"); sp.add_argument("--per-source", type=int, default=40, help="每标的每源提炼前 N 条(按互动)，默认 40=前端各源 LIMIT"); sp.add_argument("--since-days", type=int, default=20, help="只提炼近 N 天(匹配前端价格窗口)；0=不限"); sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker"); sp.add_argument("--workers", type=int, default=6, help="LLM 并发数"); sp.add_argument("--force", action="store_true", help="重提炼全部（默认只补未提炼的）"); sp.set_defaults(func=cmd_kol_refine)

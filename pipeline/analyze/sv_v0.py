@@ -43,12 +43,34 @@ TWEET_DIRS = [
     ROOT / "equity_trader_kol_tweets_2025h2",
     ROOT / "roster_tweets_6m_f5000",
 ]
-HORIZONS = {"1D": 1, "5D": 5, "20D": 20, "60D": 60}
-SV_SCORING_VERSION = "v1.3"
+SV_PLATFORMS = {"x", "youtube", "reddit", "xueqiu", "toss"}
+SUPPORTED_SOURCES = {"x", "youtube", "reddit"}
+SOURCE_LABELS = {
+    "x": {"zh": "X", "en": "X"},
+    "youtube": {"zh": "YouTube", "en": "YouTube"},
+    "reddit": {"zh": "Reddit", "en": "Reddit"},
+    "xueqiu": {"zh": "雪球", "en": "Xueqiu"},
+    "toss": {"zh": "Toss", "en": "Toss"},
+}
+HORIZONS = {"1D": 1, "5D": 5, "20D": 20, "60D": 60, "90D": 90, "180D": 180}
+SV_SCORING_VERSION = "v1.7-platform-global"
+PLATFORM_QUALIFICATION = {
+    "x": {"n_eff": 8.0, "settled_calls": 10},
+    "youtube": {"n_eff": 4.0, "settled_calls": 5},
+    "reddit": {"n_eff": 3.0, "settled_calls": 4},
+    "xueqiu": {"n_eff": 5.0, "settled_calls": 8},
+    "toss": {"n_eff": 5.0, "settled_calls": 8},
+}
 BASE_RATE_PRIOR = 20.0
 BASE_RATE_MIN = 0.40
 BASE_RATE_MAX = 0.65
-RETURN_NORMALIZER = {"1D": 0.03, "5D": 0.08, "20D": 0.18, "60D": 0.35}
+RETURN_NORMALIZER = {"1D": 0.03, "5D": 0.08, "20D": 0.18, "60D": 0.35, "90D": 0.45, "180D": 0.70}
+PATH_SCORE_WEIGHTS = {
+    "endpoint": 0.40,
+    "opportunity": 0.30,
+    "persistence": 0.20,
+    "retracement": 0.10,
+}
 CALL_TYPES = {
     "single_ticker_call",
     "basket_call",
@@ -59,6 +81,36 @@ CALL_TYPES = {
     "context_mention",
 }
 TICKER_ROLES = {"primary", "basket_member", "context", "comparison", "excluded"}
+INVESTOR_STYLES = {"fundamental", "technical", "event_driven", "macro", "flow_momentum", "mixed", "unknown"}
+CALL_STRUCTURES = {
+    "conviction_call",
+    "conditional_setup",
+    "invalidation_call",
+    "watchlist",
+    "risk_update",
+    "reversal_call",
+    "retrospective",
+}
+LIFECYCLE_ACTIONS = {
+    "open_call",
+    "reinforce_call",
+    "invalidate_prior_call",
+    "close_prior_call",
+    "reverse_call",
+    "no_trade_setup",
+    "retrospective",
+    "none",
+}
+ENTRY_STATUSES = {"active_entry", "conditional_setup", "watchlist_only", "not_applicable"}
+HORIZON_TYPE_WEIGHTS = {
+    "technical": {"1D": 0.10, "5D": 0.30, "20D": 0.28, "60D": 0.18, "90D": 0.09, "180D": 0.05},
+    "fundamental": {"1D": 0.03, "5D": 0.07, "20D": 0.20, "60D": 0.27, "90D": 0.28, "180D": 0.15},
+    "event_driven": {"1D": 0.08, "5D": 0.20, "20D": 0.28, "60D": 0.24, "90D": 0.14, "180D": 0.06},
+    "macro": {"1D": 0.04, "5D": 0.10, "20D": 0.22, "60D": 0.28, "90D": 0.24, "180D": 0.12},
+    "flow_momentum": {"1D": 0.12, "5D": 0.32, "20D": 0.28, "60D": 0.16, "90D": 0.08, "180D": 0.04},
+    "mixed": {"1D": 0.06, "5D": 0.15, "20D": 0.23, "60D": 0.25, "90D": 0.21, "180D": 0.10},
+    "unknown": {"1D": 0.05, "5D": 0.15, "20D": 0.25, "60D": 0.25, "90D": 0.20, "180D": 0.10},
+}
 
 NON_CALL_TAGS = {
     "SPY",  # benchmark; QQQ/IWM/SMH remain valid ETF calls
@@ -95,26 +147,68 @@ HORIZON_RE = re.compile(
     re.I,
 )
 OPTION_RE = re.compile(r"\b\d+(?:\.\d+)?\s*[cp]\b|\b(?:calls?|puts?)\b", re.I)
+TECHNICAL_RE = re.compile(
+    r"\b(break(?:out|down)?|support|resistance|ema|sma|rsi|macd|pivot|trend(?:line)?|"
+    r"triangle|wedge|flag|channel|candles?|engulfing|lower highs?|lower lows?|higher lows?|"
+    r"gap(?:ping)?|reclaim|lost|hold(?:ing)? above|below|volume confirmation|setup|price action)\b|"
+    r"突破|跌破|支撑|阻力|均线|趋势线|形态|技术|量能|确认",
+    re.I,
+)
+FUNDAMENTAL_RE = re.compile(
+    r"\b(revenue|earnings|eps|margin|guidance|valuation|multiple|cash flow|fcf|tam|"
+    r"backlog|capex|demand|supply|profit|balance sheet|fundamental|estimate|consensus)\b|"
+    r"营收|利润|利润率|估值|现金流|指引|订单|需求|供给|基本面",
+    re.I,
+)
+FLOW_RE = re.compile(r"\b(options? flow|gamma|short interest|squeeze|oi|unusual flow|0dte|calls?|puts?)\b", re.I)
+CONDITIONAL_SETUP_RE = re.compile(
+    r"\b(if|when|once|unless|needs? to|must|waiting for|wait for|requires?|"
+    r"confirmation|confirmed breakout|breakout above|break above|hold above|holds? support|"
+    r"pivot off|setup|no trade until|watch(?:ing)? for)\b|如果|若|一旦|需要|等待|确认|站稳|守住",
+    re.I,
+)
+WATCHLIST_RE = re.compile(r"\b(watchlist|watching|on watch|keep an eye|monitor|观察|关注|候选)\b", re.I)
+INVALIDATE_BULL_RE = re.compile(
+    r"\b(broke below|breaks? below|lost (?:its )?(?:the )?(?:50 )?(?:ema|sma|support)|"
+    r"lost support|failed breakout|breakout failed|invalidated|no attractive long setup|"
+    r"no long setup|no technical reason to .*go long|neither occurred|sellers? (?:have )?taken control|"
+    r"bearish follow-through|weakness .*confirm|prior support .*resistance|momentum .*downside|"
+    r"until .*stabilization|demand returning)\b|跌破|失守|多头.*失效|没有.*看多|无.*做多|支撑.*转为阻力",
+    re.I,
+)
+INVALIDATE_BEAR_RE = re.compile(
+    r"\b(broke above|breaks? above|reclaimed|reclaims|invalidated .*short|no attractive short setup|"
+    r"no short setup|no technical reason to .*short|buyers? (?:have )?taken control|"
+    r"bullish follow-through|prior resistance .*support)\b|突破|收复|空头.*失效|没有.*看空|无.*做空",
+    re.I,
+)
 
 SV_SYSTEM = (
-    "You structure public equity-market posts into tradable calls for Smart Voice scoring. "
+    "You structure public equity-market posts or videos into tradable calls for Smart Voice scoring. "
     "Judge only the specified ticker, but first understand whether the post is a single-ticker call, "
     "a basket/sector thesis, a pair trade, a portfolio update, a retrospective, or merely context. "
     "Do not decide whether the call was correct. "
-    "If the post is news, a joke, a repost, a retrospective brag, a pure chart note without direction, "
+    "If the content is news, a joke, a repost, a retrospective brag, a pure chart note without direction, "
     "or only mentions the ticker in a watchlist with no directional implication, mark it non-actionable. "
     "If the specified ticker is only a comparison, ecosystem reference, or context mention, mark it non-actionable "
     "or set ticker_role to context/comparison/excluded. "
     "If it contains a conditional trade plan, it can be actionable if direction is clear. "
     "Return strict JSON only with these fields: "
     "{\"is_actionable_call\":boolean,\"direction\":\"bull|bear|neutral\","
-    "\"horizon_bucket\":\"1D|5D|20D|60D|unknown\",\"horizon_explicit\":boolean,"
+    "\"horizon_bucket\":\"1D|5D|20D|60D|90D|180D|unknown\",\"horizon_explicit\":boolean,"
     "\"target_price\":number|null,\"conviction_score\":number,"
     "\"evidence_score\":number,\"specificity_score\":number,"
     "\"call_type\":\"single_ticker_call|basket_call|pair_trade|sector_call|portfolio_update|retrospective|context_mention\","
     "\"ticker_role\":\"primary|basket_member|context|comparison|excluded\","
     "\"ticker_relevance\":number,"
     "\"target_price_owner\":\"ticker symbol if a target price belongs to a specific ticker else empty\","
+    "\"investor_style\":\"fundamental|technical|event_driven|macro|flow_momentum|mixed|unknown\","
+    "\"call_structure\":\"conviction_call|conditional_setup|invalidation_call|watchlist|risk_update|reversal_call|retrospective\","
+    "\"lifecycle_action\":\"open_call|reinforce_call|invalidate_prior_call|close_prior_call|reverse_call|no_trade_setup|retrospective|none\","
+    "\"affected_direction\":\"bull|bear|unknown\","
+    "\"entry_status\":\"active_entry|conditional_setup|watchlist_only|not_applicable\","
+    "\"trigger_condition\":\"short trigger condition if any else empty\","
+    "\"invalidation_condition\":\"short invalidation condition if any else empty\","
     "\"evidence_span\":\"short original quote supporting this ticker call\","
     "\"summary_zh\":\"short Chinese summary\",\"summary_en\":\"short English summary\","
     "\"exclusion_reason\":\"short reason if non-actionable else empty\"}. "
@@ -205,6 +299,8 @@ def ensure_tables(con: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS idx_sv_candidate_ticker ON sv_call_candidate(ticker);
         CREATE INDEX IF NOT EXISTS idx_sv_candidate_author ON sv_call_candidate(author_id);
         CREATE INDEX IF NOT EXISTS idx_sv_candidate_created ON sv_call_candidate(created_at);
+        CREATE INDEX IF NOT EXISTS idx_sv_candidate_source_rank
+          ON sv_call_candidate(source, candidate_rank, heuristic_score, interactions);
 
         CREATE TABLE IF NOT EXISTS sv_call (
           candidate_id TEXT PRIMARY KEY,
@@ -228,6 +324,13 @@ def ensure_tables(con: sqlite3.Connection) -> None:
           ticker_role TEXT DEFAULT '',
           ticker_relevance REAL DEFAULT 0,
           target_price_owner TEXT DEFAULT '',
+          investor_style TEXT DEFAULT 'unknown',
+          call_structure TEXT DEFAULT '',
+          lifecycle_action TEXT DEFAULT '',
+          affected_direction TEXT DEFAULT 'unknown',
+          entry_status TEXT DEFAULT '',
+          trigger_condition TEXT DEFAULT '',
+          invalidation_condition TEXT DEFAULT '',
           evidence_span TEXT DEFAULT '',
           scoring_version TEXT DEFAULT 'v0',
           summary_zh TEXT DEFAULT '',
@@ -239,6 +342,7 @@ def ensure_tables(con: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS idx_sv_call_action ON sv_call(is_actionable_call, direction);
         CREATE INDEX IF NOT EXISTS idx_sv_call_investor ON sv_call(investor_id);
         CREATE INDEX IF NOT EXISTS idx_sv_call_ticker ON sv_call(ticker);
+        CREATE INDEX IF NOT EXISTS idx_sv_call_source ON sv_call(source);
 
         CREATE TABLE IF NOT EXISTS sv_call_settlement (
           candidate_id TEXT NOT NULL,
@@ -259,6 +363,16 @@ def ensure_tables(con: sqlite3.Connection) -> None:
           actual_hit INTEGER,
           score_weight REAL,
           contribution REAL,
+          max_favorable_excess REAL,
+          peak_day TEXT,
+          time_to_peak_days INTEGER,
+          positive_day_share REAL,
+          avg_directional_excess REAL,
+          retracement REAL,
+          endpoint_component REAL,
+          opportunity_component REAL,
+          persistence_component REAL,
+          retracement_penalty REAL,
           exit_reason TEXT DEFAULT 'horizon',
           superseded_by_candidate_id TEXT,
           status TEXT NOT NULL,
@@ -302,6 +416,31 @@ def ensure_tables(con: sqlite3.Connection) -> None:
           settled_calls INTEGER,
           PRIMARY KEY(segment_type, segment_key, investor_id)
         );
+
+        CREATE TABLE IF NOT EXISTS sv_investor_score_snapshot (
+          run_id TEXT NOT NULL,
+          scoring_version TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          investor_id TEXT NOT NULL,
+          source TEXT NOT NULL,
+          name TEXT,
+          handle TEXT,
+          language TEXT,
+          sv REAL,
+          raw_z REAL,
+          rank_no INTEGER,
+          confidence TEXT,
+          n_eff REAL,
+          settled_calls INTEGER,
+          active_days INTEGER,
+          covered_tickers INTEGER,
+          horizon_scores_json TEXT,
+          ticker_scores_json TEXT,
+          concentration_json TEXT,
+          PRIMARY KEY(run_id, investor_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_sv_snapshot_created ON sv_investor_score_snapshot(created_at);
+        CREATE INDEX IF NOT EXISTS idx_sv_snapshot_investor ON sv_investor_score_snapshot(investor_id);
         """
     )
     existing_cols = {r["name"] for r in con.execute("PRAGMA table_info(sv_call)").fetchall()}
@@ -310,6 +449,13 @@ def ensure_tables(con: sqlite3.Connection) -> None:
         "ticker_role": "TEXT DEFAULT ''",
         "ticker_relevance": "REAL DEFAULT 0",
         "target_price_owner": "TEXT DEFAULT ''",
+        "investor_style": "TEXT DEFAULT 'unknown'",
+        "call_structure": "TEXT DEFAULT ''",
+        "lifecycle_action": "TEXT DEFAULT ''",
+        "affected_direction": "TEXT DEFAULT 'unknown'",
+        "entry_status": "TEXT DEFAULT ''",
+        "trigger_condition": "TEXT DEFAULT ''",
+        "invalidation_condition": "TEXT DEFAULT ''",
         "evidence_span": "TEXT DEFAULT ''",
         "scoring_version": "TEXT DEFAULT 'v0'",
     }
@@ -318,6 +464,16 @@ def ensure_tables(con: sqlite3.Connection) -> None:
             con.execute(f"ALTER TABLE sv_call ADD COLUMN {name} {ddl}")
     existing_settle_cols = {r["name"] for r in con.execute("PRAGMA table_info(sv_call_settlement)").fetchall()}
     extra_settle_cols = {
+        "max_favorable_excess": "REAL",
+        "peak_day": "TEXT",
+        "time_to_peak_days": "INTEGER",
+        "positive_day_share": "REAL",
+        "avg_directional_excess": "REAL",
+        "retracement": "REAL",
+        "endpoint_component": "REAL",
+        "opportunity_component": "REAL",
+        "persistence_component": "REAL",
+        "retracement_penalty": "REAL",
         "exit_reason": "TEXT DEFAULT 'horizon'",
         "superseded_by_candidate_id": "TEXT",
     }
@@ -370,6 +526,36 @@ def interactions(obj: dict[str, Any]) -> float:
     )
 
 
+def source_set(raw: str | None) -> set[str]:
+    values = {x.strip().lower() for x in (raw or "").split(",") if x.strip()}
+    if not values or "all" in values:
+        return set(SV_PLATFORMS)
+    unknown = values - SV_PLATFORMS
+    if unknown:
+        raise SystemExit(f"[sv-v0] unsupported source(s): {', '.join(sorted(unknown))}")
+    return values
+
+
+def investor_key(source: str, raw_id: str) -> str:
+    raw = str(raw_id or "").strip()
+    if not raw:
+        return ""
+    if source != "x":
+        return f"{source}:{raw.lower()}"
+    return raw
+
+
+def table_columns(con: sqlite3.Connection, name: str) -> set[str]:
+    try:
+        return {str(r["name"]) for r in con.execute(f"PRAGMA table_info({name})").fetchall()}
+    except sqlite3.DatabaseError:
+        return set()
+
+
+def table_exists(con: sqlite3.Connection, name: str) -> bool:
+    return bool(table_columns(con, name))
+
+
 def heuristic(text: str) -> tuple[float, str]:
     reasons: list[str] = []
     score = 0.0
@@ -394,6 +580,168 @@ def heuristic(text: str) -> tuple[float, str]:
     if len(text) < 12:
         score -= 8
     return score, ",".join(reasons)
+
+
+def reddit_interactions(row: sqlite3.Row) -> float:
+    return (
+        max(0.0, float(row["score"] or 0))
+        + max(0.0, float(row["num_comments"] or 0)) * 2
+        + max(0.0, float(row["total_awards"] or 0)) * 3
+    )
+
+
+def reddit_url(row: sqlite3.Row) -> str:
+    permalink = str(row["permalink"] or "")
+    if permalink.startswith("http"):
+        return permalink
+    if permalink:
+        return "https://www.reddit.com" + permalink
+    return str(row["url"] or "")
+
+
+def reddit_candidate_tuple(row: sqlite3.Row, ticker: str, score: float, reason: str, rank: int) -> tuple:
+    post_id = str(row["id"] or "")
+    created = str(row["created_utc"] or "")
+    title = str(row["title"] or "").strip()
+    body = str(row["selftext"] or "").strip()
+    text = f"{title}\n\n{body}".strip()
+    author = str(row["author_id"] or "")
+    return (
+        f"reddit:{post_id}:{ticker}",
+        post_id,
+        ticker,
+        "reddit",
+        investor_key("reddit", author),
+        author,
+        created,
+        created[:10],
+        "reddit_post",
+        "en",
+        text,
+        reddit_url(row),
+        int(row["score"] or 0),
+        0,
+        int(row["num_comments"] or 0),
+        0,
+        0,
+        int(row["total_awards"] or 0),
+        reddit_interactions(row),
+        score,
+        reason,
+        rank,
+        f"reddit:{row['source'] or 'scan'}:{row['subreddit_id'] or ''}",
+        utc_now(),
+    )
+
+
+def json_text_list(raw: Any, limit: int = 6) -> list[str]:
+    try:
+        value = json.loads(raw or "[]")
+    except (TypeError, json.JSONDecodeError):
+        value = raw
+    if isinstance(value, list):
+        return [str(x).strip() for x in value if str(x).strip()][:limit]
+    if isinstance(value, str) and value.strip():
+        return [value.strip()[:400]]
+    return []
+
+
+def youtube_interactions(row: sqlite3.Row) -> float:
+    return (
+        max(0.0, float(row["view_count"] or 0)) * 0.01
+        + max(0.0, float(row["like_count"] or 0)) * 2.0
+        + max(0.0, float(row["comment_count"] or 0)) * 3.0
+    )
+
+
+def youtube_candidate_text(row: sqlite3.Row) -> str:
+    parts = [
+        f"Video title: {row['title'] or ''}",
+        f"Channel: {row['channel'] or row['channel_title'] or ''}",
+        f"Description: {str(row['description'] or '')[:900]}",
+    ]
+    if row["stance"] or row["summary_zh"] or row["summary_en"]:
+        parts.append(
+            "Prior video analysis: "
+            f"stance={row['stance'] or 'unknown'}, conviction={row['conviction'] or ''}, "
+            f"summary_zh={row['summary_zh'] or ''}, summary_en={row['summary_en'] or ''}"
+        )
+    points = json_text_list(row["key_points_zh"]) or json_text_list(row["key_points_en"])
+    if points:
+        parts.append("Analysis points:\n" + "\n".join(f"- {p[:220]}" for p in points[:6]))
+    digest = json_text_list(row["digest_summary_zh"]) or json_text_list(row["digest_summary_en"])
+    if digest:
+        parts.append("Investor digest:\n" + "\n".join(f"- {p[:220]}" for p in digest[:7]))
+    chapters = []
+    try:
+        chapters_raw = json.loads(row["chapters"] or "[]")
+        if isinstance(chapters_raw, list):
+            for ch in chapters_raw[:8]:
+                if isinstance(ch, dict):
+                    label = ch.get("t_en") or ch.get("t_zh") or ""
+                    if label:
+                        chapters.append(str(label).strip())
+    except json.JSONDecodeError:
+        chapters = []
+    if chapters:
+        parts.append("Chapters: " + " | ".join(chapters))
+    judgment = []
+    for label, key in [
+        ("horizon", "horizon_en"),
+        ("target", "target"),
+        ("key levels", "key_levels_en"),
+    ]:
+        value = str(row[key] or "").strip()
+        if value:
+            judgment.append(f"{label}: {value}")
+    if not judgment:
+        for label, key in [("horizon", "horizon_zh"), ("key levels", "key_levels_zh")]:
+            value = str(row[key] or "").strip()
+            if value:
+                judgment.append(f"{label}: {value}")
+    if row["price_target"]:
+        judgment.append(f"raw price target: {row['price_target']}")
+    if judgment:
+        parts.append("Structured judgment: " + "; ".join(judgment))
+    fulltext = str(row["content_en"] or row["content_zh"] or "").strip()
+    if fulltext:
+        parts.append("Transcript excerpt:\n" + fulltext[:1800])
+    return "\n\n".join(p for p in parts if p.strip())
+
+
+def youtube_candidate_tuple(row: sqlite3.Row, score: float, reason: str, rank: int) -> tuple:
+    video_id = str(row["id"] or "")
+    ticker = str(row["ticker"] or "").upper()
+    created = str(row["published_utc"] or "")
+    channel_id = str(row["channel_id"] or "")
+    handle = str(row["handle"] or row["channel"] or row["channel_title"] or channel_id)
+    text = youtube_candidate_text(row)
+    return (
+        f"youtube:{video_id}:{ticker}",
+        video_id,
+        ticker,
+        "youtube",
+        investor_key("youtube", channel_id),
+        handle,
+        created,
+        created[:10],
+        "youtube_video",
+        str(row["lang"] or row["default_language"] or row["inferred_language"] or ""),
+        text,
+        str(row["url"] or ""),
+        int(row["like_count"] or 0),
+        0,
+        int(row["comment_count"] or 0),
+        0,
+        int(row["view_count"] or 0),
+        0,
+        youtube_interactions(row),
+        score,
+        reason,
+        rank,
+        f"youtube:subs>={row['subscriber_count'] or 0}:transcript={'yes' if row['content_en'] or row['content_zh'] else 'no'}",
+        utc_now(),
+    )
 
 
 def candidate_tuple(obj: dict[str, Any], ticker: str, score: float, reason: str, source_file: str, rank: int) -> tuple:
@@ -426,6 +774,346 @@ def candidate_tuple(obj: dict[str, Any], ticker: str, score: float, reason: str,
         source_file,
         utc_now(),
     )
+
+
+def reddit_author_pool(
+    con: sqlite3.Connection,
+    limit: int,
+    since_days: int,
+    min_posts: int,
+) -> set[str]:
+    if limit <= 0:
+        return set()
+    max_created = con.execute("SELECT MAX(created_utc) AS mx FROM posts WHERE market='us'").fetchone()
+    max_day = str(max_created["mx"] or utc_now())[:10]
+    cutoff = (
+        dt.datetime.fromisoformat(max_day)
+        - dt.timedelta(days=max(1, since_days))
+    ).strftime("%Y-%m-%d")
+    rows = con.execute(
+        """
+        SELECT p.author_id,
+               COUNT(DISTINCT p.id) AS posts,
+               COUNT(DISTINCT m.ticker) AS tickers,
+               COALESCE(SUM(MAX(p.score, 0) + 2 * MAX(p.num_comments, 0)), 0) AS engagement,
+               AVG(COALESCE(ia.quality_score, 0.35)) AS quality,
+               SUM(CASE WHEN ia.stance IN ('bull','bear') THEN 1 ELSE 0 END) AS directional
+          FROM posts p
+          JOIN mentions m ON m.item_id=p.id AND m.item_type='post'
+          LEFT JOIN item_analysis ia ON ia.item_id=p.id AND ia.item_type='post'
+         WHERE p.market='us'
+           AND p.author_id IS NOT NULL
+           AND p.author_id NOT IN ('[deleted]', 'None')
+           AND p.created_utc >= ?
+         GROUP BY p.author_id
+        HAVING posts >= ?
+        """,
+        (cutoff, max(1, min_posts)),
+    ).fetchall()
+    scored = []
+    for r in rows:
+        posts = int(r["posts"] or 0)
+        tickers = int(r["tickers"] or 0)
+        engagement = float(r["engagement"] or 0)
+        quality = clamp(float(r["quality"] or 0.35), 0.0, 1.0)
+        directional = int(r["directional"] or 0)
+        score = (
+            quality * 3.0
+            + math.log1p(engagement) * 0.75
+            + math.log1p(posts) * 0.9
+            + math.log1p(tickers) * 0.8
+            + (directional / max(1, posts)) * 1.2
+        )
+        scored.append((score, engagement, posts, str(r["author_id"])))
+    scored.sort(key=lambda x: (-x[0], -x[1], -x[2], x[3].lower()))
+    return {author for _, _, _, author in scored[:limit]}
+
+
+def build_reddit_candidates(
+    con: sqlite3.Connection,
+    limit: int,
+    min_score: float,
+    only: set[str] | None,
+    author_limit: int,
+    since_days: int,
+    min_author_posts: int,
+) -> int:
+    ensure_tables(con)
+    valid = price_tickers(con) - NON_CALL_TAGS
+    if only:
+        valid &= only
+    author_pool = reddit_author_pool(con, author_limit, since_days, min_author_posts)
+    if author_limit > 0 and not author_pool:
+        print("[sv-v0] reddit author pool empty; skip reddit candidates.", flush=True)
+        return 0
+    max_created = con.execute("SELECT MAX(created_utc) AS mx FROM posts WHERE market='us'").fetchone()
+    max_day = str(max_created["mx"] or utc_now())[:10]
+    cutoff = (
+        dt.datetime.fromisoformat(max_day)
+        - dt.timedelta(days=max(1, since_days))
+    ).strftime("%Y-%m-%d")
+    rows = con.execute(
+        """
+        SELECT p.id, p.subreddit_id, p.author_id, p.title, p.selftext, p.url, p.permalink,
+               p.source, p.created_utc, p.score, p.num_comments, p.total_awards,
+               m.ticker, m.confidence AS mention_confidence,
+               ia.quality_score, ia.stance, ia.sentiment_score
+          FROM posts p
+          JOIN mentions m ON m.item_id=p.id AND m.item_type='post'
+          LEFT JOIN item_analysis ia ON ia.item_id=p.id AND ia.item_type='post'
+         WHERE p.market='us'
+           AND p.author_id IS NOT NULL
+           AND p.author_id NOT IN ('[deleted]', 'None')
+           AND p.created_utc >= ?
+        """,
+        (cutoff,),
+    ).fetchall()
+    heap: list[tuple[float, int, tuple]] = []
+    batch: list[tuple] = []
+    scanned = matched = inserted = 0
+    seq = 0
+    for row in rows:
+        scanned += 1
+        author = str(row["author_id"] or "")
+        if author_pool and author not in author_pool:
+            continue
+        ticker = str(row["ticker"] or "").upper()
+        if ticker not in valid:
+            continue
+        title = str(row["title"] or "")
+        body = str(row["selftext"] or "")
+        if body in {"[removed]", "[deleted]"}:
+            body = ""
+        text = f"{title}\n{body}".strip()
+        if len(text) < 40:
+            continue
+        h_score, h_reason = heuristic(text)
+        quality = clamp(norm_num(row["quality_score"], 0.35), 0.0, 1.0)
+        mention_conf = clamp(norm_num(row["mention_confidence"], 0.0), 0.0, 1.0)
+        stance = str(row["stance"] or "")
+        score = (
+            h_score
+            + quality * 14
+            + mention_conf * 8
+            + min(14.0, math.log1p(reddit_interactions(row)) * 2.25)
+            + (6.0 if stance in {"bull", "bear"} else 0.0)
+            + (4.0 if len(text) >= 240 else 0.0)
+        )
+        if score < min_score:
+            continue
+        reasons = [x for x in h_reason.split(",") if x]
+        reasons += [f"quality={quality:.2f}", f"mention={mention_conf:.2f}"]
+        if stance in {"bull", "bear"}:
+            reasons.append(f"stance={stance}")
+        matched += 1
+        priority = score * 10 + math.log1p(reddit_interactions(row)) * 2
+        seq += 1
+        item = reddit_candidate_tuple(row, ticker, score, ",".join(reasons), 0)
+        if limit > 0:
+            wrapped = (priority, seq, item)
+            if len(heap) < limit:
+                heapq.heappush(heap, wrapped)
+            elif wrapped > heap[0]:
+                heapq.heapreplace(heap, wrapped)
+        else:
+            batch.append(item)
+            if len(batch) >= 1000:
+                before = con.total_changes
+                insert_candidates(con, batch)
+                con.commit()
+                inserted += con.total_changes - before
+                batch.clear()
+
+    if limit > 0:
+        ordered = [x[2] for x in sorted(heap, key=lambda x: (-x[0], x[1]))]
+        ranked = []
+        for i, row in enumerate(ordered, 1):
+            lst = list(row)
+            lst[21] = i
+            ranked.append(tuple(lst))
+        before = con.total_changes
+        insert_candidates(con, ranked)
+        con.commit()
+        inserted += con.total_changes - before
+    elif batch:
+        before = con.total_changes
+        insert_candidates(con, batch)
+        con.commit()
+        inserted += con.total_changes - before
+    print(
+        f"[sv-v0] reddit candidates scanned={scanned} matched={matched} "
+        f"authors={len(author_pool) if author_pool else 'all'} inserted={inserted} "
+        f"since_days={since_days} limit={limit}",
+        flush=True,
+    )
+    return inserted
+
+
+def build_youtube_candidates(
+    con: sqlite3.Connection,
+    limit: int,
+    min_score: float,
+    only: set[str] | None,
+    min_subscribers: int,
+    since_days: int,
+) -> int:
+    ensure_tables(con)
+    required = {"yt_video", "yt_channel"}
+    missing_required = [name for name in sorted(required) if not table_exists(con, name)]
+    if missing_required:
+        print(
+            f"[sv-v0] youtube candidate source table(s) missing: {', '.join(missing_required)}; "
+            "skip youtube candidates.",
+            flush=True,
+        )
+        return 0
+    valid = price_tickers(con) - NON_CALL_TAGS
+    if only:
+        valid &= only
+    max_created = con.execute("SELECT MAX(published_utc) AS mx FROM yt_video WHERE market='us'").fetchone()
+    max_day = str(max_created["mx"] or utc_now())[:10]
+    cutoff = (
+        dt.datetime.fromisoformat(max_day)
+        - dt.timedelta(days=max(1, since_days))
+    ).strftime("%Y-%m-%d")
+    optional_tables = {
+        name: table_columns(con, name)
+        for name in ("yt_analysis", "yt_digest", "yt_fulltext", "yt_judgment")
+    }
+    joins: list[str] = []
+
+    def can_join(table: str) -> bool:
+        return "video_id" in optional_tables.get(table, set())
+
+    if can_join("yt_analysis"):
+        joins.append("LEFT JOIN yt_analysis a ON a.video_id = v.id")
+    if can_join("yt_digest"):
+        joins.append("LEFT JOIN yt_digest d ON d.video_id = v.id")
+    if can_join("yt_fulltext"):
+        joins.append("LEFT JOIN yt_fulltext f ON f.video_id = v.id")
+    if can_join("yt_judgment"):
+        joins.append("LEFT JOIN yt_judgment j ON j.video_id = v.id")
+
+    def opt_col(table: str, alias: str, column: str, out: str | None = None, default: str = "''") -> str:
+        output = out or column
+        if can_join(table) and column in optional_tables.get(table, set()):
+            return f"{alias}.{column} AS {output}"
+        return f"{default} AS {output}"
+
+    rows = con.execute(
+        f"""
+        SELECT v.id, v.ticker, v.market, v.channel, v.channel_id, v.title, v.description,
+               v.lang, '' AS default_language, '' AS inferred_language,
+               v.duration_s, v.view_count, v.like_count, v.comment_count, v.url, v.published_utc,
+               c.title AS channel_title, c.handle, c.subscriber_count, c.video_count AS channel_video_count,
+               c.view_count AS channel_view_count,
+               {opt_col("yt_analysis", "a", "stance")},
+               {opt_col("yt_analysis", "a", "sentiment", default="0")},
+               {opt_col("yt_analysis", "a", "conviction", default="0")},
+               {opt_col("yt_analysis", "a", "summary_zh")},
+               {opt_col("yt_analysis", "a", "summary_en")},
+               {opt_col("yt_analysis", "a", "key_points_zh")},
+               {opt_col("yt_analysis", "a", "key_points_en")},
+               {opt_col("yt_analysis", "a", "price_target")},
+               {opt_col("yt_digest", "d", "summary_zh", "digest_summary_zh")},
+               {opt_col("yt_digest", "d", "summary_en", "digest_summary_en")},
+               {opt_col("yt_digest", "d", "chapters")},
+               {opt_col("yt_fulltext", "f", "content_zh")},
+               {opt_col("yt_fulltext", "f", "content_en")},
+               {opt_col("yt_judgment", "j", "horizon_zh")},
+               {opt_col("yt_judgment", "j", "horizon_en")},
+               {opt_col("yt_judgment", "j", "target")},
+               {opt_col("yt_judgment", "j", "key_levels_zh")},
+               {opt_col("yt_judgment", "j", "key_levels_en")}
+          FROM yt_video v
+          JOIN yt_channel c ON c.channel_id = v.channel_id
+          {" ".join(joins)}
+         WHERE v.market = 'us'
+           AND v.published_utc >= ?
+           AND COALESCE(c.subscriber_count, 0) >= ?
+        """,
+        (cutoff, max(0, min_subscribers)),
+    ).fetchall()
+    heap: list[tuple[float, int, tuple]] = []
+    batch: list[tuple] = []
+    scanned = matched = inserted = 0
+    seq = 0
+    for row in rows:
+        scanned += 1
+        ticker = str(row["ticker"] or "").upper()
+        if ticker not in valid:
+            continue
+        text = youtube_candidate_text(row)
+        if len(text) < 60:
+            continue
+        h_score, h_reason = heuristic(text)
+        stance = str(row["stance"] or "").lower()
+        conviction = clamp(norm_num(row["conviction"], 0.0), 0.0, 1.0)
+        has_target = bool(str(row["target"] or row["price_target"] or "").strip())
+        has_horizon = bool(str(row["horizon_en"] or row["horizon_zh"] or "").strip())
+        has_fulltext = bool(str(row["content_en"] or row["content_zh"] or "").strip())
+        score = (
+            h_score
+            + (8.0 if stance in {"bull", "bear"} else 0.0)
+            + conviction * 10.0
+            + (8.0 if has_target else 0.0)
+            + (5.0 if has_horizon else 0.0)
+            + (5.0 if row["digest_summary_zh"] or row["digest_summary_en"] else 0.0)
+            + (3.0 if has_fulltext else 0.0)
+            + min(14.0, math.log1p(youtube_interactions(row)) * 1.6)
+        )
+        if score < min_score:
+            continue
+        reasons = [x for x in h_reason.split(",") if x]
+        if stance in {"bull", "bear", "neutral"}:
+            reasons.append(f"stance={stance}")
+        if has_target:
+            reasons.append("target")
+        if has_horizon:
+            reasons.append("horizon")
+        if has_fulltext:
+            reasons.append("transcript")
+        matched += 1
+        priority = score * 10 + math.log1p(youtube_interactions(row)) * 2
+        seq += 1
+        item = youtube_candidate_tuple(row, score, ",".join(reasons), 0)
+        if limit > 0:
+            wrapped = (priority, seq, item)
+            if len(heap) < limit:
+                heapq.heappush(heap, wrapped)
+            elif wrapped > heap[0]:
+                heapq.heapreplace(heap, wrapped)
+        else:
+            batch.append(item)
+            if len(batch) >= 1000:
+                before = con.total_changes
+                insert_candidates(con, batch)
+                con.commit()
+                inserted += con.total_changes - before
+                batch.clear()
+
+    if limit > 0:
+        ordered = [x[2] for x in sorted(heap, key=lambda x: (-x[0], x[1]))]
+        ranked = []
+        for i, row in enumerate(ordered, 1):
+            lst = list(row)
+            lst[21] = i
+            ranked.append(tuple(lst))
+        before = con.total_changes
+        insert_candidates(con, ranked)
+        con.commit()
+        inserted += con.total_changes - before
+    elif batch:
+        before = con.total_changes
+        insert_candidates(con, batch)
+        con.commit()
+        inserted += con.total_changes - before
+    print(
+        f"[sv-v0] youtube candidates scanned={scanned} matched={matched} "
+        f"min_subscribers={min_subscribers} inserted={inserted} since_days={since_days} limit={limit}",
+        flush=True,
+    )
+    return inserted
 
 
 def insert_candidates(con: sqlite3.Connection, rows: list[tuple]) -> int:
@@ -549,6 +1237,21 @@ def normalize_call(data: Any) -> dict[str, Any]:
         ticker_role = ""
     ticker_relevance = clamp(norm_num(d.get("ticker_relevance"), 0.0), 0, 1)
     target_price_owner = str(d.get("target_price_owner") or "").strip().upper().lstrip("$")[:16]
+    investor_style = str(d.get("investor_style") or "unknown").strip().lower()
+    if investor_style not in INVESTOR_STYLES:
+        investor_style = "unknown"
+    call_structure = str(d.get("call_structure") or "").strip().lower()
+    if call_structure not in CALL_STRUCTURES:
+        call_structure = "conviction_call" if actionable else ""
+    lifecycle_action = str(d.get("lifecycle_action") or "").strip().lower()
+    if lifecycle_action not in LIFECYCLE_ACTIONS:
+        lifecycle_action = "open_call" if actionable else "none"
+    affected_direction = str(d.get("affected_direction") or "unknown").strip().lower()
+    if affected_direction not in {"bull", "bear", "unknown"}:
+        affected_direction = "unknown"
+    entry_status = str(d.get("entry_status") or "").strip().lower()
+    if entry_status not in ENTRY_STATUSES:
+        entry_status = "active_entry" if actionable else "not_applicable"
     evidence_span = str(d.get("evidence_span") or "")[:360]
     explicit = bool(d.get("horizon_explicit")) and horizon != "unknown"
     horizon_mult = 1.0 if explicit else (0.75 if horizon != "unknown" else 0.55)
@@ -576,6 +1279,13 @@ def normalize_call(data: Any) -> dict[str, Any]:
         "ticker_role": ticker_role,
         "ticker_relevance": ticker_relevance,
         "target_price_owner": target_price_owner,
+        "investor_style": investor_style,
+        "call_structure": call_structure,
+        "lifecycle_action": lifecycle_action,
+        "affected_direction": affected_direction,
+        "entry_status": entry_status,
+        "trigger_condition": str(d.get("trigger_condition") or "")[:240],
+        "invalidation_condition": str(d.get("invalidation_condition") or "")[:240],
         "evidence_span": evidence_span,
         "scoring_version": SV_SCORING_VERSION,
         "summary_zh": str(d.get("summary_zh") or "")[:240],
@@ -585,14 +1295,18 @@ def normalize_call(data: Any) -> dict[str, Any]:
 
 
 def user_prompt(row: sqlite3.Row) -> str:
+    source = str(row["source"] or "x")
+    item_label = {"reddit": "Reddit post", "youtube": "YouTube video"}.get(source, "Tweet")
+    text_cap = 5200 if source == "youtube" else 2200
     return (
         f"Ticker to judge: {row['ticker']}\n"
+        f"Source: {source}\n"
         f"Created at: {row['created_at']}\n"
-        f"Tweet type: {row['tweet_type']}\n"
+        f"{item_label} type: {row['tweet_type']}\n"
         f"Language: {row['lang']}\n"
         f"Heuristic reason: {row['reason']}\n"
-        "Post text:\n"
-        f"{str(row['text'])[:2200]}"
+        f"{item_label} text:\n"
+        f"{str(row['text'])[:text_cap]}"
     )
 
 
@@ -602,9 +1316,11 @@ def write_call(con: sqlite3.Connection, candidate: sqlite3.Row, norm: dict[str, 
            (candidate_id,tweet_id,ticker,source,investor_id,author_handle,created_at,language,
             is_actionable_call,direction,horizon_bucket,horizon_explicit,target_price,
             conviction_score,evidence_score,specificity_score,call_weight,call_type,ticker_role,
-            ticker_relevance,target_price_owner,evidence_span,scoring_version,summary_zh,summary_en,
+            ticker_relevance,target_price_owner,investor_style,call_structure,lifecycle_action,
+            affected_direction,entry_status,trigger_condition,invalidation_condition,
+            evidence_span,scoring_version,summary_zh,summary_en,
             exclusion_reason,model,tagged_at)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
            ON CONFLICT(candidate_id) DO UPDATE SET
              is_actionable_call=excluded.is_actionable_call,
              direction=excluded.direction,
@@ -619,6 +1335,13 @@ def write_call(con: sqlite3.Connection, candidate: sqlite3.Row, norm: dict[str, 
              ticker_role=excluded.ticker_role,
              ticker_relevance=excluded.ticker_relevance,
              target_price_owner=excluded.target_price_owner,
+             investor_style=excluded.investor_style,
+             call_structure=excluded.call_structure,
+             lifecycle_action=excluded.lifecycle_action,
+             affected_direction=excluded.affected_direction,
+             entry_status=excluded.entry_status,
+             trigger_condition=excluded.trigger_condition,
+             invalidation_condition=excluded.invalidation_condition,
              evidence_span=excluded.evidence_span,
              scoring_version=excluded.scoring_version,
              summary_zh=excluded.summary_zh,
@@ -630,7 +1353,7 @@ def write_call(con: sqlite3.Connection, candidate: sqlite3.Row, norm: dict[str, 
             candidate["candidate_id"],
             candidate["tweet_id"],
             candidate["ticker"],
-            "x",
+            candidate["source"] or "x",
             candidate["author_id"],
             candidate["author_handle"],
             candidate["created_at"],
@@ -648,6 +1371,13 @@ def write_call(con: sqlite3.Connection, candidate: sqlite3.Row, norm: dict[str, 
             norm["ticker_role"],
             norm["ticker_relevance"],
             norm["target_price_owner"],
+            norm["investor_style"],
+            norm["call_structure"],
+            norm["lifecycle_action"],
+            norm["affected_direction"],
+            norm["entry_status"],
+            norm["trigger_condition"],
+            norm["invalidation_condition"],
             norm["evidence_span"],
             norm["scoring_version"],
             norm["summary_zh"],
@@ -659,8 +1389,21 @@ def write_call(con: sqlite3.Connection, candidate: sqlite3.Row, norm: dict[str, 
     )
 
 
-def ranked_candidate_rows(con: sqlite3.Connection, limit: int, force: bool) -> list[sqlite3.Row]:
-    where = "" if force else "WHERE c.candidate_id IS NULL"
+def ranked_candidate_rows(
+    con: sqlite3.Connection,
+    limit: int,
+    force: bool,
+    sources: set[str] | None = None,
+) -> list[sqlite3.Row]:
+    clauses: list[str] = []
+    params: list[Any] = []
+    if not force:
+        clauses.append("c.candidate_id IS NULL")
+    if sources:
+        placeholders = ",".join("?" for _ in sources)
+        clauses.append(f"cc.source IN ({placeholders})")
+        params.extend(sorted(sources))
+    where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
     sql = f"""
         SELECT cc.*
           FROM sv_call_candidate cc
@@ -669,7 +1412,8 @@ def ranked_candidate_rows(con: sqlite3.Connection, limit: int, force: bool) -> l
          ORDER BY COALESCE(cc.candidate_rank, 999999999), cc.heuristic_score DESC, cc.interactions DESC
          LIMIT ?
     """
-    return con.execute(sql, (limit if limit > 0 else 1_000_000_000,)).fetchall()
+    params.append(limit if limit > 0 else 1_000_000_000)
+    return con.execute(sql, params).fetchall()
 
 
 def author_balanced_candidate_rows(
@@ -678,8 +1422,9 @@ def author_balanced_candidate_rows(
     force: bool,
     per_author_min: int,
     per_author_max: int,
+    sources: set[str] | None = None,
 ) -> list[sqlite3.Row]:
-    rows = ranked_candidate_rows(con, 0, force)
+    rows = ranked_candidate_rows(con, 0, force, sources)
     if not rows:
         return []
     if limit <= 0:
@@ -689,7 +1434,14 @@ def author_balanced_candidate_rows(
 
     existing = collections.Counter()
     if not force:
-        for r in con.execute("SELECT investor_id, count(*) AS n FROM sv_call GROUP BY investor_id"):
+        sql = "SELECT investor_id, count(*) AS n FROM sv_call"
+        params: list[Any] = []
+        if sources:
+            placeholders = ",".join("?" for _ in sources)
+            sql += f" WHERE source IN ({placeholders})"
+            params.extend(sorted(sources))
+        sql += " GROUP BY investor_id"
+        for r in con.execute(sql, params):
             if r["investor_id"]:
                 existing[str(r["investor_id"])] = int(r["n"] or 0)
 
@@ -769,15 +1521,16 @@ def extract_calls(
     extract_mode: str,
     per_author_min: int,
     per_author_max: int,
+    sources: set[str] | None = None,
 ) -> int:
     ensure_tables(con)
     if not llm.available(llm.LOW):
         print("[sv-v0] LOW model key unavailable; extraction skipped.", flush=True)
         return 0
     if extract_mode == "author-balanced":
-        rows = author_balanced_candidate_rows(con, limit, force, per_author_min, per_author_max)
+        rows = author_balanced_candidate_rows(con, limit, force, per_author_min, per_author_max, sources)
     else:
-        rows = ranked_candidate_rows(con, limit, force)
+        rows = ranked_candidate_rows(con, limit, force, sources)
     if not rows:
         print("[sv-v0] no candidates need extraction.", flush=True)
         return 0
@@ -868,16 +1621,76 @@ def base_rates(prices: dict[str, list[tuple[str, float]]]) -> dict[tuple[str, st
     return rates
 
 
-def horizon_factor(call_bucket: str, explicit: int, horizon: str) -> float:
+def infer_analysis_type(text: str, stored: str = "unknown") -> str:
+    stored = (stored or "unknown").lower()
+    if stored in INVESTOR_STYLES and stored != "unknown":
+        return stored
+    technical = len(TECHNICAL_RE.findall(text or ""))
+    fundamental = len(FUNDAMENTAL_RE.findall(text or ""))
+    flow = len(FLOW_RE.findall(text or ""))
+    if flow and flow >= max(technical, fundamental):
+        return "flow_momentum"
+    if technical >= 2 and technical >= fundamental * 1.5:
+        return "technical"
+    if fundamental >= 2 and fundamental >= technical:
+        return "fundamental"
+    if technical and fundamental:
+        return "mixed"
+    if technical:
+        return "technical"
+    if fundamental:
+        return "fundamental"
+    return "unknown"
+
+
+def infer_structure(text: str, stored: str = "", actionable: bool = True) -> tuple[str, str, str, str]:
+    stored = (stored or "").lower()
+    if stored in CALL_STRUCTURES:
+        structure = stored
+    elif INVALIDATE_BULL_RE.search(text or "") or INVALIDATE_BEAR_RE.search(text or ""):
+        structure = "invalidation_call"
+    elif WATCHLIST_RE.search(text or "") and not actionable:
+        structure = "watchlist"
+    elif CONDITIONAL_SETUP_RE.search(text or ""):
+        structure = "conditional_setup"
+    else:
+        structure = "conviction_call" if actionable else "watchlist"
+
+    action = "open_call" if actionable else "none"
+    affected = "unknown"
+    entry_status = "active_entry" if actionable else "not_applicable"
+    if structure == "conditional_setup":
+        entry_status = "conditional_setup"
+    elif structure == "watchlist":
+        action = "no_trade_setup"
+        entry_status = "watchlist_only"
+    elif structure == "invalidation_call":
+        action = "invalidate_prior_call"
+        entry_status = "not_applicable"
+        if INVALIDATE_BULL_RE.search(text or ""):
+            affected = "bull"
+        elif INVALIDATE_BEAR_RE.search(text or ""):
+            affected = "bear"
+    elif structure == "reversal_call":
+        action = "reverse_call"
+    elif structure == "risk_update":
+        action = "close_prior_call"
+        entry_status = "not_applicable"
+    elif structure == "retrospective":
+        action = "retrospective"
+        entry_status = "not_applicable"
+    return structure, action, affected, entry_status
+
+
+def horizon_factor(call_bucket: str, explicit: int, horizon: str, analysis_type: str = "unknown") -> float:
+    base = HORIZON_TYPE_WEIGHTS.get(analysis_type, HORIZON_TYPE_WEIGHTS["unknown"])
     if call_bucket in HORIZONS:
         if call_bucket == horizon:
-            return 1.0
-        order = list(HORIZONS)
-        dist = abs(order.index(call_bucket) - order.index(horizon))
-        if explicit:
-            return 0.15 if dist == 1 else 0.0
-        return 0.25 if dist == 1 else 0.0
-    return {"1D": 0.0, "5D": 0.25, "20D": 0.50, "60D": 0.25}[horizon]
+            primary = 0.65 if explicit else 0.45
+            return primary + (1.0 - primary) * base[horizon]
+        spillover = 0.35 if explicit else 0.55
+        return spillover * base[horizon]
+    return base[horizon]
 
 
 def text_tickers(text: str) -> list[str]:
@@ -894,6 +1707,7 @@ def infer_call_meta(call: sqlite3.Row) -> dict[str, Any]:
     ticker = str(call["ticker"]).upper()
     text = str(call["text"] or "")
     summary = f"{call['summary_zh'] or ''} {call['summary_en'] or ''}"
+    combined_text = f"{text}\n{summary}\n{call['evidence_span'] or ''}"
     tags = text_tickers(text)
     unique_tags = sorted(set(tags))
     tag_count = len(unique_tags)
@@ -970,12 +1784,41 @@ def infer_call_meta(call: sqlite3.Row) -> dict[str, Any]:
     }.get(role, 0.0)
     if relevance < 0.20:
         role_mult = 0.0
+    analysis_type = infer_analysis_type(combined_text, str(call["investor_style"] or "unknown"))
+    call_structure, lifecycle_action, affected_direction, entry_status = infer_structure(
+        combined_text,
+        str(call["call_structure"] or ""),
+        bool(call["is_actionable_call"]),
+    )
+    stored_lifecycle = str(call["lifecycle_action"] or "").lower()
+    if stored_lifecycle in LIFECYCLE_ACTIONS and stored_lifecycle not in {"", "none"}:
+        lifecycle_action = stored_lifecycle
+    stored_affected = str(call["affected_direction"] or "unknown").lower()
+    if stored_affected in {"bull", "bear"}:
+        affected_direction = stored_affected
+    stored_entry = str(call["entry_status"] or "").lower()
+    if stored_entry in ENTRY_STATUSES and stored_entry:
+        entry_status = stored_entry
+    structure_mult = {
+        "conviction_call": 1.00,
+        "conditional_setup": 0.60 if analysis_type == "technical" else 0.70,
+        "reversal_call": 0.85,
+        "risk_update": 0.35,
+        "watchlist": 0.15,
+        "invalidation_call": 0.0,
+        "retrospective": 0.0,
+    }.get(call_structure, 1.0)
     return {
         "call_type": call_type,
         "ticker_role": role,
         "ticker_relevance": relevance,
         "target_price_owner": target_owner,
-        "weight_multiplier": type_mult * role_mult * relevance,
+        "analysis_type": analysis_type,
+        "call_structure": call_structure,
+        "lifecycle_action": lifecycle_action,
+        "affected_direction": affected_direction,
+        "entry_status": entry_status,
+        "weight_multiplier": type_mult * role_mult * relevance * structure_mult,
         "tag_count": tag_count,
     }
 
@@ -986,35 +1829,144 @@ def post_weight_cap(n_calls: int) -> float:
     return min(2.8, 1.15 + 0.35 * math.sqrt(n_calls))
 
 
-def annotate_supersessions(enriched: list[dict[str, Any]]) -> int:
-    """Mark calls closed by a later opposite same-investor same-ticker call."""
+def lifecycle_events(con: sqlite3.Connection) -> list[dict[str, Any]]:
+    rows = con.execute(
+        """SELECT c.*, cc.text AS text
+             FROM sv_call c JOIN sv_call_candidate cc ON cc.candidate_id=c.candidate_id
+            WHERE c.investor_id IS NOT NULL AND c.ticker IS NOT NULL"""
+    ).fetchall()
+    events: list[dict[str, Any]] = []
+    for call in rows:
+        meta = infer_call_meta(call)
+        action = str(meta["lifecycle_action"])
+        direction = str(call["direction"] or "neutral")
+        if direction in {"bull", "bear"} or action in {"invalidate_prior_call", "close_prior_call", "reverse_call"}:
+            events.append(
+                {
+                    "candidate_id": str(call["candidate_id"]),
+                    "investor_id": str(call["investor_id"] or ""),
+                    "ticker": str(call["ticker"] or "").upper(),
+                    "created_at": str(call["created_at"] or ""),
+                    "direction": direction,
+                    "action": action,
+                    "affected_direction": str(meta["affected_direction"]),
+                }
+            )
+    return events
+
+
+def annotate_supersessions(enriched: list[dict[str, Any]], events: list[dict[str, Any]]) -> int:
+    """Mark calls closed by later lifecycle events on the same investor+ticker."""
     by_key: dict[tuple[str, str], list[dict[str, Any]]] = collections.defaultdict(list)
+    events_by_key: dict[tuple[str, str], list[dict[str, Any]]] = collections.defaultdict(list)
     for item in enriched:
         call = item["call"]
         investor = str(call["investor_id"] or "")
         ticker = str(call["ticker"] or "").upper()
         if investor and ticker:
             by_key[(investor, ticker)].append(item)
+    for event in events:
+        investor = str(event["investor_id"] or "")
+        ticker = str(event["ticker"] or "").upper()
+        if investor and ticker:
+            events_by_key[(investor, ticker)].append(event)
 
     closed = 0
-    for items in by_key.values():
+    for key, items in by_key.items():
         items.sort(key=lambda x: (str(x["call"]["created_at"] or ""), str(x["call"]["candidate_id"] or "")))
+        key_events = sorted(events_by_key.get(key, []), key=lambda x: (x["created_at"], x["candidate_id"]))
         for i, item in enumerate(items):
             call = item["call"]
             direction = str(call["direction"])
             created = str(call["created_at"] or "")
-            for later in items[i + 1:]:
-                later_call = later["call"]
-                later_created = str(later_call["created_at"] or "")
+            current_id = str(call["candidate_id"])
+            for event in key_events:
+                later_created = str(event["created_at"] or "")
                 if later_created <= created:
                     continue
-                if str(later_call["direction"]) == direction:
+                if str(event["candidate_id"]) == current_id:
+                    continue
+                action = str(event["action"])
+                affected = str(event["affected_direction"])
+                later_direction = str(event["direction"])
+                closes = False
+                if action == "reverse_call" and later_direction in {"bull", "bear"} and later_direction != direction:
+                    closes = True
+                elif action in {"invalidate_prior_call", "close_prior_call"} and affected in {direction, "unknown"}:
+                    closes = True
+                elif later_direction in {"bull", "bear"} and later_direction != direction:
+                    closes = True
+                if not closes:
                     continue
                 item["superseded_at"] = later_created
-                item["superseded_by_candidate_id"] = str(later_call["candidate_id"])
+                item["superseded_by_candidate_id"] = str(event["candidate_id"])
                 closed += 1
                 break
     return closed
+
+
+def path_score_components(
+    series: list[tuple[str, float]],
+    spy: list[tuple[str, float]],
+    idx: int,
+    spy_idx: int,
+    exit_idx: int,
+    exit_spy_idx: int,
+    entry_px: float,
+    spy_entry: float,
+    direction: str,
+    expected_hit: float,
+    actual_hit: int,
+    endpoint_directional_excess: float,
+    normalizer: float,
+) -> dict[str, Any]:
+    """Score the full path inside a horizon window, not only the endpoint."""
+    max_steps = min(exit_idx - idx, exit_spy_idx - spy_idx)
+    path: list[tuple[int, str, float]] = []
+    for step in range(1, max_steps + 1):
+        day, px = series[idx + step]
+        _, spx = spy[spy_idx + step]
+        if entry_px <= 0 or spy_entry <= 0 or px <= 0 or spx <= 0:
+            continue
+        excess = (px / entry_px - 1) - (spx / spy_entry - 1)
+        directional = excess if direction == "bull" else -excess
+        path.append((step, day, directional))
+
+    if not path:
+        path = [(max(0, exit_idx - idx), series[exit_idx][0], endpoint_directional_excess)]
+
+    peak_step, peak_day, max_favorable = max(path, key=lambda x: x[2])
+    positive_day_share = sum(1 for _, _, v in path if v > 0) / len(path)
+    avg_directional = sum(v for _, _, v in path) / len(path)
+    endpoint_return_component = clamp(endpoint_directional_excess / normalizer, -1.0, 1.0)
+    endpoint_component = 0.75 * (actual_hit - expected_hit) + 0.25 * endpoint_return_component
+    opportunity_component = clamp(max_favorable / normalizer, -1.0, 1.0)
+    persistence_component = positive_day_share - expected_hit
+    retracement = max(0.0, max_favorable - endpoint_directional_excess)
+    retracement_penalty = (
+        clamp(retracement / max(max_favorable, normalizer * 0.5), 0.0, 1.0)
+        if max_favorable > 0
+        else 0.0
+    )
+    contribution_core = (
+        PATH_SCORE_WEIGHTS["endpoint"] * endpoint_component
+        + PATH_SCORE_WEIGHTS["opportunity"] * opportunity_component
+        + PATH_SCORE_WEIGHTS["persistence"] * persistence_component
+        - PATH_SCORE_WEIGHTS["retracement"] * retracement_penalty
+    )
+    return {
+        "max_favorable_excess": max_favorable,
+        "peak_day": peak_day,
+        "time_to_peak_days": peak_step,
+        "positive_day_share": positive_day_share,
+        "avg_directional_excess": avg_directional,
+        "retracement": retracement,
+        "endpoint_component": endpoint_component,
+        "opportunity_component": opportunity_component,
+        "persistence_component": persistence_component,
+        "retracement_penalty": retracement_penalty,
+        "contribution_core": contribution_core,
+    }
 
 
 def settle_calls(con: sqlite3.Connection) -> int:
@@ -1031,7 +1983,7 @@ def settle_calls(con: sqlite3.Connection) -> int:
             WHERE c.is_actionable_call=1 AND c.direction IN ('bull','bear') AND c.call_weight > 0"""
     ).fetchall()
     enriched: list[dict[str, Any]] = []
-    by_tweet: dict[str, list[dict[str, Any]]] = collections.defaultdict(list)
+    by_post: dict[str, list[dict[str, Any]]] = collections.defaultdict(list)
     for call in rows:
         meta = infer_call_meta(call)
         raw_weight = float(call["call_weight"]) * float(meta["weight_multiplier"])
@@ -1039,9 +1991,9 @@ def settle_calls(con: sqlite3.Connection) -> int:
             continue
         item = {"call": call, "meta": meta, "raw_weight": raw_weight, "effective_weight": raw_weight}
         enriched.append(item)
-        by_tweet[str(call["tweet_id"])].append(item)
+        by_post[f"{call['source'] or 'x'}:{call['tweet_id']}"].append(item)
 
-    for items in by_tweet.values():
+    for items in by_post.values():
         if not items:
             continue
         cap = post_weight_cap(len(items))
@@ -1050,7 +2002,7 @@ def settle_calls(con: sqlite3.Connection) -> int:
         for item in items:
             item["effective_weight"] = float(item["raw_weight"]) * scale
 
-    superseded = annotate_supersessions(enriched)
+    superseded = annotate_supersessions(enriched, lifecycle_events(con))
     out: list[tuple] = []
     for item in enriched:
         call = item["call"]
@@ -1077,11 +2029,16 @@ def settle_calls(con: sqlite3.Connection) -> int:
                 supersede_exit_day = series[supersede_idx][0]
                 supersede_spy_idx = first_idx_on_or_after(spy, supersede_exit_day)
         for h, n in HORIZONS.items():
-            weight = float(item["effective_weight"]) * horizon_factor(str(call["horizon_bucket"]), int(call["horizon_explicit"] or 0), h)
+            weight = float(item["effective_weight"]) * horizon_factor(
+                str(call["horizon_bucket"]),
+                int(call["horizon_explicit"] or 0),
+                h,
+                str(item["meta"].get("analysis_type") or "unknown"),
+            )
             if weight <= 0:
                 continue
             status = "pending"
-            values = [None] * 10
+            values = [None] * 20
             contribution = None
             actual_hit = None
             expected = rates.get((ticker, h), 0.5)
@@ -1109,18 +2066,40 @@ def settle_calls(con: sqlite3.Connection) -> int:
                 else:
                     actual_hit = 1 if excess < 0 else 0
                     expected_hit = 1 - expected
-                ret_component = clamp(directional_excess / RETURN_NORMALIZER[h], -1.0, 1.0)
-                contribution = weight * (0.75 * (actual_hit - expected_hit) + 0.25 * ret_component)
+                path = path_score_components(
+                    series,
+                    spy,
+                    idx,
+                    spy_idx,
+                    exit_idx,
+                    exit_spy_idx,
+                    entry_px,
+                    spy_entry,
+                    str(call["direction"]),
+                    expected_hit,
+                    actual_hit,
+                    directional_excess,
+                    RETURN_NORMALIZER[h],
+                )
+                contribution = weight * float(path["contribution_core"])
                 status = "settled"
-                values = [exit_day, exit_px, spy_entry, spy_exit, ret, bret, excess, expected_hit, actual_hit, contribution]
+                values = [
+                    exit_day, exit_px, spy_entry, spy_exit, ret, bret, excess, expected_hit, actual_hit, contribution,
+                    path["max_favorable_excess"], path["peak_day"], path["time_to_peak_days"],
+                    path["positive_day_share"], path["avg_directional_excess"], path["retracement"],
+                    path["endpoint_component"], path["opportunity_component"], path["persistence_component"],
+                    path["retracement_penalty"],
+                ]
             else:
                 expected_hit = expected if call["direction"] == "bull" else 1 - expected
-                values = [None, None, spy_entry, None, None, None, None, expected_hit, None, None]
+                values = [None, None, spy_entry, None, None, None, None, expected_hit, None, None] + [None] * 10
             out.append(
                 (
                     call["candidate_id"], h, ticker, call["investor_id"], call["created_at"],
                     entry_day, values[0], entry_px, values[1], values[2], values[3],
                     values[4], values[5], values[6], values[7], values[8], weight, values[9],
+                    values[10], values[11], values[12], values[13], values[14], values[15],
+                    values[16], values[17], values[18], values[19],
                     exit_reason, superseded_by, status,
                 )
             )
@@ -1128,8 +2107,10 @@ def settle_calls(con: sqlite3.Connection) -> int:
         """INSERT OR REPLACE INTO sv_call_settlement
            (candidate_id,horizon,ticker,investor_id,created_at,entry_day,exit_day,entry_price,exit_price,
             benchmark_entry_price,benchmark_exit_price,return_pct,benchmark_return_pct,excess_return_pct,
-            expected_hit,actual_hit,score_weight,contribution,exit_reason,superseded_by_candidate_id,status)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            expected_hit,actual_hit,score_weight,contribution,max_favorable_excess,peak_day,time_to_peak_days,
+            positive_day_share,avg_directional_excess,retracement,endpoint_component,opportunity_component,
+            persistence_component,retracement_penalty,exit_reason,superseded_by_candidate_id,status)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         out,
     )
     con.commit()
@@ -1203,6 +2184,25 @@ def robust_scores(raw_by_id: dict[str, float]) -> dict[str, int]:
     return {k: int(round(clamp(100 + 10 * ((v - med) / scale), 40, 180))) for k, v in raw_by_id.items()}
 
 
+def primary_source_for_rows(rows: list[sqlite3.Row]) -> str:
+    counts = collections.Counter(str(r["source"] or "x") for r in rows)
+    if not counts:
+        return "x"
+    return counts.most_common(1)[0][0]
+
+
+def platform_qualification(source: str) -> dict[str, float]:
+    return PLATFORM_QUALIFICATION.get(source, PLATFORM_QUALIFICATION["x"])
+
+
+def qualifies_for_platform(source: str, stats: dict[str, Any]) -> bool:
+    rule = platform_qualification(source)
+    return (
+        float(stats.get("n_eff") or 0) >= float(rule["n_eff"])
+        and int(stats.get("settled_calls") or 0) >= int(rule["settled_calls"])
+    )
+
+
 def confidence(n_eff: float, calls: int) -> str:
     if n_eff >= 60 and calls >= 80:
         return "high"
@@ -1211,6 +2211,20 @@ def confidence(n_eff: float, calls: int) -> str:
     if n_eff >= 10 and calls >= 15:
         return "low"
     return "observing"
+
+
+def confidence_factor(level: str) -> float:
+    return {"high": 1.0, "medium": 0.85, "low": 0.65, "observing": 0.35}.get(level, 0.35)
+
+
+def global_sv_from_platform(platform_sv: float, level: str) -> tuple[int, float]:
+    """Convert platform-relative SV into global deviation ranking.
+
+    Global SV measures how far an investor is from the median investor in the
+    investor's own platform, with low-confidence evidence pulled toward 100.
+    """
+    deviation = ((platform_sv - 100.0) / 100.0) * confidence_factor(level)
+    return int(round(clamp(100.0 + 100.0 * deviation, 40.0, 180.0))), deviation
 
 
 def reliability_cap(level: str) -> int:
@@ -1238,11 +2252,21 @@ def concentration_cap(st: dict[str, Any]) -> int:
     return 180
 
 
+def row_analysis_type(row: sqlite3.Row) -> str:
+    stored = str(row["investor_style"] or "unknown") if "investor_style" in row.keys() else "unknown"
+    text = ""
+    if "text" in row.keys():
+        text = str(row["text"] or "")
+    return infer_analysis_type(text, stored)
+
+
 def score_investors(con: sqlite3.Connection) -> int:
     ensure_tables(con)
     joined = con.execute(
-        """SELECT s.*, c.author_handle, c.language, c.direction
-             FROM sv_call_settlement s JOIN sv_call c ON c.candidate_id=s.candidate_id
+        """SELECT s.*, c.source, c.author_handle, c.language, c.direction, c.investor_style, c.call_structure, cc.text AS text
+             FROM sv_call_settlement s
+             JOIN sv_call c ON c.candidate_id=s.candidate_id
+             JOIN sv_call_candidate cc ON cc.candidate_id=s.candidate_id
             WHERE s.status='settled'"""
     ).fetchall()
     by_inv: dict[str, list[sqlite3.Row]] = collections.defaultdict(list)
@@ -1252,11 +2276,28 @@ def score_investors(con: sqlite3.Connection) -> int:
 
     global_stats = {inv: aggregate_stats(rows, 30.0) for inv, rows in by_inv.items()}
     global_stats = {k: v for k, v in global_stats.items() if v}
-    qualified = {k: v["raw_z"] for k, v in global_stats.items() if v["n_eff"] >= 8 and v["settled_calls"] >= 10}
-    if len(qualified) < 8:
-        qualified = {k: v["raw_z"] for k, v in global_stats.items()}
-    sv_scores = robust_scores(qualified)
-    fallback_scores = robust_scores({k: v["raw_z"] for k, v in global_stats.items()})
+    primary_sources = {inv: primary_source_for_rows(rows) for inv, rows in by_inv.items() if inv in global_stats}
+    raw_by_platform: dict[str, dict[str, float]] = collections.defaultdict(dict)
+    for inv, st in global_stats.items():
+        raw_by_platform[primary_sources.get(inv, "x")][inv] = float(st["raw_z"])
+
+    platform_sv_scores: dict[str, dict[str, int]] = {}
+    platform_fallback_scores: dict[str, dict[str, int]] = {}
+    platform_pool_sizes: dict[str, dict[str, int]] = {}
+    for source, raw_map in raw_by_platform.items():
+        qualified = {
+            inv: raw
+            for inv, raw in raw_map.items()
+            if qualifies_for_platform(source, global_stats[inv])
+        }
+        if len(qualified) < 8:
+            qualified = raw_map
+        platform_sv_scores[source] = robust_scores(qualified)
+        platform_fallback_scores[source] = robust_scores(raw_map)
+        platform_pool_sizes[source] = {
+            "qualified": len(qualified),
+            "total": len(raw_map),
+        }
 
     con.execute("DELETE FROM sv_investor_score")
     con.execute("DELETE FROM sv_segment_score")
@@ -1268,12 +2309,23 @@ def score_investors(con: sqlite3.Connection) -> int:
         if not st:
             continue
         handle = next((r["author_handle"] for r in rows if r["author_handle"]), inv)
+        source_counts = collections.Counter(str(r["source"] or "x") for r in rows)
+        primary_source = primary_sources.get(inv) or (source_counts.most_common(1)[0][0] if source_counts else "x")
+        source_label = SOURCE_LABELS.get(primary_source, {"zh": primary_source, "en": primary_source})
+        if primary_source == "reddit":
+            display_name = f"u/{handle}"
+        elif primary_source == "youtube":
+            display_name = handle or inv
+        else:
+            display_name = f"@{handle}"
         lang_counts = collections.Counter(str(r["language"] or "en") for r in rows)
         top_lang = lang_counts.most_common(1)[0][0] if lang_counts else "en"
         ticker_counts = collections.Counter(str(r["ticker"]) for r in rows)
         top_tickers = [t for t, _ in ticker_counts.most_common(8)]
         narrative_counts = collections.Counter(TICKER_NARRATIVE.get(t, "other") for t in ticker_counts)
         top_narratives = [n for n, _ in narrative_counts.most_common(4)]
+        analysis_counts = collections.Counter(row_analysis_type(r) for r in rows)
+        top_analysis_type = analysis_counts.most_common(1)[0][0] if analysis_counts else "unknown"
 
         segment_scores: dict[tuple[str, str], int] = {}
         for h in HORIZONS:
@@ -1294,32 +2346,65 @@ def score_investors(con: sqlite3.Connection) -> int:
             if ag and ag["n_eff"] >= 2:
                 segment_scores[("narrative", n)] = int(round(clamp(100 + 10 * ag["raw_z"], 40, 180)))
                 segment_rows.append(("narrative", n, inv, segment_scores[("narrative", n)], ag["raw_z"], ag["n_eff"], ag["settled_calls"]))
+        for analysis_type in set(analysis_counts):
+            sub = [r for r in rows if row_analysis_type(r) == analysis_type]
+            ag = aggregate_stats(sub, 20.0)
+            if ag and ag["n_eff"] >= 2:
+                segment_scores[("investor_type", analysis_type)] = int(round(clamp(100 + 10 * ag["raw_z"], 40, 180)))
+                segment_rows.append(("investor_type", analysis_type, inv, segment_scores[("investor_type", analysis_type)], ag["raw_z"], ag["n_eff"], ag["settled_calls"]))
+        for source in set(source_counts):
+            sub = [r for r in rows if str(r["source"] or "x") == source]
+            ag = aggregate_stats(sub, 20.0)
+            if ag and ag["n_eff"] >= 2:
+                segment_scores[("platform", source)] = int(round(clamp(100 + 10 * ag["raw_z"], 40, 180)))
+                segment_rows.append(("platform", source, inv, segment_scores[("platform", source)], ag["raw_z"], ag["n_eff"], ag["settled_calls"]))
 
         horizon_json = {h: segment_scores.get(("horizon", h)) for h in HORIZONS}
         ticker_json = {t: segment_scores[("ticker", t)] for t in ticker_counts if ("ticker", t) in segment_scores}
         narrative_json = {n: segment_scores[("narrative", n)] for n in set(top_narratives) if ("narrative", n) in segment_scores}
         level = confidence(st["n_eff"], st["settled_calls"])
-        raw_sv = sv_scores.get(inv, fallback_scores.get(inv, 100))
+        raw_platform_sv = platform_sv_scores.get(primary_source, {}).get(
+            inv,
+            platform_fallback_scores.get(primary_source, {}).get(inv, 100),
+        )
         rel_cap = reliability_cap(level)
         conc_cap = concentration_cap(st)
-        sv = min(raw_sv, rel_cap, conc_cap)
+        platform_sv = min(raw_platform_sv, rel_cap, conc_cap)
+        sv, global_deviation = global_sv_from_platform(platform_sv, level)
         concentration = dict(st.get("concentration") or {})
         concentration.update(
             {
                 "cap": conc_cap,
-                "capApplied": conc_cap < raw_sv,
-                "rawSvBeforeConcentrationCap": raw_sv,
+                "capApplied": conc_cap < raw_platform_sv,
+                "rawSvBeforeConcentrationCap": raw_platform_sv,
+                "svPlatform": platform_sv,
+                "svPlatformRaw": raw_platform_sv,
+                "svGlobal": sv,
+                "svGlobalDeviation": round(global_deviation, 4),
+                "confidenceFactor": confidence_factor(level),
+                "platformBaseline": 100,
+                "primaryPlatform": primary_source,
+                "platformPool": platform_pool_sizes.get(primary_source, {"qualified": 0, "total": 0}),
+                "dominantInvestorType": top_analysis_type,
+                "investorTypeShare": {
+                    k: round(v / max(1, sum(analysis_counts.values())), 4)
+                    for k, v in analysis_counts.most_common()
+                },
             }
         )
         rows_to_write.append(
             (
-                inv, "x", f"@{handle}", handle, top_lang if top_lang in {"zh", "en", "ko", "ja"} else "en",
+                inv, primary_source, display_name, handle, top_lang if top_lang in {"zh", "en", "ko", "ja"} else "en",
                 sv, st["raw_z"], level, st["n_eff"], st["settled_calls"],
                 st["active_days"], st["covered_tickers"], jdump(top_tickers), jdump(top_narratives),
-                jdump({"x": sv}), jdump(horizon_json), jdump(narrative_json), jdump(ticker_json),
+                jdump({
+                    source: (platform_sv if source == primary_source else segment_scores.get(("platform", source), sv))
+                    for source in source_counts
+                }),
+                jdump(horizon_json), jdump(narrative_json), jdump(ticker_json),
                 jdump(concentration),
-                f"基于 {st['settled_calls']} 个已结算 X call；SV {SV_SCORING_VERSION} 按单帖权重封顶、相对 SPY 的方向准确度、收益幅度、后续反向观点提前结算、集中度门槛与样本置信度归一。",
-                f"Based on {st['settled_calls']} settled X calls; SV {SV_SCORING_VERSION} caps post-level weight and normalizes directional accuracy, bounded excess return, call lifecycle early closes, concentration gates, and evidence size versus SPY.",
+                f"基于 {st['settled_calls']} 个已结算 {source_label['zh']} call；先在平台内计算 SV_Platform={platform_sv}，再按置信度折算为 SV_Global={sv}。",
+                f"Based on {st['settled_calls']} settled {source_label['en']} calls; SV_Platform={platform_sv} is normalized inside the platform and converted to SV_Global={sv} with confidence adjustment.",
                 utc_now(),
             )
         )
@@ -1344,9 +2429,36 @@ def score_investors(con: sqlite3.Connection) -> int:
 
 
 def export_json(con: sqlite3.Connection) -> None:
-    rows = con.execute(
-        """SELECT * FROM sv_investor_score
+    snapshot_created_at = utc_now()
+    run_id = f"{SV_SCORING_VERSION}:{snapshot_created_at}"
+    prev_run = con.execute(
+        "SELECT run_id FROM sv_investor_score_snapshot GROUP BY run_id ORDER BY MAX(created_at) DESC LIMIT 1"
+    ).fetchone()
+    prev_by_investor: dict[str, sqlite3.Row] = {}
+    if prev_run:
+        prev_rows = con.execute(
+            "SELECT investor_id, sv, rank_no, confidence, n_eff, settled_calls FROM sv_investor_score_snapshot WHERE run_id = ?",
+            (prev_run["run_id"],),
+        ).fetchall()
+        prev_by_investor = {str(r["investor_id"]): r for r in prev_rows}
+
+    all_rows = con.execute(
+        """SELECT *,
+                  RANK() OVER (
+                    ORDER BY sv DESC,
+                             raw_z DESC,
+                             CASE confidence
+                               WHEN 'high' THEN 4
+                               WHEN 'medium' THEN 3
+                               WHEN 'low' THEN 2
+                               ELSE 1
+                             END DESC,
+                             n_eff DESC,
+                             settled_calls DESC
+                  ) AS rank_no
+             FROM sv_investor_score
             ORDER BY sv DESC,
+                     raw_z DESC,
                      CASE confidence
                        WHEN 'high' THEN 4
                        WHEN 'medium' THEN 3
@@ -1354,38 +2466,140 @@ def export_json(con: sqlite3.Connection) -> None:
                        ELSE 1
                      END DESC,
                      n_eff DESC,
-                     settled_calls DESC
-            LIMIT 200"""
+                     settled_calls DESC"""
     ).fetchall()
-    investors = []
-    for r in rows:
+    con.executemany(
+        """INSERT OR REPLACE INTO sv_investor_score_snapshot
+           (run_id,scoring_version,created_at,investor_id,source,name,handle,language,sv,raw_z,rank_no,confidence,n_eff,settled_calls,active_days,covered_tickers,horizon_scores_json,ticker_scores_json,concentration_json)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+        [
+            (
+                run_id,
+                SV_SCORING_VERSION,
+                snapshot_created_at,
+                r["investor_id"],
+                r["source"],
+                r["name"],
+                r["handle"],
+                r["language"],
+                r["sv"],
+                r["raw_z"],
+                r["rank_no"],
+                r["confidence"],
+                r["n_eff"],
+                r["settled_calls"],
+                r["active_days"],
+                r["covered_tickers"],
+                r["horizon_scores_json"],
+                r["ticker_scores_json"],
+                r["concentration_json"],
+            )
+            for r in all_rows
+        ],
+    )
+    con.commit()
+    rows = all_rows[:200]
+    scores = sorted(float(r["sv"] or 0) for r in all_rows)
+
+    def quantile(values: list[float], q: float) -> float:
+        if not values:
+            return 0.0
+        pos = (len(values) - 1) * q
+        lo = int(math.floor(pos))
+        hi = int(math.ceil(pos))
+        if lo == hi:
+            return values[lo]
+        return values[lo] * (hi - pos) + values[hi] * (pos - lo)
+
+    def score_bins(values: list[float], bucket_count: int = 28) -> list[dict[str, float | int]]:
+        if not values:
+            return []
+        lo = math.floor(min(values) / 5) * 5
+        hi = math.ceil(max(values) / 5) * 5
+        span = max(1.0, hi - lo)
+        counts = [0 for _ in range(bucket_count)]
+        for score in values:
+            idx = min(bucket_count - 1, max(0, int((score - lo) / span * bucket_count)))
+            counts[idx] += 1
+        step = span / bucket_count
+        return [
+            {"from": round(lo + i * step, 1), "to": round(lo + (i + 1) * step, 1), "count": count}
+            for i, count in enumerate(counts)
+        ]
+
+    distribution = {
+        "count": len(scores),
+        "min": round(scores[0], 1) if scores else 0,
+        "q25": round(quantile(scores, 0.25), 1),
+        "median": round(quantile(scores, 0.5), 1),
+        "q75": round(quantile(scores, 0.75), 1),
+        "max": round(scores[-1], 1) if scores else 0,
+        "top10Threshold": round(float(all_rows[9]["sv"]), 1) if len(all_rows) >= 10 else 0,
+        "bottom10Threshold": round(float(all_rows[-10]["sv"]), 1) if len(all_rows) >= 10 else 0,
+        "bins": score_bins(scores),
+    }
+    def serialize_investor(r: sqlite3.Row) -> dict[str, Any]:
         handle = str(r["handle"] or "")
-        investors.append(
-            {
-                "id": f"x:{r['investor_id']}",
-                "source": "x",
-                "name": r["name"] or f"@{handle}",
-                "handle": handle,
-                "avatar": f"https://unavatar.io/twitter/{handle}" if handle else None,
-                "url": f"https://x.com/{handle}" if handle else None,
-                "language": r["language"] or "en",
-                "sv": int(round(float(r["sv"] or 100))),
-                "confidence": r["confidence"] or "observing",
-                "nEff": round(float(r["n_eff"] or 0), 1),
-                "settledCalls": int(r["settled_calls"] or 0),
-                "activeDays": int(r["active_days"] or 0),
-                "coveredTickers": int(r["covered_tickers"] or 0),
-                "topTickers": json.loads(r["top_tickers_json"] or "[]"),
-                "topNarratives": json.loads(r["top_narratives_json"] or "[]"),
-                "platformScores": json.loads(r["platform_scores_json"] or "{}"),
-                "horizonScores": json.loads(r["horizon_scores_json"] or "{}"),
-                "narrativeScores": json.loads(r["narrative_scores_json"] or "{}"),
-                "tickerScores": json.loads(r["ticker_scores_json"] or "{}"),
-                "concentration": json.loads(r["concentration_json"] or "{}"),
-                "rationaleZh": r["rationale_zh"] or "",
-                "rationaleEn": r["rationale_en"] or "",
-            }
-        )
+        source = str(r["source"] or "x")
+        investor_id = str(r["investor_id"] or "")
+        public_id = investor_id
+        if source != "x" and investor_id and not investor_id.startswith(f"{source}:"):
+            public_id = f"{source}:{investor_id}"
+        prev = prev_by_investor.get(str(r["investor_id"]))
+        sv_delta = round(float(r["sv"] or 0) - float(prev["sv"] or 0), 1) if prev else None
+        rank_delta = int(prev["rank_no"] or 0) - int(r["rank_no"] or 0) if prev else None
+        n_eff_delta = round(float(r["n_eff"] or 0) - float(prev["n_eff"] or 0), 1) if prev else None
+        settled_delta = int(r["settled_calls"] or 0) - int(prev["settled_calls"] or 0) if prev else None
+        if source == "reddit":
+            avatar = f"https://www.redditstatic.com/avatars/avatar_default_02_46A508.png"
+            url = f"https://www.reddit.com/user/{handle}/" if handle else None
+        elif source == "youtube":
+            channel_id = investor_id.split(":", 1)[1] if investor_id.startswith("youtube:") else investor_id
+            yt_handle = handle if handle.startswith("@") else ""
+            youtube_key = yt_handle.lstrip("@") or channel_id
+            avatar = f"https://unavatar.io/youtube/{youtube_key}" if youtube_key else None
+            url = f"https://www.youtube.com/{yt_handle}" if yt_handle else (f"https://www.youtube.com/channel/{channel_id}" if channel_id else None)
+        else:
+            avatar = f"https://unavatar.io/twitter/{handle}" if handle else None
+            url = f"https://x.com/{handle}" if handle else None
+        return {
+            "id": public_id,
+            "rank": int(r["rank_no"] or 0),
+            "svDelta": sv_delta,
+            "rankDelta": rank_delta,
+            "nEffDelta": n_eff_delta,
+            "settledCallsDelta": settled_delta,
+            "previousConfidence": prev["confidence"] if prev else None,
+            "source": source,
+            "name": r["name"] or f"@{handle}",
+            "handle": handle,
+            "avatar": avatar,
+            "url": url,
+            "language": r["language"] or "en",
+            "sv": int(round(float(r["sv"] or 100))),
+            "svKind": "global_platform_deviation",
+            "confidence": r["confidence"] or "observing",
+            "nEff": round(float(r["n_eff"] or 0), 1),
+            "settledCalls": int(r["settled_calls"] or 0),
+            "activeDays": int(r["active_days"] or 0),
+            "coveredTickers": int(r["covered_tickers"] or 0),
+            "topTickers": json.loads(r["top_tickers_json"] or "[]"),
+            "topNarratives": json.loads(r["top_narratives_json"] or "[]"),
+            "platformScores": json.loads(r["platform_scores_json"] or "{}"),
+            "horizonScores": json.loads(r["horizon_scores_json"] or "{}"),
+            "narrativeScores": json.loads(r["narrative_scores_json"] or "{}"),
+            "tickerScores": json.loads(r["ticker_scores_json"] or "{}"),
+            "concentration": json.loads(r["concentration_json"] or "{}"),
+            "rationaleZh": r["rationale_zh"] or "",
+            "rationaleEn": r["rationale_en"] or "",
+        }
+
+    investors = [serialize_investor(r) for r in rows]
+    bottom_investors = [serialize_investor(r) for r in all_rows[-20:]]
+    by_source: dict[str, list[dict[str, Any]]] = collections.defaultdict(list)
+    for r in all_rows[:200]:
+        item = serialize_investor(r)
+        by_source[str(item["source"])].append(item)
     current = [
         {"key": "semis", **NARRATIVE_LABELS["semis"], "weight": 34},
         {"key": "ai_infra", **NARRATIVE_LABELS["ai_infra"], "weight": 24},
@@ -1393,12 +2607,25 @@ def export_json(con: sqlite3.Connection) -> None:
         {"key": "crypto", **NARRATIVE_LABELS["crypto"], "weight": 10},
     ]
     payload = {
-        "version": 4,
+        "version": 6,
         "scoringVersion": SV_SCORING_VERSION,
+        "scoreSemantics": {
+            "sv": "SV_Global. It ranks platform-relative deviation after confidence adjustment.",
+            "platformScores": "SV_Platform. Each score is normalized inside that platform only.",
+            "baseline": 100,
+            "globalFormula": "SV_Global = 100 + (SV_Platform - 100) * confidence_factor",
+        },
         "updatedAt": utc_now()[:10],
+        "totalInvestors": len(all_rows),
+        "exportedInvestors": len(investors),
+        "distribution": distribution,
         "investors": investors,
-        "x": investors,
-        "youtube": [],
+        "bottomInvestors": bottom_investors,
+        "x": by_source.get("x", []),
+        "reddit": by_source.get("reddit", []),
+        "youtube": by_source.get("youtube", []),
+        "xueqiu": by_source.get("xueqiu", []),
+        "toss": by_source.get("toss", []),
         "currentNarratives": current,
     }
     EXPORT.parent.mkdir(parents=True, exist_ok=True)
@@ -1410,10 +2637,38 @@ def run(args: argparse.Namespace) -> None:
     con = connect()
     ensure_tables(con)
     only = {x.strip().upper() for x in args.only.split(",") if x.strip()} if args.only else None
+    sources = source_set(getattr(args, "source", "x"))
     tweet_dirs = [Path(p).expanduser() for p in args.tweet_dir] if args.tweet_dir else TWEET_DIRS
     stages = ["candidates", "extract", "settle", "score", "export"] if args.stage == "all" else [args.stage]
     if "candidates" in stages:
-        build_candidates(con, tweet_dirs, args.candidate_limit, args.min_score, only)
+        if "x" in sources:
+            build_candidates(con, tweet_dirs, args.candidate_limit, args.min_score, only)
+        if "reddit" in sources:
+            build_reddit_candidates(
+                con,
+                args.candidate_limit,
+                args.min_score,
+                only,
+                args.reddit_author_limit,
+                args.reddit_since_days,
+                args.reddit_min_author_posts,
+            )
+        if "youtube" in sources:
+            build_youtube_candidates(
+                con,
+                args.candidate_limit,
+                args.min_score,
+                only,
+                args.youtube_min_subs,
+                args.youtube_since_days,
+            )
+        pending_adapters = sorted((sources - SUPPORTED_SOURCES) & SV_PLATFORMS)
+        if pending_adapters:
+            print(
+                f"[sv-v0] candidate adapters not implemented yet: {', '.join(pending_adapters)}; "
+                "existing candidates for these sources can still be extracted/scored.",
+                flush=True,
+            )
     if "extract" in stages:
         extract_calls(
             con,
@@ -1423,6 +2678,7 @@ def run(args: argparse.Namespace) -> None:
             args.extract_mode,
             args.per_author_min,
             args.per_author_max,
+            sources,
         )
     if "settle" in stages:
         settle_calls(con)
@@ -1436,6 +2692,7 @@ def run(args: argparse.Namespace) -> None:
 def main() -> None:
     ap = argparse.ArgumentParser(description="Smart Voice v0 hybrid scorer")
     ap.add_argument("--stage", choices=["candidates", "extract", "settle", "score", "export", "all"], default="all")
+    ap.add_argument("--source", default="x", help="Comma-separated source subset: x,youtube,reddit,xueqiu,toss,all. Default keeps legacy X-only behavior.")
     ap.add_argument("--candidate-limit", type=int, default=50_000, help="0 means insert all recalled candidates.")
     ap.add_argument("--extract-limit", type=int, default=1_000, help="0 means all pending candidates.")
     ap.add_argument("--extract-mode", choices=["rank", "author-balanced"], default="rank")
@@ -1445,6 +2702,11 @@ def main() -> None:
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--only", default="", help="Comma-separated ticker subset.")
     ap.add_argument("--tweet-dir", action="append", default=[], help="Override/add tweet JSONL directories.")
+    ap.add_argument("--reddit-author-limit", type=int, default=1_000, help="Top Reddit author pool size for candidate recall; 0 means all authors.")
+    ap.add_argument("--reddit-since-days", type=int, default=365, help="Reddit candidate lookback window.")
+    ap.add_argument("--reddit-min-author-posts", type=int, default=8, help="Minimum ticker-mentioned Reddit posts for Reddit author-pool eligibility.")
+    ap.add_argument("--youtube-min-subs", type=int, default=1_000, help="Minimum public YouTube subscribers for creator pool eligibility.")
+    ap.add_argument("--youtube-since-days", type=int, default=365, help="YouTube candidate lookback window.")
     ap.add_argument("--force", action="store_true", help="Re-extract candidates already in sv_call.")
     run(ap.parse_args())
 

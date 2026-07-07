@@ -36,6 +36,7 @@ export const ja: Dictionary = {
   nav: {
     dashboard: "ダッシュボード",
     overview: "概要",
+    smartVoice: "Smart Voice",
     tickers: "銘柄",
     investors: "投資家",
     regions: "地域",

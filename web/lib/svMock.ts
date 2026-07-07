@@ -1,11 +1,29 @@
 import generatedSmartVoice from "./data/smartVoice.json";
 
 export type SvSource = "x" | "youtube";
-export type SvHorizon = "1D" | "5D" | "20D" | "60D";
+export type SvHorizon = "1D" | "5D" | "20D" | "60D" | "90D" | "180D";
 export type SvConfidence = "observing" | "low" | "medium" | "high";
+
+export interface SvDistribution {
+  count: number;
+  min: number;
+  q25: number;
+  median: number;
+  q75: number;
+  max: number;
+  top10Threshold: number;
+  bottom10Threshold: number;
+  bins: { from: number; to: number; count: number }[];
+}
 
 export interface SvInvestor {
   id: string;
+  rank?: number;
+  svDelta?: number | null;
+  rankDelta?: number | null;
+  nEffDelta?: number | null;
+  settledCallsDelta?: number | null;
+  previousConfidence?: SvConfidence | null;
   source: SvSource;
   name: string;
   handle: string;
@@ -21,19 +39,32 @@ export interface SvInvestor {
   topTickers: string[];
   topNarratives: string[];
   platformScores: Partial<Record<SvSource, number>>;
-  horizonScores: Record<SvHorizon, number | null>;
+  horizonScores: Partial<Record<SvHorizon, number | null>>;
   narrativeScores: Record<string, number>;
   tickerScores: Record<string, number>;
+  concentration?: {
+    dominantInvestorType?: string;
+    investorTypeShare?: Record<string, number>;
+    topTicker?: string;
+    topTickerWeightShare?: number;
+    effectiveTickersByWeight?: number;
+    capApplied?: boolean;
+  };
   rationaleZh: string;
   rationaleEn: string;
 }
 
 export interface SvBoard {
   investors: SvInvestor[];
+  bottomInvestors?: SvInvestor[];
   x: SvInvestor[];
   youtube: SvInvestor[];
   currentNarratives: { key: string; zh: string; en: string; weight: number }[];
   updatedAt: string;
+  scoringVersion?: string;
+  totalInvestors?: number;
+  exportedInvestors?: number;
+  distribution?: SvDistribution;
 }
 
 export interface SvTickerBoard {
@@ -42,7 +73,7 @@ export interface SvTickerBoard {
   investors: (SvInvestor & { contextualSv: number; basisZh: string; basisEn: string })[];
 }
 
-export const SV_HORIZONS: SvHorizon[] = ["1D", "5D", "20D", "60D"];
+export const SV_HORIZONS: SvHorizon[] = ["1D", "5D", "20D", "60D", "90D", "180D"];
 
 const FALLBACK_NARRATIVES = [
   { key: "semis", zh: "半导体", en: "Semiconductors", weight: 34 },
@@ -319,13 +350,15 @@ function normalizeConfidence(value: unknown): SvConfidence {
   return value === "high" || value === "medium" || value === "low" ? value : "observing";
 }
 
-function normalizeHorizonScores(value: unknown): Record<SvHorizon, number | null> {
+function normalizeHorizonScores(value: unknown): Partial<Record<SvHorizon, number | null>> {
   const raw = (value && typeof value === "object" ? value : {}) as Partial<Record<SvHorizon, unknown>>;
   return {
     "1D": typeof raw["1D"] === "number" ? raw["1D"] : null,
     "5D": typeof raw["5D"] === "number" ? raw["5D"] : null,
     "20D": typeof raw["20D"] === "number" ? raw["20D"] : null,
     "60D": typeof raw["60D"] === "number" ? raw["60D"] : null,
+    "90D": typeof raw["90D"] === "number" ? raw["90D"] : null,
+    "180D": typeof raw["180D"] === "number" ? raw["180D"] : null,
   };
 }
 
@@ -343,6 +376,12 @@ function normalizeRealInvestor(value: unknown): SvInvestor | null {
   const handle = String(raw.handle || raw.name || raw.id);
   return {
     id: String(raw.id),
+    rank: typeof raw.rank === "number" ? raw.rank : undefined,
+    svDelta: typeof raw.svDelta === "number" ? raw.svDelta : null,
+    rankDelta: typeof raw.rankDelta === "number" ? raw.rankDelta : null,
+    nEffDelta: typeof raw.nEffDelta === "number" ? raw.nEffDelta : null,
+    settledCallsDelta: typeof raw.settledCallsDelta === "number" ? raw.settledCallsDelta : null,
+    previousConfidence: raw.previousConfidence ? normalizeConfidence(raw.previousConfidence) : null,
     source,
     name: String(raw.name || handle),
     handle,
@@ -361,6 +400,7 @@ function normalizeRealInvestor(value: unknown): SvInvestor | null {
     horizonScores: normalizeHorizonScores(raw.horizonScores),
     narrativeScores: normalizeScoreMap(raw.narrativeScores),
     tickerScores: normalizeScoreMap(raw.tickerScores),
+    concentration: raw.concentration && typeof raw.concentration === "object" ? raw.concentration as SvInvestor["concentration"] : undefined,
     rationaleZh: String(raw.rationaleZh || "真实 SV v0：根据已结构化 call 的历史结算结果生成。"),
     rationaleEn: String(raw.rationaleEn || "Real SV v0 generated from settled structured calls."),
   };
@@ -369,14 +409,20 @@ function normalizeRealInvestor(value: unknown): SvInvestor | null {
 function getGeneratedSmartVoiceBoard(): SvBoard | null {
   const raw = generatedSmartVoice as unknown as Partial<SvBoard>;
   const investors = Array.isArray(raw.investors) ? raw.investors.map(normalizeRealInvestor).filter((i): i is SvInvestor => Boolean(i)) : [];
+  const bottomInvestors = Array.isArray(raw.bottomInvestors) ? raw.bottomInvestors.map(normalizeRealInvestor).filter((i): i is SvInvestor => Boolean(i)) : [];
   if (!investors.length) return null;
   const sorted = investors.sort((a, b) => b.sv - a.sv);
   return {
     investors: sorted,
+    bottomInvestors: bottomInvestors.sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0)),
     x: sorted.filter((i) => i.source === "x"),
     youtube: sorted.filter((i) => i.source === "youtube"),
     currentNarratives: Array.isArray(raw.currentNarratives) && raw.currentNarratives.length ? raw.currentNarratives : FALLBACK_NARRATIVES,
     updatedAt: raw.updatedAt || new Date().toISOString().slice(0, 10),
+    scoringVersion: typeof raw.scoringVersion === "string" ? raw.scoringVersion : undefined,
+    totalInvestors: typeof raw.totalInvestors === "number" ? raw.totalInvestors : investors.length,
+    exportedInvestors: typeof raw.exportedInvestors === "number" ? raw.exportedInvestors : investors.length,
+    distribution: raw.distribution as SvDistribution | undefined,
   };
 }
 
@@ -386,10 +432,13 @@ export function getSmartVoiceBoard(): SvBoard {
   const investors = [...INVESTORS].sort((a, b) => b.sv - a.sv);
   return {
     investors,
+    bottomInvestors: [...investors].sort((a, b) => a.sv - b.sv).slice(0, 10),
     x: investors.filter((i) => i.source === "x"),
     youtube: investors.filter((i) => i.source === "youtube"),
     currentNarratives: FALLBACK_NARRATIVES,
     updatedAt: "2026-07-03",
+    totalInvestors: investors.length,
+    exportedInvestors: investors.length,
   };
 }
 

@@ -22,6 +22,7 @@ from sqlalchemy import delete, select, text, update
 from ..common import gemini, llm
 from ..common.config import ROOT, settings
 from ..common.db import engine, session_scope
+from ..common.deepseek import extract_json
 from ..common.models import YtAnalysis, YtFulltext, YtTickerSummary, YtVideo
 from ..ingest.youtube_crawl import _ensure_tables
 
@@ -47,12 +48,14 @@ def _mood(net: float) -> str:
     return "看多" if net > 0.15 else "看空" if net < -0.15 else "中性"
 
 
-def fetch_transcript(video_id: str, max_chars: int = 8000) -> str | None:
+def fetch_transcript(video_id: str, max_chars: int | None = 8000) -> str | None:
     """尽力从 watch 页解析字幕轨 → 取文本（拿不到返回 None；生产环境 IP 通常可用）。"""
     try:
         r = requests.get(f"https://www.youtube.com/watch?v={video_id}", timeout=20,
                          headers={"User-Agent": "Mozilla/5.0", "Accept-Language": "en"})
-        m = re.search(r'"captionTracks":(\[.*?\])', r.text)
+        m = re.search(r'"captionTracks":(\[.*?\])\s*,\s*"audioTracks"', r.text)
+        if not m:
+            m = re.search(r'"captionTracks":(\[.*?\])', r.text)
         if not m:
             return None
         tracks = json.loads(m.group(1))
@@ -61,7 +64,10 @@ def fetch_transcript(video_id: str, max_chars: int = 8000) -> str | None:
             return None
         xml = requests.get(url, timeout=20).text
         txt = re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", xml))).strip()
-        return txt[:max_chars] or None
+        low = txt.lower()
+        if "your computer or network may be sending automated queries" in low or low.startswith("sorry..."):
+            return None
+        return (txt[:max_chars] if max_chars else txt) or None
     except Exception:  # noqa: BLE001
         return None
 
@@ -412,6 +418,20 @@ SYSTEM_FULLTEXT = (
     '仅输出 JSON，不要多余文字：{"segments":[...]}'
 )
 
+SYSTEM_FULLTEXT_TRANSCRIPT = (
+    "你是金融视频口播整理器。输入是 YouTube 字幕原文的一段，语言可能是英/韩/日/中。"
+    "请把这段字幕**完整翻译并整理为中文有序口播段落**，让读者不看视频也能读全、且读得轻松。\n"
+    '每段：{"type":"speech","speaker":"说话人","text":"该段口播（通顺中文书面语，可含 Markdown 行内强调）"}\n'
+    "规则：\n"
+    "1) 只依据字幕原文，不补充画面信息，不输出你自己的分析。\n"
+    "2) 书面化但不删信息：去口水话/重复/语气词、理顺语序，但保留论点/数据/推理/结论。\n"
+    "3) 按语义分段，每段约 3-6 句、120-280 字；话题切换才另起一段。\n"
+    "4) 用 `**加粗**` 克制标出关键结论/数据/催化剂/目标价，每段至多 1-3 处。\n"
+    "5) 无法确认说话人时 speaker 填空字符串 \"\"。\n"
+    "6) 剔除赞助商、点赞订阅、VIP/Discord/Patreon、下载 App、自我推广等与投资无关内容。\n"
+    '仅输出 JSON，不要多余文字：{"segments":[...]}'
+)
+
 _NODE_DIR = os.path.expanduser("~/.nvm/versions/node/v22.22.2/bin")
 
 
@@ -462,6 +482,61 @@ def _record_fulltext_failure(video_id: str, ticker: str, reason: str) -> None:
 def _clear_fulltext_failure(video_id: str) -> None:
     with session_scope() as s:
         s.execute(text("DELETE FROM yt_fulltext_fail WHERE video_id=:video_id"), {"video_id": video_id})
+
+
+def _split_transcript_chunks(text: str, max_chars: int = 22000) -> list[str]:
+    """字幕兜底用的粗分块：尽量在句末切，避免单次文本输入过长。"""
+    clean = re.sub(r"\s+", " ", text or "").strip()
+    if not clean:
+        return []
+    chunks: list[str] = []
+    start = 0
+    n = len(clean)
+    while start < n:
+        end = min(n, start + max_chars)
+        if end < n:
+            window = clean[start:end]
+            cut = max(window.rfind(p) for p in (". ", "? ", "! ", "。", "？", "！", "\n"))
+            if cut > max_chars * 0.55:
+                end = start + cut + 1
+        chunks.append(clean[start:end].strip())
+        start = end
+    return [c for c in chunks if c]
+
+
+def _fulltext_from_transcript(v: YtVideo) -> list[dict] | None:
+    tx = fetch_transcript(v.id, max_chars=None)
+    if not tx or len(tx) < 200:
+        return None
+    chunks = _split_transcript_chunks(tx)
+    if not chunks:
+        return None
+    final: list[dict] = []
+    for idx, chunk in enumerate(chunks, 1):
+        prompt = (
+            f"标的 {v.ticker}。频道《{v.channel}》。标题：{v.title}\n"
+            f"下面是该视频字幕的第 {idx}/{len(chunks)} 段。请只整理这一段，不要总结其它段落。\n\n"
+            f"字幕：\n{chunk}"
+        )
+        raw = gemini.chat(SYSTEM_FULLTEXT_TRANSCRIPT, prompt, model=settings.gemini_model,
+                          max_tokens=8000, retries=2, timeout=180)
+        data = extract_json(raw)
+        segs = (data or {}).get("segments") if isinstance(data, dict) else None
+        if not isinstance(segs, list):
+            continue
+        for sg in segs:
+            if not isinstance(sg, dict):
+                continue
+            tx2 = str(sg.get("text") or "").strip()
+            if not tx2:
+                continue
+            spk = str(sg.get("speaker") or "").strip()
+            for para in _split_speech_text(tx2):
+                seg = {"type": "speech", "text": para}
+                if spk:
+                    seg["speaker"] = spk
+                final.append(seg)
+    return final or None
 
 
 def _tool_env() -> dict:
@@ -647,10 +722,27 @@ def gen_fulltext(only: set[str] | None = None, per_ticker: int = 10, workers: in
 
     def _process(v: YtVideo) -> tuple[YtVideo, str, list[dict], int] | None:
         prompt = f"标的 {v.ticker}。频道《{v.channel}》。按系统要求结构化还原该视频。"
-        data = gemini.video_json(v.url, prompt, system=SYSTEM_FULLTEXT, low_res=low_res,
-                                 max_tokens=8000, timeout=180, retries=2, max_rate_waits=max_rate_waits)
+        try:
+            data = gemini.video_json(v.url, prompt, system=SYSTEM_FULLTEXT, low_res=low_res,
+                                     max_tokens=8000, timeout=180, retries=2, max_rate_waits=max_rate_waits)
+        except Exception:
+            fallback = _fulltext_from_transcript(v)
+            if fallback:
+                flat_fb = "\n\n".join(
+                    (f"{s['speaker']}：{_strip_md(s['text'])}" if s.get("speaker") else _strip_md(s["text"]))
+                    for s in fallback if s["type"] == "speech"
+                )
+                return v, flat_fb, fallback, 0
+            raise
         segs = (data or {}).get("segments") if isinstance(data, dict) else None
         if not isinstance(segs, list) or not segs:
+            fallback = _fulltext_from_transcript(v)
+            if fallback:
+                flat_fb = "\n\n".join(
+                    (f"{s['speaker']}：{_strip_md(s['text'])}" if s.get("speaker") else _strip_md(s["text"]))
+                    for s in fallback if s["type"] == "speech"
+                )
+                return v, flat_fb, fallback, 0
             return None
         norm: list[dict] = []
         visuals: list[dict] = []

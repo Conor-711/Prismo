@@ -2,7 +2,7 @@
 
 本站构建为**纯静态产物**（`web/out/`，构建期已把真实数据渲染进 HTML），零后端、可部署到任何静态托管。
 
-> ⚠️ 为什么不在平台上直接 build：Web 端用 Node 内置 `node:sqlite` 读数据库，需要 Node 22+ 与实验 flag，多数平台默认 build 环境不满足。所以**推荐部署已构建好的 `out/`**（不在平台 build），最稳。
+> ⚠️ 为什么不在平台上直接 build：Web 端用 Node 内置 `node:sqlite` 读数据库，需要 Node 22+ 与实验 flag，并且构建期要读本地 `data/dev.db` 快照。所以**推荐部署已构建好的 `out/`**（不在平台 build），最稳。
 
 ## 一步生成产物
 ```bash
@@ -30,11 +30,39 @@ make serve         # → http://localhost:8080
 2. 把 `web/out` 整个文件夹拖进去 → 立刻得到一个公开 URL。
 （登录账号即可永久保留 / 绑定域名。）
 
-## 方式 B：Cloudflare Pages
+## 方式 B：Cloudflare Pages（推荐）
+Cloudflare Pages 只负责托管静态产物，不在 Cloudflare 上重新跑 Next build。
+
+首次使用：
 ```bash
-npx wrangler pages deploy web/out --project-name reddit-alpha
+npx wrangler login
 ```
-（首次会引导登录 Cloudflare。）
+
+之后每次发布：
+```bash
+make cf-deploy
+```
+
+等价于：
+```bash
+make site
+rm -rf /tmp/prismo-out-cf
+rsync -a --exclude='/ja/' --exclude='/ko/' web/out/ /tmp/prismo-out-cf/
+npx wrangler pages deploy /tmp/prismo-out-cf --project-name prismo --branch main --commit-dirty=true
+```
+
+当前产品只发布 `zh/en`。如果 `web/out/` 里存在历史 `ja/ko` 静态页，`make cf-deploy` 会在上传前排除它们，避免 Cloudflare Direct Upload 因产物过大而超时。
+
+如果 Cloudflare Pages 项目名不是 `prismo`：
+```bash
+PROJECT=<你的项目名> make cf-deploy
+```
+
+Cloudflare 发布成功后会给一个 `*.pages.dev` 预览域名。确认页面和登录功能没问题后，再到 Cloudflare Pages 的 **Custom domains** 绑定正式域名。
+
+需要在 Supabase 同步配置 Auth 回调：
+- Site URL：正式域名，例如 `https://prismo.today`
+- Redirect URLs：`https://prismo.today/**` 和 Cloudflare 预览域名，例如 `https://prismo.pages.dev/**`
 
 ## 方式 C：Vercel（部署静态产物，不在平台 build）
 ```bash
@@ -54,7 +82,7 @@ Vercel 检测到是纯静态目录，直接发布，不触发 Next build。
 ---
 
 ## 刷新数据的工作流
-- 本地：`make real`（拉真实数据）→ `make site`（重建 out/）→ 重新拖到 Netlify / 重新 deploy。
+- 本地：跑对应数据管线 → `make cf-deploy`（重建 `web/out/` 并上传 Cloudflare Pages）。
 - GitHub Pages：直接等定时任务，或 Actions 页面点 “Run workflow”。
 
 ## 真实 Claude 分析

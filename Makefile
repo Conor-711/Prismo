@@ -4,7 +4,7 @@ MANAGE := $(PY) -m pipeline.manage
 
 .PHONY: install venv db-init migrate seed seed-cn sample ingest refresh extract analyze analyze-mock \
         rollup narratives narrative-rotation brief worker daily daily-build cn-backfill demo stats test web-install web-dev clean help \
-        sv-price-history sv-v0-candidates sv-v0 sv-v0-prod
+        sv-price-history sv-v0-candidates sv-v0 sv-v0-prod reddit-sv-authors sv-v0-reddit-candidates sv-v0-reddit-prod cf-deploy
 
 help:
 	@echo "Reddit 版 Kaito Pro — 常用命令"
@@ -27,8 +27,11 @@ help:
 	@echo "  make sv-price-history     补齐 SV 所需日线价格"
 	@echo "  make sv-v0                运行 Smart Voice v0：候选召回 → LLM 结构化 → 结算 → 导出"
 	@echo "  make sv-v0-prod           生产级 SV：更大候选池 + 作者均衡 LLM 抽样"
+	@echo "  make reddit-sv-authors    补 Reddit SV 作者历史和作者资料"
+	@echo "  make sv-v0-reddit-prod    运行 Reddit 帖子版 Smart Voice"
 	@echo "  --- Web ---"
 	@echo "  make web-install   安装前端依赖    make web-dev  启动 Next.js"
+	@echo "  make cf-deploy     构建并上传 web/out 到 Cloudflare Pages（PROJECT=prismo 可改项目名）"
 
 # ---------- 环境 ----------
 venv:
@@ -72,6 +75,9 @@ scrape:
 # 作者库：爬「实力榜」Top 作者历史帖（两级漏斗：DeepSeek 粗筛 → 千问深析）。需 DeepSeek key。
 crawl-authors:
 	$(MANAGE) crawl-authors --limit 50
+
+reddit-sv-authors:
+	$(MANAGE) crawl-authors --limit $(or $(AUTHORS),1000) --per-author $(or $(PER_AUTHOR),40) --max-fetch-per $(or $(MAX_FETCH),1000) --since-days $(or $(DAYS),365)
 
 # ---------- 每日一次（不再实时；以 UTC+8 24h 为界，08:00 跑一次）----------
 # 分析过去 24 小时：拉取 1 天的帖子/评论 + AI 打标 + 聚合。需要真实 Claude 则设 ANTHROPIC_API_KEY。
@@ -346,6 +352,9 @@ test:
 sv-v0-candidates:
 	$(PY) -m pipeline.analyze.sv_v0 --stage candidates --candidate-limit $(or $(LIMIT),50000)
 
+sv-v0-reddit-candidates:
+	$(PY) -m pipeline.analyze.sv_v0 --source reddit --stage candidates --candidate-limit $(or $(LIMIT),50000) --reddit-author-limit $(or $(AUTHORS),1000) --reddit-since-days $(or $(DAYS),365) --reddit-min-author-posts $(or $(MIN_POSTS),8)
+
 # 混合版：规则召回 + LLM 结构化 + 价格结算 + SV 打分 + 前端 JSON 导出。
 # 可覆盖参数：make sv-v0 LIMIT=50000 EXTRACT=2000 WORKERS=4
 sv-v0:
@@ -355,6 +364,9 @@ sv-v0:
 # 可覆盖参数：make sv-v0-prod LIMIT=50000 EXTRACT=10000 MIN=20 MAX=80 WORKERS=4
 sv-v0-prod:
 	$(PY) -m pipeline.analyze.sv_v0 --stage all --candidate-limit $(or $(LIMIT),50000) --extract-limit $(or $(EXTRACT),10000) --extract-mode author-balanced --per-author-min $(or $(MIN),20) --per-author-max $(or $(MAX),80) --workers $(or $(WORKERS),4)
+
+sv-v0-reddit-prod:
+	$(PY) -m pipeline.analyze.sv_v0 --source reddit --stage all --candidate-limit $(or $(LIMIT),50000) --extract-limit $(or $(EXTRACT),10000) --extract-mode author-balanced --per-author-min $(or $(MIN),10) --per-author-max $(or $(MAX),50) --workers $(or $(WORKERS),4) --reddit-author-limit $(or $(AUTHORS),1000) --reddit-since-days $(or $(DAYS),365) --reddit-min-author-posts $(or $(MIN_POSTS),8)
 
 # ---------- Web ----------
 web-install:
@@ -373,6 +385,14 @@ serve:
 	@[ -d web/out ] || $(MAKE) site
 	@echo "🌐 本地部署： http://localhost:8080   (Ctrl+C 退出)"
 	@python3 -m http.server 8080 --bind 0.0.0.0 --directory web/out
+
+# Cloudflare Pages：本地用 Node 22 读 dev.db 构建静态产物，再用 Wrangler Direct Upload 发布。
+# 当前产品只部署 zh/en；web/out 里若有 ja/ko 历史产物，会先排除到临时目录，避免上传体积过大。
+# 首次使用前需要：npx wrangler login。项目名默认 prismo，可用 PROJECT=xxx 覆盖。
+cf-deploy: site
+	rm -rf /tmp/prismo-out-cf
+	rsync -a --exclude='/ja/' --exclude='/ko/' web/out/ /tmp/prismo-out-cf/
+	npx wrangler pages deploy /tmp/prismo-out-cf --project-name $(or $(PROJECT),prismo) --branch main --commit-dirty=true
 
 # ---------- 云端数据库（Supabase = 数据的家）----------
 # 前提：.env 里 DATABASE_URL 已设为 Supabase 的 Postgres 连接串（见 CLOUD_DB.md）。

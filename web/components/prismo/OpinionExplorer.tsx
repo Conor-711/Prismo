@@ -135,7 +135,7 @@ type SvOpinionMeta = {
   score: number;
   investor: SvTickerBoard["investors"][number];
 };
-type SortMode = "personal" | "rel" | "time" | "hot";
+type SortMode = "personal" | "sv" | "rel" | "time" | "hot";
 type PersonalDirection = "" | "long" | "short" | "watch";
 type PersonalStyle = "" | "shortterm" | "swing" | "longterm" | "dca";
 type RecommendationReason = { zh: string; en: string };
@@ -893,19 +893,24 @@ export function OpinionExplorer({
 
   const filtered = useMemo(() => {
     const out = baseFiltered.filter((o) => !plat.size || plat.has(o.source));
-    // 排序：相关度（降序，其次互动）/ 热度（互动降序，其次相关度）/ 最新（发布日降序，其次相关度）
+    // 排序：个性化 / Smart Voice / 相关度 / 热度 / 最新。
     out.sort((a, b) => {
       if (sort === "personal" && personalConfigured) {
         const pa = personalRank.get(a.id)?.score ?? 0;
         const pb = personalRank.get(b.id)?.score ?? 0;
         return pb - pa || relOf(b) - relOf(a) || (b.interactions || 0) - (a.interactions || 0);
       }
+      if (sort === "sv") {
+        const sa = getOpinionSvMeta(a, svIndex.byKey)?.score ?? 0;
+        const sb = getOpinionSvMeta(b, svIndex.byKey)?.score ?? 0;
+        return sb - sa || relOf(b) - relOf(a) || (b.interactions || 0) - (a.interactions || 0);
+      }
       if (sort === "time") return (a.day < b.day ? 1 : a.day > b.day ? -1 : 0) || relOf(b) - relOf(a);
       if (sort === "hot") return (b.interactions || 0) - (a.interactions || 0) || relOf(b) - relOf(a);
       return relOf(b) - relOf(a) || (b.interactions || 0) - (a.interactions || 0);
     });
     return out;
-  }, [baseFiltered, plat, sort, personalConfigured, personalRank]);
+  }, [baseFiltered, plat, sort, personalConfigured, personalRank, svIndex.byKey]);
 
   const selected = selId ? filtered.find((o) => o.id === selId) ?? null : overview ? null : filtered[0] ?? null;
   const availablePlatforms = PLATFORMS.filter((p) => avail.plat.has(p));
@@ -1193,6 +1198,7 @@ export function OpinionExplorer({
               <div className="flex items-center gap-1">
                 <span className="text-[11px] text-neutral-600">{zh ? "排序" : "Sort"}</span>
                 {personalConfigured && <Chip active={sort === "personal"} onClick={() => setSort("personal")}>{zh ? "推荐" : "For You"}</Chip>}
+                {svIndex.count > 0 && <Chip active={sort === "sv"} onClick={() => setSort("sv")}>SV</Chip>}
                 <Chip active={sort === "rel"} onClick={() => setSort("rel")}>{zh ? "相关度" : "Rel"}</Chip>
                 <Chip active={sort === "hot"} onClick={() => setSort("hot")}>{zh ? "热度" : "Top"}</Chip>
                 <Chip active={sort === "time"} onClick={() => setSort("time")}>{zh ? "最新" : "New"}</Chip>

@@ -36,6 +36,7 @@ export const ko: Dictionary = {
   nav: {
     dashboard: "대시보드",
     overview: "개요",
+    smartVoice: "Smart Voice",
     tickers: "종목",
     investors: "투자자",
     regions: "지역",

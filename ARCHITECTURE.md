@@ -2,7 +2,7 @@
 
 > **维护约定**：本文件是项目的「活地图」。**每次对项目结构或功能有实质改动后，必须同步更新本文件对应章节**
 > （新增/删除模块、改数据流、改命令、改部署方式、改 schema 等）。详见根目录 `CLAUDE.md`。
-> 最近更新：2026-06-30。
+> 最近更新：2026-07-07。
 
 ---
 
@@ -44,7 +44,8 @@
 
 ### ② 数据真源 = 本地 `data/dev.db`（Prismo）
 - Reddit 核心（14 表）+ **Prismo 独有层** `gr_*`(5 社区)/`yt_*`(YouTube)/`kol_*`/`x_opinion`/`price_daily`/`author_avatar` 等（这些云端**没有**）。
-- Railway/Dockerfile 用**提交进镜像的数据快照**构建（线上=本地）。`data/dev.db` 仍走 Git LFS；为避开 Railway 构建上下文未还原 LFS，以及 GitHub 普通文件 100MB 限制，仓库同时提交普通 Git 文件分片 `data/dev.db.xz.part-*` 和 manifest `data/dev.db.xz.parts`。Docker build 只有在 manifest 存在时才拼接分片还原 `data/dev.db`，没有 manifest 时回退到旧的 `data/dev.db.xz`。改数据前先 `make backup-db`。
+- **推荐部署路径：Cloudflare Pages Direct Upload**。本地用 Node 22 + `node:sqlite` 读取 `data/dev.db` 构建 `web/out/`，再 `make cf-deploy` 上传 zh/en 静态产物；Cloudflare 运行时不需要 Node 服务，也不重新构建。
+- Railway/Dockerfile 仍可作为旧部署路径：用**提交进镜像的数据快照**构建（线上=本地）。`data/dev.db` 仍走 Git LFS；为避开 Railway 构建上下文未还原 LFS，以及 GitHub 普通文件 100MB 限制，仓库同时提交普通 Git 文件分片 `data/dev.db.xz.part-*` 和 manifest `data/dev.db.xz.parts`。Docker build 只有在 manifest 存在时才拼接分片还原 `data/dev.db`，没有 manifest 时回退到旧的 `data/dev.db.xz`。改数据前先 `make backup-db`。
 - **Supabase 云端**（`wimipsiwtrqhizgmbxas`，**不是 Prismo 的内容家**）：① redditalpha.xyz 的 Reddit 核心；② Prismo 的 **web 后端**（`app_events`/`ticker_searches`/`user_collections`/`user_profiles`/Auth，走 `NEXT_PUBLIC_*`）；③ Prismo 只读的 `tw_*`(X)。见 `CLOUD_DB.md`。
 
 ### ③ Next.js 静态网站（`web/`）
@@ -270,6 +271,7 @@ crypto_us/
 | `make cloud-pull` | ⛔ **默认拒绝**（会用「只有 Reddit 核心」的云端覆盖本地、抹掉 Prismo 独有的 gr_*/yt_*/kol_*）。确需重建：`make backup-db && FORCE=1 make cloud-pull` |
 | `make backup-db` | 备份 `data/dev.db` → `data/dev.db.bak-<时间戳>`（改数据前先跑） |
 | `make site` | 构建静态站 `web/out/`（读**本地 dev.db**；需 **Node 22**） |
+| `make cf-deploy` | Cloudflare Pages Direct Upload：先 `make site`，再把 zh/en 产物复制到 `/tmp/prismo-out-cf` 并上传到 `prismo` 的 `main` production；可用 `PROJECT=xxx` 覆盖项目名 |
 | `make site-cloud` | **现等同 `make site`**（Prismo 以本地为真源、不再 cloud-pull；保留名字防误清） |
 | `make stats` | 打印库内统计 |
 | `make demo` | 一键离线全流程（样本+mock，无需 key） |
@@ -278,9 +280,10 @@ crypto_us/
 
 ## 8. 构建 & 部署
 
-1. `nvm use 22`（**必须 Node 22**；Node 23 + 实验 SQLite 会让构建被系统 SIGKILL）。
-2. `make site-cloud`（从云端拉数据 + `next build` → `web/out/`，~6500 页、cpus:1 串行 ~2–3 分钟）。
-3. 部署 `web/out/` 到静态托管（自定义根域名 www.redditalpha.xyz）。详见 `DEPLOY.md`。
+1. `nvm use 22`（**必须 Node 22**；Node 23 + 实验 SQLite 会让构建被系统 SIGKILL；仓库根目录有 `.node-version=22`）。
+2. `make site`（读本地真源 `data/dev.db` + `next build` → `web/out/`，~6500 页、cpus:1 串行）。
+3. 推荐发布到 Cloudflare Pages：首次 `npx wrangler login`，之后 `make cf-deploy`（可用 `PROJECT=xxx` 改 Pages 项目名）。
+4. Railway/Dockerfile 仅作为旧路径保留；Cloudflare Pages 运行时只托管静态文件，不跑 `server.mjs`。
 
 ---
 

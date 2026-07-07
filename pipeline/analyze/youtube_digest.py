@@ -17,7 +17,9 @@ import argparse
 import datetime as dt
 import json
 import os
+import re
 import sqlite3
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from ..common import llm
 
@@ -53,6 +55,36 @@ def _numbered(speech: list[str], cap: int = 9000) -> str:
             break
         lines.append(line)
     return "\n".join(lines)
+
+
+def _plain(text: str) -> str:
+    return re.sub(r"\s+", " ", re.sub(r"[*_`#>\[\]()]|https?://\\S+", " ", text or "")).strip()
+
+
+def _clip(text: str, n: int = 180) -> str:
+    t = _plain(text)
+    return t if len(t) <= n else t[: n - 1].rstrip() + "…"
+
+
+def _fallback_digest(vid: str, ticker: str, speech: list[str]) -> tuple[str, str, list[str], list[str], list[dict]] | None:
+    """短视频/LLM JSON 失败兜底：用原口播抽取摘要与章节，保证阅读面板不缺模块。"""
+    usable = [_clip(x) for x in speech if _plain(x)]
+    if not usable:
+        return None
+    summary_zh = usable[:7]
+    chapters: list[dict] = []
+    if len(speech) <= 1:
+        chapters = [{"t_zh": "完整口播", "t_en": "Transcript", "seg": 0}]
+    else:
+        step = max(1, len(speech) // 5)
+        for seg in range(0, len(speech), step):
+            title = _clip(speech[seg], 18) or f"第 {seg + 1} 段"
+            chapters.append({"t_zh": title, "t_en": f"Part {len(chapters) + 1}", "seg": seg})
+            if len(chapters) >= 6:
+                break
+        if chapters and chapters[0]["seg"] != 0:
+            chapters[0]["seg"] = 0
+    return vid, ticker, summary_zh, [], chapters
 
 
 def _clean_chapters(raw, n_speech: int) -> list[dict]:
@@ -91,7 +123,30 @@ def _ensure(con: sqlite3.Connection) -> None:
     )
 
 
-def run(force: bool = False, only: set[str] | None = None) -> int:
+def _digest_one(vid: str, ticker: str, seg_json: str) -> tuple[str, str, list[str], list[str], list[dict]] | None:
+    try:
+        speech = _speech(json.loads(seg_json or "[]"))
+    except json.JSONDecodeError:
+        speech = []
+    if len(speech) < 2:
+        return _fallback_digest(vid, ticker, speech)
+    data = None
+    for _ in range(3):  # LOW 偶发 JSON 截断/None → 重试，绝不静默落空
+        data = llm.messages_json(llm.LOW, SYSTEM, _numbered(speech), max_tokens=1100)
+        if isinstance(data, dict) and (data.get("summary_zh") or data.get("chapters")):
+            break
+    if not isinstance(data, dict):
+        fb = _fallback_digest(vid, ticker, speech)
+        if fb:
+            return fb
+        raise RuntimeError("LLM 无有效 JSON")
+    s_zh = [str(x).strip() for x in (data.get("summary_zh") or []) if str(x).strip()][:7]
+    s_en = [str(x).strip() for x in (data.get("summary_en") or []) if str(x).strip()][:7]
+    chapters = _clean_chapters(data.get("chapters"), len(speech))
+    return vid, ticker, s_zh, s_en, chapters
+
+
+def run(force: bool = False, only: set[str] | None = None, workers: int = 1) -> int:
     if not llm.available(llm.LOW):
         print("[yt-digest] ⚠ 缺 QWEN_API_KEY（LOW 档）→ 跳过")
         return 0
@@ -100,29 +155,15 @@ def run(force: bool = False, only: set[str] | None = None) -> int:
     done = {r[0] for r in con.execute("SELECT video_id FROM yt_digest").fetchall()} if not force else set()
     rows = con.execute("SELECT video_id, ticker, segments FROM yt_fulltext WHERE segments IS NOT NULL AND segments <> ''").fetchall()
     todo = [r for r in rows if (not only or r[0] in only) and r[0] not in done]
-    print(f"[yt-digest] 计划 {len(todo)} 视频（已有 {len(done)} / 共 {len(rows)}；model={llm.model_label(llm.LOW)}）", flush=True)
+    print(f"[yt-digest] 计划 {len(todo)} 视频（已有 {len(done)} / 共 {len(rows)}；model={llm.model_label(llm.LOW)}；workers={workers}）", flush=True)
 
     now = dt.datetime.now(dt.timezone.utc).isoformat()
     ok = fail = 0
-    for vid, ticker, seg_json in todo:
-        try:
-            speech = _speech(json.loads(seg_json or "[]"))
-        except json.JSONDecodeError:
-            speech = []
-        if len(speech) < 2:
-            continue
-        data = None
-        for _ in range(3):  # LOW 偶发 JSON 截断/None → 重试，绝不静默落空
-            data = llm.messages_json(llm.LOW, SYSTEM, _numbered(speech), max_tokens=1100)
-            if isinstance(data, dict) and (data.get("summary_zh") or data.get("chapters")):
-                break
-        if not isinstance(data, dict):
-            fail += 1
-            print(f"  [yt-digest] {vid} 失败（LLM 无有效 JSON）", flush=True)
-            continue
-        s_zh = [str(x).strip() for x in (data.get("summary_zh") or []) if str(x).strip()][:7]
-        s_en = [str(x).strip() for x in (data.get("summary_en") or []) if str(x).strip()][:7]
-        chapters = _clean_chapters(data.get("chapters"), len(speech))
+    def _save(res: tuple[str, str, list[str], list[str], list[dict]] | None) -> None:
+        nonlocal ok
+        if res is None:
+            return
+        vid, ticker, s_zh, s_en, chapters = res
         con.execute(
             "INSERT OR REPLACE INTO yt_digest (video_id,ticker,summary_zh,summary_en,chapters,model,tagged_at) "
             "VALUES (?,?,?,?,?,?,?)",
@@ -131,7 +172,30 @@ def run(force: bool = False, only: set[str] | None = None) -> int:
         )
         con.commit()
         ok += 1
-        print(f"  [yt-digest] {vid}: {len(s_zh)} 摘要 · {len(chapters)} 章节 ✓", flush=True)
+
+    if workers > 1:
+        with ThreadPoolExecutor(max_workers=max(1, workers)) as ex:
+            futs = {ex.submit(_digest_one, vid, ticker, seg_json): vid for vid, ticker, seg_json in todo}
+            for i, fut in enumerate(as_completed(futs), 1):
+                vid = futs[fut]
+                try:
+                    _save(fut.result())
+                except Exception:  # noqa: BLE001
+                    fail += 1
+                    if fail <= 12:
+                        print(f"  [yt-digest] {vid} 失败（LLM 无有效 JSON）", flush=True)
+                if i % 50 == 0:
+                    print(f"  [yt-digest] …{i}/{len(todo)}（ok={ok} fail={fail}）", flush=True)
+    else:
+        for i, row in enumerate(todo, 1):
+            vid = row[0]
+            try:
+                _save(_digest_one(*row))
+            except Exception:  # noqa: BLE001
+                fail += 1
+                print(f"  [yt-digest] {vid} 失败（LLM 无有效 JSON）", flush=True)
+            if i % 50 == 0:
+                print(f"  [yt-digest] …{i}/{len(todo)}（ok={ok} fail={fail}）", flush=True)
 
     print(f"[yt-digest] 完成：{ok} 成功 / {fail} 失败 → yt_digest", flush=True)
     con.close()
@@ -142,5 +206,6 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--only", type=str, default=None, help="逗号分隔 video_id")
+    ap.add_argument("--workers", type=int, default=1, help="LLM 并发数")
     a = ap.parse_args()
-    run(force=a.force, only={x.strip() for x in a.only.split(",")} if a.only else None)
+    run(force=a.force, only={x.strip() for x in a.only.split(",")} if a.only else None, workers=a.workers)
