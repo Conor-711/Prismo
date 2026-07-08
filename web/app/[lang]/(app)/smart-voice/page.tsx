@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { SmartVoiceWorkspace } from "@/components/prismo/SmartVoiceWorkspace";
-import { getSmartVoiceBoard } from "@/lib/svMock";
+import { SmartVoiceWorkspace } from "@/features/smart-voice";
+import { getSmartVoiceBoard } from "@/features/smart-voice/svMock";
 import { defaultLocale, isLocale, type Locale } from "@/lib/i18n";
 
 export function generateMetadata({ params }: { params: { lang: string } }): Metadata {

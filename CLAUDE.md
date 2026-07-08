@@ -1,6 +1,7 @@
 # CLAUDE.md — 给 AI 助手的项目须知
 
 本文件每次会话自动加载。动手前先读 **`ARCHITECTURE.md`**（项目结构/数据流/命令的活地图）。
+架构专题文档在 `docs/architecture/`，跨平台数据契约在 `docs/contracts/`；新增复杂功能前必须读 `docs/architecture/08-development-rules.md`，按其中的落点规则确认目标边界。
 
 ## 最重要的规则：保持 ARCHITECTURE.md 最新
 **每次对项目做了实质改动后，必须同步更新 `ARCHITECTURE.md` 对应章节**，并把顶部的「最近更新」日期改为当天。需要更新的改动包括但不限于：
@@ -12,7 +13,7 @@
 小改动（改文案、修 bug、调样式）不必更新；**结构性/流程性改动必须更新**。更新要简洁，跟随既有格式。
 
 ## 项目速记
-- **Prismo**：多语（zh 默认 / en / ja / ko）多社区美股 + 中概股舆情看板。三系统：① Python 管线 `pipeline/` ② **本地 `data/dev.db`**（Prismo 的唯一真源，含 gr_*/yt_*/kol_* 等独有层）③ Next.js 静态站 `web/`。
+- **Prismo**：多语（zh 默认 / en / ja / ko）多社区美股舆情与 Smart Voice 看板。核心系统：① Python 管线 `pipeline/` ② **本地 `data/dev.db`**（Prismo 的唯一真源，含 gr_*/yt_*/kol_* 等独有层）③ Next.js 静态站 `web/` ④ Supabase web 后端/Auth/收藏/埋点和部分外部 `tw_*` 读取。
 - **两个站、两套数据、互不干扰**（2026-06）：① **prismo.today** = 本仓库（`Conor-711/Prismo`），完整多社区，数据 = **本地 `data/dev.db`**（Railway/Dockerfile 用提交进去的 dev.db 构建，线上=本地）；② **redditalpha.xyz** = 旧仓库（`Conor-711/reddit_alpha`，只读保留），只含 Reddit，数据 = **Supabase 云端**（`wimipsiwtrqhizgmbxas` 的 Reddit 核心）。
 
 ## 硬性约定

@@ -1,6 +1,6 @@
 import { OnboardingFlow, type OnbTicker } from "@/components/onboarding/OnboardingFlow";
-import { getGrTickers } from "@/lib/globalQueries";
-import { TICKER_UNIVERSE } from "@/lib/tickerMeta";
+import { getGrTickers } from "@/server/queries/globalQueries";
+import { TICKER_UNIVERSE } from "@/shared/market/tickerMeta";
 import { EXTRA_INSTRUMENTS } from "@/lib/instruments";
 
 // 首登引导页。薄壳：构建期取标的全集（持仓选择器用），交给客户端向导 OnboardingFlow。

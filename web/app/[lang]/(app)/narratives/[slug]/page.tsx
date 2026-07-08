@@ -2,20 +2,20 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { LocaleLink } from "@/components/i18n/LocaleLink";
 import { SaveButton } from "@/components/favorites/SaveButton";
-import { SentScore } from "@/components/prismo/Bits";
-import { TickerLogo } from "@/components/prismo/TickerLogo";
-import { Module, Counter, Counters, flag } from "@/components/prismo/DetailBits";
-import { NarrativeDetailTimeline } from "@/components/prismo/NarrativeRotationCharts";
-import { SmartVoicePortfolioModule } from "@/components/prismo/SmartVoiceModules";
-import { ViewportWorkspace } from "@/components/prismo/ViewportWorkspace";
-import { fmtCompact, fmtPct } from "@/lib/format";
+import { TickerLogo } from "@/shared/market/TickerLogo";
+import { SentScore } from "@/shared/ui/prismoBits";
+import { Counter, Counters, Module, flag } from "@/shared/ui/detailBits";
+import { NarrativeDetailTimeline } from "@/features/narrative";
+import { SmartVoicePortfolioModule } from "@/features/smart-voice";
+import { ViewportWorkspace } from "@/shared/layout/ViewportWorkspace";
+import { fmtCompact, fmtPct } from "@/shared/formatting/format";
 import {
   getNarrativeBySlug,
   getNarrativeRotation,
   getNarrativeSlugs,
   narrativeText,
   trendLabel,
-} from "@/lib/narrativeRotation";
+} from "@/server/queries/narrativeRotation";
 import { defaultLocale, isLocale, type Locale } from "@/lib/i18n";
 
 export const dynamicParams = false;

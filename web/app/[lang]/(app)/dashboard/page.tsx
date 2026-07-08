@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
 import { LocaleLink } from "@/components/i18n/LocaleLink";
 import { Panel, Eyebrow } from "@/components/ui";
-import { SentScore, RegionBadge, StanceBar } from "@/components/prismo/Bits";
-import { TickerLogo } from "@/components/prismo/TickerLogo";
+import { TickerLogo } from "@/shared/market/TickerLogo";
+import { RegionBadge, SentScore, StanceBar } from "@/shared/ui/prismoBits";
 import { AsiaHeatmap } from "@/components/asia/AsiaCharts";
-import { Module, Counter, Counters } from "@/components/prismo/DetailBits";
-import { SmartVoiceLeaderboard } from "@/components/prismo/SmartVoiceModules";
+import { Counter, Counters, Module } from "@/shared/ui/detailBits";
+import { SmartVoiceLeaderboard } from "@/features/smart-voice";
 import {
   getGrMeta, getGrTickers, getGrTickerRegions, getGrRegionSummary, getGrQuotes,
-} from "@/lib/globalQueries";
-import { getSmartVoiceBoard } from "@/lib/svMock";
-import { REGION_ORDER, regionLabel, regionSource } from "@/lib/regions";
-import { fmtInt, fmtCompact, timeAgo } from "@/lib/format";
+} from "@/server/queries/globalQueries";
+import { getSmartVoiceBoard } from "@/features/smart-voice/svMock";
+import { REGION_ORDER, regionLabel, regionSource } from "@/shared/market/regions";
+import { fmtInt, fmtCompact, timeAgo } from "@/shared/formatting/format";
 import { isLocale, defaultLocale, type Locale } from "@/lib/i18n";
 
 export function generateMetadata({ params }: { params: { lang: string } }): Metadata {

@@ -16,7 +16,7 @@
    - docs/smart_voice/REDDIT_ALGORITHM.md
    - docs/smart_voice/XUEQIU_ALGORITHM.md
    - docs/smart_voice/TOSS_ALGORITHM.md
-5. pipeline/analyze/sv_v0.py
+5. pipeline/domain/smart_voice/v0.py 和 pipeline/jobs/smart_voice/workflows.py
 ```
 
 文件职责：
@@ -31,8 +31,11 @@ docs/smart_voice/GLOBAL_ALGORITHM.md
 平台文件
 = 各平台 adapter 规则：内容单元、候选召回、字段映射、样本门槛、噪声过滤、平台调参。
 
-pipeline/analyze/sv_v0.py
-= 当前可执行实现。
+pipeline/domain/smart_voice/v0.py / v0_impl.py
+= 当前核心实现。
+
+pipeline/jobs/smart_voice/workflows.py
+= 当前 job 编排入口。
 ```
 
 不要把五个平台的完整算法复制成五份。平台文件只写“这个平台如何进入共用核心算法”，共用的市场结算和打分逻辑应保留在核心算法中。
@@ -386,7 +389,7 @@ Toss:
 当前核心实现文件：
 
 ```text
-pipeline/analyze/sv_v0.py
+pipeline/domain/smart_voice/v0.py / v0_impl.py
 ```
 
 当前 source 状态：
@@ -439,7 +442,7 @@ cp data/dev.db data/dev.db.bak-sv-$(date +%Y%m%d-%H%M%S)
 ### X
 
 ```bash
-python3 -m pipeline.analyze.sv_v0 \
+python3 -m pipeline.manage sv-v0 \
   --stage all \
   --source x \
   --candidate-limit 50000 \
@@ -455,7 +458,7 @@ python3 -m pipeline.analyze.sv_v0 \
 全量一年候选：
 
 ```bash
-python3 -m pipeline.analyze.sv_v0 \
+python3 -m pipeline.manage sv-v0 \
   --stage candidates \
   --source youtube \
   --candidate-limit 0 \
@@ -467,7 +470,7 @@ python3 -m pipeline.analyze.sv_v0 \
 抽取所有 pending YouTube candidates：
 
 ```bash
-python3 -m pipeline.analyze.sv_v0 \
+python3 -m pipeline.manage sv-v0 \
   --stage extract \
   --source youtube \
   --extract-limit 0 \
@@ -482,15 +485,15 @@ python3 -m pipeline.analyze.sv_v0 \
 当前实现中，`candidates` 和 `extract` 才按 `--source` 处理平台数据；`settle`、`score`、`export` 应按统一池重算。这样才能保证 `SV_Global` 的跨平台分布和导出文件一致。
 
 ```bash
-python3 -m pipeline.analyze.sv_v0 --stage settle --source all
-python3 -m pipeline.analyze.sv_v0 --stage score --source all
-python3 -m pipeline.analyze.sv_v0 --stage export --source all
+python3 -m pipeline.manage sv-v0 --stage settle --source all
+python3 -m pipeline.manage sv-v0 --stage score --source all
+python3 -m pipeline.manage sv-v0 --stage export --source all
 ```
 
 ### Reddit
 
 ```bash
-python3 -m pipeline.analyze.sv_v0 \
+python3 -m pipeline.manage sv-v0 \
   --stage all \
   --source reddit \
   --candidate-limit 0 \

@@ -1,5 +1,5 @@
 """ticker 抽取器离线单测（不依赖 DB，用 fallback 字典）。"""
-from pipeline.ingest.ticker_extract import (
+from pipeline.domain.tickers.extraction import (
     extract_mentions,
     load_ticker_dict_from_fallback,
 )

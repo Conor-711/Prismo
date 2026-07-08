@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import { PageHeader, Panel } from "@/components/ui";
-import { TickerTable } from "@/components/prismo/TickerTable";
-import { TickerSignalBoards } from "@/components/prismo/TickerSignalBoards";
-import { getGrTickers } from "@/lib/globalQueries";
-import { getKolBullBearBoards, getKolSentimentSwings } from "@/lib/kolQueries";
-import { getSmartVoiceTickerBoards } from "@/lib/smartVoiceQueries";
+import { TickerSignalBoards, TickerTable } from "@/features/ticker";
+import { getGrTickers } from "@/server/queries/globalQueries";
+import { getKolBullBearBoards, getKolSentimentSwings } from "@/server/queries/kolQueries";
+import { getSmartVoiceTickerBoards } from "@/server/queries/smartVoiceQueries";
 import { isLocale, defaultLocale, type Locale } from "@/lib/i18n";
 
 export function generateMetadata({ params }: { params: { lang: string } }): Metadata {
