@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import { LocaleLink } from "@/components/i18n/LocaleLink";
 import { SaveButton } from "@/components/favorites/SaveButton";
 import { Panel, PageHeader, SectionTitle } from "@/components/ui";
-import { SentScore, StanceBar } from "@/components/prismo/Bits";
+import { SentScore, StanceBar } from "@/shared/ui/prismoBits";
 import { AsiaDivergingBars } from "@/components/asia/AsiaCharts";
-import { getGrRegionSummary, getGrRegionDetail } from "@/lib/globalQueries";
-import { REGION_ORDER, regionLabel, regionSource, regionColor } from "@/lib/regions";
-import { fmtCompact } from "@/lib/format";
+import { getGrRegionSummary, getGrRegionDetail } from "@/server/queries/globalQueries";
+import { REGION_ORDER, regionLabel, regionSource, regionColor } from "@/shared/market/regions";
+import { fmtCompact } from "@/shared/formatting/format";
 import { isLocale, defaultLocale, type Locale } from "@/lib/i18n";
 
 export function generateMetadata({ params }: { params: { lang: string } }): Metadata {

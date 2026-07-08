@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { LocaleLink } from "@/components/i18n/LocaleLink";
 import { Eyebrow } from "@/components/ui";
 import { IconLayers, IconPulse, IconTrend } from "@/components/icons";
-import { getGrMeta } from "@/lib/globalQueries";
-import { REGION_ORDER, regionLabel, regionSource, regionColor } from "@/lib/regions";
-import { fmtInt, fmtCompact, timeAgo } from "@/lib/format";
+import { getGrMeta } from "@/server/queries/globalQueries";
+import { REGION_ORDER, regionLabel, regionSource, regionColor } from "@/shared/market/regions";
+import { fmtInt, fmtCompact, timeAgo } from "@/shared/formatting/format";
 import { getDictionary, isLocale, defaultLocale, type Locale } from "@/lib/i18n";
 
 // 落地页（域名根 /）：以 dict.home 的 slogan 开篇。

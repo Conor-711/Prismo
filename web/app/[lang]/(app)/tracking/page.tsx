@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/ui";
-import { TrackingView, type TrackingCatalog } from "@/components/prismo/TrackingView";
-import { getGrTickers, getGrTickerRegions, getGrRegionSummary } from "@/lib/globalQueries";
-import { getInvestorBoard, type InvestorBoard } from "@/lib/investorQueries";
-import { getNarrativeRotation, trendLabel } from "@/lib/narrativeRotation";
-import { REGION_ORDER } from "@/lib/regions";
+import { TrackingView, type TrackingCatalog } from "@/features/tracking";
+import { getGrTickers, getGrTickerRegions, getGrRegionSummary } from "@/server/queries/globalQueries";
+import { getInvestorBoard, type InvestorBoard } from "@/server/queries/investorQueries";
+import { getNarrativeRotation, trendLabel } from "@/server/queries/narrativeRotation";
+import { REGION_ORDER } from "@/shared/market/regions";
 import { getDictionary, isLocale, defaultLocale, type Locale } from "@/lib/i18n";
-import type { KolSource } from "@/lib/mockDetail";
+import type { KolSource } from "@/shared/market/mockDetail";
 
 // 追踪页（私密）。页面是薄壳：服务端把全部标的摘要烤进去，登录态/过滤在客户端的 TrackingView。
 // [lang] 的 generateStaticParams 由 layout 提供，与 output:export 兼容。

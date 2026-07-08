@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-labelledby="title desc">
+  <title id="title">Prismo Logo Concept 02 - Signal Aperture</title>
+  <desc id="desc">A compact aperture mark that converges market signals into a center point.</desc>
+  <g fill="none" stroke="#57D7BA" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M50 18v15" stroke-width="5"/>
+    <path d="M50 67v15" stroke-width="5"/>
+    <path d="M18 50h15" stroke-width="5"/>
+    <path d="M67 50h15" stroke-width="5"/>
+    <path d="M30 30l11 11" stroke-width="4"/>
+    <path d="M59 59l11 11" stroke-width="4"/>
+    <path d="M70 30L59 41" stroke-width="4"/>
+    <path d="M41 59L30 70" stroke-width="4"/>
+  </g>
+  <circle cx="50" cy="50" r="13" fill="#17191C" stroke="#57D7BA" stroke-width="5"/>
+  <circle cx="50" cy="50" r="4.5" fill="#57D7BA"/>
+</svg>

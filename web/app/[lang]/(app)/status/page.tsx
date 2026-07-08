@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { isLocale, defaultLocale, type Locale } from "@/lib/i18n";
-import { getDataStats, getDailyBrief } from "@/lib/queries";
+import { getDataStats, getDailyBrief } from "@/server/queries/legacyRedditQueries";
 import { RoutineStatus } from "@/components/RoutineStatus";
 
 // 运维看板：无导航入口、noindex（仅 URL 直达，给运营自查 routine 是否正常）。

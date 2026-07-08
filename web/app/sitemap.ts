@@ -1,9 +1,9 @@
 import type { MetadataRoute } from "next";
 import { SITE_URL, BASE_PATH } from "@/lib/site";
 import { locales } from "@/lib/i18n";
-import { getGrTickerSymbols } from "@/lib/globalQueries";
-import { REGION_ORDER } from "@/lib/regions";
-import { getNarrativeSlugs } from "@/lib/narrativeRotation";
+import { getGrTickerSymbols } from "@/server/queries/globalQueries";
+import { REGION_ORDER } from "@/shared/market/regions";
+import { getNarrativeSlugs } from "@/server/queries/narrativeRotation";
 
 export const dynamic = "force-static";
 

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-labelledby="title desc">
+  <title id="title">Prismo Logo Concept 04 - Spectrum Lens</title>
+  <desc id="desc">A lens that filters scattered community data into a clean signal.</desc>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M17 31h19M17 43h25M17 55h19M17 67h13" stroke="#7D858E" stroke-width="4" opacity=".55"/>
+    <path d="M45 24l33 26-33 26V24z" fill="#57D7BA" stroke="#57D7BA" stroke-width="2"/>
+    <path d="M45 24v52L28 50l17-26z" fill="#2F6F63"/>
+    <path d="M45 50h34" stroke="#17191C" stroke-width="5"/>
+    <path d="M57 38c9 0 14 5 14 12s-5 12-14 12" stroke="#17191C" stroke-width="5"/>
+  </g>
+</svg>

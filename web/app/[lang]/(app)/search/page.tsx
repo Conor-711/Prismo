@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { PageHeader, Panel } from "@/components/ui";
-import { TickerSearch } from "@/components/prismo/TickerSearch";
-import { getGrTickers } from "@/lib/globalQueries";
+import { TickerSearch } from "@/features/search";
+import { getGrTickers } from "@/server/queries/globalQueries";
 import { isLocale, defaultLocale, type Locale } from "@/lib/i18n";
 
 export function generateMetadata({ params }: { params: { lang: string } }): Metadata {

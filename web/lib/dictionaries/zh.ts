@@ -34,6 +34,7 @@ export const zh = {
   nav: {
     dashboard: "看板",
     overview: "总览",
+    smartVoice: "Smart Voice",
     tickers: "标的",
     investors: "作者",
     regions: "区域",

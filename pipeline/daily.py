@@ -43,15 +43,16 @@ def _post_count() -> int:
 
 
 def run_daily(rebuild: bool = False) -> None:
-    from .analyze.brief import run_brief
-    from .analyze.item_analyze import run_analyze
-    from .analyze.market_mood import run_market_mood
-    from .analyze.narratives import run_narratives
-    from .analyze.rollups import run_rollups
-    from .analyze.trending import run_trending
-    from .ingest.arctic_scrape import scrape, scrape_china_filtered, scrape_comments
-    from .ingest.author_crawl import crawl_top_authors
-    from .ingest.sample_loader import load_sample
+    from .domain.market import build_brief, build_mood, build_rollups, build_trending
+    from .domain.narratives.legacy import build_legacy_narratives
+    from .domain.opinions import analyze_items
+    from .platforms.local import load_sample_data
+    from .platforms.reddit import (
+        crawl_author_pool,
+        scrape_arctic_comments,
+        scrape_arctic_posts,
+        scrape_china_posts,
+    )
 
     started = dt.datetime.now()
     use_qwen = settings.has_qwen          # 高档：逐帖投资打标（千问思考模式）
@@ -62,46 +63,59 @@ def run_daily(rebuild: bool = False) -> None:
     init_db()
 
     # 1) 拉取过去 24 小时的帖子与高赞评论（Arctic Shift）
-    _safe("scrape", scrape, days=WINDOW_DAYS, limit_per=SCRAPE_LIMIT_PER)
+    _safe("scrape", scrape_arctic_posts, days=WINDOW_DAYS, limit_per=SCRAPE_LIMIT_PER, markets=None)
     # 1.5) 关键词/ticker 过滤扫描综合中国社区，补充 A 股(沪深)等中国股市内容（量小，市场=cn）
-    _safe("scrape-china", scrape_china_filtered, days=WINDOW_DAYS, limit_per=SCRAPE_LIMIT_PER)
+    _safe("scrape-china", scrape_china_posts, days=WINDOW_DAYS, limit_per=SCRAPE_LIMIT_PER, subs=None)
 
     # 2) 若库内仍为空（如网络受限爬取失败），用样本兜底，保证站点不空
     if _post_count() == 0:
         print("[daily] 库内无帖子，载入样本兜底。")
-        _safe("load-sample", load_sample)
+        _safe("load-sample", load_sample_data)
 
     # 3) 高档：逐帖 AI 打标（有千问→真实思考模式；否则 mock 启发式兜底） + 按 market 分别聚合
     if use_qwen:
-        _safe("analyze", run_analyze, qwen=True, workers=10)
+        _safe("analyze", analyze_items, mock=False, qwen=True, limit=None, workers=10, force=False)
     else:
-        _safe("analyze", run_analyze, mock=True)
+        _safe("analyze", analyze_items, mock=True, qwen=False, limit=None, workers=8, force=False)
     # 3.2) 作者库：爬「实力榜」Top 作者历史帖（两级漏斗：DeepSeek 粗筛 → 千问深析）。
     #      放在主分析之后（作者才可排名），过线帖再走一次增量分析（item_analyze 跳过已分析）。
     #      需 DeepSeek（粗筛闸）；作者库帖 source='author'，被所有实时聚合排除，只进作者页。
     if settings.has_deepseek:
-        _safe("crawl-authors", crawl_top_authors, limit=50)
+        _safe(
+            "crawl-authors",
+            crawl_author_pool,
+            limit=50,
+            per_author_cap=20,
+            refresh_days=7,
+            max_fetch_per=120,
+            since_days=365,
+            refresh_profiles=True,
+            pool="leaderboard",
+            min_ticker_posts=3,
+            quality_mode="llm",
+        )
         if use_qwen:
-            _safe("analyze-authors", run_analyze, qwen=True, workers=10)
+            _safe("analyze-authors", analyze_items, mock=False, qwen=True, limit=None, workers=10, force=False)
         else:
-            _safe("analyze-authors", run_analyze, mock=True)
+            _safe("analyze-authors", analyze_items, mock=True, qwen=False, limit=None, workers=8, force=False)
     # 3.5) 抓「展示优先级最高」帖的评论快照（移到 analyze 之后，按质量分选帖）。
     #      Arctic 发帖瞬间存档 → num_comments≈0 不可信，故不按它过滤（min_comments=0）。
-    _safe("scrape-comments", scrape_comments, top_n=700, per_post=15, min_comments=0)
+    _safe("scrape-comments", scrape_arctic_comments, top_n=700, per_post=15, min_comments=0)
     for mk in MARKETS:
-        _safe(f"rollup[{mk}]", run_rollups, market=mk)
-        _safe(f"mood[{mk}]", run_market_mood, market=mk)
-        _safe(f"trending[{mk}]", run_trending, market=mk)
+        _safe(f"rollup[{mk}]", build_rollups, market=mk)
+        _safe(f"mood[{mk}]", build_mood, market=mk)
+        _safe(f"trending[{mk}]", build_trending, market=mk)
         # 中档：叙事聚类（有 DeepSeek→真实语义聚类；否则 mock 按主题分组）
-        _safe(f"narratives[{mk}]", run_narratives, mock=mid_mock, market=mk)
+        _safe(f"narratives[{mk}]", build_legacy_narratives, mock=mid_mock, market=mk)
     # 中档：每日简报润色
-    _safe("brief", run_brief, mock=mid_mock)
+    _safe("brief", build_brief, mock=mid_mock)
 
     # 4) 低档：翻译成简体中文（标题/正文/AI 摘要/评论 → *_zh），保证 zh 模式 100% 中文。
     #    走千问 LOW 档 qwen-flash（统一档位路由）；缺 key 则跳过（_safe 兜底）。
     if settings.has_qwen:
-        from .analyze.translate import run as run_translate
-        _safe("translate", run_translate, {"posts", "analysis", "comments"}, None)
+        from .domain.translations import translate_legacy_content
+
+        _safe("translate", translate_legacy_content, only={"posts", "analysis", "comments"}, limit=None)
 
     # 5) 可选：重建静态站点，让部署的页面反映最新一天的数据
     if rebuild:

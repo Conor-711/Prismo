@@ -344,6 +344,114 @@ class GrQuote(Base):
     updated_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
 
 
+# --------------------- 雪球长期采集管道（raw + job + checkpoint） ---------------------
+class XueqiuCrawlJob(Base):
+    """雪球采集任务队列。
+
+    一年级回填不能依赖一次性脚本顺跑：任务表负责断点、重试、窗口和状态记录。
+    采集结果先进入 xueqiu_raw_post / xueqiu_post_ticker，再同步到 gr_post。
+    """
+
+    __tablename__ = "xueqiu_crawl_job"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    job_key: Mapped[str] = mapped_column(String(180), unique=True, index=True)
+    ticker: Mapped[str] = mapped_column(String(16), index=True)
+    mode: Mapped[str] = mapped_column(String(16), index=True)  # backfill | incremental | repair | related
+    status: Mapped[str] = mapped_column(String(16), default="pending", index=True)  # pending|running|done|failed
+    since_utc: Mapped[dt.datetime] = mapped_column(DateTime, index=True)
+    until_utc: Mapped[Optional[dt.datetime]] = mapped_column(DateTime, nullable=True)
+    cursor_page: Mapped[int] = mapped_column(Integer, default=1)
+    per_page: Mapped[int] = mapped_column(Integer, default=20)
+    max_pages: Mapped[int] = mapped_column(Integer, default=80)
+    priority: Mapped[int] = mapped_column(Integer, default=100, index=True)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    rows_seen: Mapped[int] = mapped_column(Integer, default=0)
+    rows_new: Mapped[int] = mapped_column(Integer, default=0)
+    earliest_seen_utc: Mapped[Optional[dt.datetime]] = mapped_column(DateTime, nullable=True)
+    latest_seen_utc: Mapped[Optional[dt.datetime]] = mapped_column(DateTime, nullable=True)
+    stop_reason: Mapped[str] = mapped_column(String(80), default="")
+    last_error: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow, index=True)
+    updated_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+    started_at: Mapped[Optional[dt.datetime]] = mapped_column(DateTime, nullable=True)
+    finished_at: Mapped[Optional[dt.datetime]] = mapped_column(DateTime, nullable=True)
+
+
+class XueqiuCrawlCheckpoint(Base):
+    """按标的记录雪球采集进度，供增量与回填续跑。"""
+
+    __tablename__ = "xueqiu_crawl_checkpoint"
+    ticker: Mapped[str] = mapped_column(String(16), primary_key=True)
+    newest_post_utc: Mapped[Optional[dt.datetime]] = mapped_column(DateTime, nullable=True)
+    oldest_post_utc: Mapped[Optional[dt.datetime]] = mapped_column(DateTime, nullable=True)
+    last_backfill_since_utc: Mapped[Optional[dt.datetime]] = mapped_column(DateTime, nullable=True)
+    last_incremental_at: Mapped[Optional[dt.datetime]] = mapped_column(DateTime, nullable=True)
+    last_page: Mapped[int] = mapped_column(Integer, default=0)
+    raw_count: Mapped[int] = mapped_column(Integer, default=0)
+    last_status: Mapped[str] = mapped_column(String(16), default="")
+    last_error: Mapped[str] = mapped_column(Text, default="")
+    updated_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class XueqiuRawPost(Base):
+    """雪球源生帖子原始层。
+
+    raw 保留完整接口返回，避免后续需要粉丝数、认证、用户地区、附图等字段时重爬。
+    """
+
+    __tablename__ = "xueqiu_raw_post"
+    native_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    source_symbol: Mapped[str] = mapped_column(String(16), default="", index=True)
+    author_id: Mapped[str] = mapped_column(String(64), default="", index=True)
+    author: Mapped[str] = mapped_column(String(160), default="")
+    text: Mapped[str] = mapped_column(Text, default="")
+    lang: Mapped[str] = mapped_column(String(8), default="zh")
+    url: Mapped[str] = mapped_column(Text, default="")
+    like_count: Mapped[int] = mapped_column(Integer, default=0)
+    reply_count: Mapped[int] = mapped_column(Integer, default=0)
+    view_count: Mapped[int] = mapped_column(Integer, default=0)
+    retweet_count: Mapped[int] = mapped_column(Integer, default=0)
+    created_utc: Mapped[dt.datetime] = mapped_column(DateTime, index=True)
+    raw: Mapped[Optional[dict]] = mapped_column(JSONText, nullable=True)
+    first_seen_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+    last_seen_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class XueqiuPostTicker(Base):
+    """雪球帖子与标的的多对多关系。
+
+    role=crawled 表示从该标的页面抓到；role=mentioned 表示从正文/标签中抽取出的关联标的。
+    """
+
+    __tablename__ = "xueqiu_post_ticker"
+    native_id: Mapped[str] = mapped_column(String(64), primary_key=True, index=True)
+    ticker: Mapped[str] = mapped_column(String(16), primary_key=True, index=True)
+    role: Mapped[str] = mapped_column(String(16), default="crawled")
+    confidence: Mapped[float] = mapped_column(Float, default=1.0)
+    created_utc: Mapped[dt.datetime] = mapped_column(DateTime, index=True)
+    updated_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class XueqiuAuthorSnapshot(Base):
+    """雪球作者元数据快照，保留粉丝数等随时间变化的字段。"""
+
+    __tablename__ = "xueqiu_author_snapshot"
+    __table_args__ = (UniqueConstraint("user_id", "snapshot_date", name="uq_xueqiu_author_snapshot"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(64), index=True)
+    snapshot_date: Mapped[str] = mapped_column(String(10), index=True)  # YYYY-MM-DD
+    screen_name: Mapped[str] = mapped_column(String(160), default="")
+    followers_count: Mapped[int] = mapped_column(Integer, default=0)
+    friends_count: Mapped[int] = mapped_column(Integer, default=0)
+    statuses_count: Mapped[int] = mapped_column(Integer, default=0)
+    verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    province: Mapped[str] = mapped_column(String(64), default="")
+    city: Mapped[str] = mapped_column(String(64), default="")
+    profile: Mapped[str] = mapped_column(Text, default="")
+    raw: Mapped[Optional[dict]] = mapped_column(JSONText, nullable=True)
+    fetched_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+
+
 # --------------------- YouTube 观点（标的页正式模块；Gemini 视频理解 + 全语种纳入当地分析者） ---------------------
 # 每标的近 24h、浏览量 > 阈值的视频；混合分析（top N 原生看视频 + 其余字幕文本）。隔离表 yt_*。
 class YtVideo(Base):
@@ -590,6 +698,8 @@ ALL_TABLES = [
     NarrativePost, DailyBrief,
     # 全球散户多区看板隔离表（同样进快照、不进 SOURCE_TABLES）。
     GrPost, GrTickerRegion, GrTicker, GrQuote,
+    # 雪球长期采集管道：任务、断点、raw、作者快照和帖子-标的映射。
+    XueqiuCrawlJob, XueqiuCrawlCheckpoint, XueqiuRawPost, XueqiuPostTicker, XueqiuAuthorSnapshot,
     # YouTube 观点隔离表（同样进快照、不进 SOURCE_TABLES）。
     YtVideo, YtAnalysis, YtTickerSummary, YtFulltext,
     # KOL 个体观点「AI 提炼+双语」隔离表（同样进快照、不进 SOURCE_TABLES）。

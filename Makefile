@@ -1,10 +1,11 @@
 PY := pipeline/.venv/bin/python
+SYS_PY := python3
 PIP := pipeline/.venv/bin/pip
 MANAGE := $(PY) -m pipeline.manage
 
 .PHONY: install venv db-init migrate seed seed-cn sample ingest refresh extract analyze analyze-mock \
         rollup narratives narrative-rotation brief worker daily daily-build cn-backfill demo stats test web-install web-dev clean help \
-        sv-price-history sv-v0-candidates sv-v0 sv-v0-prod
+        arch-check sv-price-history sv-v0-candidates sv-v0 sv-v0-prod reddit-sv-authors sv-v0-reddit-candidates sv-v0-reddit-prod tw-match cf-deploy
 
 help:
 	@echo "Reddit 版 Kaito Pro — 常用命令"
@@ -27,8 +28,12 @@ help:
 	@echo "  make sv-price-history     补齐 SV 所需日线价格"
 	@echo "  make sv-v0                运行 Smart Voice v0：候选召回 → LLM 结构化 → 结算 → 导出"
 	@echo "  make sv-v0-prod           生产级 SV：更大候选池 + 作者均衡 LLM 抽样"
+	@echo "  make reddit-sv-authors    补 Reddit SV 作者历史和作者资料"
+	@echo "  make sv-v0-reddit-prod    运行 Reddit 帖子版 Smart Voice"
 	@echo "  --- Web ---"
 	@echo "  make web-install   安装前端依赖    make web-dev  启动 Next.js"
+	@echo "  make cf-deploy     构建并上传 web/out 到 Cloudflare Pages（PROJECT=prismo 可改项目名）"
+	@echo "  make arch-check    检查前端/管线架构边界"
 
 # ---------- 环境 ----------
 venv:
@@ -73,6 +78,9 @@ scrape:
 crawl-authors:
 	$(MANAGE) crawl-authors --limit 50
 
+reddit-sv-authors:
+	$(MANAGE) crawl-authors --limit $(or $(AUTHORS),1000) --per-author $(or $(PER_AUTHOR),40) --max-fetch-per $(or $(MAX_FETCH),1000) --since-days $(or $(DAYS),365)
+
 # ---------- 每日一次（不再实时；以 UTC+8 24h 为界，08:00 跑一次）----------
 # 分析过去 24 小时：拉取 1 天的帖子/评论 + AI 打标 + 聚合。需要真实 Claude 则设 ANTHROPIC_API_KEY。
 daily:
@@ -96,7 +104,7 @@ cn-backfill:
 	$(MANAGE) mood --market all
 	$(MANAGE) trending --market all
 	$(MANAGE) narratives --mock --market all
-	-$(PY) -m pipeline.analyze.translate
+	-$(MANAGE) translate
 	@echo "" && echo "==== 中概·港股回填完成 ====" && $(MANAGE) stats
 
 # 真实数据全流程（Arctic Shift 实时 Reddit 数据 + mock AI；真实 Claude 需 ANTHROPIC_API_KEY）
@@ -147,10 +155,10 @@ gr-quote:
 # SV scoring price history: backfill Nasdaq daily OHLC into local price_daily.
 # 可局部补齐：make sv-price-history ONLY=MU,NVDA
 sv-price-history:
-	$(PY) -m pipeline.ingest.sv_price_history --start $(or $(START),2025-06-01) --top-n $(or $(TOP_N),1000) --min-count $(or $(MIN_COUNT),25) --workers $(or $(WORKERS),8) --sleep $(or $(SLEEP),0.02) $(if $(ONLY),--only $(ONLY),)
+	$(MANAGE) sv-price-history --start $(or $(START),2025-06-01) --top-n $(or $(TOP_N),1000) --min-count $(or $(MIN_COUNT),25) --workers $(or $(WORKERS),8) --sleep $(or $(SLEEP),0.02) $(if $(ONLY),--only $(ONLY),)
 
 # Toss(토스증권) 종목 커뮤니티评论 → gr_post(source='toss', region='kr')。逆向 Web API、游标翻页 RECENT，无需登录。
-# 标的映射在 pipeline/ingest/toss.py 的 TOSS_STOCKS；大体量标的可调 --resume/--max-pages/--sleep/--commit-pages。
+# 标的映射在 pipeline/platforms/toss/community.py 的 TOSS_STOCKS；大体量标的可调 --resume/--max-pages/--sleep/--commit-pages。
 # 落库后跑 gr-tag(打情绪)→retail-sentiment/-volume/-newcomers(进散户图)。
 # 本地：DATABASE_URL='sqlite:///./data/dev.db' make toss
 toss:
@@ -210,13 +218,16 @@ kol-viewpoint:
 
 # KOL 目标价+操作周期 抽取：从 reddit/x/雪球/Toss 原帖**只抽作者明说**的 买入/卖出/目标价 + 周期 → kol_judgment。
 # 反臆造(没明说=空)；增量(只补未抽)。YouTube 复用 yt_judgment 无需在此。需 QWEN_API_KEY(LOW档)。先跑 kol-refine。
-# 本地：DATABASE_URL='sqlite:///./data/dev.db' make kol-judgment（单标的调试 python -m pipeline.analyze.kol_judgment --only NFLX）
+# 本地：DATABASE_URL='sqlite:///./data/dev.db' make kol-judgment（单标的调试 $(MANAGE) kol-judgment --only NFLX）
 kol-judgment:
 	$(MANAGE) kol-judgment --per-source 40
 	@echo "" && echo "✅ KOL 目标价+周期抽取完成。出站：make site（正文提炼显示买卖价/周期 + 整体数据目标价散点图）。"
 
 # X 推文情绪打分（写**云端** tw_tweet_sentiment）：给 tw_tweet_topic 命中的 ~5.4 万推文 flash 批量打 -1..1。
 # ⚠ 别加 sqlite 覆盖（tw_* 在云端）。需 DEEPSEEK_API_KEY。增量(只打未打分的)。
+tw-match:
+	$(MANAGE) tw-match
+
 tw-sentiment:
 	$(MANAGE) tw-sentiment
 	@echo "" && echo "✅ X 推文情绪打分完成（云端 tw_tweet_sentiment）。下一步：make kol-sentiment。"
@@ -315,7 +326,7 @@ brief:
 
 # 把帖子/AI 摘要/评论翻译成中文 → *_zh 列（增量、幂等，需 ANTHROPIC_API_KEY）。
 translate:
-	$(PY) -m pipeline.analyze.translate
+	$(MANAGE) translate
 
 worker:
 	$(PY) -m pipeline.worker
@@ -340,21 +351,31 @@ stats:
 
 test:
 	$(PY) -m pytest -q
+	$(SYS_PY) scripts/check_architecture.py
+
+arch-check:
+	$(SYS_PY) scripts/check_architecture.py
 
 # ---------- Smart Voice v0 ----------
 # 只做规则候选召回，不调用 LLM，便于先检查覆盖范围。
 sv-v0-candidates:
-	$(PY) -m pipeline.analyze.sv_v0 --stage candidates --candidate-limit $(or $(LIMIT),50000)
+	$(MANAGE) sv-v0 --stage candidates --candidate-limit $(or $(LIMIT),50000)
+
+sv-v0-reddit-candidates:
+	$(MANAGE) sv-v0 --source reddit --stage candidates --candidate-limit $(or $(LIMIT),50000) --reddit-author-limit $(or $(AUTHORS),1000) --reddit-since-days $(or $(DAYS),365) --reddit-min-author-posts $(or $(MIN_POSTS),8)
 
 # 混合版：规则召回 + LLM 结构化 + 价格结算 + SV 打分 + 前端 JSON 导出。
 # 可覆盖参数：make sv-v0 LIMIT=50000 EXTRACT=2000 WORKERS=4
 sv-v0:
-	$(PY) -m pipeline.analyze.sv_v0 --stage all --candidate-limit $(or $(LIMIT),50000) --extract-limit $(or $(EXTRACT),1000) --workers $(or $(WORKERS),4)
+	$(MANAGE) sv-v0 --stage all --candidate-limit $(or $(LIMIT),50000) --extract-limit $(or $(EXTRACT),1000) --workers $(or $(WORKERS),4)
 
 # 生产级 v0：扩大候选池后，按作者均衡分配 LLM 额度，避免少数高互动/多 ticker 作者吃掉样本。
 # 可覆盖参数：make sv-v0-prod LIMIT=50000 EXTRACT=10000 MIN=20 MAX=80 WORKERS=4
 sv-v0-prod:
-	$(PY) -m pipeline.analyze.sv_v0 --stage all --candidate-limit $(or $(LIMIT),50000) --extract-limit $(or $(EXTRACT),10000) --extract-mode author-balanced --per-author-min $(or $(MIN),20) --per-author-max $(or $(MAX),80) --workers $(or $(WORKERS),4)
+	$(MANAGE) sv-v0 --stage all --candidate-limit $(or $(LIMIT),50000) --extract-limit $(or $(EXTRACT),10000) --extract-mode author-balanced --per-author-min $(or $(MIN),20) --per-author-max $(or $(MAX),80) --workers $(or $(WORKERS),4)
+
+sv-v0-reddit-prod:
+	$(MANAGE) sv-v0 --source reddit --stage all --candidate-limit $(or $(LIMIT),50000) --extract-limit $(or $(EXTRACT),10000) --extract-mode author-balanced --per-author-min $(or $(MIN),10) --per-author-max $(or $(MAX),50) --workers $(or $(WORKERS),4) --reddit-author-limit $(or $(AUTHORS),1000) --reddit-since-days $(or $(DAYS),365) --reddit-min-author-posts $(or $(MIN_POSTS),8)
 
 # ---------- Web ----------
 web-install:
@@ -373,6 +394,14 @@ serve:
 	@[ -d web/out ] || $(MAKE) site
 	@echo "🌐 本地部署： http://localhost:8080   (Ctrl+C 退出)"
 	@python3 -m http.server 8080 --bind 0.0.0.0 --directory web/out
+
+# Cloudflare Pages：本地用 Node 22 读 dev.db 构建静态产物，再用 Wrangler Direct Upload 发布。
+# 当前产品只部署 zh/en；web/out 里若有 ja/ko 历史产物，会先排除到临时目录，避免上传体积过大。
+# 首次使用前需要：npx wrangler login。项目名默认 prismo，可用 PROJECT=xxx 覆盖。
+cf-deploy: site
+	rm -rf /tmp/prismo-out-cf
+	rsync -a --exclude='/ja/' --exclude='/ko/' web/out/ /tmp/prismo-out-cf/
+	npx wrangler pages deploy /tmp/prismo-out-cf --project-name $(or $(PROJECT),prismo) --branch main --commit-dirty=true
 
 # ---------- 云端数据库（Supabase = 数据的家）----------
 # 前提：.env 里 DATABASE_URL 已设为 Supabase 的 Postgres 连接串（见 CLOUD_DB.md）。

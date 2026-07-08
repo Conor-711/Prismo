@@ -118,7 +118,7 @@ Prismo 当前的数据智能层可以理解为 5 个活跃系统：
 
 ### 5.1 KOL 观点精炼
 
-脚本：`pipeline/analyze/kol_refine.py`  
+实现：`pipeline/domain/opinions/kol_refine.py`（由 `pipeline/jobs/kol/workflows.py` 编排）
 命令：`make kol-refine`  
 输出表：`kol_refined`  
 粒度：`source + item_id + ticker`
@@ -175,7 +175,7 @@ quote 与 reason 不同：reason 是你的提炼，quote 是 ta 本人说的原�
 
 ### 5.2 相关度打分
 
-脚本：`pipeline/analyze/kol_relevance.py`  
+实现：`pipeline/domain/opinions/kol_relevance.py`（由 `pipeline/jobs/kol/workflows.py` 编排）
 命令：`make kol-relevance`  
 输出表：`kol_relevance`  
 粒度：`source + item_id + ticker`
@@ -216,7 +216,7 @@ quote 与 reason 不同：reason 是你的提炼，quote 是 ta 本人说的原�
 
 ### 5.3 内容质量打分
 
-脚本：`pipeline/analyze/kol_quality.py`  
+实现：`pipeline/domain/opinions/kol_quality.py`（由 `pipeline/jobs/kol/workflows.py` 编排）
 命令：`make kol-quality`  
 输出表：`kol_quality`  
 粒度：`source + item_id`
@@ -258,7 +258,7 @@ quote 与 reason 不同：reason 是你的提炼，quote 是 ta 本人说的原�
 
 ### 5.4 投资视角分类
 
-脚本：`pipeline/analyze/kol_viewpoint.py`  
+实现：`pipeline/domain/opinions/kol_viewpoint.py`（由 `pipeline/jobs/kol/workflows.py` 编排）
 命令：`make kol-viewpoint`  
 输出表：`kol_viewpoint`  
 粒度：`source + item_id + ticker`
@@ -306,7 +306,7 @@ quote 与 reason 不同：reason 是你的提炼，quote 是 ta 本人说的原�
 
 ### 5.5 目标价、买卖价与周期抽取
 
-脚本：`pipeline/analyze/kol_judgment.py`  
+实现：`pipeline/domain/target_prices/kol_judgment.py`（由 `pipeline/jobs/kol/workflows.py` 编排）
 命令：`make kol-judgment`  
 输出表：`kol_judgment`  
 粒度：`source + item_id + ticker`
@@ -374,7 +374,7 @@ quote 与 reason 不同：reason 是你的提炼，quote 是 ta 本人说的原�
 
 ### 5.6 原帖完整翻译
 
-脚本：`pipeline/analyze/kol_translate.py`  
+实现：`pipeline/domain/opinions/kol_translate.py`（由 `pipeline/jobs/kol/workflows.py` 编排）
 命令：`make kol-translate`  
 输出字段：`kol_refined.trans_zh`, `kol_refined.trans_en`
 
@@ -397,7 +397,7 @@ quote 与 reason 不同：reason 是你的提炼，quote 是 ta 本人说的原�
 
 ### 5.7 论点综合与叙事编织
 
-脚本：`pipeline/analyze/kol_argument.py`  
+实现：`pipeline/domain/opinions/kol_argument.py`（由 `pipeline/jobs/kol/workflows.py` 编排）
 命令：`make kol-argument`  
 输出表：`kol_argument`, `kol_narrative`  
 粒度：`ticker + lens + stance + window`
@@ -443,8 +443,8 @@ quote 与 reason 不同：reason 是你的提炼，quote 是 ta 本人说的原�
 
 脚本：
 
-- `pipeline/ingest/youtube_crawl.py`
-- `pipeline/ingest/youtube_channels.py`
+- `pipeline/platforms/youtube/discovery.py`
+- `pipeline/platforms/youtube/channels.py`
 
 命令：
 
@@ -469,7 +469,7 @@ make yt-channels
 
 ### 6.2 YouTube 观点分析
 
-脚本：`pipeline/analyze/youtube_analyze.py`  
+实现：`pipeline/domain/opinions/youtube_analysis.py`（由 `pipeline/jobs/youtube/workflows.py` 编排）
 命令：`make youtube` / `youtube-tag`  
 输出表：`yt_analysis`
 
@@ -513,7 +513,7 @@ make yt-channels
 
 ### 6.3 YouTube 完整口播
 
-脚本：`pipeline/analyze/youtube_analyze.py` 的 `gen_fulltext`  
+实现：`pipeline/domain/opinions/youtube_analysis.py` 的 `gen_fulltext`（由 `pipeline/jobs/youtube/workflows.py` 编排）
 命令：`youtube-fulltext`  
 输出表：`yt_fulltext`
 
@@ -542,7 +542,7 @@ make yt-channels
 
 ### 6.4 YouTube 投资者摘要与内容目录
 
-脚本：`pipeline/analyze/youtube_digest.py`  
+实现：`pipeline/domain/opinions/youtube_digest.py`（由 `pipeline/jobs/youtube/workflows.py` 编排）
 命令：`make youtube-digest`  
 输出表：`yt_digest`
 
@@ -574,7 +574,7 @@ make yt-channels
 
 ### 6.5 YouTube 目标价与关键位置
 
-脚本：`pipeline/analyze/youtube_judgment.py`  
+实现：`pipeline/domain/target_prices/youtube_judgment.py`（由 `pipeline/jobs/youtube/workflows.py` 编排）
 命令：`make youtube-judgment`  
 输出表：`yt_judgment`
 
@@ -604,7 +604,7 @@ make yt-channels
 
 ### 6.6 YouTube 作者×标的综合观点
 
-脚本：`pipeline/analyze/youtube_creator_view.py`  
+实现：`pipeline/domain/authors/youtube_creator_view.py`（由 `pipeline/jobs/youtube/workflows.py` 编排）
 命令：`make youtube-creator-view`  
 输出表：`yt_creator_view`  
 粒度：`channel_id + ticker`
@@ -631,7 +631,7 @@ make yt-channels
 
 ### 7.1 X 数据同步
 
-脚本：`pipeline/ingest/x_pull.py` 或 `pipeline/ingest/load_complete_x_ticker_universe.py`  
+脚本：`pipeline/platforms/x/cloud_pull.py` 或 `pipeline/platforms/x/complete_universe.py`
 输出：
 
 - `x_opinion`
@@ -653,7 +653,7 @@ make yt-channels
 
 ### 7.2 Smart Voice Call 抽取
 
-脚本：`pipeline/analyze/sv_v0.py`  
+实现：`pipeline/domain/smart_voice/v0.py` / `pipeline/domain/smart_voice/v0_impl.py`（由 `pipeline/jobs/smart_voice/workflows.py` 编排）
 命令：
 
 ```bash
@@ -745,7 +745,7 @@ SV 后处理：
 
 ### 7.3 X 情绪打分
 
-脚本：`pipeline/analyze/tweet_sentiment.py`  
+实现：`pipeline/domain/smart_voice/tweet_sentiment.py`（由 `pipeline/jobs/smart_voice/workflows.py` 编排）
 命令：`make tw-sentiment`  
 输出：cloud `tw_tweet_sentiment`
 
@@ -792,7 +792,7 @@ make gr-tag
 
 ### 8.2 全球社区轻量情绪
 
-脚本：`pipeline/analyze/global_retail_tag.py`  
+实现：`pipeline/domain/global_retail/tag.py`（由 `pipeline/jobs/global_retail/workflows.py` 编排）
 输出字段：`gr_post.sentiment`, `gr_post.stance`
 
 输入：
@@ -827,7 +827,7 @@ make gr-tag
 
 ### 9.1 KOL 每日净情绪
 
-脚本：`pipeline/analyze/kol_sentiment.py`  
+实现：`pipeline/domain/smart_voice/kol_sentiment.py`（由 `pipeline/jobs/smart_voice/workflows.py` 编排）
 命令：`make kol-sentiment`  
 输出表：`kol_sentiment_daily`
 
@@ -841,7 +841,7 @@ make gr-tag
 
 ### 9.2 KOL 每日讨论度
 
-脚本：`pipeline/analyze/kol_volume.py`  
+实现：`pipeline/domain/smart_voice/kol_volume.py`（由 `pipeline/jobs/smart_voice/workflows.py` 编排）
 命令：`make kol-volume`  
 输出表：`kol_volume_daily`
 
@@ -855,9 +855,9 @@ make gr-tag
 
 脚本：
 
-- `pipeline/analyze/retail_sentiment.py`
-- `pipeline/analyze/retail_volume.py`
-- `pipeline/analyze/retail_newcomers.py`
+- `pipeline/domain/smart_voice/retail_sentiment.py`
+- `pipeline/domain/smart_voice/retail_volume.py`
+- `pipeline/domain/smart_voice/retail_newcomers.py`
 
 命令：
 
@@ -882,7 +882,7 @@ make retail-newcomers
 
 ### 9.4 KOL 新增参与者
 
-脚本：`pipeline/analyze/kol_newcomers.py`  
+实现：`pipeline/domain/smart_voice/kol_newcomers.py`（由 `pipeline/jobs/smart_voice/workflows.py` 编排）
 命令：`make kol-newcomers`  
 输出表：`kol_newcomers_daily`
 
@@ -894,7 +894,7 @@ make retail-newcomers
 
 ### 9.5 整体数据异动归因
 
-脚本：`pipeline/analyze/overall_signals.py`  
+实现：`pipeline/domain/smart_voice/overall_signals.py`（由 `pipeline/jobs/smart_voice/workflows.py` 编排）
 命令：`make overall-signals`
 输出：`web/lib/data/overallData.json`
 
@@ -935,7 +935,7 @@ make retail-newcomers
 
 ### 9.6 叙事轮动
 
-脚本：`pipeline/analyze/narrative_rotation.py`  
+实现：`pipeline/domain/narratives/rotation.py`（由 `pipeline/jobs/narrative_rotation/workflows.py` 编排）
 命令：`make narrative-rotation`  
 输出：`web/lib/data/narrativeRotation.json`
 

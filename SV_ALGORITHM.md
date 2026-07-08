@@ -1,8 +1,8 @@
-# Smart Voice (SV) Algorithm v1.3
+# Smart Voice (SV) Algorithm v1.6
 
 > Status: proposal / execution spec
 >
-> Scope: X and YouTube only
+> Scope: X, YouTube, and Reddit posts
 >
 > Goal: quantify how valuable each Prismo-collected investor's public market calls are to users in the current market environment.
 
@@ -32,10 +32,10 @@ Accuracy is the first priority. Content quality only changes the responsibility 
 V1 only covers:
 
 ```text
-Platforms: X, YouTube
+Platforms: X, YouTube, Reddit posts
 Market: US equities
 Assets: stocks and ETFs
-Excluded for V1: options, futures, crypto, Toss, Xueqiu, Reddit, Yahoo JP, Naver, PTT
+Excluded for V1: options, futures, crypto, Toss, Xueqiu, Reddit comments, Yahoo JP, Naver, PTT
 ```
 
 V1 outputs:
@@ -46,6 +46,7 @@ SV_By_Platform
 SV_By_Horizon
 SV_By_Narrative / Sector
 SV_By_Ticker
+SV_By_Investor_Type
 SV_Portfolio
 Confidence
 ```
@@ -137,7 +138,7 @@ Day 15: bullish A
 
 Day 0 bearish call:
   1D / 5D: keep normal settled scores if already complete
-  20D / 60D: settle early at Day 15 close
+  20D / 60D / 90D / 180D: settle early at Day 15 close
 
 Day 15 bullish call:
   starts a new lifecycle and settles from Day 15 onward
@@ -174,7 +175,7 @@ Minimum fields:
 ```text
 call_id
 investor_id
-source: x | youtube
+source: x | youtube | reddit
 content_id
 created_at
 ticker
@@ -198,11 +199,23 @@ ticker_role:
 ticker_relevance: 0..1
 target_price_owner
 evidence_span
+investor_style:
+  technical | fundamental | event_driven | macro | flow_momentum | mixed | unknown
+call_structure:
+  conviction_call | conditional_setup | invalidation_call | watchlist | risk_update | reversal_call | retrospective
+lifecycle_action:
+  open_call | reinforce_call | invalidate_prior_call | close_prior_call | reverse_call | no_trade_setup | retrospective | none
+affected_direction:
+  bull | bear | unknown
+entry_status:
+  active_entry | conditional_setup | watchlist_only | not_applicable
+trigger_condition
+invalidation_condition
 direction: bull | bear | neutral
 is_actionable_call: true | false
 target_price
 horizon_explicit: true | false
-horizon_bucket: 1D | 5D | 20D | 60D | unknown
+horizon_bucket: 1D | 5D | 20D | 60D | 90D | 180D | unknown
 conviction_score
 evidence_score
 specificity_score
@@ -370,6 +383,8 @@ V1 horizons:
 5D  = short term
 20D = short / medium term
 60D = medium term
+90D = earnings-season term
+180D = long-term structural term
 ```
 
 Each call can be evaluated across multiple horizons, but there should be a primary horizon when the author states or implies one.
@@ -401,10 +416,8 @@ missing_horizon: 0.55
 For calls with no horizon and no target:
 
 ```text
-1D:  0%
-5D:  25%
-20D: 50%
-60D: 25%
+Use the investor-type horizon distribution in section 7.1.
+Every horizon receives non-zero weight.
 ```
 
 For calls with a stated or inferred horizon:
@@ -448,7 +461,9 @@ Suggested target ladder:
 Target reached within 5D:   strong target success
 Target reached within 20D:  medium-high target success
 Target reached within 60D:  medium target success
-Target reached after 60D:   direction may count, target success should not receive strong credit
+Target reached within 90D:  earnings-season target success
+Target reached within 180D: long-term target success
+Target reached after the configured horizon: direction may count, target success should not receive strong credit
 ```
 
 For V1, target price should mainly affect the call's specificity and responsibility weight. The core directional hit calculation should remain the main score.
@@ -507,6 +522,69 @@ bear: hit_h = excess_h < 0
 ```
 
 Neutral calls do not enter directional scoring in V1.
+
+## 10.0.1 Horizon Window, Not Endpoint Only
+
+V1.4 changes horizon settlement from a single endpoint snapshot to a full path-aware window.
+
+The product still exposes clear horizon labels:
+
+```text
+1D / 5D / 20D / 60D / 90D / 180D
+```
+
+But each horizon now means:
+
+```text
+evaluate the price path from entry day to horizon end
+```
+
+not:
+
+```text
+evaluate only the final close on day H
+```
+
+This fixes cases where an investor correctly identifies a large move inside the horizon, but the ticker gives back the move near the exact endpoint.
+
+For each call and horizon, keep endpoint fields for auditability:
+
+```text
+endpoint_excess_h
+endpoint_hit_h
+```
+
+Also compute path fields inside the same window:
+
+```text
+directional_excess_t =
+  bull: stock_excess_t
+  bear: -stock_excess_t
+
+max_favorable_excess_h =
+  max(directional_excess_t for t in [entry, horizon_end])
+
+time_to_peak_days_h =
+  first trading-day offset where max_favorable_excess_h is reached
+
+positive_day_share_h =
+  share of trading days where directional_excess_t > 0
+
+avg_directional_excess_h =
+  average(directional_excess_t over the window)
+
+retracement_h =
+  max(0, max_favorable_excess_h - endpoint_directional_excess_h)
+```
+
+Interpretation:
+
+```text
+endpoint_excess captures whether the call persisted to the horizon end.
+max_favorable_excess captures whether the call created a real opportunity.
+positive_day_share captures whether the opportunity was readable and persistent.
+retracement prevents one-day spikes from being scored like clean sustained calls.
+```
 
 ## 10.1 Call Lifecycle and Early Close
 
@@ -609,6 +687,230 @@ A GME specialist can still rank highly on GME.
 But they should not become a top global investor purely through GME.
 ```
 
+## 4.4 V1.4 Core Correction
+
+V1.3 still scored a horizon mostly from the exact close at the horizon endpoint.
+
+This can mis-score useful calls:
+
+```text
+Day 0:  investor is bullish
+Day 59: ticker is +100% versus entry
+Day 60: ticker crashes below entry
+```
+
+An endpoint-only 60D score would punish the investor heavily, even though the call produced a major tradable opportunity inside the stated horizon.
+
+V1.4 changes each horizon score to combine:
+
+```text
+endpoint persistence
+window opportunity
+path persistence
+giveback penalty
+```
+
+SV should therefore be continuous in computation and segmented in product display:
+
+```text
+Computation: continuous price path inside each horizon window
+Display: discrete 1D / 5D / 20D / 60D scores before V1.5 extends the displayed set
+```
+
+## 4.5 V1.5 Core Correction
+
+V1.4 fixed endpoint-only scoring, but the longest production horizon was still 60D.
+
+60D is useful for swing and medium-term calls, but it is not enough for:
+
+```text
+earnings-cycle calls
+valuation-repair calls
+institutional repricing calls
+sector trend calls
+long-term structural theses
+```
+
+V1.5 adds two longer windows:
+
+```text
+90D  = full earnings-season window
+180D = long-term structural window
+```
+
+90D is part of the core SV horizon set because it matches how many users think about a complete reporting cycle.
+
+180D is included with a lower default responsibility weight because half-year results are more exposed to unrelated macro, rate, index-style, and sector-regime changes.
+
+For calls with no explicit horizon, default responsibility is:
+
+```text
+5D   15%
+20D  25%
+60D  25%
+90D  25%
+180D 10%
+```
+
+Rationale:
+
+```text
+Users value fast validation, so 5D receives meaningful weight.
+20D / 60D / 90D remain the main evidence base for repeatable investment judgment.
+180D is visible and useful, but should not dominate global SV by default.
+```
+
+The computation remains path-aware:
+
+```text
+Computation: continuous price path inside each horizon window
+Display: discrete 1D / 5D / 20D / 60D / 90D / 180D scores
+```
+
+## 4.6 V1.6 Core Correction
+
+V1.5 still treated all calls as if they should share one neutral horizon distribution.
+
+That is unfair because investors express market views through different analytical modes:
+
+```text
+technical investors:
+  mostly test price-action setups, triggers, supports, resistance, breakouts, and invalidations
+
+fundamental investors:
+  mostly express company-level conviction based on earnings, margins, valuation, guidance, demand, and cash flow
+```
+
+V1.6 adds investor-type-aware scoring.
+
+The classification starts at the call level:
+
+```text
+call_analysis_type:
+  technical
+  fundamental
+  event_driven
+  macro
+  flow_momentum
+  mixed
+  unknown
+```
+
+The investor profile is derived from historical call composition:
+
+```text
+technical_share
+fundamental_share
+dominant_investor_type
+```
+
+This profile is not a reputation label. It only describes the evidence style collected by Prismo.
+
+Global SV remains one shared pool:
+
+```text
+technical calls and fundamental calls are not ranked in separate universes.
+Each call is scored with the horizon distribution appropriate to its analysis type.
+All call contributions are then aggregated into one Global SV and normalized inside the same qualified investor pool.
+```
+
+V1.6 also adds:
+
+```text
+SV_By_Investor_Type
+```
+
+Examples:
+
+```text
+technical SV
+fundamental SV
+mixed SV
+```
+
+These segment scores explain where an investor is strong without splitting the global leaderboard.
+
+## 7.1 Investor-Type Horizon Weights
+
+Every horizon must have non-zero weight. Short-term validation matters for fundamental investors, and long-term validation still matters for technical investors, but the distributions differ.
+
+Default horizon distributions:
+
+```text
+technical:
+  1D   10%
+  5D   30%
+  20D  28%
+  60D  18%
+  90D   9%
+  180D  5%
+
+fundamental:
+  1D    3%
+  5D    7%
+  20D  20%
+  60D  27%
+  90D  28%
+  180D 15%
+
+event_driven:
+  1D    8%
+  5D   20%
+  20D  28%
+  60D  24%
+  90D  14%
+  180D  6%
+
+macro:
+  1D    4%
+  5D   10%
+  20D  22%
+  60D  28%
+  90D  24%
+  180D 12%
+
+flow_momentum:
+  1D   12%
+  5D   32%
+  20D  28%
+  60D  16%
+  90D   8%
+  180D  4%
+
+mixed:
+  1D    6%
+  5D   15%
+  20D  23%
+  60D  25%
+  90D  21%
+  180D 10%
+
+unknown:
+  1D    5%
+  5D   15%
+  20D  25%
+  60D  25%
+  90D  20%
+  180D 10%
+```
+
+If a call states an explicit horizon, the stated horizon receives the majority of the responsibility, while all other horizons still receive a non-zero spillover weight based on the call's investor type:
+
+```text
+explicit horizon:
+  primary horizon = 65% + 35% * type_weight(primary)
+  other horizons  = 35% * type_weight(h)
+
+inferred horizon:
+  primary horizon = 45% + 55% * type_weight(primary)
+  other horizons  = 55% * type_weight(h)
+
+missing horizon:
+  use full type_weight(h)
+```
+
+This preserves horizon intent while keeping every period represented.
+
 ## 11. Ticker Base Rate
 
 The algorithm should not reward investors merely for being bullish on stocks that naturally outperform during the evaluation window.
@@ -677,25 +979,58 @@ return_normalizer:
   5D  = 8%
   20D = 18%
   60D = 35%
+  90D = 45%
+  180D = 70%
 ```
 
-Final contribution:
+Endpoint score:
+
+```text
+endpoint_component_h =
+  0.75 * (actual_hit_h - expected_hit_h)
+  + 0.25 * return_component_h
+```
+
+Path-aware components:
+
+```text
+opportunity_component_h =
+  clamp(max_favorable_excess_h / return_normalizer_h, -1, 1)
+
+persistence_component_h =
+  positive_day_share_h - expected_hit_h
+
+retracement_penalty_h =
+  if max_favorable_excess_h > 0:
+    clamp(
+      retracement_h / max(max_favorable_excess_h, return_normalizer_h * 0.5),
+      0,
+      1
+    )
+  else:
+    0
+```
+
+Final V1.4+ contribution:
 
 ```text
 contribution_h =
   score_weight_h
   * (
-      0.75 * (actual_hit_h - expected_hit_h)
-    + 0.25 * return_component_h
+      0.40 * endpoint_component_h
+    + 0.30 * opportunity_component_h
+    + 0.20 * persistence_component_h
+    - 0.10 * retracement_penalty_h
     )
 ```
 
 Interpretation:
 
 ```text
-Accuracy is still dominant.
-A barely correct call and a major outperformance call are no longer treated as identical.
-A high-conviction wrong call with large negative excess return is penalized more.
+Endpoint accuracy still matters.
+A major tradable move inside the window is credited.
+A fleeting spike is discounted by low persistence and high retracement.
+A call that is wrong for most of the window remains weak even if it briefly works.
 ```
 
 ## 12. Duplicate and Independence Rules
@@ -998,7 +1333,7 @@ Rules:
 
 ```text
 One video may split into multiple ticker calls.
-Prioritize 20D / 60D settlement.
+Prioritize 20D / 60D / 90D settlement.
 High-specificity calls may receive higher weight.
 Apply stronger shrinkage when sample size is small.
 Do not let one or two successful videos dominate the leaderboard.
@@ -1127,6 +1462,16 @@ excess_return REAL
 hit INTEGER
 expected_hit REAL
 contribution REAL
+max_favorable_excess REAL
+peak_day TEXT
+time_to_peak_days INTEGER
+positive_day_share REAL
+avg_directional_excess REAL
+retracement REAL
+endpoint_component REAL
+opportunity_component REAL
+persistence_component REAL
+retracement_penalty REAL
 settled_at TEXT
 PRIMARY KEY (call_id, horizon)
 ```
@@ -1174,7 +1519,7 @@ Suggested pipeline stages:
 
 ```text
 sv-extract-calls
-  Extract structured calls from X and YouTube.
+  Extract structured calls from X, YouTube, and Reddit posts.
 
 sv-settle-calls
   Attach prices and calculate horizon-level call results.
@@ -1204,6 +1549,21 @@ YouTube:
   kol_relevance
   kol_quality
 
+Reddit:
+  authors
+  posts
+  mentions
+  item_analysis
+  sv_call_candidate(source='reddit')
+
+Reddit SV v1 scope:
+  only posts enter SV scoring
+  comments are excluded from investor ranking
+  author pool uses a Top-N quality / engagement / ticker-coverage filter
+  author history is crawled cross-site first, then filtered by ticker and finance quality
+  public author profile storage uses account age, link karma, comment karma, local post count, and local influence score
+  Reddit has no stable public follower-count field, so follower count is not required for Reddit SV
+
 Prices:
   price_daily
 
@@ -1216,9 +1576,9 @@ Narrative weights:
 V1 is complete when:
 
 ```text
-1. X and YouTube content can be converted into structured calls.
-2. Each call can be settled over 1D / 5D / 20D / 60D.
-3. Single-call contribution uses actual hit minus expected hit.
+1. X, YouTube, and Reddit post content can be converted into structured calls.
+2. Each call can be settled over 1D / 5D / 20D / 60D / 90D / 180D.
+3. Single-call contribution uses endpoint hit, window opportunity, path persistence, and retracement penalty.
 4. Investor Global SV can be computed.
 5. Platform, horizon, narrative, and ticker SV can be computed.
 6. SV 100 is aligned to the Prismo qualified investor pool median.

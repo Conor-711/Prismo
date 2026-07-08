@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { LocaleLink } from "@/components/i18n/LocaleLink";
-import { CreatorProfile } from "@/components/prismo/CreatorProfile";
-import { ViewportWorkspace } from "@/components/prismo/ViewportWorkspace";
-import { getYoutubeCreator, getYoutubeChannelIds } from "@/lib/creatorQueries";
-import { getCreatorSmartVoice } from "@/lib/svMock";
+import { CreatorProfile } from "@/features/investor";
+import { ViewportWorkspace } from "@/shared/layout/ViewportWorkspace";
+import { getYoutubeCreator, getYoutubeChannelIds } from "@/server/queries/creatorQueries";
+import { getCreatorSmartVoice } from "@/features/smart-voice/svMock";
 import { isLocale, defaultLocale, type Locale } from "@/lib/i18n";
 
 // YouTube 作者页（投资者榜单的下钻）。静态导出：枚举所有有视频的频道 id；[lang] 由 layout 提供。

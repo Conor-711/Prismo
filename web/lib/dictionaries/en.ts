@@ -35,6 +35,7 @@ export const en: Dictionary = {
   nav: {
     dashboard: "Dashboard",
     overview: "Overview",
+    smartVoice: "Smart Voice",
     tickers: "Tickers",
     investors: "Authors",
     regions: "Regions",

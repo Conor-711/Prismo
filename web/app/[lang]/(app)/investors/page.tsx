@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/ui";
-import { InvestorBoardView } from "@/components/prismo/InvestorBoard";
-import { getInvestorBoard } from "@/lib/investorQueries";
-import { getSmartVoiceBoard } from "@/lib/svMock";
+import { InvestorBoardView } from "@/features/investor";
+import { getInvestorBoard } from "@/server/queries/investorQueries";
+import { getSmartVoiceBoard } from "@/features/smart-voice/svMock";
 import { getDictionary, isLocale, defaultLocale, type Locale } from "@/lib/i18n";
 
 // 投资者榜单（X / YouTube / Reddit / 雪球）。薄壳：服务端把四平台榜单烤进去，过滤在客户端。

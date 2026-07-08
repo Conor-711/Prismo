@@ -2,16 +2,16 @@ import type { Metadata } from "next";
 import { LocaleLink } from "@/components/i18n/LocaleLink";
 import { SaveButton } from "@/components/favorites/SaveButton";
 import { Panel } from "@/components/ui";
-import { NarrativeMindshareAreaChart } from "@/components/prismo/NarrativeRotationCharts";
-import { ViewportWorkspace } from "@/components/prismo/ViewportWorkspace";
-import { fmtCompact, fmtPct, timeAgo } from "@/lib/format";
+import { NarrativeMindshareAreaChart } from "@/features/narrative";
+import { ViewportWorkspace } from "@/shared/layout/ViewportWorkspace";
+import { fmtCompact, fmtPct, timeAgo } from "@/shared/formatting/format";
 import {
   getNarrativeRotation,
   narrativeText,
   trendLabel,
   type NarrativeDay,
   type NarrativeLeader,
-} from "@/lib/narrativeRotation";
+} from "@/server/queries/narrativeRotation";
 import { defaultLocale, isLocale, type Locale } from "@/lib/i18n";
 
 export function generateMetadata({ params }: { params: { lang: string } }): Metadata {
