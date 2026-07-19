@@ -58,6 +58,7 @@ marketing/remotion/cap/test/
 .codex/
 .agents/
 .playwright-cli/
+.wrangler/
 
 # 本地抓取/分析输出（可再生，不入库）
 /output/

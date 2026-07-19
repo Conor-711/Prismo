@@ -2,10 +2,15 @@ PY := pipeline/.venv/bin/python
 SYS_PY := python3
 PIP := pipeline/.venv/bin/pip
 MANAGE := $(PY) -m pipeline.manage
+SV_INDICATOR_WINDOWS := 1,3,7,30,90
+SV_INDICATOR_SOURCES := all,x,youtube,reddit,xueqiu
+SV_SEGMENT_WINDOWS := 3,7,14,30
+SV_SEGMENT_TYPES := horizon,narrative,investor_type
+SV_SEGMENT_BANDS := top10,top25
 
 .PHONY: install venv db-init migrate seed seed-cn sample ingest refresh extract analyze analyze-mock \
         rollup narratives narrative-rotation brief worker daily daily-build cn-backfill demo stats test web-install web-dev clean help \
-        arch-check sv-price-history sv-v0-candidates sv-v0 sv-v0-prod sv-ticker-signals sv-indicator-backtest sv-indicator-report reddit-sv-authors sv-v0-reddit-candidates sv-v0-reddit-prod tw-match cf-deploy \
+        arch-check sv-price-history sv-v0-candidates sv-v0 sv-v0-prod sv-ticker-signals sv-indicator-backtest sv-indicator-report sv-segment-backtest reddit-sv-authors sv-v0-reddit-candidates sv-v0-reddit-prod tw-match cf-deploy \
         backup-db snapshot-db restore-db data-clean data-status xueqiu-author-auth xueqiu-author-plan xueqiu-author-run xueqiu-author-drain xueqiu-author-status xueqiu-sv-full
 
 help:
@@ -32,6 +37,7 @@ help:
 	@echo "  make sv-ticker-signals    标的 SV 分层、聚集事件与无泄漏历史回测"
 	@echo "  make sv-indicator-backtest  回测 SV 发现页指标的胜率、盈亏比和超额收益"
 	@echo "  make sv-indicator-report    导出逐事件、逐原文证据和稳健性细分数据"
+	@echo "  make sv-segment-backtest    按周期、赛道和投资类型子 SV 做垂直集中回测"
 	@echo "  make xueqiu-author-plan   导入雪球候选池并创建一年作者时间线任务"
 	@echo "  make xueqiu-author-auth   由用户登录雪球并保存本地会话（不保存密码）"
 	@echo "  make xueqiu-author-run    断点运行雪球作者时间线任务"
@@ -417,10 +423,14 @@ sv-ticker-signals:
 
 # SV 发现页四类指标：历史平台内 Top/Bottom 10% → 事件化 → 下一交易日开盘多周期回测。
 sv-indicator-backtest:
-	$(MANAGE) sv-indicator-backtest $(if $(ONLY),--only $(ONLY),) --windows $(or $(WINDOWS),1,3,7,30,90) --source-scopes $(or $(SOURCES),all,x,youtube,reddit,xueqiu) --report $(or $(REPORT),data/reports/sv_indicator_backtest.csv)
+	$(MANAGE) sv-indicator-backtest $(if $(ONLY),--only $(ONLY),) --windows $(or $(WINDOWS),$(SV_INDICATOR_WINDOWS)) --source-scopes $(or $(SOURCES),$(SV_INDICATOR_SOURCES)) --report $(or $(REPORT),data/reports/sv_indicator_backtest.csv)
 
 sv-indicator-report:
 	$(MANAGE) sv-indicator-report --report-dir $(or $(REPORT_DIR),data/reports)
+
+# 子 SV 垂直集中回测：历史周期/赛道/投资类型排名 → 滚动事件 → 匹配周期超额。
+sv-segment-backtest:
+	$(MANAGE) sv-segment-backtest $(if $(ONLY),--only $(ONLY),) --windows $(or $(WINDOWS),$(SV_SEGMENT_WINDOWS)) --sources $(or $(SOURCES),x) --segment-types $(or $(SEGMENTS),$(SV_SEGMENT_TYPES)) --rank-bands $(or $(BANDS),$(SV_SEGMENT_BANDS)) --report $(or $(REPORT),data/reports/sv_segment_backtest/sv_segment_backtest.csv)
 
 # ---------- Web ----------
 web-install:
@@ -443,7 +453,8 @@ serve:
 # Cloudflare Pages：本地用 Node 22 读 dev.db 构建静态产物，再用 Wrangler Direct Upload 发布。
 # 当前产品只部署 zh/en；web/out 里若有 ja/ko 历史产物，会先排除到临时目录，避免上传体积过大。
 # 首次使用前需要：npx wrangler login。项目名默认 prismo，可用 PROJECT=xxx 覆盖。
-cf-deploy: site
+cf-deploy:
+	NEXT_BUILD_CPUS=$(or $(CPUS),1) $(MAKE) site
 	rm -rf /tmp/prismo-out-cf
 	rsync -a --exclude='/ja/' --exclude='/ko/' web/out/ /tmp/prismo-out-cf/
 	npx wrangler pages deploy /tmp/prismo-out-cf --project-name $(or $(PROJECT),prismo) --branch main --commit-dirty=true

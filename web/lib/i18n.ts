@@ -5,10 +5,16 @@ import { ko } from "./dictionaries/ko";
 
 export const locales = ["zh", "en", "ja", "ko"] as const;
 export type Locale = (typeof locales)[number];
+export const publishedLocales = ["zh", "en"] as const satisfies readonly Locale[];
+export type PublishedLocale = (typeof publishedLocales)[number];
 export const defaultLocale: Locale = "zh";
 
 export function isLocale(x: unknown): x is Locale {
   return x === "zh" || x === "en" || x === "ja" || x === "ko";
+}
+
+export function isPublishedLocale(x: unknown): x is PublishedLocale {
+  return x === "zh" || x === "en";
 }
 
 const DICTS: Record<Locale, Dictionary> = { zh, en, ja, ko };

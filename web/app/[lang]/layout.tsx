@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { LocaleProvider } from "@/components/i18n/LocaleProvider";
-import { getDictionary, locales, defaultLocale, isLocale, type Locale } from "@/lib/i18n";
+import { getDictionary, publishedLocales, defaultLocale, isLocale, type Locale } from "@/lib/i18n";
 
 // 语言段布局：只提供语言上下文（dict）+ 注册 locale 静态参数。
 // 站点 chrome（侧栏/顶栏）在 (app)/layout.tsx；落地页用 (marketing)/layout.tsx 的极简壳。
 export function generateStaticParams() {
-  return locales.map((lang) => ({ lang }));
+  return publishedLocales.map((lang) => ({ lang }));
 }
 
 export function generateMetadata({ params }: { params: { lang: string } }): Metadata {

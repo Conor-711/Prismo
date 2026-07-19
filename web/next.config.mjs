@@ -2,6 +2,7 @@
 // 部署到 GitHub Pages 项目页（子路径）时设 NEXT_PUBLIC_BASE_PATH=/<repo>；
 // 部署到根域名（Netlify/Cloudflare/Vercel/自定义域名）留空即可。
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
+const buildCpus = Math.max(1, Number(process.env.NEXT_BUILD_CPUS || "1"));
 
 const nextConfig = {
   reactStrictMode: true,
@@ -15,7 +16,7 @@ const nextConfig = {
   assetPrefix: basePath || undefined,
   // 静态导出页数很多(数千页)时，并行 worker 偶发 "Cannot find module for page X.js"
   // 的导出竞态。串行化生成(单 worker)虽稍慢，但消除该 flaky 错误，保证 out/ 完整。
-  experimental: { workerThreads: false, cpus: 1 },
+  experimental: { workerThreads: false, cpus: buildCpus },
 };
 
 export default nextConfig;

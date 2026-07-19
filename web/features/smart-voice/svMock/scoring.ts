@@ -36,7 +36,10 @@ export function smartVoiceBottomDecile(board: SvBoard) {
 
 export function getSmartVoiceDetailInvestors(board = getSmartVoiceBoard()) {
   const seen = new Set<string>();
-  const platformInvestors = Object.values(board.platformBands ?? {}).flatMap((band) => band?.ranked ?? []);
+  const platformInvestors = Object.values(board.platformBands ?? {}).flatMap((band) => [
+    ...(band?.top10 ?? []),
+    ...(band?.bottom10 ?? []),
+  ]);
   return [...smartVoiceTopDecile(board), ...smartVoiceBottomDecile(board), ...platformInvestors].filter((inv) => {
     if (seen.has(inv.id)) return false;
     seen.add(inv.id);
