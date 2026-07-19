@@ -133,6 +133,7 @@ All platforms share:
 - Path-aware horizon scoring.
 - Content-level evidence budget.
 - Call lifecycle closure when an investor clearly reverses.
+- Same-entry-day reconciliation before settlement: repeated same-direction calls share a daily evidence cap; explicit reversals keep the final call; otherwise opposite evidence is netted and ambiguous days become neutral.
 - Confidence and concentration gates.
 
 Platforms differ in:

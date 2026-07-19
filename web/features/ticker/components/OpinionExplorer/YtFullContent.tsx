@@ -30,7 +30,7 @@ function RichText({ text }: { text: string }) {
   return (
     <>
       {paras.map((p, i) => (
-        <p key={i} className="text-[14px] leading-[1.8] text-neutral-200">{inline(p)}</p>
+        <p key={i} className="text-[15px] leading-[1.8] text-neutral-200">{inline(p)}</p>
       ))}
     </>
   );

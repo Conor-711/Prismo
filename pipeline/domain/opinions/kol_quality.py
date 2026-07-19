@@ -18,6 +18,7 @@ from sqlalchemy import text
 from ...common import llm
 from ...common.db import engine, session_scope
 from ...common.models import KolQuality
+from ...common.youtube_filters import YOUTUBE_MIN_DISPLAY_DURATION_SECONDS, YOUTUBE_MIN_DISPLAY_SUBSCRIBERS
 from .kol_refine import DEFAULT_PER_SOURCE, DEFAULT_SINCE_DAYS, TEXT_SOURCES, _load
 
 QUALITY_SYSTEM = (
@@ -185,14 +186,20 @@ def _load_youtube_quality(only: set[str] | None, since_days: int) -> list[dict]:
                d.chapters AS chapters, COALESCE(f.content_zh,'') AS full_zh,
                COALESCE(r.score,70) AS relevance
           FROM yt_video v
+          JOIN yt_channel c ON c.channel_id = v.channel_id
           LEFT JOIN yt_analysis a ON a.video_id = v.id
           LEFT JOIN yt_digest d ON d.video_id = v.id
           LEFT JOIN yt_fulltext f ON f.video_id = v.id
           LEFT JOIN kol_relevance r ON r.source = 'youtube' AND r.item_id = v.id AND r.ticker = v.ticker
+         WHERE COALESCE(v.duration_s,0) > :min_duration
+           AND COALESCE(c.subscriber_count,-1) >= :min_subscribers
          ORDER BY v.ticker, v.view_count DESC
     """
     with session_scope() as s:
-        rows = [dict(r._mapping) for r in s.execute(text(sql))]
+        rows = [dict(r._mapping) for r in s.execute(text(sql), {
+            "min_duration": YOUTUBE_MIN_DISPLAY_DURATION_SECONDS,
+            "min_subscribers": YOUTUBE_MIN_DISPLAY_SUBSCRIBERS,
+        })]
     cutoff = (dt.date.today() - dt.timedelta(days=since_days)).isoformat() if since_days > 0 else ""
     out: list[dict] = []
     for r in rows:

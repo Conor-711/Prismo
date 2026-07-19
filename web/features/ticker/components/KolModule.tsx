@@ -10,7 +10,7 @@ import type { ChartMarker, VolRow } from "../overallDataTypes";
 import { OverlayPanel } from "./OverlayPanel";
 import { TargetPricePanel } from "./TargetPricePanel";
 import { CrowdingChart, ViewpointStanceChart } from "./OverallStructureCharts";
-import type { KolFlow, KolTargetData } from "@/shared/market/mockDetail";
+import type { KolCandle, KolTargetData } from "@/shared/market/mockDetail";
 import type { DailyNet, DailyVol, KolNew, RetailVol, RetailNew, WindowedArguments } from "@/server/queries/kolQueries";
 import type { OverallData, AnomalyMetric, Divergence, SentStance } from "@/server/queries/overallData";
 
@@ -122,9 +122,9 @@ function extendPrice(rows: Array<{ day: string; close: number }> | undefined, da
 }
 
 export function KolModule({
-  flow, sentiment, volume, retailSentiment, retailVolume, retailNewcomers, kolNewcomers, overall, targetPrices, argumentsData,
+  flowDays, sentiment, volume, retailSentiment, retailVolume, retailNewcomers, kolNewcomers, overall, targetPrices, argumentsData,
 }: {
-  flow: KolFlow;
+  flowDays: KolCandle[];
   sentiment?: DailyNet[];
   volume?: DailyVol[];
   retailSentiment?: DailyNet[];
@@ -139,11 +139,11 @@ export function KolModule({
   const zh = lang === "zh";
   const [cohort, setCohort] = useState<Cohort>("kol");
   const latestDay = useMemo(
-    () => latestDayOf(flow.days, sentiment, volume, retailSentiment, retailVolume, retailNewcomers, kolNewcomers, overall?.divergence?.series) || "2026-06-22",
-    [flow.days, sentiment, volume, retailSentiment, retailVolume, retailNewcomers, kolNewcomers, overall?.divergence?.series]
+    () => latestDayOf(flowDays, sentiment, volume, retailSentiment, retailVolume, retailNewcomers, kolNewcomers, overall?.divergence?.series) || "2026-06-22",
+    [flowDays, sentiment, volume, retailSentiment, retailVolume, retailNewcomers, kolNewcomers, overall?.divergence?.series]
   );
   const yearDays = useMemo(() => enumerateDays(dayShift(latestDay, -(YEAR_DAYS - 1)), latestDay), [latestDay]);
-  const salt = useMemo(() => hash01(`${flow.days[0]?.close ?? 0}:${flow.days.at(-1)?.close ?? 0}:${latestDay}`) * 9 + 1, [flow.days, latestDay]);
+  const salt = useMemo(() => hash01(`${flowDays[0]?.close ?? 0}:${flowDays.at(-1)?.close ?? 0}:${latestDay}`) * 9 + 1, [flowDays, latestDay]);
 
   // 整体散户视图有数据才给切换入口（避免 mock/缺数据标的下出现空的散户图）
   const hasRetail =
@@ -160,7 +160,7 @@ export function KolModule({
   const yearSentiment = useMemo(() => extendSentiment(curSentiment, yearDays, salt + (isRetail ? 1 : 0)), [curSentiment, yearDays, salt, isRetail]);
   const yearVolume = useMemo(() => extendVolume(curVolume, yearDays, curVolStack, salt + (isRetail ? 2 : 0)), [curVolume, yearDays, curVolStack, salt, isRetail]);
   const yearNewcomers = useMemo(() => extendVolume(curNewcomers, yearDays, curNewStack, salt + (isRetail ? 4 : 3)), [curNewcomers, yearDays, curNewStack, salt, isRetail]);
-  const yearPrice = useMemo(() => extendPrice(flow.days, yearDays, salt), [flow.days, yearDays, salt]);
+  const yearPrice = useMemo(() => extendPrice(flowDays, yearDays, salt), [flowDays, yearDays, salt]);
 
   // 异动标记（金 ⚑ + AI 归因）仅 KOL 口径——归因基于 KOL 序列；切到整体散户时隐藏。
   const anomalies = overall?.anomalies ?? [];

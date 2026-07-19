@@ -4,11 +4,15 @@ from ._utils import csv_values
 from ...jobs.youtube import (
     analyze_text,
     analyze_videos,
+    backfill_author_uploads,
+    build_author_pool,
     build_creator_view,
     build_digest,
     crawl_videos,
     extract_judgment,
     generate_fulltext,
+    hydrate_author_uploads,
+    map_author_uploads,
     refresh_channels,
 )
 
@@ -30,6 +34,46 @@ def cmd_yt_channels(args):
     refresh_channels()
 
 
+def cmd_youtube_author_pool(args):
+    build_author_pool(
+        target_size=args.target_size,
+        min_subscribers=args.min_subscribers,
+        since_days=args.since_days,
+        pool_version=args.pool_version,
+    )
+
+
+def cmd_youtube_author_backfill(args):
+    backfill_author_uploads(
+        pool_version=args.pool_version,
+        since_days=args.since_days,
+        workers=args.workers,
+        limit_channels=args.limit_channels,
+        max_pages=args.max_pages,
+        force=args.force,
+        hydrate_metadata=args.hydrate_metadata,
+    )
+
+
+def cmd_youtube_author_map(args):
+    map_author_uploads(
+        pool_version=args.pool_version,
+        force=args.force,
+        limit=args.limit,
+        max_tickers=args.max_tickers,
+    )
+
+
+def cmd_youtube_author_hydrate(args):
+    hydrate_author_uploads(
+        pool_version=args.pool_version,
+        min_confidence=args.min_confidence,
+        limit=args.limit,
+        workers=args.workers,
+        force=args.force,
+    )
+
+
 def cmd_youtube_tag(args):
     # 混合分析（top N 原生看视频 + 其余字幕）→ yt_analysis + 聚合 yt_ticker_summary。缺 key/--mock 出样本。
     analyze_videos(
@@ -39,12 +83,23 @@ def cmd_youtube_tag(args):
         per_ticker_cap=args.per_ticker,
         workers=args.workers,
         only=csv_values(getattr(args, "only", None)),
+        since_days=args.since_days,
+        min_subscribers=args.min_subscribers,
+        min_duration_seconds=args.min_duration_seconds,
+        transcript_only=args.transcript_only,
     )
 
 
 def cmd_youtube_tag_text(args):
-    # 无 Gemini 配额兜底：标题+简介 → DeepSeek flash 出双语观点 → yt_analysis(mode=text)。
-    analyze_text(per_ticker=args.per_ticker, workers=args.workers)
+    # 无 Gemini 配额兜底：标题+简介 → LOW 档出双语观点 → yt_analysis(mode=text)。
+    analyze_text(
+        per_ticker=args.per_ticker,
+        workers=args.workers,
+        only=csv_values(getattr(args, "only", None), upper=True, as_set=True),
+        since_days=args.since_days,
+        min_subscribers=args.min_subscribers,
+        min_duration_seconds=args.min_duration_seconds,
+    )
 
 
 def cmd_youtube_fulltext(args):
@@ -102,18 +157,62 @@ def register_commands(sub, root) -> None:
 
     sub.add_parser("yt-channels").set_defaults(func=cmd_yt_channels)
 
+    sp = sub.add_parser("youtube-author-pool")
+    sp.add_argument("--target-size", type=int, default=500, help="目标个人创作者候选池规模")
+    sp.add_argument("--min-subscribers", type=int, default=1000, help="公开粉丝数 discovery 门槛")
+    sp.add_argument("--since-days", type=int, default=365, help="项目内相关视频证据窗口")
+    sp.add_argument("--pool-version", type=str, default=None, help="可复用的候选池版本名")
+    sp.set_defaults(func=cmd_youtube_author_pool)
+
+    sp = sub.add_parser("youtube-author-backfill")
+    sp.add_argument("--pool-version", type=str, default=None, help="候选池版本；省略取最新版本")
+    sp.add_argument("--since-days", type=int, default=365, help="回填频道上传历史天数")
+    sp.add_argument("--workers", type=int, default=6, help="频道并发数")
+    sp.add_argument("--limit-channels", type=int, default=None, help="只处理前 N 个频道，用于 smoke test")
+    sp.add_argument("--max-pages", type=int, default=0, help="每频道最多 playlist 页数；0=直到时间边界")
+    sp.add_argument("--force", action="store_true", help="重新抓取已完成的频道")
+    sp.add_argument(
+        "--hydrate-metadata",
+        action="store_true",
+        help="同时补播放量、互动和时长；默认只保存 playlist 元数据以节省配额",
+    )
+    sp.set_defaults(func=cmd_youtube_author_backfill)
+
+    sp = sub.add_parser("youtube-author-map")
+    sp.add_argument("--pool-version", type=str, default=None, help="候选池版本；省略取最新版本")
+    sp.add_argument("--limit", type=int, default=None, help="只处理前 N 条，用于 smoke test")
+    sp.add_argument("--max-tickers", type=int, default=6, help="单条视频最多映射 ticker 数")
+    sp.add_argument("--force", action="store_true", help="重建已有映射")
+    sp.set_defaults(func=cmd_youtube_author_map)
+
+    sp = sub.add_parser("youtube-author-hydrate")
+    sp.add_argument("--pool-version", type=str, default=None, help="候选池版本；省略取最新版本")
+    sp.add_argument("--min-confidence", type=float, default=0.78)
+    sp.add_argument("--limit", type=int, default=None, help="只补前 N 条相关视频")
+    sp.add_argument("--workers", type=int, default=6)
+    sp.add_argument("--force", action="store_true", help="重刷已补全视频")
+    sp.set_defaults(func=cmd_youtube_author_hydrate)
+
     sp = sub.add_parser("youtube-tag")
     sp.add_argument("--top-native", type=int, default=2, help="每标的用 Gemini 原生看视频的前 N 条（其余走字幕）")
     sp.add_argument("--per-ticker", type=int, default=None, help="每标的最多分析前 N 条(按播放量)；省略=全部。配合 8h/天预算用，按档位跨标的铺开")
     sp.add_argument("--force", action="store_true", help="重分析全部（默认只分析未分析的）")
     sp.add_argument("--workers", type=int, default=1, help="并发线程数(>1 走并发真看视频，billing 解锁 8h 后用)")
     sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker，只跑这些（如前十讨论度）")
+    sp.add_argument("--since-days", type=int, default=None, help="只分析最近 N 天发布的视频")
+    sp.add_argument("--min-subscribers", type=int, default=0, help="频道最低订阅数；0=不限制")
+    sp.add_argument("--min-duration-seconds", type=int, default=0, help="视频时长必须严格大于该秒数；0=不限制")
+    sp.add_argument("--transcript-only", action="store_true", help="只处理已有完整口播的视频，不回退原生视频")
     sp.add_argument("--mock", action="store_true")
     sp.set_defaults(func=cmd_youtube_tag)
 
     sp = sub.add_parser("youtube-tag-text")
-    sp.add_argument("--per-ticker", type=int, default=20, help="每标的按播放量取前 N（默认 20=前端 LIMIT）")
+    sp.add_argument("--per-ticker", type=int, default=20, help="每标的按播放量取前 N；0=全部")
     sp.add_argument("--workers", type=int, default=6, help="LLM 并发数")
+    sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker")
+    sp.add_argument("--since-days", type=int, default=None, help="只分析最近 N 天发布的视频")
+    sp.add_argument("--min-subscribers", type=int, default=0, help="频道最低订阅数；0=不限制")
+    sp.add_argument("--min-duration-seconds", type=int, default=0, help="视频时长必须严格大于该秒数；0=不限制")
     sp.set_defaults(func=cmd_youtube_tag_text)
 
     sp = sub.add_parser("youtube-fulltext")

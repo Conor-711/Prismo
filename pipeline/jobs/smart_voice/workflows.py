@@ -2,7 +2,10 @@
 from __future__ import annotations
 
 from ...domain.smart_voice import signals
+from ...domain.smart_voice.indicator_backtest import build_sv_indicator_backtest as build_sv_indicator_backtest_domain
+from ...domain.smart_voice.indicator_backtest_reporting import export_sv_indicator_backtest_reports as export_sv_indicator_backtest_reports_domain
 from ...domain.smart_voice.v0 import run_sv_v0 as run_sv_v0_domain
+from ...domain.smart_voice.ticker_signals import build_ticker_sv_signals as build_ticker_sv_signals_domain
 from ...platforms.market_data import backfill_price_history as backfill_price_history_platform
 from ...platforms.x import match_tweet_topics
 
@@ -130,6 +133,9 @@ def run_sv_v0(
     reddit_min_author_posts: int,
     youtube_min_subs: int,
     youtube_since_days: int,
+    xueqiu_pool_version: str,
+    xueqiu_since_days: int,
+    xueqiu_allow_partial: bool,
     force: bool,
 ) -> None:
     """Run Smart Voice v0 scoring through the job boundary."""
@@ -150,5 +156,55 @@ def run_sv_v0(
         reddit_min_author_posts=reddit_min_author_posts,
         youtube_min_subs=youtube_min_subs,
         youtube_since_days=youtube_since_days,
+        xueqiu_pool_version=xueqiu_pool_version,
+        xueqiu_since_days=xueqiu_since_days,
+        xueqiu_allow_partial=xueqiu_allow_partial,
         force=force,
     )
+
+
+def build_ticker_sv_signals(
+    *,
+    db_path: str,
+    only: list[str] | None,
+    window_days: int,
+    min_authors: int,
+    consensus_threshold: float,
+    effective_voice_threshold: float,
+) -> dict[str, int]:
+    """Build point-in-time ticker SV clusters and their forward backtests."""
+    return build_ticker_sv_signals_domain(
+        db_path=db_path,
+        only=only,
+        window_days=window_days,
+        min_authors=min_authors,
+        consensus_threshold=consensus_threshold,
+        effective_voice_threshold=effective_voice_threshold,
+    )
+
+
+def build_sv_indicator_backtest(
+    *,
+    db_path: str,
+    report_path: str,
+    only: list[str] | None,
+    windows: tuple[int, ...],
+    source_scopes: tuple[str, ...],
+) -> dict[str, int]:
+    """Backtest Smart Voice discovery indicators through the job boundary."""
+    return build_sv_indicator_backtest_domain(
+        db_path=db_path,
+        report_path=report_path,
+        only=only,
+        windows=windows,
+        source_scopes=source_scopes,
+    )
+
+
+def export_sv_indicator_backtest_reports(
+    *,
+    db_path: str,
+    report_dir: str,
+) -> dict[str, int]:
+    """Export detailed event, evidence, and robustness files without rebuilding signals."""
+    return export_sv_indicator_backtest_reports_domain(db_path=db_path, report_dir=report_dir)

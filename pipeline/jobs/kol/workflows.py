@@ -35,6 +35,8 @@ def refine_opinions(
 def classify_viewpoints(
     *,
     only: list[str] | None,
+    sources: list[str] | None,
+    since_days: int | None,
     force: bool,
     workers: int,
     reclassify_other: bool,
@@ -42,6 +44,8 @@ def classify_viewpoints(
     """Classify KOL opinions into viewpoint buckets."""
     return classify_viewpoints_domain(
         only=only,
+        sources=sources,
+        since_days=since_days,
         force=force,
         workers=workers,
         reclassify_other=reclassify_other,
@@ -135,4 +139,3 @@ def score_quality(
         since_days=since_days,
         include_youtube=include_youtube,
     )
-

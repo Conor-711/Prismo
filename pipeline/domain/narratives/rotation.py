@@ -340,16 +340,16 @@ def _keyword_hit(hay: str, keyword: str) -> bool:
     return keyword in hay
 
 
-def _load_reddit(con: sqlite3.Connection) -> list[Event]:
+def _load_reddit(con: sqlite3.Connection, start_day: str) -> list[Event]:
     out: list[Event] = []
     sql = """
       SELECT p.id, p.title, p.selftext, p.score, p.num_comments, p.created_utc,
              ia.sentiment_score, ia.stance, ia.themes, ia.tickers
         FROM posts p
         JOIN item_analysis ia ON ia.item_id = p.id AND ia.item_type = 'post'
-       WHERE p.market = 'us' AND p.source = 'scan'
+       WHERE p.market = 'us' AND p.source = 'scan' AND substr(p.created_utc,1,10) >= ?
     """
-    for r in con.execute(sql):
+    for r in con.execute(sql, (start_day,)):
         tickers = _extract_tickers(_parse_json(r["tickers"], []))
         out.append(Event(
             day=_date(r["created_utc"]),
@@ -363,13 +363,14 @@ def _load_reddit(con: sqlite3.Connection) -> list[Event]:
     return out
 
 
-def _load_gr(con: sqlite3.Connection) -> list[Event]:
+def _load_gr(con: sqlite3.Connection, start_day: str) -> list[Event]:
     out: list[Event] = []
     sql = """
       SELECT region, source, ticker, title, body, likes, comments, views, sentiment, stance, created_utc
         FROM gr_post
+       WHERE substr(created_utc,1,10) >= ?
     """
-    for r in con.execute(sql):
+    for r in con.execute(sql, (start_day,)):
         source = str(r["source"] or "").strip() or str(r["region"] or "")
         sentiment = r["sentiment"]
         out.append(Event(
@@ -384,7 +385,7 @@ def _load_gr(con: sqlite3.Connection) -> list[Event]:
     return out
 
 
-def _load_x(con: sqlite3.Connection) -> list[Event]:
+def _load_x(con: sqlite3.Connection, start_day: str) -> list[Event]:
     out: list[Event] = []
     sql = """
       SELECT x.tweet_id, x.ticker, x.text, x.likes, x.retweets, x.replies, x.quotes,
@@ -392,9 +393,9 @@ def _load_x(con: sqlite3.Connection) -> list[Event]:
         FROM x_opinion x
         LEFT JOIN kol_refined kr
           ON kr.source = 'x' AND kr.item_id = x.tweet_id AND kr.ticker = x.ticker
-       WHERE COALESCE(x.text, '') NOT LIKE 'RT @%'
+       WHERE COALESCE(x.text, '') NOT LIKE 'RT @%' AND substr(x.created,1,10) >= ?
     """
-    for r in con.execute(sql):
+    for r in con.execute(sql, (start_day,)):
         out.append(Event(
             day=_date(r["created"]),
             source="x",
@@ -410,7 +411,7 @@ def _load_x(con: sqlite3.Connection) -> list[Event]:
     return out
 
 
-def _load_youtube(con: sqlite3.Connection) -> list[Event]:
+def _load_youtube(con: sqlite3.Connection, start_day: str) -> list[Event]:
     out: list[Event] = []
     sql = """
       SELECT v.ticker, v.title, v.description, v.view_count, v.like_count, v.comment_count,
@@ -418,8 +419,9 @@ def _load_youtube(con: sqlite3.Connection) -> list[Event]:
              a.key_points_zh, a.key_points_en
         FROM yt_video v
         JOIN yt_analysis a ON a.video_id = v.id
+       WHERE substr(v.published_utc,1,10) >= ?
     """
-    for r in con.execute(sql):
+    for r in con.execute(sql, (start_day,)):
         out.append(Event(
             day=_date(r["published_utc"]),
             source="youtube",
@@ -432,12 +434,29 @@ def _load_youtube(con: sqlite3.Connection) -> list[Event]:
     return out
 
 
-def _safe_load(loader, con: sqlite3.Connection) -> list[Event]:
+def _safe_load(loader, con: sqlite3.Connection, start_day: str) -> list[Event]:
     try:
-        return loader(con)
+        return loader(con, start_day)
     except sqlite3.Error as e:
         print(f"[narrative-rotation] skip {loader.__name__}: {e}")
         return []
+
+
+def _latest_source_day(con: sqlite3.Connection) -> str:
+    latest: list[str] = []
+    for sql in (
+        "SELECT MAX(substr(created_utc,1,10)) FROM gr_post",
+        "SELECT MAX(substr(created_utc,1,10)) FROM posts WHERE market='us' AND source='scan'",
+        "SELECT MAX(substr(created,1,10)) FROM x_opinion",
+        "SELECT MAX(substr(published_utc,1,10)) FROM yt_video",
+    ):
+        try:
+            value = con.execute(sql).fetchone()[0]
+        except sqlite3.Error:
+            value = None
+        if value and len(str(value)) == 10:
+            latest.append(str(value))
+    return max(latest) if latest else dt.date.today().isoformat()
 
 
 def _out_path(out_path: str) -> Path:
@@ -468,9 +487,12 @@ def build(db_path: str = str(DB), out_path: str = str(OUT), window_days: int = 2
         return payload
 
     con = _connect(db_path)
+    end = dt.date.fromisoformat(_latest_source_day(con))
+    start = end - dt.timedelta(days=max(1, window_days) - 1)
+    start_day = start.isoformat()
     raw_events: list[Event] = []
     for loader in (_load_gr, _load_reddit, _load_x, _load_youtube):
-        raw_events.extend(_safe_load(loader, con))
+        raw_events.extend(_safe_load(loader, con, start_day))
     con.close()
 
     classified: list[tuple[Event, str]] = []
@@ -488,9 +510,6 @@ def build(db_path: str = str(DB), out_path: str = str(OUT), window_days: int = 2
         path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
         return payload
 
-    max_day = max(e.day for e, _ in classified)
-    end = dt.date.fromisoformat(max_day)
-    start = end - dt.timedelta(days=max(1, window_days) - 1)
     days = _days(start.isoformat(), end.isoformat())
     day_set = set(days)
     events = [(e, c) for e, c in classified if e.day in day_set]

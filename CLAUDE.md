@@ -27,4 +27,4 @@
 - **Prismo 的数据真源 = 本地 `data/dev.db`**（gr_*/yt_*/kol_* 只在本地、云端没有）。出网站 = **`make site`**（读本地 dev.db 构建 → `web/out/`）。
 - **绝对别 `make site-cloud` / `make cloud-pull`**：会用「只有 Reddit 核心」的云端快照覆盖本地、**抹掉 Prismo 独有层**（『数据消失』的元凶）。已加保护：`site-cloud` 现等同 `make site`、`cloud-pull` 默认拒绝（需 `make backup-db && FORCE=1`）、`clean` 不再删 dev.db。
 - 刷新本地数据：跑相应管线（`DATABASE_URL='sqlite:///./data/dev.db' make gr` / `make youtube` / `make kol-*` 等，都写本地）。**X 数据 `tw_*` 仍从云端只读拉**（`kol_sentiment.py`/`kol_volume.py` 的 `_cloud_url()` 直接读 .env 拿云端串，不受 sqlite 默认影响）。
-- 改数据前先 `make backup-db`。云端 Supabase 留给 redditalpha.xyz（+ Prismo 只读 tw_*）。详见 `CLOUD_DB.md`。
+- 改数据前先 `make backup-db`：备份写到项目外且默认只保留最近一份。原始 `data/dev.db` 不进入 Git；需要更新 Railway 数据时运行 `make snapshot-db` 并提交压缩快照。云端 Supabase 留给 redditalpha.xyz（+ Prismo 只读 tw_*）。详见 `CLOUD_DB.md`。

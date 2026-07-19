@@ -30,6 +30,22 @@
 - `gr_*`：全球散户和跨社区零售数据。
 - `yt_*`：YouTube 专属数据。
 
+## 雪球作者池表
+
+- `xueqiu_author_pool`：domain 生成的版本化发现池；记录发现门槛、发布者隔离、Top 300 正式池和 warm reserve 顺序，可由发现 CSV 重算。
+- `xueqiu_author_crawl_job`：platform 维护的作者时间线分页、重试、登录阻塞和一年窗口断点；可重建任务，但游标属于运行状态。
+- `xueqiu_raw_post`：作者时间线与标的搜索共同复用的 raw 真源；进入部署快照。
+- `xueqiu_post_ticker`：从作者正文提取的多对多标的映射；可从 raw 重算。
+
+## YouTube SV 作者池表
+
+- `yt_author_pool_run` / `yt_author_pool`：domain 生成的版本化作者池、媒体分类、选择排名和运行规则；可从频道发现与画像重算。
+- `yt_channel_upload_checkpoint`：platform 维护的一年 uploads playlist 回填状态；属于运行状态。
+- `yt_channel_upload` / `yt_channel_upload_pool`：normalized 视频元数据和版本化作者池归属；进入本地部署快照。
+- `yt_channel_upload_relevance` / `yt_channel_upload_ticker`：domain 生成的版本化视频相关性及多 ticker 映射；可从上传元数据重算。
+- `sv_call_candidate` / `sv_call` / `sv_call_settlement`：跨平台标准化 evidence、LLM 结构化 call 和确定性价格结算。
+- `sv_investor_score` / `sv_segment_score`：可重算的当前评分结果；`sv_investor_score_snapshot` 保存跨运行比较快照。
+
 ## Schema 真源
 
 - SQLAlchemy 主 schema 仍以 `pipeline/common/models.py` 为迁移期真源。

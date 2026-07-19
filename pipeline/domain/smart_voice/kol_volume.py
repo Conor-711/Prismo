@@ -4,10 +4,10 @@
 按平台拆分 n_reddit / n_x / n_xueqiu / n_youtube，n_total = 四者之和 → web 端堆叠条形图。
 
 源（混合本地 + 云端，与 kol_sentiment 同范式）：
-  - **本地 dev.db**：Reddit(mentions⋈posts，去重帖)、雪球(gr_post source=xueqiu)、YouTube(yt_video)。
-  - **云端 Supabase**：X = **直接数 `tw_tweet_ticker`**（外部工具灌入的标的↔推文链接表，含 created_at、
-    全量全历史）。**不 join `tw_tweet`**——后者是滚动窗口、tweet_id 会漂移，join 会丢行（实测 0 命中）；
-    tw_tweet_ticker 才是稳定权威的「这条推在讨论该标的」链接，计数即讨论量（含转/引/回，不区分类型）。
+  - **本地 dev.db**：Reddit(mentions⋈posts，去重帖)、X(x_opinion)、雪球(gr_post source=xueqiu)、YouTube(yt_video)。
+  - **云端 Supabase**：可选 X 补充 = 直接读 `tw_tweet_ticker`（外部工具灌入的标的↔推文链接表，含 created_at、
+    全量全历史），并跳过本地 x_opinion 已经覆盖的 (tweet_id,ticker)。**不 join `tw_tweet`**——后者是滚动窗口、
+    tweet_id 会漂移，join 会丢行（实测 0 命中）。默认不查云端；需要时设置 `KOL_VOLUME_CLOUD_X=1`。
 
 输出 → 本地 dev.db 的 `kol_volume_daily`（原生 DDL 自建、不入 models.py；纯本地派生、随构建读，
 `make site` 直接用）。整表重算、幂等。运行：**不要加 sqlite 覆盖**——本脚本自己 hardcode 本地、并从 .env
@@ -16,11 +16,14 @@
 from __future__ import annotations
 
 import datetime as dt
+import os
 from collections import defaultdict
 
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import create_engine, text
 
 from ...common.config import ROOT, normalize_db_url, settings
+from ...common.youtube_filters import YOUTUBE_MIN_DISPLAY_DURATION_SECONDS, YOUTUBE_MIN_DISPLAY_SUBSCRIBERS
 
 LOCAL_URL = "sqlite:///./data/dev.db"
 
@@ -51,6 +54,7 @@ def rollup() -> int:
 
     acc: dict[tuple[str, str], dict] = defaultdict(
         lambda: {"reddit": 0, "x": 0, "xueqiu": 0, "youtube": 0})
+    local_x_pairs: set[tuple[str, str]] = set()
 
     def add(ticker, day, n, src):
         if not ticker or not day or not n:
@@ -76,27 +80,54 @@ def rollup() -> int:
             add(tk, day, n, "xueqiu")
         print(f"[kol-volume] xueqiu ✓（累计 {len(acc)} 格）", flush=True)
 
+        nx_local = 0
+        for tweet_id, tk, day in c.execute(text(
+            "SELECT DISTINCT tweet_id, ticker, substr(created,1,10) "
+            "FROM x_opinion WHERE tweet_id<>'' AND ticker<>'' AND created<>''")):
+            tk_norm = str(tk).upper()
+            local_x_pairs.add((str(tweet_id), tk_norm))
+            add(tk_norm, day, 1, "x")
+            nx_local += 1
+        print(f"[kol-volume] X 本地 ✓（{nx_local:,} 个 推文×标的；累计 {len(acc)} 格）", flush=True)
+
         for tk, day, n in c.execute(text(
             "SELECT ticker, substr(published_utc,1,10), count(*) "
-            "FROM yt_video GROUP BY 1,2")):
+            "FROM yt_video v JOIN yt_channel yc ON yc.channel_id=v.channel_id "
+            "WHERE COALESCE(v.duration_s,0) > :min_duration "
+            "AND COALESCE(yc.subscriber_count,-1) >= :min_subscribers "
+            "GROUP BY 1,2"),
+            {
+                "min_duration": YOUTUBE_MIN_DISPLAY_DURATION_SECONDS,
+                "min_subscribers": YOUTUBE_MIN_DISPLAY_SUBSCRIBERS,
+            }):
             add(tk, day, n, "youtube")
         print(f"[kol-volume] youtube ✓（累计 {len(acc)} 格）", flush=True)
 
     # ---- 云端 X（直接数 tw_tweet_ticker，不 join tw_tweet）----
     cu = _cloud_url()
-    if cu:
+    use_cloud_x = os.environ.get("KOL_VOLUME_CLOUD_X") == "1"
+    if cu and use_cloud_x:
         cloud = create_engine(cu, connect_args={"prepare_threshold": None}, pool_pre_ping=True)
         nx = 0
-        with cloud.connect() as c:
-            for tk, day, n in c.execute(text(
-                "SELECT ticker, to_char(created_at AT TIME ZONE 'UTC','YYYY-MM-DD'), count(*) "
-                "FROM tw_tweet_ticker WHERE ticker = ANY(:syms) AND created_at IS NOT NULL GROUP BY 1,2"),
-                {"syms": symbols}):
-                add(tk, day, n, "x")
-                nx += int(n or 0)
-        print(f"[kol-volume] X ✓（{nx:,} 条推文计数；累计 {len(acc)} 格）", flush=True)
+        try:
+            with cloud.connect() as c:
+                for tweet_id, tk, day in c.execute(text(
+                    "SELECT tweet_id, ticker, to_char(created_at AT TIME ZONE 'UTC','YYYY-MM-DD') "
+                    "FROM tw_tweet_ticker WHERE ticker = ANY(:syms) AND created_at IS NOT NULL"),
+                    {"syms": symbols}):
+                    pair = (str(tweet_id), str(tk).upper())
+                    if pair in local_x_pairs:
+                        continue
+                    add(tk, day, 1, "x")
+                    nx += 1
+            print(f"[kol-volume] X ✓（{nx:,} 条云端补充推文计数；累计 {len(acc)} 格）", flush=True)
+        except SQLAlchemyError as exc:
+            print(f"[kol-volume] ⚠ 云端 X 补充失败，保留本地 x_opinion 计数：{str(exc)[:160]}", flush=True)
     else:
-        print("[kol-volume] ⚠ 未找到云端 DATABASE_URL → 跳过 X（讨论度缺 X 贡献）", flush=True)
+        if not cu:
+            print("[kol-volume] ⚠ 未找到云端 DATABASE_URL → 跳过云端 X 补充", flush=True)
+        else:
+            print("[kol-volume] 云端 X 补充未启用（KOL_VOLUME_CLOUD_X!=1），使用本地 x_opinion。", flush=True)
 
     # ---- 落库（整表重算）----
     now = dt.datetime.utcnow().isoformat()

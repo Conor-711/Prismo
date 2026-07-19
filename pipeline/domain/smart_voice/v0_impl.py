@@ -24,6 +24,7 @@ import argparse
 import collections
 import concurrent.futures
 import datetime as dt
+import html
 import heapq
 import json
 import math
@@ -33,18 +34,30 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
-from ...common import llm
+from ...common import deepseek, gemini, llm
+from ...common.config import ROOT as PROJECT_ROOT, RUNTIME_DATA_DIR, settings
+from ...common.ticker_extraction import ALIASES
+from ...common.youtube_filters import (
+    YOUTUBE_MIN_DISPLAY_DURATION_SECONDS,
+    YOUTUBE_MIN_DISPLAY_SUBSCRIBERS,
+)
+from .youtube_transcript_calls import (
+    TranscriptDocument,
+    YOUTUBE_TRANSCRIPT_CALL_VERSION,
+    extract_from_transcript,
+    transcript_document,
+)
 
 
-ROOT = Path(__file__).resolve().parents[2]
-DB = ROOT / "data" / "dev.db"
+ROOT = PROJECT_ROOT
+DB = Path(os.environ.get("PRICE_DB", str(RUNTIME_DATA_DIR / "dev.db"))).resolve()
 EXPORT = ROOT / "web" / "lib" / "data" / "smartVoice.json"
 TWEET_DIRS = [
     ROOT / "equity_trader_kol_tweets_2025h2",
     ROOT / "roster_tweets_6m_f5000",
 ]
 SV_PLATFORMS = {"x", "youtube", "reddit", "xueqiu", "toss"}
-SUPPORTED_SOURCES = {"x", "youtube", "reddit"}
+SUPPORTED_SOURCES = {"x", "youtube", "reddit", "xueqiu"}
 SOURCE_LABELS = {
     "x": {"zh": "X", "en": "X"},
     "youtube": {"zh": "YouTube", "en": "YouTube"},
@@ -53,7 +66,9 @@ SOURCE_LABELS = {
     "toss": {"zh": "Toss", "en": "Toss"},
 }
 HORIZONS = {"1D": 1, "5D": 5, "20D": 20, "60D": 60, "90D": 90, "180D": 180}
-SV_SCORING_VERSION = "v1.7-platform-global"
+SV_SCORING_VERSION = "v1.8-transcript-lifecycle"
+YOUTUBE_UPLOAD_MAPPING_VERSION = "youtube-title-v3"
+YOUTUBE_UPLOAD_MIN_MAPPING_CONFIDENCE = 0.90
 PLATFORM_QUALIFICATION = {
     "x": {"n_eff": 8.0, "settled_calls": 10},
     "youtube": {"n_eff": 4.0, "settled_calls": 5},
@@ -71,6 +86,8 @@ PATH_SCORE_WEIGHTS = {
     "persistence": 0.20,
     "retracement": 0.10,
 }
+DAILY_CALL_EVIDENCE_CAP = 1.8
+SAME_DAY_DIRECTION_THRESHOLD = 0.25
 CALL_TYPES = {
     "single_ticker_call",
     "basket_call",
@@ -332,6 +349,17 @@ def ensure_tables(con: sqlite3.Connection) -> None:
           trigger_condition TEXT DEFAULT '',
           invalidation_condition TEXT DEFAULT '',
           evidence_span TEXT DEFAULT '',
+          evidence_segment_start INTEGER,
+          evidence_segment_end INTEGER,
+          statement_mode TEXT DEFAULT '',
+          instrument_scope TEXT DEFAULT '',
+          option_strategy TEXT DEFAULT '',
+          underlying_direction TEXT DEFAULT 'unknown',
+          call_owner TEXT DEFAULT 'unknown',
+          host_endorsement TEXT DEFAULT 'none',
+          transcript_model TEXT DEFAULT '',
+          transcript_created_at TEXT DEFAULT '',
+          transcript_version TEXT DEFAULT '',
           scoring_version TEXT DEFAULT 'v0',
           summary_zh TEXT DEFAULT '',
           summary_en TEXT DEFAULT '',
@@ -457,6 +485,17 @@ def ensure_tables(con: sqlite3.Connection) -> None:
         "trigger_condition": "TEXT DEFAULT ''",
         "invalidation_condition": "TEXT DEFAULT ''",
         "evidence_span": "TEXT DEFAULT ''",
+        "evidence_segment_start": "INTEGER",
+        "evidence_segment_end": "INTEGER",
+        "statement_mode": "TEXT DEFAULT ''",
+        "instrument_scope": "TEXT DEFAULT ''",
+        "option_strategy": "TEXT DEFAULT ''",
+        "underlying_direction": "TEXT DEFAULT 'unknown'",
+        "call_owner": "TEXT DEFAULT 'unknown'",
+        "host_endorsement": "TEXT DEFAULT 'none'",
+        "transcript_model": "TEXT DEFAULT ''",
+        "transcript_created_at": "TEXT DEFAULT ''",
+        "transcript_version": "TEXT DEFAULT ''",
         "scoring_version": "TEXT DEFAULT 'v0'",
     }
     for name, ddl in extra_cols.items():
@@ -556,6 +595,90 @@ def table_exists(con: sqlite3.Connection, name: str) -> bool:
     return bool(table_columns(con, name))
 
 
+def youtube_candidate_eligibility_predicate(
+    con: sqlite3.Connection,
+    candidate_alias: str = "cc",
+) -> str:
+    """Return the shared YouTube subscriber/duration eligibility predicate."""
+    checks: list[str] = []
+    if table_exists(con, "yt_video") and table_exists(con, "yt_channel"):
+        checks.append(
+            f"EXISTS (SELECT 1 FROM yt_video yv JOIN yt_channel yc ON yc.channel_id=yv.channel_id "
+            f"WHERE yv.id={candidate_alias}.tweet_id "
+            f"AND COALESCE(yv.duration_s,0)>{YOUTUBE_MIN_DISPLAY_DURATION_SECONDS} "
+            f"AND COALESCE(yc.subscriber_count,0)>={YOUTUBE_MIN_DISPLAY_SUBSCRIBERS})"
+        )
+    if all(
+        table_exists(con, name)
+        for name in ("yt_channel_upload", "yt_author_pool", "yt_author_pool_run")
+    ):
+        checks.append(
+            f"EXISTS (SELECT 1 FROM yt_channel_upload yu JOIN yt_author_pool yp "
+            f"ON yp.channel_id=yu.channel_id AND yp.pool_version=(SELECT pool_version "
+            f"FROM yt_author_pool_run ORDER BY created_at DESC LIMIT 1) AND yp.selected=1 "
+            f"WHERE yu.video_id={candidate_alias}.tweet_id "
+            f"AND COALESCE(yu.duration_s,0)>{YOUTUBE_MIN_DISPLAY_DURATION_SECONDS} "
+            f"AND COALESCE(yp.subscriber_count,0)>={YOUTUBE_MIN_DISPLAY_SUBSCRIBERS})"
+        )
+    return f"({' OR '.join(checks)})" if checks else "0"
+
+
+def sv_extract_provider_order() -> list[str]:
+    raw = os.environ.get("SV_EXTRACT_PROVIDERS", "qwen,deepseek,gemini")
+    providers: list[str] = []
+    for item in raw.split(","):
+        provider = item.strip().lower()
+        if provider in {"qwen", "deepseek", "gemini"} and provider not in providers:
+            providers.append(provider)
+    return providers or ["qwen", "deepseek", "gemini"]
+
+
+def sv_extract_provider_available(provider: str) -> bool:
+    if provider == "qwen":
+        return llm.available(llm.LOW)
+    if provider == "deepseek":
+        return settings.has_deepseek
+    if provider == "gemini":
+        return settings.has_gemini
+    return False
+
+
+def sv_extract_model_label(provider: str) -> str:
+    if provider == "qwen":
+        return llm.model_label(llm.LOW)
+    if provider == "deepseek":
+        return f"deepseek:{settings.deepseek_model_low}"
+    return f"gemini:{settings.gemini_model}"
+
+
+def sv_extract_messages_json(
+    provider: str,
+    system: str,
+    prompt: str,
+    max_tokens: int,
+) -> dict[str, Any] | None:
+    try:
+        if provider == "qwen":
+            return llm.messages_json(llm.LOW, system, prompt, max_tokens=max_tokens)
+        if provider == "deepseek":
+            return deepseek.messages_json(
+                system,
+                prompt,
+                model=settings.deepseek_model_low,
+                max_tokens=max_tokens,
+            )
+        if provider == "gemini":
+            return gemini.messages_json(
+                system,
+                prompt,
+                model=settings.gemini_model,
+                max_tokens=max_tokens,
+            )
+    except Exception:
+        return None
+    return None
+
+
 def heuristic(text: str) -> tuple[float, str]:
     reasons: list[str] = []
     score = 0.0
@@ -632,6 +755,244 @@ def reddit_candidate_tuple(row: sqlite3.Row, ticker: str, score: float, reason: 
         f"reddit:{row['source'] or 'scan'}:{row['subreddit_id'] or ''}",
         utc_now(),
     )
+
+
+def latest_xueqiu_pool_version(con: sqlite3.Connection) -> str:
+    if not table_exists(con, "xueqiu_author_pool"):
+        return ""
+    row = con.execute(
+        """SELECT pool_version
+             FROM xueqiu_author_pool
+            WHERE selected=1
+            GROUP BY pool_version
+            ORDER BY MAX(updated_at) DESC, pool_version DESC
+            LIMIT 1"""
+    ).fetchone()
+    return str(row["pool_version"] or "") if row else ""
+
+
+def xueqiu_pool_completion(con: sqlite3.Connection, pool_version: str) -> tuple[int, int]:
+    row = con.execute(
+        """SELECT COUNT(*) AS total,
+                  SUM(CASE WHEN EXISTS (
+                        SELECT 1 FROM xueqiu_author_crawl_job j
+                         WHERE j.pool_version=p.pool_version
+                           AND j.user_id=p.user_id
+                           AND j.status='done'
+                  ) THEN 1 ELSE 0 END) AS done
+             FROM xueqiu_author_pool p
+            WHERE p.pool_version=?
+              AND p.selected=1
+              AND p.author_type='creator'""",
+        (pool_version,),
+    ).fetchone()
+    return int(row["total"] or 0), int(row["done"] or 0)
+
+
+def xueqiu_payload(raw: Any) -> dict[str, Any]:
+    if isinstance(raw, dict):
+        return raw
+    try:
+        value = json.loads(raw or "{}")
+    except (TypeError, json.JSONDecodeError):
+        return {}
+    return value if isinstance(value, dict) else {}
+
+
+def xueqiu_clean_text(row: sqlite3.Row) -> str:
+    payload = xueqiu_payload(row["raw"])
+    title = str(payload.get("title") or "").strip()
+    body = html.unescape(re.sub(r"<[^>]+>", " ", str(row["text"] or "")))
+    body = re.sub(r"\s+", " ", body).strip()
+    if title and title not in body:
+        return f"{title}\n\n{body}".strip()
+    return body
+
+
+def xueqiu_interactions(row: sqlite3.Row) -> float:
+    return (
+        max(0.0, float(row["like_count"] or 0))
+        + max(0.0, float(row["reply_count"] or 0)) * 2.0
+        + max(0.0, float(row["retweet_count"] or 0)) * 2.0
+        + math.log1p(max(0.0, float(row["view_count"] or 0))) * 0.25
+    )
+
+
+def xueqiu_candidate_tuple(
+    row: sqlite3.Row,
+    pool_version: str,
+    score: float,
+    reason: str,
+    rank: int,
+) -> tuple:
+    post_id = str(row["native_id"] or "")
+    ticker = str(row["ticker"] or "").upper()
+    author_id = str(row["author_id"] or "")
+    created = str(row["created_utc"] or "")
+    return (
+        f"xueqiu:{post_id}:{ticker}",
+        post_id,
+        ticker,
+        "xueqiu",
+        investor_key("xueqiu", author_id),
+        str(row["author"] or author_id),
+        created,
+        created[:10],
+        "xueqiu_post",
+        str(row["lang"] or "zh"),
+        xueqiu_clean_text(row),
+        str(row["url"] or ""),
+        int(row["like_count"] or 0),
+        int(row["retweet_count"] or 0),
+        int(row["reply_count"] or 0),
+        0,
+        int(row["view_count"] or 0),
+        0,
+        xueqiu_interactions(row),
+        score,
+        reason,
+        rank,
+        f"xueqiu:pool={pool_version}:mapping={row['role']}:{float(row['confidence'] or 0):.2f}",
+        utc_now(),
+    )
+
+
+def build_xueqiu_candidates(
+    con: sqlite3.Connection,
+    limit: int,
+    min_score: float,
+    only: set[str] | None,
+    pool_version: str,
+    since_days: int,
+    require_complete_pool: bool = True,
+) -> int:
+    ensure_tables(con)
+    required = {
+        "xueqiu_raw_post",
+        "xueqiu_post_ticker",
+        "xueqiu_author_pool",
+        "xueqiu_author_crawl_job",
+    }
+    if not all(table_exists(con, name) for name in required):
+        print("[sv-v0] xueqiu author-pool tables missing; skip xueqiu candidates.", flush=True)
+        return 0
+    pool_version = pool_version or latest_xueqiu_pool_version(con)
+    if not pool_version:
+        print("[sv-v0] xueqiu selected pool missing; skip xueqiu candidates.", flush=True)
+        return 0
+    total_authors, done_authors = xueqiu_pool_completion(con, pool_version)
+    if total_authors == 0:
+        print(f"[sv-v0] xueqiu pool {pool_version} has no selected creators.", flush=True)
+        return 0
+    if require_complete_pool and done_authors < total_authors:
+        print(
+            f"[sv-v0] xueqiu pool incomplete: {done_authors}/{total_authors} done; "
+            "candidate recall is gated until the one-year pool is complete.",
+            flush=True,
+        )
+        return 0
+
+    valid = price_tickers(con) - NON_CALL_TAGS
+    if only:
+        valid &= only
+    max_created = con.execute(
+        """SELECT MAX(r.created_utc) AS mx
+             FROM xueqiu_raw_post r
+             JOIN xueqiu_author_pool p ON p.user_id=r.author_id
+            WHERE p.pool_version=? AND p.selected=1 AND p.author_type='creator'""",
+        (pool_version,),
+    ).fetchone()
+    max_day = str(max_created["mx"] or utc_now())[:10]
+    cutoff = (
+        dt.datetime.fromisoformat(max_day) - dt.timedelta(days=max(1, since_days))
+    ).strftime("%Y-%m-%d")
+    rows = con.execute(
+        """SELECT r.*, m.ticker, m.role, m.confidence
+             FROM xueqiu_raw_post r
+             JOIN xueqiu_post_ticker m ON m.native_id=r.native_id
+             JOIN xueqiu_author_pool p
+               ON p.user_id=r.author_id AND p.pool_version=?
+             JOIN xueqiu_author_crawl_job j
+               ON j.user_id=r.author_id AND j.pool_version=p.pool_version
+            WHERE p.selected=1
+              AND p.author_type='creator'
+              AND j.status='done'
+              AND r.created_utc>=?
+              AND r.created_utc>=j.since_utc
+              AND (j.until_utc IS NULL OR r.created_utc<=j.until_utc)
+              AND m.confidence>=0.65""",
+        (pool_version, cutoff),
+    ).fetchall()
+
+    heap: list[tuple[float, int, tuple]] = []
+    batch: list[tuple] = []
+    scanned = matched = inserted = 0
+    seq = 0
+    for row in rows:
+        scanned += 1
+        ticker = str(row["ticker"] or "").upper()
+        if ticker not in valid:
+            continue
+        payload = xueqiu_payload(row["raw"])
+        if payload.get("retweeted_status") or payload.get("retweeted_status_id"):
+            continue
+        text = xueqiu_clean_text(row)
+        if len(text) < 40:
+            continue
+        h_score, h_reason = heuristic(text)
+        mapping_confidence = clamp(norm_num(row["confidence"], 0.0), 0.0, 1.0)
+        score = (
+            h_score
+            + mapping_confidence * 8.0
+            + min(14.0, math.log1p(xueqiu_interactions(row)) * 2.0)
+            + (4.0 if len(text) >= 240 else 0.0)
+        )
+        if score < min_score:
+            continue
+        reasons = [x for x in h_reason.split(",") if x]
+        reasons += [f"mapping={row['role']}:{mapping_confidence:.2f}", "selected_pool"]
+        matched += 1
+        priority = score * 10 + math.log1p(xueqiu_interactions(row)) * 2
+        seq += 1
+        item = xueqiu_candidate_tuple(row, pool_version, score, ",".join(reasons), 0)
+        if limit > 0:
+            wrapped = (priority, seq, item)
+            if len(heap) < limit:
+                heapq.heappush(heap, wrapped)
+            elif wrapped > heap[0]:
+                heapq.heapreplace(heap, wrapped)
+        else:
+            batch.append(item)
+            if len(batch) >= 1000:
+                before = con.total_changes
+                insert_candidates(con, batch)
+                con.commit()
+                inserted += con.total_changes - before
+                batch.clear()
+
+    if limit > 0:
+        ordered = [x[2] for x in sorted(heap, key=lambda x: (-x[0], x[1]))]
+        ranked = []
+        for index, row in enumerate(ordered, 1):
+            values = list(row)
+            values[21] = index
+            ranked.append(tuple(values))
+        before = con.total_changes
+        insert_candidates(con, ranked)
+        con.commit()
+        inserted += con.total_changes - before
+    elif batch:
+        before = con.total_changes
+        insert_candidates(con, batch)
+        con.commit()
+        inserted += con.total_changes - before
+    print(
+        f"[sv-v0] xueqiu candidates scanned={scanned} matched={matched} "
+        f"authors={done_authors}/{total_authors} inserted={inserted} "
+        f"since_days={since_days} limit={limit}",
+        flush=True,
+    )
+    return inserted
 
 
 def json_text_list(raw: Any, limit: int = 6) -> list[str]:
@@ -716,6 +1077,8 @@ def youtube_candidate_tuple(row: sqlite3.Row, score: float, reason: str, rank: i
     channel_id = str(row["channel_id"] or "")
     handle = str(row["handle"] or row["channel"] or row["channel_title"] or channel_id)
     text = youtube_candidate_text(row)
+    mapping_method = str(row["mapping_method"] or "legacy")
+    mapping_confidence = clamp(norm_num(row["mapping_confidence"], 1.0), 0.0, 1.0)
     return (
         f"youtube:{video_id}:{ticker}",
         video_id,
@@ -739,7 +1102,8 @@ def youtube_candidate_tuple(row: sqlite3.Row, score: float, reason: str, rank: i
         score,
         reason,
         rank,
-        f"youtube:subs>={row['subscriber_count'] or 0}:transcript={'yes' if row['content_en'] or row['content_zh'] else 'no'}",
+        f"youtube:subs>={row['subscriber_count'] or 0}:mapping={mapping_method}:{mapping_confidence:.2f}:"
+        f"transcript={'yes' if row['content_en'] or row['content_zh'] else 'no'}",
         utc_now(),
     )
 
@@ -958,20 +1322,37 @@ def build_youtube_candidates(
     since_days: int,
 ) -> int:
     ensure_tables(con)
-    required = {"yt_video", "yt_channel"}
-    missing_required = [name for name in sorted(required) if not table_exists(con, name)]
-    if missing_required:
+    min_subscribers = max(min_subscribers, YOUTUBE_MIN_DISPLAY_SUBSCRIBERS)
+    legacy_available = table_exists(con, "yt_video") and table_exists(con, "yt_channel")
+    upload_tables = {
+        "yt_channel_upload",
+        "yt_channel_upload_ticker",
+        "yt_author_pool",
+        "yt_author_pool_run",
+    }
+    upload_available = all(table_exists(con, name) for name in upload_tables)
+    if not legacy_available and not upload_available:
         print(
-            f"[sv-v0] youtube candidate source table(s) missing: {', '.join(missing_required)}; "
-            "skip youtube candidates.",
+            "[sv-v0] youtube candidate sources missing: expected yt_video+yt_channel "
+            "or the versioned author-upload tables; skip youtube candidates.",
             flush=True,
         )
         return 0
     valid = price_tickers(con) - NON_CALL_TAGS
     if only:
         valid &= only
-    max_created = con.execute("SELECT MAX(published_utc) AS mx FROM yt_video WHERE market='us'").fetchone()
-    max_day = str(max_created["mx"] or utc_now())[:10]
+    max_dates: list[str] = []
+    if legacy_available:
+        row = con.execute(
+            "SELECT MAX(published_utc) AS mx FROM yt_video WHERE market='us'"
+        ).fetchone()
+        if row and row["mx"]:
+            max_dates.append(str(row["mx"])[:10])
+    if upload_available:
+        row = con.execute("SELECT MAX(published_utc) AS mx FROM yt_channel_upload").fetchone()
+        if row and row["mx"]:
+            max_dates.append(str(row["mx"])[:10])
+    max_day = max(max_dates) if max_dates else utc_now()[:10]
     cutoff = (
         dt.datetime.fromisoformat(max_day)
         - dt.timedelta(days=max(1, since_days))
@@ -980,19 +1361,20 @@ def build_youtube_candidates(
         name: table_columns(con, name)
         for name in ("yt_analysis", "yt_digest", "yt_fulltext", "yt_judgment")
     }
-    joins: list[str] = []
-
     def can_join(table: str) -> bool:
         return "video_id" in optional_tables.get(table, set())
 
-    if can_join("yt_analysis"):
-        joins.append("LEFT JOIN yt_analysis a ON a.video_id = v.id")
-    if can_join("yt_digest"):
-        joins.append("LEFT JOIN yt_digest d ON d.video_id = v.id")
-    if can_join("yt_fulltext"):
-        joins.append("LEFT JOIN yt_fulltext f ON f.video_id = v.id")
-    if can_join("yt_judgment"):
-        joins.append("LEFT JOIN yt_judgment j ON j.video_id = v.id")
+    def optional_joins(video_id_expression: str) -> str:
+        joins: list[str] = []
+        if can_join("yt_analysis"):
+            joins.append(f"LEFT JOIN yt_analysis a ON a.video_id = {video_id_expression}")
+        if can_join("yt_digest"):
+            joins.append(f"LEFT JOIN yt_digest d ON d.video_id = {video_id_expression}")
+        if can_join("yt_fulltext"):
+            joins.append(f"LEFT JOIN yt_fulltext f ON f.video_id = {video_id_expression}")
+        if can_join("yt_judgment"):
+            joins.append(f"LEFT JOIN yt_judgment j ON j.video_id = {video_id_expression}")
+        return " ".join(joins)
 
     def opt_col(table: str, alias: str, column: str, out: str | None = None, default: str = "''") -> str:
         output = out or column
@@ -1000,40 +1382,113 @@ def build_youtube_candidates(
             return f"{alias}.{column} AS {output}"
         return f"{default} AS {output}"
 
-    rows = con.execute(
-        f"""
-        SELECT v.id, v.ticker, v.market, v.channel, v.channel_id, v.title, v.description,
-               v.lang, '' AS default_language, '' AS inferred_language,
-               v.duration_s, v.view_count, v.like_count, v.comment_count, v.url, v.published_utc,
-               c.title AS channel_title, c.handle, c.subscriber_count, c.video_count AS channel_video_count,
-               c.view_count AS channel_view_count,
-               {opt_col("yt_analysis", "a", "stance")},
-               {opt_col("yt_analysis", "a", "sentiment", default="0")},
-               {opt_col("yt_analysis", "a", "conviction", default="0")},
-               {opt_col("yt_analysis", "a", "summary_zh")},
-               {opt_col("yt_analysis", "a", "summary_en")},
-               {opt_col("yt_analysis", "a", "key_points_zh")},
-               {opt_col("yt_analysis", "a", "key_points_en")},
-               {opt_col("yt_analysis", "a", "price_target")},
-               {opt_col("yt_digest", "d", "summary_zh", "digest_summary_zh")},
-               {opt_col("yt_digest", "d", "summary_en", "digest_summary_en")},
-               {opt_col("yt_digest", "d", "chapters")},
-               {opt_col("yt_fulltext", "f", "content_zh")},
-               {opt_col("yt_fulltext", "f", "content_en")},
-               {opt_col("yt_judgment", "j", "horizon_zh")},
-               {opt_col("yt_judgment", "j", "horizon_en")},
-               {opt_col("yt_judgment", "j", "target")},
-               {opt_col("yt_judgment", "j", "key_levels_zh")},
-               {opt_col("yt_judgment", "j", "key_levels_en")}
-          FROM yt_video v
-          JOIN yt_channel c ON c.channel_id = v.channel_id
-          {" ".join(joins)}
-         WHERE v.market = 'us'
-           AND v.published_utc >= ?
-           AND COALESCE(c.subscriber_count, 0) >= ?
-        """,
-        (cutoff, max(0, min_subscribers)),
-    ).fetchall()
+    optional_projection = ",\n               ".join(
+        [
+            opt_col("yt_analysis", "a", "stance"),
+            opt_col("yt_analysis", "a", "sentiment", default="0"),
+            opt_col("yt_analysis", "a", "conviction", default="0"),
+            opt_col("yt_analysis", "a", "summary_zh"),
+            opt_col("yt_analysis", "a", "summary_en"),
+            opt_col("yt_analysis", "a", "key_points_zh"),
+            opt_col("yt_analysis", "a", "key_points_en"),
+            opt_col("yt_analysis", "a", "price_target"),
+            opt_col("yt_digest", "d", "summary_zh", "digest_summary_zh"),
+            opt_col("yt_digest", "d", "summary_en", "digest_summary_en"),
+            opt_col("yt_digest", "d", "chapters"),
+            opt_col("yt_fulltext", "f", "content_zh"),
+            opt_col("yt_fulltext", "f", "content_en"),
+            opt_col("yt_judgment", "j", "horizon_zh"),
+            opt_col("yt_judgment", "j", "horizon_en"),
+            opt_col("yt_judgment", "j", "target"),
+            opt_col("yt_judgment", "j", "key_levels_zh"),
+            opt_col("yt_judgment", "j", "key_levels_en"),
+        ]
+    )
+    pool_version = ""
+    if upload_available:
+        latest_pool = con.execute(
+            "SELECT pool_version FROM yt_author_pool_run ORDER BY created_at DESC LIMIT 1"
+        ).fetchone()
+        pool_version = str(latest_pool["pool_version"] or "") if latest_pool else ""
+    rows: list[sqlite3.Row] = []
+    if legacy_available:
+        legacy_pool_join = (
+            "JOIN yt_author_pool lp ON lp.channel_id=v.channel_id "
+            "AND lp.pool_version=? AND lp.selected=1"
+            if pool_version
+            else ""
+        )
+        legacy_params: list[Any] = []
+        if pool_version:
+            legacy_params.append(pool_version)
+        legacy_params.extend(
+            [cutoff, max(0, min_subscribers), YOUTUBE_MIN_DISPLAY_DURATION_SECONDS]
+        )
+        rows.extend(
+            con.execute(
+                f"""
+                SELECT v.id, v.ticker, v.market, v.channel, v.channel_id, v.title, v.description,
+                       v.lang, '' AS default_language, '' AS inferred_language,
+                       v.duration_s, v.view_count, v.like_count, v.comment_count, v.url, v.published_utc,
+                       c.title AS channel_title, c.handle, c.subscriber_count,
+                       c.video_count AS channel_video_count, c.view_count AS channel_view_count,
+                       {optional_projection},
+                       1.0 AS mapping_confidence, 'legacy' AS mapping_method
+                  FROM yt_video v
+                  JOIN yt_channel c ON c.channel_id = v.channel_id
+                  {legacy_pool_join}
+                  {optional_joins("v.id")}
+                 WHERE v.market = 'us'
+                   AND v.published_utc >= ?
+                   AND COALESCE(c.subscriber_count, 0) >= ?
+                   AND COALESCE(v.duration_s, 0) > ?
+                """,
+                legacy_params,
+            ).fetchall()
+        )
+    if upload_available:
+        legacy_exclusion = (
+            "AND NOT EXISTS (SELECT 1 FROM yt_video lv "
+            "WHERE lv.id=u.video_id AND lv.ticker=m.ticker)"
+            if legacy_available
+            else ""
+        )
+        rows.extend(
+            con.execute(
+                f"""
+                SELECT u.video_id AS id, m.ticker, 'us' AS market,
+                       COALESCE(NULLIF(p.handle, ''), NULLIF(u.channel_title, ''), p.title) AS channel,
+                       u.channel_id, u.title, u.description,
+                       u.default_language AS lang, u.default_language, '' AS inferred_language,
+                       u.duration_s, u.view_count, u.like_count, u.comment_count,
+                       u.url, u.published_utc,
+                       COALESCE(NULLIF(p.title, ''), u.channel_title) AS channel_title,
+                       p.handle, p.subscriber_count,
+                       p.platform_video_count AS channel_video_count, 0 AS channel_view_count,
+                       {optional_projection},
+                       m.confidence AS mapping_confidence, m.method AS mapping_method
+                  FROM yt_channel_upload u
+                  JOIN yt_channel_upload_ticker m ON m.video_id=u.video_id
+                  JOIN yt_author_pool p
+                    ON p.channel_id=u.channel_id AND p.pool_version=? AND p.selected=1
+                  {optional_joins("u.video_id")}
+                 WHERE u.published_utc >= ?
+                   AND m.mapping_version=?
+                   AND m.confidence>=?
+                   AND COALESCE(p.subscriber_count, 0) >= ?
+                   AND COALESCE(u.duration_s, 0) > ?
+                   {legacy_exclusion}
+                """,
+                (
+                    pool_version,
+                    cutoff,
+                    YOUTUBE_UPLOAD_MAPPING_VERSION,
+                    YOUTUBE_UPLOAD_MIN_MAPPING_CONFIDENCE,
+                    max(0, min_subscribers),
+                    YOUTUBE_MIN_DISPLAY_DURATION_SECONDS,
+                ),
+            ).fetchall()
+        )
     heap: list[tuple[float, int, tuple]] = []
     batch: list[tuple] = []
     scanned = matched = inserted = 0
@@ -1052,6 +1507,9 @@ def build_youtube_candidates(
         has_target = bool(str(row["target"] or row["price_target"] or "").strip())
         has_horizon = bool(str(row["horizon_en"] or row["horizon_zh"] or "").strip())
         has_fulltext = bool(str(row["content_en"] or row["content_zh"] or "").strip())
+        mapping_method = str(row["mapping_method"] or "legacy")
+        mapping_confidence = clamp(norm_num(row["mapping_confidence"], 1.0), 0.0, 1.0)
+        mapping_bonus = mapping_confidence * 8.0 if mapping_method != "legacy" else 0.0
         score = (
             h_score
             + (8.0 if stance in {"bull", "bear"} else 0.0)
@@ -1061,6 +1519,7 @@ def build_youtube_candidates(
             + (5.0 if row["digest_summary_zh"] or row["digest_summary_en"] else 0.0)
             + (3.0 if has_fulltext else 0.0)
             + min(14.0, math.log1p(youtube_interactions(row)) * 1.6)
+            + mapping_bonus
         )
         if score < min_score:
             continue
@@ -1073,6 +1532,8 @@ def build_youtube_candidates(
             reasons.append("horizon")
         if has_fulltext:
             reasons.append("transcript")
+        if mapping_method != "legacy":
+            reasons.append(f"mapping={mapping_method}:{mapping_confidence:.2f}")
         matched += 1
         priority = score * 10 + math.log1p(youtube_interactions(row)) * 2
         seq += 1
@@ -1253,6 +1714,30 @@ def normalize_call(data: Any) -> dict[str, Any]:
     if entry_status not in ENTRY_STATUSES:
         entry_status = "active_entry" if actionable else "not_applicable"
     evidence_span = str(d.get("evidence_span") or "")[:360]
+    statement_mode = str(d.get("statement_mode") or "other").strip().lower()
+    if statement_mode not in {
+        "prediction", "position_action", "risk_management", "education",
+        "news", "retrospective", "other",
+    }:
+        statement_mode = "other"
+    instrument_scope = str(d.get("instrument_scope") or "other").strip().lower()
+    if instrument_scope not in {"stock", "options", "portfolio", "other"}:
+        instrument_scope = "other"
+    option_strategy = str(d.get("option_strategy") or "none").strip().lower()
+    if option_strategy not in {
+        "none", "covered_call", "protective_put", "cash_secured_put",
+        "speculative_call", "speculative_put", "spread", "other",
+    }:
+        option_strategy = "other"
+    underlying_direction = str(d.get("underlying_direction") or "unknown").strip().lower()
+    if underlying_direction not in {"bull", "bear", "neutral", "unknown"}:
+        underlying_direction = "unknown"
+    call_owner = str(d.get("call_owner") or "unknown").strip().lower()
+    if call_owner not in {"channel_host", "named_guest", "quoted_third_party", "unknown"}:
+        call_owner = "unknown"
+    host_endorsement = str(d.get("host_endorsement") or "none").strip().lower()
+    if host_endorsement not in {"explicit", "implicit", "none", "opposes"}:
+        host_endorsement = "none"
     explicit = bool(d.get("horizon_explicit")) and horizon != "unknown"
     horizon_mult = 1.0 if explicit else (0.75 if horizon != "unknown" else 0.55)
     weight = 0.0
@@ -1287,6 +1772,17 @@ def normalize_call(data: Any) -> dict[str, Any]:
         "trigger_condition": str(d.get("trigger_condition") or "")[:240],
         "invalidation_condition": str(d.get("invalidation_condition") or "")[:240],
         "evidence_span": evidence_span,
+        "evidence_segment_start": d.get("evidence_segment_start"),
+        "evidence_segment_end": d.get("evidence_segment_end"),
+        "statement_mode": statement_mode,
+        "instrument_scope": instrument_scope,
+        "option_strategy": option_strategy,
+        "underlying_direction": underlying_direction,
+        "call_owner": call_owner,
+        "host_endorsement": host_endorsement,
+        "transcript_model": str(d.get("transcript_model") or "")[:120],
+        "transcript_created_at": str(d.get("transcript_created_at") or "")[:64],
+        "transcript_version": str(d.get("transcript_version") or "")[:80],
         "scoring_version": SV_SCORING_VERSION,
         "summary_zh": str(d.get("summary_zh") or "")[:240],
         "summary_en": str(d.get("summary_en") or "")[:240],
@@ -1318,9 +1814,11 @@ def write_call(con: sqlite3.Connection, candidate: sqlite3.Row, norm: dict[str, 
             conviction_score,evidence_score,specificity_score,call_weight,call_type,ticker_role,
             ticker_relevance,target_price_owner,investor_style,call_structure,lifecycle_action,
             affected_direction,entry_status,trigger_condition,invalidation_condition,
-            evidence_span,scoring_version,summary_zh,summary_en,
+            evidence_span,evidence_segment_start,evidence_segment_end,statement_mode,
+            instrument_scope,option_strategy,underlying_direction,call_owner,host_endorsement,transcript_model,
+            transcript_created_at,transcript_version,scoring_version,summary_zh,summary_en,
             exclusion_reason,model,tagged_at)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
            ON CONFLICT(candidate_id) DO UPDATE SET
              is_actionable_call=excluded.is_actionable_call,
              direction=excluded.direction,
@@ -1343,6 +1841,17 @@ def write_call(con: sqlite3.Connection, candidate: sqlite3.Row, norm: dict[str, 
              trigger_condition=excluded.trigger_condition,
              invalidation_condition=excluded.invalidation_condition,
              evidence_span=excluded.evidence_span,
+             evidence_segment_start=excluded.evidence_segment_start,
+             evidence_segment_end=excluded.evidence_segment_end,
+             statement_mode=excluded.statement_mode,
+             instrument_scope=excluded.instrument_scope,
+             option_strategy=excluded.option_strategy,
+             underlying_direction=excluded.underlying_direction,
+             call_owner=excluded.call_owner,
+             host_endorsement=excluded.host_endorsement,
+             transcript_model=excluded.transcript_model,
+             transcript_created_at=excluded.transcript_created_at,
+             transcript_version=excluded.transcript_version,
              scoring_version=excluded.scoring_version,
              summary_zh=excluded.summary_zh,
              summary_en=excluded.summary_en,
@@ -1379,6 +1888,17 @@ def write_call(con: sqlite3.Connection, candidate: sqlite3.Row, norm: dict[str, 
             norm["trigger_condition"],
             norm["invalidation_condition"],
             norm["evidence_span"],
+            norm["evidence_segment_start"],
+            norm["evidence_segment_end"],
+            norm["statement_mode"],
+            norm["instrument_scope"],
+            norm["option_strategy"],
+            norm["underlying_direction"],
+            norm["call_owner"],
+            norm["host_endorsement"],
+            norm["transcript_model"],
+            norm["transcript_created_at"],
+            norm["transcript_version"],
             norm["scoring_version"],
             norm["summary_zh"],
             norm["summary_en"],
@@ -1394,15 +1914,69 @@ def ranked_candidate_rows(
     limit: int,
     force: bool,
     sources: set[str] | None = None,
+    transcript_backed: bool = False,
+    tickers: set[str] | None = None,
+    youtube_created_since: str | None = None,
+    reddit_created_since: str | None = None,
 ) -> list[sqlite3.Row]:
     clauses: list[str] = []
     params: list[Any] = []
     if not force:
-        clauses.append("c.candidate_id IS NULL")
+        clauses.append(
+            "(c.candidate_id IS NULL OR (cc.source='youtube' "
+            "AND (COALESCE(c.scoring_version,'')<>? "
+            "OR COALESCE(c.transcript_version,'')<>?)))"
+        )
+        params.extend([SV_SCORING_VERSION, YOUTUBE_TRANSCRIPT_CALL_VERSION])
     if sources:
         placeholders = ",".join("?" for _ in sources)
         clauses.append(f"cc.source IN ({placeholders})")
         params.extend(sorted(sources))
+        if "youtube" in sources:
+            clauses.append(
+                f"(cc.source<>'youtube' OR {youtube_candidate_eligibility_predicate(con, 'cc')})"
+            )
+        if (
+            "youtube" in sources
+            and table_exists(con, "yt_author_pool")
+            and table_exists(con, "yt_author_pool_run")
+        ):
+            clauses.append(
+                "(cc.source <> 'youtube' OR cc.author_id IN ("
+                "SELECT 'youtube:' || lower(p.channel_id) FROM yt_author_pool p "
+                "WHERE p.pool_version=(SELECT pool_version FROM yt_author_pool_run "
+                "ORDER BY created_at DESC LIMIT 1) AND p.selected=1))"
+            )
+        if "youtube" in sources and table_exists(con, "yt_channel_upload_ticker"):
+            clauses.append(
+                "(cc.source <> 'youtube' OR COALESCE(cc.source_file, '') NOT LIKE '%mapping=%' "
+                "OR cc.source_file LIKE '%mapping=legacy:%' OR EXISTS ("
+                "SELECT 1 FROM yt_channel_upload_ticker ym "
+                "WHERE ym.video_id=cc.tweet_id AND ym.ticker=cc.ticker "
+                "AND ym.mapping_version=? AND ym.confidence>=?))"
+            )
+            params.extend(
+                [YOUTUBE_UPLOAD_MAPPING_VERSION, YOUTUBE_UPLOAD_MIN_MAPPING_CONFIDENCE]
+            )
+        if "youtube" in sources and transcript_backed:
+            if table_exists(con, "yt_fulltext"):
+                clauses.append(
+                    "(cc.source<>'youtube' OR EXISTS (SELECT 1 FROM yt_fulltext yf "
+                    "WHERE yf.video_id=cc.tweet_id AND "
+                    "length(COALESCE(yf.content_en,'') || COALESCE(yf.content_zh,''))>=80))"
+                )
+            else:
+                clauses.append("cc.source<>'youtube'")
+    if tickers:
+        placeholders = ",".join("?" for _ in tickers)
+        clauses.append(f"cc.ticker IN ({placeholders})")
+        params.extend(sorted(tickers))
+    if youtube_created_since:
+        clauses.append("(cc.source<>'youtube' OR cc.created_at>=?)")
+        params.append(youtube_created_since)
+    if reddit_created_since:
+        clauses.append("(cc.source<>'reddit' OR cc.created_at>=?)")
+        params.append(reddit_created_since)
     where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
     sql = f"""
         SELECT cc.*
@@ -1423,8 +1997,22 @@ def author_balanced_candidate_rows(
     per_author_min: int,
     per_author_max: int,
     sources: set[str] | None = None,
+    transcript_backed: bool = False,
+    author_filter: set[str] | None = None,
+    tickers: set[str] | None = None,
+    youtube_created_since: str | None = None,
+    reddit_created_since: str | None = None,
 ) -> list[sqlite3.Row]:
-    rows = ranked_candidate_rows(con, 0, force, sources)
+    rows = ranked_candidate_rows(
+        con,
+        0,
+        force,
+        sources,
+        transcript_backed=transcript_backed,
+        tickers=tickers,
+        youtube_created_since=youtube_created_since,
+        reddit_created_since=reddit_created_since,
+    )
     if not rows:
         return []
     if limit <= 0:
@@ -1433,22 +2021,45 @@ def author_balanced_candidate_rows(
     per_author_max = max(per_author_min, per_author_max)
 
     existing = collections.Counter()
+    actionable = collections.Counter()
     if not force:
-        sql = "SELECT investor_id, count(*) AS n FROM sv_call"
-        params: list[Any] = []
+        sql = (
+            "SELECT investor_id, count(*) AS n FROM sv_call "
+            "WHERE (source<>'youtube' OR (scoring_version=? AND transcript_version=?))"
+        )
+        params: list[Any] = [SV_SCORING_VERSION, YOUTUBE_TRANSCRIPT_CALL_VERSION]
         if sources:
             placeholders = ",".join("?" for _ in sources)
-            sql += f" WHERE source IN ({placeholders})"
+            sql += f" AND source IN ({placeholders})"
             params.extend(sorted(sources))
         sql += " GROUP BY investor_id"
         for r in con.execute(sql, params):
             if r["investor_id"]:
                 existing[str(r["investor_id"])] = int(r["n"] or 0)
 
+        action_sql = (
+            "SELECT investor_id, count(*) AS n FROM sv_call "
+            "WHERE is_actionable_call=1 "
+            "AND (source<>'youtube' OR (scoring_version=? AND transcript_version=?))"
+        )
+        action_params: list[Any] = [SV_SCORING_VERSION, YOUTUBE_TRANSCRIPT_CALL_VERSION]
+        if sources:
+            placeholders = ",".join("?" for _ in sources)
+            action_sql += f" AND source IN ({placeholders})"
+            action_params.extend(sorted(sources))
+        action_sql += " GROUP BY investor_id"
+        for r in con.execute(action_sql, action_params):
+            if r["investor_id"]:
+                actionable[str(r["investor_id"])] = int(r["n"] or 0)
+
     by_author: dict[str, list[sqlite3.Row]] = collections.defaultdict(list)
     for row in rows:
         author = str(row["author_id"] or row["author_handle"] or "unknown")
+        if author_filter is not None and author not in author_filter:
+            continue
         by_author[author].append(row)
+    if not by_author:
+        return []
 
     selected: list[sqlite3.Row] = []
     selected_ids: set[str] = set()
@@ -1472,27 +2083,41 @@ def author_balanced_candidate_rows(
     authors = sorted(
         by_author,
         key=lambda a: (
+            actionable[a] >= int(PLATFORM_QUALIFICATION.get("youtube", {}).get("settled_calls", 5))
+            if sources == {"youtube"} else False,
+            -actionable[a] if sources == {"youtube"} else 0,
             min(existing[a], per_author_min),
             -(len(by_author[a])),
             by_author[a][0]["candidate_rank"] or 999999999,
         ),
     )
 
-    # Phase 1: give every available author enough LLM slots to reach the
-    # production minimum before allocating extra depth to already-rich authors.
-    for author in authors:
-        current = existing[author]
-        if current >= per_author_min:
-            continue
-        take(author, min(per_author_min - current, per_author_max - current))
-        if len(selected) >= limit:
+    # Phase 1: round-robin authors toward the production minimum. Filling one
+    # author completely before moving on wastes small paid batches on a narrow
+    # creator set and delays confidence-pool coverage.
+    while len(selected) < limit:
+        moved = False
+        for author in authors:
+            current = existing[author] + selected_counts[author]
+            if current >= per_author_min:
+                continue
+            before = len(selected)
+            take(author, 1)
+            moved = moved or len(selected) > before
+            if len(selected) >= limit:
+                break
+        if not moved:
             break
 
     # Phase 2: round-robin extra slots, capped per author, still preserving each
     # author's internal rank order.
+    allocation_authors = authors
+    if sources == {"youtube"} and author_filter is None:
+        qualification_calls = int(PLATFORM_QUALIFICATION["youtube"]["settled_calls"])
+        allocation_authors = [author for author in authors if actionable[author] < qualification_calls]
     while len(selected) < limit:
         moved = False
-        for author in authors:
+        for author in allocation_authors:
             current = existing[author] + selected_counts[author]
             if current >= per_author_max:
                 continue
@@ -1513,6 +2138,279 @@ def author_balanced_candidate_rows(
     return selected
 
 
+def load_youtube_transcript_documents(
+    con: sqlite3.Connection,
+    rows: list[sqlite3.Row],
+) -> dict[str, TranscriptDocument]:
+    if not table_exists(con, "yt_fulltext"):
+        return {}
+    video_ids = sorted(
+        {
+            str(row["tweet_id"])
+            for row in rows
+            if str(row["source"] or "x") == "youtube" and row["tweet_id"]
+        }
+    )
+    documents: dict[str, TranscriptDocument] = {}
+    for offset in range(0, len(video_ids), 500):
+        batch = video_ids[offset : offset + 500]
+        placeholders = ",".join("?" for _ in batch)
+        for row in con.execute(
+            f"""SELECT video_id,content_zh,content_en,segments,model,created_at
+                  FROM yt_fulltext WHERE video_id IN ({placeholders})""",
+            batch,
+        ):
+            document = transcript_document(row)
+            if document is not None:
+                documents[document.video_id] = document
+    return documents
+
+
+def youtube_transcript_candidate_rows(
+    con: sqlite3.Connection,
+    limit: int,
+    per_author_min: int,
+    per_author_max: int,
+    force: bool,
+    tickers: set[str] | None = None,
+    created_since: str | None = None,
+) -> list[sqlite3.Row]:
+    """Select unique author-balanced videos that still need full transcripts."""
+    rows = ranked_candidate_rows(
+        con,
+        0,
+        True,
+        {"youtube"},
+        tickers=tickers,
+        youtube_created_since=created_since,
+    )
+    if not rows:
+        return []
+    documents = load_youtube_transcript_documents(con, rows) if not force else {}
+    existing_video_ids = set(documents)
+    existing_by_author: collections.Counter[str] = collections.Counter()
+    actionable_by_author: collections.Counter[str] = collections.Counter()
+    if not force:
+        for call_row in con.execute(
+            """SELECT investor_id, count(*) AS n
+                 FROM sv_call
+                WHERE source='youtube'
+                  AND scoring_version=?
+                  AND transcript_version=?
+                  AND is_actionable_call=1
+                GROUP BY investor_id""",
+            (SV_SCORING_VERSION, YOUTUBE_TRANSCRIPT_CALL_VERSION),
+        ):
+            if call_row["investor_id"]:
+                actionable_by_author[str(call_row["investor_id"])] = int(call_row["n"] or 0)
+    by_author: dict[str, list[sqlite3.Row]] = collections.defaultdict(list)
+    seen_by_author: dict[str, set[str]] = collections.defaultdict(set)
+    for row in rows:
+        author = str(row["author_id"] or row["author_handle"] or "unknown")
+        video_id = str(row["tweet_id"] or "")
+        if not video_id or video_id in seen_by_author[author]:
+            continue
+        seen_by_author[author].add(video_id)
+        if video_id in existing_video_ids:
+            existing_by_author[author] += 1
+        else:
+            by_author[author].append(row)
+    if limit <= 0:
+        limit = sum(len(items) for items in by_author.values())
+    per_author_min = max(1, per_author_min)
+    per_author_max = max(per_author_min, per_author_max)
+    authors = sorted(
+        by_author,
+        key=lambda author: (
+            actionable_by_author[author] >= int(PLATFORM_QUALIFICATION["youtube"]["settled_calls"]),
+            -min(
+                actionable_by_author[author],
+                int(PLATFORM_QUALIFICATION["youtube"]["settled_calls"]),
+            ),
+            min(existing_by_author[author], per_author_min),
+            -len(by_author[author]),
+            by_author[author][0]["candidate_rank"] or 999999999,
+        ),
+    )
+    selected: list[sqlite3.Row] = []
+    selected_by_author: collections.Counter[str] = collections.Counter()
+
+    def take(author: str, count: int) -> None:
+        while by_author[author] and count > 0 and len(selected) < limit:
+            selected.append(by_author[author].pop(0))
+            selected_by_author[author] += 1
+            count -= 1
+
+    qualification_calls = int(PLATFORM_QUALIFICATION["youtube"]["settled_calls"])
+
+    # Authors one or two calls below readiness need more than one candidate to
+    # have a reasonable chance of crossing the threshold in this batch. This
+    # only allocates transcript work; it does not alter settlement or scoring.
+    for author in authors:
+        deficit = qualification_calls - actionable_by_author[author]
+        burst = 3 if deficit == 1 else 2 if deficit == 2 else 0
+        if burst <= 0:
+            continue
+        capacity = max(
+            0,
+            per_author_max - existing_by_author[author] - selected_by_author[author],
+        )
+        take(author, min(burst, capacity))
+        if len(selected) >= limit:
+            break
+
+    # Spread each batch across not-yet-ready authors before deepening any one
+    # channel. Ready authors do not consume migration capacity while the
+    # confidence pool is still below its launch target.
+    unready_authors = [
+        author for author in authors
+        if actionable_by_author[author] < qualification_calls
+    ]
+    while len(selected) < limit:
+        moved = False
+        for author in unready_authors:
+            current = existing_by_author[author] + selected_by_author[author]
+            if current >= per_author_max or not by_author[author]:
+                continue
+            before = len(selected)
+            take(author, 1)
+            moved = moved or len(selected) > before
+            if len(selected) >= limit:
+                break
+        if not moved:
+            break
+    while len(selected) < limit:
+        moved = False
+        for author in authors:
+            current = existing_by_author[author] + selected_by_author[author]
+            if current >= per_author_max or not by_author[author]:
+                continue
+            before = len(selected)
+            take(author, 1)
+            moved = moved or len(selected) > before
+            if len(selected) >= limit:
+                break
+        if not moved:
+            break
+    return selected
+
+
+def materialize_youtube_transcript_videos(
+    con: sqlite3.Connection,
+    rows: list[sqlite3.Row],
+) -> set[str]:
+    """Expose author-pool uploads to the existing fulltext generator."""
+    if not rows or not table_exists(con, "yt_video"):
+        return set()
+    best_by_video: dict[str, sqlite3.Row] = {}
+    for row in rows:
+        best_by_video.setdefault(str(row["tweet_id"]), row)
+    video_ids = sorted(best_by_video)
+    materialized: set[str] = set()
+    for offset in range(0, len(video_ids), 500):
+        batch = video_ids[offset : offset + 500]
+        placeholders = ",".join("?" for _ in batch)
+        materialized.update(
+            str(row["id"])
+            for row in con.execute(
+                f"SELECT id FROM yt_video WHERE id IN ({placeholders})",
+                batch,
+            )
+        )
+        uploads = con.execute(
+            f"""SELECT * FROM yt_channel_upload
+                  WHERE video_id IN ({placeholders})""",
+            batch,
+        ).fetchall()
+        for upload in uploads:
+            video_id = str(upload["video_id"])
+            candidate = best_by_video[video_id]
+            con.execute(
+                """INSERT INTO yt_video
+                   (id,ticker,market,channel,channel_id,title,description,lang,duration_s,
+                    view_count,like_count,comment_count,thumbnail,url,published_utc,analyzed,fetched_at)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                   ON CONFLICT(id) DO UPDATE SET
+                     ticker=excluded.ticker,market=excluded.market,channel=excluded.channel,
+                     channel_id=excluded.channel_id,title=excluded.title,description=excluded.description,
+                     lang=excluded.lang,duration_s=excluded.duration_s,view_count=excluded.view_count,
+                     like_count=excluded.like_count,comment_count=excluded.comment_count,
+                     thumbnail=excluded.thumbnail,url=excluded.url,published_utc=excluded.published_utc,
+                     fetched_at=excluded.fetched_at""",
+                (
+                    video_id,
+                    str(candidate["ticker"] or "").upper(),
+                    "us",
+                    str(upload["channel_title"] or candidate["author_handle"] or ""),
+                    str(upload["channel_id"] or ""),
+                    str(upload["title"] or ""),
+                    str(upload["description"] or ""),
+                    str(upload["default_language"] or candidate["lang"] or ""),
+                    int(upload["duration_s"] or 0),
+                    int(upload["view_count"] or 0),
+                    int(upload["like_count"] or 0),
+                    int(upload["comment_count"] or 0),
+                    str(upload["thumbnail"] or ""),
+                    str(upload["url"] or ""),
+                    str(upload["published_utc"] or ""),
+                    0,
+                    utc_now(),
+                ),
+            )
+            materialized.add(video_id)
+    con.commit()
+    return materialized
+
+
+def generate_youtube_candidate_transcripts(
+    con: sqlite3.Connection,
+    limit: int,
+    workers: int,
+    per_author_min: int,
+    per_author_max: int,
+    force: bool,
+    tickers: set[str] | None = None,
+    created_since: str | None = None,
+) -> int:
+    rows = youtube_transcript_candidate_rows(
+        con,
+        limit,
+        per_author_min,
+        per_author_max,
+        force,
+        tickers,
+        created_since,
+    )
+    video_ids = materialize_youtube_transcript_videos(con, rows)
+    print(
+        f"[sv-v0] youtube transcript queue selected={len(rows)} "
+        f"materialized={len(video_ids)}",
+        flush=True,
+    )
+    if not video_ids:
+        return 0
+    from ..opinions.youtube import generate_fulltext
+
+    return generate_fulltext(
+        only=None,
+        per_ticker=0,
+        workers=workers,
+        force=force,
+        low_res=True,
+        frames=False,
+        limit=limit if limit > 0 else None,
+        # Gemini rejects inputs at the documented 10,800-second boundary;
+        # keep a strict margin instead of retrying a deterministic 400.
+        max_native_min=179,
+        fail_after=3,
+        max_rate_waits=12,
+        video_ids=video_ids,
+        db_path=DB,
+        max_total_minutes=settings.yt_daily_video_minutes,
+        prefer_transcript=True,
+    )
+
+
 def extract_calls(
     con: sqlite3.Connection,
     limit: int,
@@ -1522,36 +2420,115 @@ def extract_calls(
     per_author_min: int,
     per_author_max: int,
     sources: set[str] | None = None,
+    author_filter: set[str] | None = None,
+    tickers: set[str] | None = None,
+    youtube_created_since: str | None = None,
+    reddit_created_since: str | None = None,
 ) -> int:
     ensure_tables(con)
-    if not llm.available(llm.LOW):
-        print("[sv-v0] LOW model key unavailable; extraction skipped.", flush=True)
+    providers = [
+        provider
+        for provider in sv_extract_provider_order()
+        if sv_extract_provider_available(provider)
+    ]
+    if not providers:
+        print("[sv-v0] no extraction provider key available; extraction skipped.", flush=True)
         return 0
     if extract_mode == "author-balanced":
-        rows = author_balanced_candidate_rows(con, limit, force, per_author_min, per_author_max, sources)
+        rows = author_balanced_candidate_rows(
+            con,
+            limit,
+            force,
+            per_author_min,
+            per_author_max,
+            sources,
+            transcript_backed=True,
+            author_filter=author_filter,
+            tickers=tickers,
+            youtube_created_since=youtube_created_since,
+            reddit_created_since=reddit_created_since,
+        )
     else:
-        rows = ranked_candidate_rows(con, limit, force, sources)
+        rows = ranked_candidate_rows(
+            con,
+            limit,
+            force,
+            sources,
+            transcript_backed=True,
+            tickers=tickers,
+            youtube_created_since=youtube_created_since,
+            reddit_created_since=reddit_created_since,
+        )
     if not rows:
         print("[sv-v0] no candidates need extraction.", flush=True)
         return 0
-    model = llm.model_label(llm.LOW)
-    print(f"[sv-v0] extracting {len(rows)} candidates with {model} workers={workers}", flush=True)
+    youtube_documents = load_youtube_transcript_documents(con, rows)
+    transcript_missing = sum(
+        1
+        for row in rows
+        if str(row["source"] or "x") == "youtube"
+        and str(row["tweet_id"] or "") not in youtube_documents
+    )
+    if transcript_missing:
+        print(
+            f"[sv-v0] youtube transcript gate skipped={transcript_missing}; "
+            "run the YouTube SV transcript stage first.",
+            flush=True,
+        )
+    rows = [
+        row
+        for row in rows
+        if str(row["source"] or "x") != "youtube"
+        or str(row["tweet_id"] or "") in youtube_documents
+    ]
+    if not rows:
+        print("[sv-v0] no transcript-backed candidates need extraction.", flush=True)
+        return 0
+    provider_labels = [sv_extract_model_label(provider) for provider in providers]
+    print(
+        f"[sv-v0] extracting {len(rows)} candidates with "
+        f"{' -> '.join(provider_labels)} workers={workers}",
+        flush=True,
+    )
     done = actionable = fail = 0
-    buffer: list[tuple[sqlite3.Row, dict[str, Any]]] = []
+    buffer: list[tuple[sqlite3.Row, dict[str, Any], str]] = []
 
-    def work(row: sqlite3.Row) -> tuple[sqlite3.Row, dict[str, Any]]:
-        data = None
-        for _ in range(2):
-            data = llm.messages_json(llm.LOW, SV_SYSTEM, user_prompt(row), max_tokens=520)
-            if isinstance(data, dict):
-                break
-        return row, normalize_call(data)
+    def request_with_fallback(
+        system: str,
+        prompt: str,
+        max_tokens: int,
+    ) -> tuple[dict[str, Any] | None, str]:
+        for provider in providers:
+            for _ in range(2):
+                data = sv_extract_messages_json(provider, system, prompt, max_tokens)
+                if isinstance(data, dict):
+                    return data, sv_extract_model_label(provider)
+        return None, provider_labels[-1]
+
+    def work(row: sqlite3.Row) -> tuple[sqlite3.Row, dict[str, Any], str]:
+        if str(row["source"] or "x") == "youtube":
+            document = youtube_documents[str(row["tweet_id"])]
+            used_models: list[str] = []
+
+            def request_json(system: str, prompt: str) -> Any:
+                data, model_label = request_with_fallback(system, prompt, 760)
+                if isinstance(data, dict):
+                    used_models.append(model_label)
+                return data
+
+            norm = extract_from_transcript(
+                row, document, request_json=request_json, normalize=normalize_call
+            )
+            model = "+".join(dict.fromkeys(used_models)) or provider_labels[-1]
+            return row, norm, model
+        data, model = request_with_fallback(SV_SYSTEM, user_prompt(row), 520)
+        return row, normalize_call(data), model
 
     def flush() -> None:
         nonlocal done, actionable
         if not buffer:
             return
-        for cand, norm in buffer:
+        for cand, norm, model in buffer:
             write_call(con, cand, norm, model)
             actionable += int(norm["is_actionable_call"])
         con.commit()
@@ -1703,6 +2680,31 @@ def ticker_mentions(text: str, ticker: str) -> int:
     return len(re.findall(rf"(?<![A-Z0-9])\$?{t}(?![A-Z0-9])", text or "", re.I))
 
 
+def is_comparison_reference(text: str, ticker: str) -> bool:
+    """Detect titles where the ticker is a benchmark, not the recommended asset."""
+    match = re.search(r"^Video title:\s*(.+)$", text or "", re.I | re.M)
+    lines = str(text or "").splitlines()
+    title = match.group(1).strip() if match else (lines[0] if lines else "")
+    terms = {ticker.lower()}
+    terms.update(
+        alias.lower()
+        for alias, symbol in ALIASES.items()
+        if symbol.upper() == ticker.upper() and len(alias) >= 4
+    )
+    if not terms:
+        return False
+    term_pattern = "(?:" + "|".join(
+        re.escape(term) for term in sorted(terms, key=len, reverse=True)
+    ) + ")"
+    patterns = (
+        rf"\b(?:the\s+)?(?:next|new|another)\s+{term_pattern}\b",
+        rf"\bmiss(?:ed|ing)\b[^\n:!?]{{0,40}}\b{term_pattern}\b",
+        rf"\b(?:bigger|better|stronger|cheaper|faster)\s+than\s+{term_pattern}\b",
+        rf"\b{term_pattern}\s+(?:killer|alternative|competitor|rival)\b",
+    )
+    return any(re.search(pattern, title, re.I) for pattern in patterns)
+
+
 def infer_call_meta(call: sqlite3.Row) -> dict[str, Any]:
     ticker = str(call["ticker"]).upper()
     text = str(call["text"] or "")
@@ -1713,6 +2715,7 @@ def infer_call_meta(call: sqlite3.Row) -> dict[str, Any]:
     tag_count = len(unique_tags)
     current_mentions = ticker_mentions(text, ticker)
     summary_mentions = ticker_mentions(summary, ticker)
+    comparison_reference = is_comparison_reference(text, ticker)
 
     call_type = str(call["call_type"] or "").lower()
     if call_type not in CALL_TYPES:
@@ -1744,6 +2747,9 @@ def infer_call_meta(call: sqlite3.Row) -> dict[str, Any]:
             role = "basket_member"
         else:
             role = "context"
+    if comparison_reference:
+        call_type = "context_mention"
+        role = "comparison"
 
     relevance = float(call["ticker_relevance"] or 0)
     if relevance <= 0:
@@ -1765,6 +2771,8 @@ def infer_call_meta(call: sqlite3.Row) -> dict[str, Any]:
         elif call_type == "retrospective":
             relevance *= 0.45
         relevance = clamp(relevance, 0.05, 1.0)
+    if comparison_reference:
+        relevance = min(relevance, 0.15)
 
     type_mult = {
         "single_ticker_call": 1.00,
@@ -1827,6 +2835,100 @@ def post_weight_cap(n_calls: int) -> float:
     if n_calls <= 1:
         return 1.8
     return min(2.8, 1.15 + 0.35 * math.sqrt(n_calls))
+
+
+def resolve_same_entry_day_calls(
+    enriched: list[dict[str, Any]],
+    prices: dict[str, list[tuple[str, float]]],
+) -> dict[str, int]:
+    """Net repeated or conflicting calls that share one daily entry price.
+
+    Daily prices cannot distinguish intraday PnL. An explicit final reversal
+    wins; otherwise opposite evidence is netted and an ambiguous day becomes
+    neutral. Same-direction repetition shares a daily evidence cap.
+    """
+    groups: dict[tuple[str, str, str], list[dict[str, Any]]] = collections.defaultdict(list)
+    for item in enriched:
+        call = item["call"]
+        ticker = str(call["ticker"] or "").upper()
+        investor = str(call["investor_id"] or "")
+        series = prices.get(ticker) or []
+        idx = first_idx_on_or_after(series, str(call["created_at"] or "")[:10]) if series else None
+        if not investor or not ticker or idx is None:
+            continue
+        groups[(investor, ticker, series[idx][0])].append(item)
+
+    stats = {"groups": 0, "capped": 0, "reversed": 0, "netted": 0, "neutralized": 0}
+    for items in groups.values():
+        if len(items) < 2:
+            continue
+        stats["groups"] += 1
+        items.sort(
+            key=lambda item: (
+                str(item["call"]["created_at"] or ""),
+                str(item["call"]["candidate_id"] or ""),
+            )
+        )
+        directions = {
+            str(item["call"]["direction"])
+            for item in items
+            if float(item.get("effective_weight") or 0) > 0
+        }
+        if len(directions) <= 1:
+            total = sum(float(item.get("effective_weight") or 0) for item in items)
+            if total > DAILY_CALL_EVIDENCE_CAP:
+                scale = DAILY_CALL_EVIDENCE_CAP / total
+                for item in items:
+                    item["effective_weight"] = float(item.get("effective_weight") or 0) * scale
+                    item["same_day_resolution"] = "same_direction_cap"
+                stats["capped"] += 1
+            continue
+
+        final = items[-1]
+        final_action = str(final["meta"].get("lifecycle_action") or "")
+        final_direction = str(final["call"]["direction"] or "")
+        if final_action == "reverse_call" and final_direction in {"bull", "bear"}:
+            for item in items[:-1]:
+                item["effective_weight"] = 0.0
+                item["same_day_resolution"] = "void_same_day_reversed"
+            final["effective_weight"] = min(
+                DAILY_CALL_EVIDENCE_CAP,
+                float(final.get("effective_weight") or 0),
+            )
+            final["same_day_resolution"] = "final_explicit_reversal"
+            stats["reversed"] += 1
+            continue
+
+        totals = {
+            direction: sum(
+                float(item.get("effective_weight") or 0)
+                for item in items
+                if str(item["call"]["direction"]) == direction
+            )
+            for direction in ("bull", "bear")
+        }
+        total = totals["bull"] + totals["bear"]
+        net = abs(totals["bull"] - totals["bear"])
+        if total <= 0 or net / total < SAME_DAY_DIRECTION_THRESHOLD:
+            for item in items:
+                item["effective_weight"] = 0.0
+                item["same_day_resolution"] = "neutral_same_day_conflict"
+            stats["neutralized"] += 1
+            continue
+
+        dominant = "bull" if totals["bull"] > totals["bear"] else "bear"
+        dominant_total = totals[dominant]
+        retained = min(DAILY_CALL_EVIDENCE_CAP, net)
+        scale = retained / dominant_total if dominant_total > 0 else 0.0
+        for item in items:
+            if str(item["call"]["direction"]) == dominant:
+                item["effective_weight"] = float(item.get("effective_weight") or 0) * scale
+                item["same_day_resolution"] = "net_same_day_dominant"
+            else:
+                item["effective_weight"] = 0.0
+                item["same_day_resolution"] = "void_same_day_minority"
+        stats["netted"] += 1
+    return stats
 
 
 def lifecycle_events(con: sqlite3.Connection) -> list[dict[str, Any]]:
@@ -1977,10 +3079,49 @@ def settle_calls(con: sqlite3.Connection) -> int:
     if not spy:
         raise SystemExit("[sv-v0] missing SPY prices; run make sv-price-history first.")
     con.execute("DELETE FROM sv_call_settlement")
+    youtube_evidence_filter = ""
+    settlement_params: list[Any] = []
+    if table_exists(con, "yt_author_pool") and table_exists(con, "yt_author_pool_run"):
+        youtube_evidence_filter = (
+            "AND (c.source <> 'youtube' OR c.investor_id IN ("
+            "SELECT 'youtube:' || lower(p.channel_id) FROM yt_author_pool p "
+            "WHERE p.pool_version=(SELECT pool_version FROM yt_author_pool_run "
+            "ORDER BY created_at DESC LIMIT 1) AND p.selected=1))"
+        )
+    youtube_evidence_filter += (
+        f" AND (c.source<>'youtube' OR {youtube_candidate_eligibility_predicate(con, 'cc')})"
+    )
+    if table_exists(con, "yt_channel_upload_ticker"):
+        youtube_evidence_filter += (
+            " AND (c.source <> 'youtube' OR COALESCE(cc.source_file, '') NOT LIKE '%mapping=%' "
+            "OR cc.source_file LIKE '%mapping=legacy:%' OR EXISTS ("
+            "SELECT 1 FROM yt_channel_upload_ticker ym "
+            "WHERE ym.video_id=c.tweet_id AND ym.ticker=c.ticker "
+            "AND ym.mapping_version=? AND ym.confidence>=?))"
+        )
+        settlement_params.extend(
+            [YOUTUBE_UPLOAD_MAPPING_VERSION, YOUTUBE_UPLOAD_MIN_MAPPING_CONFIDENCE]
+        )
+    if table_exists(con, "yt_fulltext"):
+        youtube_evidence_filter += (
+            " AND (c.source <> 'youtube' OR (c.scoring_version=? "
+            "AND c.transcript_version=? AND COALESCE(c.transcript_model,'')<>'' "
+            "AND c.call_owner='channel_host' "
+            "AND c.statement_mode IN ('prediction','position_action') "
+            "AND EXISTS (SELECT 1 FROM yt_fulltext yf WHERE yf.video_id=c.tweet_id "
+            "AND length(COALESCE(yf.content_en,'') || COALESCE(yf.content_zh,''))>=80)))"
+        )
+        settlement_params.extend(
+            [SV_SCORING_VERSION, YOUTUBE_TRANSCRIPT_CALL_VERSION]
+        )
+    else:
+        youtube_evidence_filter += " AND c.source <> 'youtube'"
     rows = con.execute(
-        """SELECT c.*, cc.text AS text, cc.tweet_id AS source_tweet_id
+        f"""SELECT c.*, cc.text AS text, cc.tweet_id AS source_tweet_id
              FROM sv_call c JOIN sv_call_candidate cc ON cc.candidate_id=c.candidate_id
-            WHERE c.is_actionable_call=1 AND c.direction IN ('bull','bear') AND c.call_weight > 0"""
+            WHERE c.is_actionable_call=1 AND c.direction IN ('bull','bear') AND c.call_weight > 0
+              {youtube_evidence_filter}""",
+        settlement_params,
     ).fetchall()
     enriched: list[dict[str, Any]] = []
     by_post: dict[str, list[dict[str, Any]]] = collections.defaultdict(list)
@@ -2002,6 +3143,7 @@ def settle_calls(con: sqlite3.Connection) -> int:
         for item in items:
             item["effective_weight"] = float(item["raw_weight"]) * scale
 
+    same_day = resolve_same_entry_day_calls(enriched, prices)
     superseded = annotate_supersessions(enriched, lifecycle_events(con))
     out: list[tuple] = []
     for item in enriched:
@@ -2114,7 +3256,14 @@ def settle_calls(con: sqlite3.Connection) -> int:
         out,
     )
     con.commit()
-    print(f"[sv-v0] settled rows={len(out)} raw_calls={len(rows)} effective_calls={len(enriched)} superseded_calls={superseded}", flush=True)
+    print(
+        f"[sv-v0] settled rows={len(out)} raw_calls={len(rows)} "
+        f"effective_calls={len(enriched)} superseded_calls={superseded} "
+        f"same_day_groups={same_day['groups']} capped={same_day['capped']} "
+        f"reversed={same_day['reversed']} netted={same_day['netted']} "
+        f"neutralized={same_day['neutralized']}",
+        flush=True,
+    )
     return len(out)
 
 
@@ -2260,14 +3409,85 @@ def row_analysis_type(row: sqlite3.Row) -> str:
     return infer_analysis_type(text, stored)
 
 
-def score_investors(con: sqlite3.Connection) -> int:
+def score_investors(
+    con: sqlite3.Connection,
+    allow_partial_xueqiu: bool = False,
+    xueqiu_pool_version: str = "",
+) -> int:
     ensure_tables(con)
+    youtube_pool_filter = ""
+    score_params: list[Any] = []
+    if table_exists(con, "yt_author_pool") and table_exists(con, "yt_author_pool_run"):
+        youtube_pool_filter = (
+            "AND (c.source <> 'youtube' OR c.investor_id IN ("
+            "SELECT 'youtube:' || lower(p.channel_id) FROM yt_author_pool p "
+            "WHERE p.pool_version=(SELECT pool_version FROM yt_author_pool_run "
+            "ORDER BY created_at DESC LIMIT 1) AND p.selected=1))"
+        )
+    youtube_pool_filter += (
+        f" AND (c.source<>'youtube' OR {youtube_candidate_eligibility_predicate(con, 'cc')})"
+    )
+    if table_exists(con, "yt_channel_upload_ticker"):
+        youtube_pool_filter += (
+            " AND (c.source <> 'youtube' OR COALESCE(cc.source_file, '') NOT LIKE '%mapping=%' "
+            "OR cc.source_file LIKE '%mapping=legacy:%' OR EXISTS ("
+            "SELECT 1 FROM yt_channel_upload_ticker ym "
+            "WHERE ym.video_id=c.tweet_id AND ym.ticker=c.ticker "
+            "AND ym.mapping_version=? AND ym.confidence>=?))"
+        )
+        score_params.extend(
+            [YOUTUBE_UPLOAD_MAPPING_VERSION, YOUTUBE_UPLOAD_MIN_MAPPING_CONFIDENCE]
+        )
+    if table_exists(con, "yt_fulltext"):
+        youtube_pool_filter += (
+            " AND (c.source <> 'youtube' OR (c.scoring_version=? "
+            "AND c.transcript_version=? AND COALESCE(c.transcript_model,'')<>'' "
+            "AND c.call_owner='channel_host' "
+            "AND c.statement_mode IN ('prediction','position_action') "
+            "AND EXISTS (SELECT 1 FROM yt_fulltext yf WHERE yf.video_id=c.tweet_id "
+            "AND length(COALESCE(yf.content_en,'') || COALESCE(yf.content_zh,''))>=80)))"
+        )
+        score_params.extend([SV_SCORING_VERSION, YOUTUBE_TRANSCRIPT_CALL_VERSION])
+    else:
+        youtube_pool_filter += " AND c.source <> 'youtube'"
+    if table_exists(con, "xueqiu_author_pool") and table_exists(
+        con, "xueqiu_author_crawl_job"
+    ):
+        pool_version = xueqiu_pool_version or latest_xueqiu_pool_version(con)
+        if pool_version:
+            total_authors, done_authors = xueqiu_pool_completion(con, pool_version)
+            if total_authors == 0 or (
+                done_authors < total_authors and not allow_partial_xueqiu
+            ):
+                youtube_pool_filter += " AND c.source <> 'xueqiu'"
+                print(
+                    f"[sv-v0] xueqiu scoring gated: {done_authors}/{total_authors} "
+                    "selected author jobs done.",
+                    flush=True,
+                )
+            else:
+                if done_authors < total_authors:
+                    print(
+                        f"[sv-v0] xueqiu partial scoring enabled: "
+                        f"{done_authors}/{total_authors} selected author jobs done.",
+                        flush=True,
+                    )
+                youtube_pool_filter += (
+                    " AND (c.source <> 'xueqiu' OR c.investor_id IN ("
+                    "SELECT 'xueqiu:' || lower(p.user_id) FROM xueqiu_author_pool p "
+                    "WHERE p.pool_version=? AND p.selected=1 AND p.author_type='creator' "
+                    "AND EXISTS (SELECT 1 FROM xueqiu_author_crawl_job j "
+                    "WHERE j.pool_version=p.pool_version AND j.user_id=p.user_id "
+                    "AND j.status='done')))"
+                )
+                score_params.append(pool_version)
     joined = con.execute(
-        """SELECT s.*, c.source, c.author_handle, c.language, c.direction, c.investor_style, c.call_structure, cc.text AS text
+        f"""SELECT s.*, c.source, c.author_handle, c.language, c.direction, c.investor_style, c.call_structure, cc.text AS text
              FROM sv_call_settlement s
              JOIN sv_call c ON c.candidate_id=s.candidate_id
              JOIN sv_call_candidate cc ON cc.candidate_id=s.candidate_id
-            WHERE s.status='settled'"""
+            WHERE s.status='settled' {youtube_pool_filter}""",
+        score_params,
     ).fetchall()
     by_inv: dict[str, list[sqlite3.Row]] = collections.defaultdict(list)
     for r in joined:
@@ -2315,6 +3535,8 @@ def score_investors(con: sqlite3.Connection) -> int:
         if primary_source == "reddit":
             display_name = f"u/{handle}"
         elif primary_source == "youtube":
+            display_name = handle or inv
+        elif primary_source == "xueqiu":
             display_name = handle or inv
         else:
             display_name = f"@{handle}"
@@ -2428,6 +3650,102 @@ def score_investors(con: sqlite3.Connection) -> int:
     return len(rows_to_write)
 
 
+def platform_score_value(row: Any, source: str) -> float:
+    try:
+        scores = json.loads(row["platform_scores_json"] or "{}")
+    except (TypeError, json.JSONDecodeError, KeyError, IndexError):
+        scores = {}
+    value = scores.get(source) if isinstance(scores, dict) else None
+    return norm_num(value, norm_num(row["sv"], 100.0))
+
+
+def rank_platform_band_rows(rows: list[Any], source: str) -> dict[str, Any]:
+    """Return deterministic qualified-platform percentile rows before serialization."""
+    source_rows = [row for row in rows if str(row["source"] or "") == source]
+    qualified = [
+        row
+        for row in source_rows
+        if qualifies_for_platform(
+            source,
+            {"n_eff": row["n_eff"], "settled_calls": row["settled_calls"]},
+        )
+    ]
+    ranked_rows = qualified if len(qualified) >= 8 else source_rows
+    top_rows = sorted(
+        ranked_rows,
+        key=lambda row: (
+            -platform_score_value(row, source),
+            -norm_num(row["n_eff"]),
+            -int(row["settled_calls"] or 0),
+            str(row["investor_id"] or ""),
+        ),
+    )
+    bottom_rows = sorted(
+        ranked_rows,
+        key=lambda row: (
+            platform_score_value(row, source),
+            -norm_num(row["n_eff"]),
+            -int(row["settled_calls"] or 0),
+            str(row["investor_id"] or ""),
+        ),
+    )
+    observed_rows = sorted(
+        source_rows,
+        key=lambda row: (
+            -platform_score_value(row, source),
+            -norm_num(row["n_eff"]),
+            -int(row["settled_calls"] or 0),
+            str(row["investor_id"] or ""),
+        ),
+    )
+    decile_count = max(1, math.ceil(len(ranked_rows) * 0.10)) if ranked_rows else 0
+    quartile_count = max(1, math.ceil(len(ranked_rows) * 0.25)) if ranked_rows else 0
+    return {
+        "source": source,
+        "totalCount": len(source_rows),
+        "qualifiedCount": len(qualified),
+        "rankedCount": len(ranked_rows),
+        "population": "qualified" if ranked_rows is qualified else "all_scored_fallback",
+        "rankedRows": top_rows,
+        "observedRows": observed_rows,
+        "top10Rows": top_rows[:decile_count],
+        "bottom10Rows": bottom_rows[:decile_count],
+        "top25Rows": top_rows[:quartile_count],
+        "bottom25Rows": bottom_rows[:quartile_count],
+    }
+
+
+def investor_profile_assets(
+    source: str,
+    investor_id: str,
+    handle: str,
+) -> tuple[str | None, str | None]:
+    """Return platform-native avatar and profile URLs for an exported investor."""
+    if source == "reddit":
+        avatar = "https://www.redditstatic.com/avatars/avatar_default_02_46A508.png"
+        url = f"https://www.reddit.com/user/{handle}/" if handle else None
+        return avatar, url
+    if source == "youtube":
+        channel_id = investor_id.split(":", 1)[1] if investor_id.startswith("youtube:") else investor_id
+        yt_handle = handle if handle.startswith("@") else ""
+        youtube_key = yt_handle.lstrip("@") or channel_id
+        avatar = f"https://unavatar.io/youtube/{youtube_key}" if youtube_key else None
+        url = (
+            f"https://www.youtube.com/{yt_handle}"
+            if yt_handle
+            else (f"https://www.youtube.com/channel/{channel_id}" if channel_id else None)
+        )
+        return avatar, url
+    if source == "xueqiu":
+        user_id = investor_id.split(":", 1)[1] if investor_id.startswith("xueqiu:") else investor_id
+        return None, f"https://xueqiu.com/u/{user_id}" if user_id else None
+    if source == "x":
+        avatar = f"https://unavatar.io/twitter/{handle}" if handle else None
+        url = f"https://x.com/{handle}" if handle else None
+        return avatar, url
+    return None, None
+
+
 def export_json(con: sqlite3.Connection) -> None:
     snapshot_created_at = utc_now()
     run_id = f"{SV_SCORING_VERSION}:{snapshot_created_at}"
@@ -2498,7 +3816,8 @@ def export_json(con: sqlite3.Connection) -> None:
         ],
     )
     con.commit()
-    rows = all_rows[:200]
+    decile_count = max(1, math.ceil(len(all_rows) * 0.1)) if all_rows else 0
+    rows = all_rows[: max(200, decile_count)]
     scores = sorted(float(r["sv"] or 0) for r in all_rows)
 
     def quantile(values: list[float], q: float) -> float:
@@ -2527,18 +3846,37 @@ def export_json(con: sqlite3.Connection) -> None:
             for i, count in enumerate(counts)
         ]
 
-    distribution = {
-        "count": len(scores),
-        "min": round(scores[0], 1) if scores else 0,
-        "q25": round(quantile(scores, 0.25), 1),
-        "median": round(quantile(scores, 0.5), 1),
-        "q75": round(quantile(scores, 0.75), 1),
-        "max": round(scores[-1], 1) if scores else 0,
-        "top10Threshold": round(float(all_rows[9]["sv"]), 1) if len(all_rows) >= 10 else 0,
-        "bottom10Threshold": round(float(all_rows[-10]["sv"]), 1) if len(all_rows) >= 10 else 0,
-        "bins": score_bins(scores),
-    }
-    def serialize_investor(r: sqlite3.Row) -> dict[str, Any]:
+    def distribution_for(ranked_rows: list[Any], source: str | None = None) -> dict[str, Any]:
+        values = sorted(
+            platform_score_value(row, source) if source else norm_num(row["sv"])
+            for row in ranked_rows
+        )
+        ranked_desc = sorted(
+            ranked_rows,
+            key=lambda row: (
+                -(platform_score_value(row, source) if source else norm_num(row["sv"])),
+                -norm_num(row["n_eff"]),
+                -int(row["settled_calls"] or 0),
+                str(row["investor_id"] or ""),
+            ),
+        )
+        count = max(1, math.ceil(len(ranked_desc) * 0.1)) if ranked_desc else 0
+        score_of = lambda row: platform_score_value(row, source) if source else norm_num(row["sv"])
+        return {
+            "count": len(values),
+            "min": round(values[0], 1) if values else 0,
+            "q25": round(quantile(values, 0.25), 1),
+            "median": round(quantile(values, 0.5), 1),
+            "q75": round(quantile(values, 0.75), 1),
+            "max": round(values[-1], 1) if values else 0,
+            "top10Threshold": round(score_of(ranked_desc[count - 1]), 1) if count else 0,
+            "bottom10Threshold": round(score_of(ranked_desc[-count]), 1) if count else 0,
+            "bins": score_bins(values),
+        }
+
+    distribution = distribution_for(all_rows)
+
+    def serialize_investor(r: sqlite3.Row, platform_rank: int | None = None) -> dict[str, Any]:
         handle = str(r["handle"] or "")
         source = str(r["source"] or "x")
         investor_id = str(r["investor_id"] or "")
@@ -2550,21 +3888,11 @@ def export_json(con: sqlite3.Connection) -> None:
         rank_delta = int(prev["rank_no"] or 0) - int(r["rank_no"] or 0) if prev else None
         n_eff_delta = round(float(r["n_eff"] or 0) - float(prev["n_eff"] or 0), 1) if prev else None
         settled_delta = int(r["settled_calls"] or 0) - int(prev["settled_calls"] or 0) if prev else None
-        if source == "reddit":
-            avatar = f"https://www.redditstatic.com/avatars/avatar_default_02_46A508.png"
-            url = f"https://www.reddit.com/user/{handle}/" if handle else None
-        elif source == "youtube":
-            channel_id = investor_id.split(":", 1)[1] if investor_id.startswith("youtube:") else investor_id
-            yt_handle = handle if handle.startswith("@") else ""
-            youtube_key = yt_handle.lstrip("@") or channel_id
-            avatar = f"https://unavatar.io/youtube/{youtube_key}" if youtube_key else None
-            url = f"https://www.youtube.com/{yt_handle}" if yt_handle else (f"https://www.youtube.com/channel/{channel_id}" if channel_id else None)
-        else:
-            avatar = f"https://unavatar.io/twitter/{handle}" if handle else None
-            url = f"https://x.com/{handle}" if handle else None
+        avatar, url = investor_profile_assets(source, investor_id, handle)
         return {
             "id": public_id,
             "rank": int(r["rank_no"] or 0),
+            "platformRank": platform_rank,
             "svDelta": sv_delta,
             "rankDelta": rank_delta,
             "nEffDelta": n_eff_delta,
@@ -2595,11 +3923,52 @@ def export_json(con: sqlite3.Connection) -> None:
         }
 
     investors = [serialize_investor(r) for r in rows]
-    bottom_investors = [serialize_investor(r) for r in all_rows[-20:]]
+    bottom_investors = [serialize_investor(r) for r in all_rows[-decile_count:]]
+    platform_bands: dict[str, dict[str, Any]] = {}
+    for source in ("x", "youtube", "reddit", "xueqiu", "toss"):
+        band = rank_platform_band_rows(all_rows, source)
+        ranked_rows = band.pop("rankedRows")
+        if not ranked_rows:
+            continue
+        platform_ranks = {
+            str(row["investor_id"]): index
+            for index, row in enumerate(ranked_rows, 1)
+        }
+        observed_rows = band.pop("observedRows")
+        observation_ranks = {
+            str(row["investor_id"]): index
+            for index, row in enumerate(observed_rows, 1)
+        }
+
+        def serialize_platform_rows(platform_rows: list[sqlite3.Row]) -> list[dict[str, Any]]:
+            serialized: list[dict[str, Any]] = []
+            for row in platform_rows:
+                investor_id = str(row["investor_id"])
+                item = serialize_investor(row, platform_ranks.get(investor_id))
+                item["observationRank"] = observation_ranks.get(investor_id)
+                serialized.append(item)
+            return serialized
+
+        top25_rows = band.pop("top25Rows")
+        bottom25_rows = band.pop("bottom25Rows")
+        top10_rows = band.pop("top10Rows")
+        bottom10_rows = band.pop("bottom10Rows")
+        platform_bands[source] = {
+            **band,
+            "scoreKind": "SV_Platform",
+            "distribution": distribution_for(ranked_rows, source),
+            "top25Threshold": round(platform_score_value(top25_rows[-1], source), 1) if top25_rows else 0,
+            "bottom25Threshold": round(platform_score_value(bottom25_rows[-1], source), 1) if bottom25_rows else 0,
+            "ranked": serialize_platform_rows(ranked_rows),
+            "observed": serialize_platform_rows(observed_rows),
+            "top10": serialize_platform_rows(top10_rows),
+            "bottom10": serialize_platform_rows(bottom10_rows),
+            "top25": serialize_platform_rows(top25_rows),
+            "bottom25": serialize_platform_rows(bottom25_rows),
+        }
     by_source: dict[str, list[dict[str, Any]]] = collections.defaultdict(list)
-    for r in all_rows[:200]:
-        item = serialize_investor(r)
-        by_source[str(item["source"])].append(item)
+    for source, band in platform_bands.items():
+        by_source[source] = list(band["top25"])
     current = [
         {"key": "semis", **NARRATIVE_LABELS["semis"], "weight": 34},
         {"key": "ai_infra", **NARRATIVE_LABELS["ai_infra"], "weight": 24},
@@ -2607,7 +3976,7 @@ def export_json(con: sqlite3.Connection) -> None:
         {"key": "crypto", **NARRATIVE_LABELS["crypto"], "weight": 10},
     ]
     payload = {
-        "version": 6,
+        "version": 7,
         "scoringVersion": SV_SCORING_VERSION,
         "scoreSemantics": {
             "sv": "SV_Global. It ranks platform-relative deviation after confidence adjustment.",
@@ -2617,8 +3986,9 @@ def export_json(con: sqlite3.Connection) -> None:
         },
         "updatedAt": utc_now()[:10],
         "totalInvestors": len(all_rows),
-        "exportedInvestors": len(investors),
+        "exportedInvestors": len(investors) + len(bottom_investors),
         "distribution": distribution,
+        "platformBands": platform_bands,
         "investors": investors,
         "bottomInvestors": bottom_investors,
         "x": by_source.get("x", []),
@@ -2639,7 +4009,7 @@ def run(args: argparse.Namespace) -> None:
     only = {x.strip().upper() for x in args.only.split(",") if x.strip()} if args.only else None
     sources = source_set(getattr(args, "source", "x"))
     tweet_dirs = [Path(p).expanduser() for p in args.tweet_dir] if args.tweet_dir else TWEET_DIRS
-    stages = ["candidates", "extract", "settle", "score", "export"] if args.stage == "all" else [args.stage]
+    stages = ["candidates", "transcripts", "extract", "settle", "score", "export"] if args.stage == "all" else [args.stage]
     if "candidates" in stages:
         if "x" in sources:
             build_candidates(con, tweet_dirs, args.candidate_limit, args.min_score, only)
@@ -2662,6 +4032,16 @@ def run(args: argparse.Namespace) -> None:
                 args.youtube_min_subs,
                 args.youtube_since_days,
             )
+        if "xueqiu" in sources:
+            build_xueqiu_candidates(
+                con,
+                args.candidate_limit,
+                args.min_score,
+                only,
+                args.xueqiu_pool_version,
+                args.xueqiu_since_days,
+                not args.xueqiu_allow_partial,
+            )
         pending_adapters = sorted((sources - SUPPORTED_SOURCES) & SV_PLATFORMS)
         if pending_adapters:
             print(
@@ -2669,6 +4049,34 @@ def run(args: argparse.Namespace) -> None:
                 "existing candidates for these sources can still be extracted/scored.",
                 flush=True,
             )
+    youtube_created_since = None
+    if "youtube" in sources and args.youtube_since_days > 0:
+        latest_youtube_candidate = con.execute(
+            "SELECT MAX(created_at) AS mx FROM sv_call_candidate WHERE source='youtube'"
+        ).fetchone()
+        if latest_youtube_candidate and latest_youtube_candidate["mx"]:
+            latest_day = dt.datetime.fromisoformat(
+                str(latest_youtube_candidate["mx"])[:10]
+            )
+            youtube_created_since = (
+                latest_day - dt.timedelta(days=max(1, args.youtube_since_days))
+            ).strftime("%Y-%m-%d")
+    reddit_created_since = None
+    if "reddit" in sources and args.reddit_since_days > 0:
+        reddit_created_since = (
+            dt.datetime.utcnow() - dt.timedelta(days=max(1, args.reddit_since_days))
+        ).strftime("%Y-%m-%d")
+    if "transcripts" in stages and "youtube" in sources:
+        generate_youtube_candidate_transcripts(
+            con,
+            args.extract_limit,
+            args.workers,
+            args.per_author_min,
+            args.per_author_max,
+            args.force,
+            only,
+            youtube_created_since,
+        )
     if "extract" in stages:
         extract_calls(
             con,
@@ -2679,11 +4087,18 @@ def run(args: argparse.Namespace) -> None:
             args.per_author_min,
             args.per_author_max,
             sources,
+            tickers=only,
+            youtube_created_since=youtube_created_since,
+            reddit_created_since=reddit_created_since,
         )
     if "settle" in stages:
         settle_calls(con)
     if "score" in stages:
-        score_investors(con)
+        score_investors(
+            con,
+            allow_partial_xueqiu=args.xueqiu_allow_partial,
+            xueqiu_pool_version=args.xueqiu_pool_version,
+        )
     if "export" in stages:
         export_json(con)
     con.close()
@@ -2691,7 +4106,7 @@ def run(args: argparse.Namespace) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Smart Voice v0 hybrid scorer")
-    ap.add_argument("--stage", choices=["candidates", "extract", "settle", "score", "export", "all"], default="all")
+    ap.add_argument("--stage", choices=["candidates", "transcripts", "extract", "settle", "score", "export", "all"], default="all")
     ap.add_argument("--source", default="x", help="Comma-separated source subset: x,youtube,reddit,xueqiu,toss,all. Default keeps legacy X-only behavior.")
     ap.add_argument("--candidate-limit", type=int, default=50_000, help="0 means insert all recalled candidates.")
     ap.add_argument("--extract-limit", type=int, default=1_000, help="0 means all pending candidates.")
@@ -2705,8 +4120,11 @@ def main() -> None:
     ap.add_argument("--reddit-author-limit", type=int, default=1_000, help="Top Reddit author pool size for candidate recall; 0 means all authors.")
     ap.add_argument("--reddit-since-days", type=int, default=365, help="Reddit candidate lookback window.")
     ap.add_argument("--reddit-min-author-posts", type=int, default=8, help="Minimum ticker-mentioned Reddit posts for Reddit author-pool eligibility.")
-    ap.add_argument("--youtube-min-subs", type=int, default=1_000, help="Minimum public YouTube subscribers for creator pool eligibility.")
+    ap.add_argument("--youtube-min-subs", type=int, default=2_000, help="Minimum public YouTube subscribers for SV eligibility (shared product threshold).")
     ap.add_argument("--youtube-since-days", type=int, default=365, help="YouTube candidate lookback window.")
+    ap.add_argument("--xueqiu-pool-version", default="", help="Versioned selected Xueqiu author pool; empty uses the latest pool.")
+    ap.add_argument("--xueqiu-since-days", type=int, default=365, help="Xueqiu candidate lookback window.")
+    ap.add_argument("--xueqiu-allow-partial", action="store_true", help="Allow candidate recall before every selected author job is done; disabled by default.")
     ap.add_argument("--force", action="store_true", help="Re-extract candidates already in sv_call.")
     run(ap.parse_args())
 

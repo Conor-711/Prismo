@@ -1,66 +1,108 @@
 "use client";
 
+import { useState } from "react";
 import { useLocale } from "@/components/i18n/LocaleProvider";
-import { LocaleLink } from "@/components/i18n/LocaleLink";
 import type { SvBoard } from "@/features/smart-voice/svMock";
-import {
-  AlertsPanel,
-  DistributionPanel,
-  RankingPanel,
-  StatCell,
-  TypePanel,
-  TypicalPanel,
-} from "./SmartVoiceWorkspacePanels";
+import { fmtCompact } from "@/shared/formatting/format";
+import { ViewportWorkspace } from "@/shared/layout/ViewportWorkspace";
+import type { SmartVoiceLiveCall, SmartVoiceMarketData, SmartVoiceOverviewStats } from "@/server/queries/smartVoiceQueries";
+import { SmartVoiceLeaderboardView } from "./SmartVoiceLeaderboardView";
+import { SmartVoiceLiveView } from "./SmartVoiceLiveView";
+import { SmartVoiceMarketView } from "./SmartVoiceMarketView";
 
-export function SmartVoiceWorkspace({ board }: { board: SvBoard }) {
+type WorkspaceView = "market" | "leaderboard" | "live";
+
+function latestDay(value: string, fallback: string) {
+  return value ? value.slice(0, 10) : fallback;
+}
+
+export function SmartVoiceWorkspace({
+  board,
+  marketData,
+  liveCalls,
+  stats,
+  profileIds,
+}: {
+  board: SvBoard;
+  marketData: SmartVoiceMarketData;
+  liveCalls: SmartVoiceLiveCall[];
+  stats: SmartVoiceOverviewStats;
+  profileIds: string[];
+}) {
   const { lang } = useLocale();
   const zh = lang === "zh";
-  const top = board.investors[0];
-  const total = board.totalInvestors ?? board.investors.length;
-  const exported = board.exportedInvestors ?? board.investors.length;
+  const [view, setView] = useState<WorkspaceView>("market");
+  const tickerBoards = marketData.boards;
+  const tickerCount = new Set([
+    ...tickerBoards.all["30D"].bullish.map((row) => row.ticker),
+    ...tickerBoards.all["30D"].bearish.map((row) => row.ticker),
+    ...tickerBoards.all["30D"].contrast.map((row) => row.ticker),
+    ...tickerBoards.all["30D"].authorShift.map((row) => row.ticker),
+  ]).size;
+  const tabs: { key: WorkspaceView; zh: string; en: string; count: string }[] = [
+    { key: "market", zh: "标的发现", en: "Top tickers", count: String(tickerCount) },
+    { key: "leaderboard", zh: "投资者榜", en: "Leaderboard", count: fmtCompact(stats.scoredInvestors || board.totalInvestors || 0) },
+    { key: "live", zh: "实时观点", en: "Live calls", count: fmtCompact(liveCalls.length) },
+  ];
 
   return (
-    <div className="flex h-[calc(100vh-2rem)] min-h-[760px] flex-col overflow-hidden">
-      <header className="mb-3 flex shrink-0 items-end justify-between gap-4 border-b border-line pb-3">
+    <ViewportWorkspace className="flex min-h-0 flex-col overflow-hidden" bottomOffset={16}>
+      <header className="flex shrink-0 items-end justify-between gap-5 border-b border-line pb-2.5">
         <div className="min-w-0">
-          <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-reddit">Prismo · Smart Voice</div>
-          <h1 className="mt-1 font-display text-[26px] font-extrabold leading-none text-cream">
-            {zh ? "Smart Voice 工作台" : "Smart Voice Workbench"}
-          </h1>
-          <p className="mt-2 max-w-3xl text-[13px] text-neutral-500">
-            {zh
-              ? "追踪高质量投资者的能力分布、风格边界与当前异常信号。历史变动快照接入后，这里会直接显示 SV delta 与排名 delta。"
-              : "Track high-quality investor distribution, style boundaries and current alert states. Historical snapshots will add true SV and rank deltas."}
+          <div className="flex items-center gap-2">
+            <h1 className="font-display text-[22px] font-extrabold leading-none text-cream">Smart Voice</h1>
+            <span
+              title={zh ? "根据作者公开观点的历史结算表现、胜率稳定性、覆盖范围与有效样本识别值得参考的声音。SV 不代表作者真实持仓。" : "Identifies valuable public voices from settled call performance, consistency, coverage and effective samples. SV does not represent actual holdings."}
+              className="grid h-4 w-4 cursor-help place-items-center rounded-full text-[10px] font-bold text-neutral-500 ring-1 ring-inset ring-neutral-600"
+            >i</span>
+          </div>
+          <p className="mt-1.5 truncate text-[11.5px] text-neutral-500">
+            {zh ? "从已验证作者中发现集中关注的标的、稳定表现者与最新有效观点。" : "Discover concentrated ticker interest, consistent investors and the latest actionable public calls."}
           </p>
         </div>
-        <div className="grid shrink-0 grid-cols-4 gap-2">
-          <StatCell label={zh ? "全量" : "Total"} value={`${total}`} tone="text-reddit" />
-          <StatCell label={zh ? "导出" : "Exported"} value={`${exported}`} />
-          <StatCell label={zh ? "版本" : "Version"} value={board.scoringVersion ?? "SV"} />
-          <StatCell label={zh ? "第一" : "Leader"} value={top ? `${top.sv}` : "—"} tone="text-bull" />
+        <div className="flex shrink-0 items-end divide-x divide-line text-right">
+          <div className="px-3 first:pl-0">
+            <div className="text-[9px] uppercase tracking-[0.1em] text-neutral-600">{zh ? "已评分作者" : "Scored voices"}</div>
+            <div className="mt-1 font-mono text-[14px] font-bold leading-none text-cream">{fmtCompact(stats.scoredInvestors || board.totalInvestors || 0)}</div>
+          </div>
+          <div className="px-3">
+            <div className="text-[9px] uppercase tracking-[0.1em] text-neutral-600">{zh ? "高置信作者" : "High confidence"}</div>
+            <div className="mt-1 font-mono text-[14px] font-bold leading-none text-reddit">{fmtCompact(stats.highConfidenceInvestors)}</div>
+          </div>
+          <div className="px-3">
+            <div className="text-[9px] uppercase tracking-[0.1em] text-neutral-600">{zh ? "有效观点" : "Actionable calls"}</div>
+            <div className="mt-1 font-mono text-[14px] font-bold leading-none text-cream">{fmtCompact(stats.actionableCalls)}</div>
+          </div>
+          <div className="px-3 pr-0">
+            <div className="text-[9px] uppercase tracking-[0.1em] text-neutral-600">{zh ? "更新" : "Updated"}</div>
+            <div className="mt-1 font-mono text-[14px] font-bold leading-none text-neutral-300">{latestDay(stats.latestCallAt, board.updatedAt)}</div>
+          </div>
         </div>
       </header>
 
-      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[420px_minmax(0,1fr)]">
-        <div className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-3">
-          <AlertsPanel board={board} zh={zh} />
-          <RankingPanel board={board} zh={zh} />
+      <nav className="flex h-11 shrink-0 items-end gap-1 border-b border-line" aria-label={zh ? "Smart Voice 视图" : "Smart Voice views"}>
+        {tabs.map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            onClick={() => setView(tab.key)}
+            className={`relative flex h-10 items-center gap-2 px-4 text-[12px] font-semibold outline-none transition focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-reddit/50 ${view === tab.key ? "text-cream" : "text-neutral-500 hover:text-cream"}`}
+          >
+            <span>{zh ? tab.zh : tab.en}</span>
+            <span className={`font-mono text-[9.5px] ${view === tab.key ? "text-reddit" : "text-neutral-700"}`}>{tab.count}</span>
+            {view === tab.key ? <span className="absolute inset-x-3 bottom-0 h-0.5 bg-reddit" /> : null}
+          </button>
+        ))}
+        <div className="ml-auto pb-2.5 text-[10px] text-neutral-600">
+          {zh ? `覆盖 ${stats.platformCount || 4} 个来源 · ${board.scoringVersion ?? "SV"}` : `${stats.platformCount || 4} sources · ${board.scoringVersion ?? "SV"}`}
         </div>
-        <div className="grid min-h-0 grid-rows-[minmax(0,1.2fr)_minmax(0,.8fr)] gap-3">
-          <DistributionPanel board={board} zh={zh} />
-          <div className="grid min-h-0 gap-3 lg:grid-cols-[380px_minmax(0,1fr)]">
-            <TypePanel board={board} zh={zh} />
-            <TypicalPanel board={board} zh={zh} />
-          </div>
-        </div>
-      </div>
+      </nav>
 
-      <div className="mt-2 shrink-0 text-[11px] text-neutral-700">
-        {zh ? "快照已接入；首次快照暂无 delta，下一次新版算法导出后会自动显示 SV 与排名变化。" : "Snapshots are connected; the first snapshot has no delta, and the next algorithm export will show SV and rank changes automatically."}
-        <LocaleLink href="/investors" className="ml-2 text-reddit hover:text-cream">
-          {zh ? "查看作者榜" : "Open authors"}
-        </LocaleLink>
-      </div>
-    </div>
+      <main className="mt-3 min-h-0 flex-1 overflow-hidden rounded-lg bg-card/55 ring-1 ring-inset ring-line">
+        {view === "market" ? <SmartVoiceMarketView marketData={marketData} zh={zh} /> : null}
+        {view === "leaderboard" ? <SmartVoiceLeaderboardView board={board} profileIds={profileIds} zh={zh} /> : null}
+        {view === "live" ? <SmartVoiceLiveView calls={liveCalls} profileIds={profileIds} zh={zh} /> : null}
+      </main>
+    </ViewportWorkspace>
   );
 }

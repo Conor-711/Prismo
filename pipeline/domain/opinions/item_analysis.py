@@ -1,17 +1,19 @@
 """逐帖 AI 打标：情绪 / 多空 / 质量 / 主题 / TL;DR / 多空论点 / 相关 ticker。
 
 两种模式：
-  - 真实：Claude Haiku（JSON 输出 + prompt caching；可选 Batch）。
+  - 真实：Claude / Qwen / Gemini 按配置回退，并记录实际成功模型。
   - --mock：确定性关键词启发式，无 API key 也能跑通全流程（用于离线 demo / 验证）。
 """
 from __future__ import annotations
 
 import datetime as dt
+import os
 import re
 
 import yaml
 from sqlalchemy import select, update
 
+from ...common import gemini, llm
 from ...common.config import PKG_DATA_DIR, settings
 from ...common.db import session_scope
 from ...common.models import ItemAnalysis, Mention, Post
@@ -221,9 +223,27 @@ def _norm_ticker_entries(raw, fallback: list[dict]) -> list[dict]:
 
 def analyze_qwen(post: Post, tickers: list[dict]) -> dict:
     # 高档任务：逐帖投资打标 → 千问思考模式（更强推理），经统一档位路由层调度。
-    from ...common.llm import HIGH, messages_json
+    data = llm.messages_json(
+        llm.HIGH,
+        SYSTEM_QWEN,
+        build_user(post, tickers),
+        max_tokens=2600,
+        enable_thinking=True,
+    ) or {}
+    return _normalize_real_analysis(data, tickers, "qwen:" + settings.qwen_model)
 
-    data = messages_json(HIGH, SYSTEM_QWEN, build_user(post, tickers), max_tokens=2600, enable_thinking=True) or {}
+
+def analyze_gemini(post: Post, tickers: list[dict]) -> dict:
+    data = gemini.messages_json(
+        SYSTEM_QWEN,
+        build_user(post, tickers),
+        model=settings.gemini_model,
+        max_tokens=2600,
+    ) or {}
+    return _normalize_real_analysis(data, tickers, f"gemini:{settings.gemini_model}")
+
+
+def _normalize_real_analysis(data: dict, tickers: list[dict], model: str) -> dict:
 
     def _arr(k: str) -> list:
         v = data.get(k)
@@ -243,8 +263,41 @@ def analyze_qwen(post: Post, tickers: list[dict]) -> dict:
         "bull_points_zh": _arr("bull_points_zh")[:3],
         "bear_points_zh": _arr("bear_points_zh")[:3],
         "tickers": _norm_ticker_entries(data.get("tickers"), tickers),
-        "model": "qwen:" + settings.qwen_model,
+        "model": model,
     }
+
+
+def _provider_order(prefer_qwen: bool) -> list[str]:
+    default = "qwen,gemini,claude" if prefer_qwen else "claude,qwen,gemini"
+    raw = os.environ.get("ITEM_ANALYSIS_PROVIDERS", default)
+    out: list[str] = []
+    for item in raw.split(","):
+        provider = item.strip().lower()
+        if provider in {"claude", "qwen", "gemini"} and provider not in out:
+            out.append(provider)
+    return out or default.split(",")
+
+
+def _provider_available(provider: str) -> bool:
+    if provider == "claude":
+        return settings.has_anthropic
+    if provider == "qwen":
+        return settings.has_qwen
+    if provider == "gemini":
+        return settings.has_gemini
+    return False
+
+
+def _analyze_with_provider(
+    provider: str,
+    post: Post,
+    tickers: list[dict],
+) -> dict:
+    if provider == "claude":
+        return analyze_claude(post, tickers)
+    if provider == "qwen":
+        return analyze_qwen(post, tickers)
+    return analyze_gemini(post, tickers)
 
 
 # ----------------------------- 主流程 -----------------------------
@@ -306,21 +359,26 @@ def run_analyze(mock: bool = False, qwen: bool = False, limit: int | None = None
             s.expunge(p)  # detach：线程内可读取已加载列
 
     total = len(work)
-    print(f"[analyze] 待分析 {total} 帖（mock={mock} qwen={qwen} workers={workers}）。", flush=True)
+    providers = [p for p in _provider_order(qwen) if _provider_available(p)]
+    if not mock and not providers:
+        print("[analyze] 没有可用的真实分析 provider，跳过。", flush=True)
+        return 0
+    print(
+        f"[analyze] 待分析 {total} 帖（mock={mock} providers={providers} workers={workers}）。",
+        flush=True,
+    )
 
     def one(item):
         p, tickers = item
-        try:
-            if mock:
-                return p, analyze_mock(p, tickers, weights.get(p.subreddit_id, 1.0))
-            if qwen:
-                return p, analyze_qwen(p, tickers)
-            return p, analyze_claude(p, tickers)
-        except Exception as e:  # noqa: BLE001
-            r = analyze_mock(p, tickers, weights.get(p.subreddit_id, 1.0))
-            r["model"] = "qwen-fallback-mock"
-            print(f"[analyze] {p.id} 失败回退 mock：{e}", flush=True)
-            return p, r
+        if mock:
+            return p, analyze_mock(p, tickers, weights.get(p.subreddit_id, 1.0)), ""
+        errors: list[str] = []
+        for provider in providers:
+            try:
+                return p, _analyze_with_provider(provider, p, tickers), ""
+            except Exception as exc:  # noqa: BLE001
+                errors.append(f"{provider}:{str(exc)[:100]}")
+        return p, None, "; ".join(errors)
 
     def _write(batch):
         with session_scope() as s:
@@ -337,26 +395,38 @@ def run_analyze(mock: bool = False, qwen: bool = False, limit: int | None = None
                 if res.get("title_zh"):
                     s.execute(update(Post).where(Post.id == p.id).values(title_zh=res["title_zh"]))
 
-    n = 0
+    n = failed = 0
     buf: list = []
-    if qwen and workers > 1 and total:
+    if workers > 1 and total:
         from concurrent.futures import ThreadPoolExecutor, as_completed
         with ThreadPoolExecutor(max_workers=workers) as ex:
             futs = [ex.submit(one, w) for w in work]
             for i, fut in enumerate(as_completed(futs), 1):
-                buf.append(fut.result()); n += 1
+                post, result, error = fut.result()
+                if result is None:
+                    failed += 1
+                    if failed <= 10:
+                        print(f"[analyze] {post.id} 真实分析失败：{error}", flush=True)
+                else:
+                    buf.append((post, result)); n += 1
                 if len(buf) >= 40:
                     _write(buf); buf = []
                 if i % 25 == 0 or i == total:
-                    print(f"[analyze] {i}/{total}", flush=True)
+                    print(f"[analyze] {i}/{total} done={n} fail={failed}", flush=True)
     else:
         for w in work:
-            buf.append(one(w)); n += 1
+            post, result, error = one(w)
+            if result is None:
+                failed += 1
+                if failed <= 10:
+                    print(f"[analyze] {post.id} 真实分析失败：{error}", flush=True)
+            else:
+                buf.append((post, result)); n += 1
             if len(buf) >= 40:
                 _write(buf); buf = []
     if buf:
         _write(buf)
-    print(f"[analyze] 完成 {n} 帖（mock={mock} qwen={qwen}）。", flush=True)
+    print(f"[analyze] 完成 {n} 帖（mock={mock} fail={failed}）。", flush=True)
     return n
 
 

@@ -24,6 +24,8 @@ from ...common.models import (
     Base,
     GrPost,
     XueqiuAuthorSnapshot,
+    XueqiuAuthorCrawlJob,
+    XueqiuAuthorPoolCandidate,
     XueqiuCrawlCheckpoint,
     XueqiuCrawlJob,
     XueqiuPostTicker,
@@ -39,6 +41,8 @@ XUEQIU_TABLES = [
     XueqiuRawPost.__table__,
     XueqiuPostTicker.__table__,
     XueqiuAuthorSnapshot.__table__,
+    XueqiuAuthorPoolCandidate.__table__,
+    XueqiuAuthorCrawlJob.__table__,
     GrPost.__table__,
 ]
 
@@ -88,15 +92,26 @@ def _bulk_upsert(  # noqa: ANN001
     if engine.dialect.name == "sqlite":
         from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
-        stmt = sqlite_insert(model.__table__).values(rows)
-        excluded = set(conflict_cols) | set(update_exclude or set())
-        updates = {
-            col.name: getattr(stmt.excluded, col.name)
-            for col in model.__table__.columns
-            if col.name not in excluded
-        }
+        # Stay below SQLite builds that retain the historical 999-variable
+        # ceiling. Large one-year expansions can contain tens of thousands of
+        # post/ticker pairs, so one VALUES statement is not safe.
+        columns_per_row = max(1, len(model.__table__.columns))
+        batch_size = max(1, 900 // columns_per_row)
         with engine.begin() as conn:
-            conn.execute(stmt.on_conflict_do_update(index_elements=conflict_cols, set_=updates))
+            for start in range(0, len(rows), batch_size):
+                stmt = sqlite_insert(model.__table__).values(rows[start : start + batch_size])
+                excluded = set(conflict_cols) | set(update_exclude or set())
+                updates = {
+                    col.name: getattr(stmt.excluded, col.name)
+                    for col in model.__table__.columns
+                    if col.name not in excluded
+                }
+                conn.execute(
+                    stmt.on_conflict_do_update(
+                        index_elements=conflict_cols,
+                        set_=updates,
+                    )
+                )
     else:
         with session_scope() as s:
             for row in rows:
@@ -220,7 +235,14 @@ def _raw_record(ticker: str, item: dict[str, Any], now: dt.datetime) -> dict[str
     }
 
 
-def _persist_items(ticker: str, items: list[dict[str, Any]], since: dt.datetime, until: dt.datetime | None) -> dict[str, Any]:
+def _persist_items(
+    ticker: str,
+    items: list[dict[str, Any]],
+    since: dt.datetime,
+    until: dt.datetime | None,
+    *,
+    map_ticker: bool = True,
+) -> dict[str, Any]:
     now = _utcnow()
     raw_rows: list[dict[str, Any]] = []
     map_rows: list[dict[str, Any]] = []
@@ -244,14 +266,15 @@ def _persist_items(ticker: str, items: list[dict[str, Any]], since: dt.datetime,
         earliest = created if earliest is None else min(earliest, created)
         latest = created if latest is None else max(latest, created)
         raw_rows.append(rec)
-        map_rows.append({
-            "native_id": rec["native_id"],
-            "ticker": ticker,
-            "role": "crawled",
-            "confidence": 1.0,
-            "created_utc": created,
-            "updated_at": now,
-        })
+        if map_ticker and ticker:
+            map_rows.append({
+                "native_id": rec["native_id"],
+                "ticker": ticker,
+                "role": "crawled",
+                "confidence": 1.0,
+                "created_utc": created,
+                "updated_at": now,
+            })
         snap = _author_snapshot(item, now)
         if snap:
             author_rows.append(snap)

@@ -137,7 +137,7 @@ export function InvestorBoardView({ board, svBoard }: { board: Board; svBoard?: 
 
   return (
     <div className="space-y-7">
-      {svBoard && <SmartVoiceLeaderboard board={svBoard} />}
+      {svBoard && <SmartVoiceLeaderboard board={svBoard} expandable />}
 
       <div className="flex items-center gap-3">
         <div className="h-px flex-1 bg-line/70" />

@@ -11,7 +11,7 @@ Prismo 聚合 Reddit、X、YouTube、雪球、Toss、Yahoo Finance Japan、Naver
 ## 架构入口
 
 先读：
-
+roster_tweets_20260626_20260711
 - `ARCHITECTURE.md`：项目活地图，记录当前系统事实、数据真源、主要目录和关键命令。
 - `docs/architecture/`：专题架构文档，包含前端、管线、数据模型、平台适配器、Smart Voice、部署和工程约定。
 - `docs/contracts/`：跨平台产品契约，包含 Opinion、Author、Ticker、Judgment、Smart Voice、Narrative。

@@ -11,11 +11,43 @@ export function getSmartVoiceBoard(): SvBoard {
     bottomInvestors: [...investors].sort((a, b) => a.sv - b.sv).slice(0, 10),
     x: investors.filter((i) => i.source === "x"),
     youtube: investors.filter((i) => i.source === "youtube"),
+    reddit: investors.filter((i) => i.source === "reddit"),
+    xueqiu: investors.filter((i) => i.source === "xueqiu"),
+    toss: investors.filter((i) => i.source === "toss"),
     currentNarratives: FALLBACK_NARRATIVES,
     updatedAt: "2026-07-03",
     totalInvestors: investors.length,
     exportedInvestors: investors.length,
   };
+}
+
+export function smartVoiceDecileSize(board: SvBoard) {
+  return Math.max(1, Math.ceil((board.totalInvestors ?? board.investors.length) * 0.1));
+}
+
+export function smartVoiceTopDecile(board: SvBoard) {
+  return [...board.investors].sort((a, b) => b.sv - a.sv).slice(0, Math.min(smartVoiceDecileSize(board), board.investors.length));
+}
+
+export function smartVoiceBottomDecile(board: SvBoard) {
+  const bottom = board.bottomInvestors?.length ? board.bottomInvestors : [...board.investors].sort((a, b) => a.sv - b.sv);
+  return [...bottom].sort((a, b) => a.sv - b.sv || (b.rank ?? 0) - (a.rank ?? 0)).slice(0, Math.min(smartVoiceDecileSize(board), bottom.length));
+}
+
+export function getSmartVoiceDetailInvestors(board = getSmartVoiceBoard()) {
+  const seen = new Set<string>();
+  const platformInvestors = Object.values(board.platformBands ?? {}).flatMap((band) => band?.ranked ?? []);
+  return [...smartVoiceTopDecile(board), ...smartVoiceBottomDecile(board), ...platformInvestors].filter((inv) => {
+    if (seen.has(inv.id)) return false;
+    seen.add(inv.id);
+    return true;
+  });
+}
+
+export function getSmartVoiceInvestor(id: string, board = getSmartVoiceBoard()) {
+  const platformInvestors = Object.values(board.platformBands ?? {}).flatMap((band) => band?.ranked ?? []);
+  const all = [...platformInvestors, ...board.investors, ...(board.bottomInvestors ?? [])];
+  return all.find((inv) => inv.id === id) ?? null;
 }
 
 function hash01(input: string) {

@@ -1,5 +1,5 @@
-import { AppRouteSkeleton } from "@/components/AppRouteSkeleton";
+import { DashboardSkeleton } from "@/features/dashboard";
 
 export default function Loading() {
-  return <AppRouteSkeleton />;
+  return <DashboardSkeleton />;
 }

@@ -9,6 +9,8 @@
 from __future__ import annotations
 
 import re
+import os
+import threading
 import time
 
 import requests
@@ -18,6 +20,42 @@ from .deepseek import extract_json  # 复用稳健 JSON 解析（容忍 ```fence
 
 # 429 限流响应里 Google 给的建议等待时长（RetryInfo.retryDelay: "38s"）
 _RETRY_DELAY_RE = re.compile(r'"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"')
+_RATE_LOCK = threading.Lock()
+_NEXT_REQUEST_AT = 0.0
+_BLOCKED_UNTIL = 0.0
+
+
+def _reserve_request_slot() -> None:
+    """Serialize paid API starts and honor a shared cooldown across workers."""
+    global _NEXT_REQUEST_AT
+    interval = max(0.0, float(os.environ.get("GEMINI_MIN_REQUEST_INTERVAL", "0") or 0))
+    while True:
+        with _RATE_LOCK:
+            now = time.monotonic()
+            if now < _BLOCKED_UNTIL:
+                delay = _BLOCKED_UNTIL - now
+                reserved = False
+            else:
+                request_at = max(now, _NEXT_REQUEST_AT)
+                _NEXT_REQUEST_AT = request_at + interval
+                delay = request_at - now
+                reserved = True
+        if delay > 0:
+            time.sleep(delay)
+        if reserved:
+            # A concurrent request may have installed a cooldown while this
+            # worker waited for its slot. Recheck before sending.
+            with _RATE_LOCK:
+                if time.monotonic() >= _BLOCKED_UNTIL:
+                    return
+            continue
+
+
+def _block_requests(delay: float) -> None:
+    """Move the process-wide request gate past a server-declared 429 window."""
+    global _BLOCKED_UNTIL
+    with _RATE_LOCK:
+        _BLOCKED_UNTIL = max(_BLOCKED_UNTIL, time.monotonic() + max(0.0, delay))
 
 
 def _endpoint(model: str) -> str:
@@ -43,6 +81,7 @@ def _gen(parts: list, system: str | None, max_tokens: int, temperature: float,
     rate_waits = 0     # 429 限流等待次数（独立、更耐心——限流是 per-minute、会过去）
     while True:
         try:
+            _reserve_request_slot()
             r = requests.post(_endpoint(model), json=body, timeout=timeout)
             if r.status_code == 200:
                 cands = r.json().get("candidates") or []
@@ -57,7 +96,15 @@ def _gen(parts: list, system: str | None, max_tokens: int, temperature: float,
                 m = _RETRY_DELAY_RE.search(r.text)
                 delay = float(m.group(1)) if m else min(60.0, 8.0 * (rate_waits + 1))
                 rate_waits += 1
-                time.sleep(min(delay + 1.5, 90.0))
+                # Paid tiers can return a rolling spend-window delay of several
+                # minutes. Share it across workers and do not truncate it to 90s.
+                cooldown = min(delay + 1.5, 660.0)
+                _block_requests(cooldown)
+                print(
+                    f"[gemini] 429 shared cooldown={cooldown:.1f}s "
+                    f"attempt={rate_waits}/{max_rate_waits}",
+                    flush=True,
+                )
                 continue
             last = f"HTTP {r.status_code}: {r.text[:300]}"
         except Exception as e:  # noqa: BLE001

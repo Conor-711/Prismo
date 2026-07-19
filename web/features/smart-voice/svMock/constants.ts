@@ -46,7 +46,10 @@ export const TICKER_NARRATIVE: Record<string, string> = {
 
 export function sourceUrl(source: SvSource, handle: string, id: string) {
   if (source === "x") return `https://x.com/${handle.replace(/^@/, "")}`;
-  return `https://www.youtube.com/channel/${id}`;
+  if (source === "youtube") return `https://www.youtube.com/channel/${id.replace(/^youtube:/, "")}`;
+  if (source === "reddit") return `https://www.reddit.com/user/${handle.replace(/^u\//, "")}/`;
+  if (source === "xueqiu") return `https://xueqiu.com/u/${id.replace(/^xueqiu:/, "")}`;
+  return "#";
 }
 
 export const INVESTORS: SvInvestor[] = [

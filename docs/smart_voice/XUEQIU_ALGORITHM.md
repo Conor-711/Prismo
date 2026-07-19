@@ -24,8 +24,24 @@ Recall should prioritize:
 Exclude:
 
 - Pure news forwarding.
+- Reposts whose raw payload links to an upstream `retweeted_status`.
 - Pure chat or emotional reaction without tradable implication.
 - A-share-only, Hong Kong-only, crypto, futures, and options-only calls for the current phase.
+
+## Author Discovery Pool
+
+The first version uses a two-stage pool instead of treating popularity as SV:
+
+1. Recall accounts with at least 500 followers (or verified) and at least 300 lifetime statuses.
+2. Separate obvious media, official institutions, and automated news publishers.
+3. Rank the remaining creators only to prioritize one-year timeline backfill; select the Top 300 and keep the rest as a warm reserve.
+4. After the one-year backfill, require at least 8 US-equity-relevant posts, 8 settled calls, and `n_eff >= 5` for formal SV qualification.
+
+Followers, verification, lifetime statuses, and discovery rank must not enter `SV_Platform`.
+
+The production candidate adapter defaults to a complete-pool gate: all selected creator timeline
+jobs for the configured pool version must be `done` before candidate recall starts. Partial recall
+is available only through an explicit diagnostic flag and must not be used for a published score.
 
 ## Structured Call
 

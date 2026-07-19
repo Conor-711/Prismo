@@ -22,7 +22,9 @@ export function ListCard({
   const st = STANCE[o.stance];
   const { base, trans, canTranslate } = pickOriginal(o, zh);
   const preview = canTranslate ? trans : base;
-  const excerpt = preview.replace(/\s+/g, " ").trim().slice(0, 84);
+  // Slice Unicode code points rather than UTF-16 code units so an emoji at the
+  // boundary cannot become an invalid surrogate during server hydration.
+  const excerpt = Array.from(preview.replace(/\s+/g, " ").trim()).slice(0, 84).join("");
   return (
     <li>
       <div

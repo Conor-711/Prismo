@@ -101,12 +101,16 @@ CLI 只负责命令注册和参数解析。长期目标是把当前 `pipeline/ma
 - YouTube 抓取/频道刷新实现已迁入 `pipeline/platforms/youtube`，旧 `pipeline/ingest/youtube_*` 仅保留兼容 wrapper。
 - X 推文与 ticker/topic 硬匹配、云端 X 拉取、完整 X ticker universe 已迁到 `pipeline/platforms/x`。
 - YouTube 观点分析、完整口播、摘要、目标价判断、创作者综合观点实现已迁到 `pipeline/domain`。
+- `youtube-tag` 支持按发布日期、频道订阅数和视频时长限制候选；非头部视频优先复用 `yt_fulltext` 完整口播或在线字幕，再回退原生视频理解。
+- `pipeline/common/llm.py` 保留 LOW/MID/HIGH 默认路由，并支持通过 `LLM_PROVIDER=qwen|deepseek|gemini` 为一次任务显式切换 provider；Reddit 逐帖分析另按 `ITEM_ANALYSIS_PROVIDERS` 做真实 provider 回退。
+- YouTube 进入观点流、目标价、相关性/质量和 KOL 日序列的展示门槛集中在 `pipeline/common/youtube_filters.py` 与 `web/server/queries/kol/shared.ts`：频道粉丝 `>=2000` 且视频时长 `>60` 秒。
 - KOL 命令已有 `pipeline/jobs/kol` 工作流，CLI 不再直接调用 domain。
 - KOL 观点提炼、视角分类、论点综合、完整翻译、相关性、质量评分实现已迁到 `pipeline/domain/opinions`。
 - KOL 目标价/操作周期抽取实现已迁到 `pipeline/domain/target_prices`。
 - Smart Voice 的 X 情绪打分、KOL/散户情绪/讨论度/新增参与者 rollup、整体信号导出、SV v0、价格历史回填已有 `pipeline/jobs/smart_voice` 工作流。
 - 叙事轮动导出已有 `pipeline/jobs/narrative_rotation` 工作流。
 - 全球散户多区抓取、打标、聚合、报价、Toss、雪球长期管道已有 `pipeline/jobs/global_retail` 工作流。
+- 雪球 SV 作者池通过 `domain/authors/xueqiu_pool.py` 版本化筛选，`platforms/xueqiu/author_timeline.py` 负责已登录作者时间线分页与断点任务，`jobs/global_retail` 只做导入、规划、运行和关联标的扩展编排；长时间回填由 `gr-xueqiu-author-drain` 按小批次、正常冷却、失败指数退避和重试上限持续消耗正式池，并对 SQLite 写锁及中断后遗留的 `running` 游标任务自动恢复。
 - Toss 社区抓取、全球散户多区抓取/浏览器雪球导入/报价、雪球 direct crawler 和雪球长期任务管道实现已迁入 `pipeline/platforms`，对应旧 `pipeline/ingest/*` 文件仅保留兼容 wrapper。
 - 全球散户打标和聚合实现已迁到 `pipeline/domain/global_retail`。
 - 核心历史命令已有 `pipeline/jobs/core` 工作流，覆盖数据库初始化、样本数据、Reddit 抓取、ticker 提取、市场聚合、每日任务、统计和云同步。

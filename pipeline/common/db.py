@@ -43,7 +43,10 @@ if engine.dialect.name == "sqlite":
         cur = dbapi_conn.cursor()
         cur.execute("PRAGMA foreign_keys=ON")
         cur.execute("PRAGMA journal_mode=WAL")
-        cur.execute("PRAGMA busy_timeout=8000")  # 并发写时等锁而非立即报 database is locked（多 AI session/管线并行）
+        # Long analysis transactions can hold SQLite's single writer lock for
+        # tens of seconds. Backfill workers should wait instead of losing their
+        # resumable job state when another pipeline is committing.
+        cur.execute("PRAGMA busy_timeout=120000")
         cur.close()
 
 

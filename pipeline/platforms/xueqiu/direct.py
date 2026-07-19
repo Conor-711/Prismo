@@ -106,6 +106,62 @@ def _fetch_page(page, symbol: str, page_no: int, count: int, timeout_ms: int = 1
     )
 
 
+def _fetch_author_page(
+    page,  # noqa: ANN001
+    user_id: str,
+    page_no: int,
+    count: int,
+    timeout_ms: int = 12_000,
+) -> dict[str, Any]:
+    """Fetch one author timeline page from an authenticated same-origin tab."""
+    return page.evaluate(
+        """async ({ userId, pageNo, count, timeoutMs }) => {
+            const params = new URLSearchParams({
+              user_id: userId,
+              page: String(pageNo),
+              count: String(count),
+              type: "0"
+            });
+            const ctrl = new AbortController();
+            let timer;
+            const timeout = new Promise(resolve => {
+              timer = setTimeout(() => {
+                ctrl.abort();
+                resolve({ ok: false, status: 0, errorCode: "CLIENT_TIMEOUT", error: "fetch timeout" });
+              }, timeoutMs);
+            });
+            const request = (async () => {
+              try {
+                const res = await fetch(`/v4/statuses/user_timeline.json?${params.toString()}`, {
+                  headers: { accept: "application/json,text/plain,*/*" },
+                  credentials: "include",
+                  signal: ctrl.signal
+                });
+                const text = await res.text();
+                let payload = null;
+                try { payload = JSON.parse(text); } catch (_) {}
+                if (!res.ok || payload === null) {
+                  return {
+                    ok: false,
+                    status: res.status,
+                    errorCode: payload && payload.error_code,
+                    error: payload && payload.error_description,
+                    text: text.slice(0, 400)
+                  };
+                }
+                return { ok: true, status: res.status, data: payload };
+              } catch (err) {
+                return { ok: false, status: 0, errorCode: null, error: String(err && err.message || err) };
+              }
+            })();
+            const result = await Promise.race([request, timeout]);
+            clearTimeout(timer);
+            return result;
+        }""",
+        {"userId": user_id, "pageNo": page_no, "count": count, "timeoutMs": timeout_ms},
+    )
+
+
 def crawl(
     *,
     out_path: str = DEFAULT_OUT,
