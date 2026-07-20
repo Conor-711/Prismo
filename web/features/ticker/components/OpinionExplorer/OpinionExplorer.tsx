@@ -4,8 +4,9 @@
 //   顶部 = 筛选条（平台[品牌 logo] / 时间[指定起始日期 + 5 个区间模板] / 语言[简中·英·日·韩·繁中] / 质量）
 //   下方 = 主从布局：左窄列 = 帖文卡列表（头像+handle+开头），右宽栏 = 选中帖的完整正文（含原文/译文切换 + 回原帖）
 // 全部筛选在前端做；默认按「相关性」降序排（最相关的在前）。数据来自 lib/kolQueries.getKolOpinions。
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useFavorites } from "@/components/favorites/FavoritesProvider";
+import { BASE_PATH } from "@/lib/site";
 import type { KolOpinion } from "@/shared/market/mockDetail";
 import type { SvTickerBoard } from "@/features/smart-voice/svMock";
 import { OpinionFilterBar } from "@/features/ticker/components/OpinionExplorer/filterBar";
@@ -38,8 +39,37 @@ export function OpinionExplorer({
   svBoard?: SvTickerBoard | null;
 }) {
   const [sort, setSort] = useState<SortMode>("rel"); // 排序：推荐 / 相关度 / 热度 / 最新
+  const [completeXOpinions, setCompleteXOpinions] = useState<KolOpinion[] | null>(null);
+  useEffect(() => {
+    if (!symbol) return;
+    const controller = new AbortController();
+    fetch(`${BASE_PATH}/data/x-opinions/${encodeURIComponent(symbol.toUpperCase())}`, {
+      signal: controller.signal,
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error(`X opinion export returned ${response.status}`);
+        return response.json();
+      })
+      .then((payload: { opinions?: KolOpinion[] }) => {
+        if (Array.isArray(payload.opinions)) setCompleteXOpinions(payload.opinions);
+      })
+      .catch((error: unknown) => {
+        if (!(error instanceof DOMException && error.name === "AbortError")) {
+          console.error("Failed to load complete X opinion pool", error);
+        }
+      });
+    return () => controller.abort();
+  }, [symbol]);
+
+  const mergedOpinions = useMemo(() => {
+    if (!completeXOpinions) return opinions;
+    const byId = new Map(opinions.map((opinion) => [opinion.id, opinion]));
+    for (const opinion of completeXOpinions) byId.set(opinion.id, opinion);
+    return [...byId.values()];
+  }, [opinions, completeXOpinions]);
+
   const { configured: trackingConfigured, signedIn: trackingSignedIn, isSaved } = useFavorites();
-  const filters = useOpinionFilters({ opinions, svBoard, isSaved });
+  const filters = useOpinionFilters({ opinions: mergedOpinions, svBoard, isSaved });
   const { resetFilters: resetOpinionFilters, resetFiltersForOpinion } = filters;
   const {
     personal,
@@ -52,7 +82,7 @@ export function OpinionExplorer({
   } = useOpinionPersonalization({ symbol, sort, setSort });
 
   const { filtered, personalRank } = useOpinionSorting({
-    opinions,
+    opinions: mergedOpinions,
     baseFiltered: filters.baseFiltered,
     platformFilter: filters.platformFilter,
     sort,
@@ -62,7 +92,7 @@ export function OpinionExplorer({
     svIndex: filters.svIndex,
   });
   const selection = useSelectedOpinion({
-    opinions,
+    opinions: mergedOpinions,
     filtered,
     hasOverview: Boolean(overview),
     defaultSort,

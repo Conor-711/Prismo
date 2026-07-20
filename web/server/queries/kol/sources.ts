@@ -253,7 +253,8 @@ export function yahooJpOps(symbol: string, since: string, limit = 40): RawOp[] {
 }
 
 // X / Twitter（云端 tw_* 拉进本地 x_opinion；pipeline/platforms/x/cloud_pull.py）。无情绪标注 → 中性。
-export function xOps(symbol: string, since: string, limit = 40): RawOp[] {
+export function xOps(symbol: string, since: string, limit: number | null = 40): RawOp[] {
+  const limitSql = limit == null ? "" : `LIMIT ${Math.max(0, limit | 0)}`;
   const rows = safe(
     () =>
       all<any>(
@@ -271,7 +272,7 @@ export function xOps(symbol: string, since: string, limit = 40): RawOp[] {
           WHERE x.ticker = ? AND x.created >= ? AND x.text NOT GLOB 'RT @*'
           ORDER BY COALESCE(q.score,0) DESC, COALESCE(rel.score,0) DESC,
                    (x.likes + x.retweets + x.replies) DESC, x.created DESC
-          LIMIT ${limit | 0}`,
+          ${limitSql}`,
         symbol,
         since
       ),
@@ -329,7 +330,8 @@ function svFallbackQuality(conviction: number, evidence: number, specificity: nu
 
 // SV v0 结构化池中的 X/Twitter call：它来自更长周期的历史推文结构化结果。
 // 在产品层仍按 X 展示；只作为 x_opinion 的补充，不暴露 SV 中间概念。
-export function xSvOps(symbol: string, since: string, limit = 400): RawOp[] {
+export function xSvOps(symbol: string, since: string, limit: number | null = 400): RawOp[] {
+  const limitSql = limit == null ? "" : `LIMIT ${Math.max(0, limit | 0)}`;
   const rows = safe(
     () =>
       all<any>(
@@ -351,7 +353,7 @@ export function xSvOps(symbol: string, since: string, limit = 400): RawOp[] {
             AND c.is_actionable_call = 1
             AND COALESCE(cc.text,'') NOT GLOB 'RT @*'
           ORDER BY COALESCE(cc.interactions,0) DESC, cc.created_at DESC
-          LIMIT ${limit | 0}`,
+          ${limitSql}`,
         symbol,
         since
       ),
@@ -400,7 +402,7 @@ export function xSvOps(symbol: string, since: string, limit = 400): RawOp[] {
   });
 }
 
-function mergeRawOps(ops: RawOp[], limit?: number): RawOp[] {
+function mergeRawOps(ops: RawOp[], limit?: number | null): RawOp[] {
   const seen = new Set<string>();
   const out: RawOp[] = [];
   for (const op of ops) {
@@ -418,6 +420,6 @@ function mergeRawOps(ops: RawOp[], limit?: number): RawOp[] {
   return typeof limit === "number" ? out.slice(0, limit) : out;
 }
 
-export function xMergedOps(symbol: string, since: string, limit = 500): RawOp[] {
+export function xMergedOps(symbol: string, since: string, limit: number | null = 500): RawOp[] {
   return mergeRawOps([...xSvOps(symbol, since, limit), ...xOps(symbol, since, limit)], limit);
 }
