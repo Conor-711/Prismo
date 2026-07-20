@@ -452,6 +452,64 @@ class XueqiuAuthorSnapshot(Base):
     fetched_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
 
 
+class XueqiuAuthorPoolCandidate(Base):
+    """Versioned Xueqiu author discovery pool used before SV qualification."""
+
+    __tablename__ = "xueqiu_author_pool"
+    __table_args__ = (
+        UniqueConstraint("pool_version", "user_id", name="uq_xueqiu_author_pool_version_user"),
+    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    pool_version: Mapped[str] = mapped_column(String(80), index=True)
+    user_id: Mapped[str] = mapped_column(String(64), index=True)
+    screen_name: Mapped[str] = mapped_column(String(160), default="")
+    discovery_rank: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    pool_rank: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, index=True)
+    pool_status: Mapped[str] = mapped_column(String(24), default="candidate", index=True)
+    selected: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    followers_count: Mapped[int] = mapped_column(Integer, default=0)
+    friends_count: Mapped[int] = mapped_column(Integer, default=0)
+    statuses_count: Mapped[int] = mapped_column(Integer, default=0)
+    verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    sampled_posts: Mapped[int] = mapped_column(Integer, default=0)
+    sampled_tickers: Mapped[int] = mapped_column(Integer, default=0)
+    discovery_score: Mapped[float] = mapped_column(Float, default=0.0)
+    author_type: Mapped[str] = mapped_column(String(24), default="unknown", index=True)
+    type_reason: Mapped[str] = mapped_column(String(160), default="")
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class XueqiuAuthorCrawlJob(Base):
+    """Resumable one-year timeline job for one Xueqiu author."""
+
+    __tablename__ = "xueqiu_author_crawl_job"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    job_key: Mapped[str] = mapped_column(String(200), unique=True, index=True)
+    pool_version: Mapped[str] = mapped_column(String(80), index=True)
+    user_id: Mapped[str] = mapped_column(String(64), index=True)
+    screen_name: Mapped[str] = mapped_column(String(160), default="")
+    mode: Mapped[str] = mapped_column(String(24), default="backfill", index=True)
+    status: Mapped[str] = mapped_column(String(16), default="pending", index=True)
+    since_utc: Mapped[dt.datetime] = mapped_column(DateTime, index=True)
+    until_utc: Mapped[Optional[dt.datetime]] = mapped_column(DateTime, nullable=True)
+    cursor_page: Mapped[int] = mapped_column(Integer, default=1)
+    per_page: Mapped[int] = mapped_column(Integer, default=20)
+    max_pages: Mapped[int] = mapped_column(Integer, default=1200)
+    priority: Mapped[int] = mapped_column(Integer, default=100, index=True)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    rows_seen: Mapped[int] = mapped_column(Integer, default=0)
+    rows_new: Mapped[int] = mapped_column(Integer, default=0)
+    earliest_seen_utc: Mapped[Optional[dt.datetime]] = mapped_column(DateTime, nullable=True)
+    latest_seen_utc: Mapped[Optional[dt.datetime]] = mapped_column(DateTime, nullable=True)
+    stop_reason: Mapped[str] = mapped_column(String(80), default="")
+    last_error: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow, index=True)
+    updated_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+    started_at: Mapped[Optional[dt.datetime]] = mapped_column(DateTime, nullable=True)
+    finished_at: Mapped[Optional[dt.datetime]] = mapped_column(DateTime, nullable=True)
+
+
 # --------------------- YouTube 观点（标的页正式模块；Gemini 视频理解 + 全语种纳入当地分析者） ---------------------
 # 每标的近 24h、浏览量 > 阈值的视频；混合分析（top N 原生看视频 + 其余字幕文本）。隔离表 yt_*。
 class YtVideo(Base):
@@ -535,7 +593,7 @@ class KolRefined(Base):
     """KOL 个体观点的「AI 提炼 + 双语」结果（标的页「个体观点·KOL」模块用）。
 
     覆盖文本源 reddit / x / xueqiu；YouTube 复用 yt_analysis（Gemini 已产出同形 summary+key_points）。
-    一次 DeepSeek(LOW) 调用同时产出 zh+en 的「为什么看多/看空/中性」+ 2-3 条要点 —— 提炼与翻译合一。
+    按可配置 provider 链调用，产出 zh+en 的「为什么看多/看空/中性」+ 2-3 条要点。
     隔离表：进 ALL_TABLES 让 cloud-pull 能快照；不进 sync.SOURCE_TABLES。
     """
 
@@ -554,7 +612,7 @@ class KolRefined(Base):
     quote_zh: Mapped[str] = mapped_column(Text, default="")
     quote_en: Mapped[str] = mapped_column(Text, default="")
     # 原帖全文的**完整忠实翻译**（逐句直译、非提炼、非一句摘录）——「按视角·原帖流」的「译」选项展示。
-    # 由独立步骤 kol_translate 产出（与提炼解耦），让英文/中文原帖对另一语读者可读。
+    # 由独立步骤 kol_translate 产出；同一 source+item 跨 ticker 复用一份翻译结果。
     trans_zh: Mapped[str] = mapped_column(Text, default="")
     trans_en: Mapped[str] = mapped_column(Text, default="")
     created: Mapped[str] = mapped_column(String(32), default="")  # 源帖创建时间字符串（供时间窗过滤）

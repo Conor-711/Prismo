@@ -1,6 +1,8 @@
 """YouTube opinion-domain workflows."""
 from __future__ import annotations
 
+from pathlib import Path
+
 
 def analyze_videos(
     *,
@@ -10,6 +12,10 @@ def analyze_videos(
     per_ticker_cap: int | None,
     workers: int,
     only: list[str] | None,
+    since_days: int | None = None,
+    min_subscribers: int = 0,
+    min_duration_seconds: int = 0,
+    transcript_only: bool = False,
 ) -> None:
     """Run mixed native-video/subtitle analysis for YouTube videos."""
     from .youtube_analysis import tag
@@ -21,14 +27,27 @@ def analyze_videos(
         per_ticker_cap=per_ticker_cap,
         workers=workers,
         only=only,
+        since_days=since_days,
+        min_subscribers=min_subscribers,
+        min_duration_seconds=min_duration_seconds,
+        transcript_only=transcript_only,
     )
 
 
-def analyze_text(*, per_ticker: int, workers: int, only: set[str] | None = None) -> int:
+def analyze_text(*, per_ticker: int, workers: int, only: set[str] | None = None,
+                 since_days: int | None = None, min_subscribers: int = 0,
+                 min_duration_seconds: int = 0) -> int:
     """Run text-only YouTube analysis for videos without native processing."""
     from .youtube_analysis import tag_text
 
-    return tag_text(per_ticker=per_ticker, workers=workers, only=only)
+    return tag_text(
+        per_ticker=per_ticker,
+        workers=workers,
+        only=only,
+        since_days=since_days,
+        min_subscribers=min_subscribers,
+        min_duration_seconds=min_duration_seconds,
+    )
 
 
 def generate_fulltext(
@@ -43,6 +62,10 @@ def generate_fulltext(
     max_native_min: int,
     fail_after: int,
     max_rate_waits: int,
+    video_ids: set[str] | None = None,
+    db_path: str | Path | None = None,
+    max_total_minutes: int | None = None,
+    prefer_transcript: bool = False,
 ) -> int:
     """Generate full reconstructed YouTube transcripts and key-frame context."""
     from .youtube_analysis import gen_fulltext
@@ -58,6 +81,10 @@ def generate_fulltext(
         max_native_min=max_native_min,
         fail_after=fail_after,
         max_rate_waits=max_rate_waits,
+        video_ids=video_ids,
+        db_path=db_path,
+        max_total_minutes=max_total_minutes,
+        prefer_transcript=prefer_transcript,
     )
 
 

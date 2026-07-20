@@ -2,20 +2,25 @@ from __future__ import annotations
 
 from ._utils import csv_values
 from ...jobs.global_retail import (
+    authorize_xueqiu_author_backfill,
     backfill_xueqiu,
     crawl_regional_discussions,
     crawl_toss,
     crawl_xueqiu_direct,
+    drain_xueqiu_author_backfill,
     enrich_xueqiu_authors,
     expand_xueqiu_related,
     fetch_quotes,
     import_xueqiu_export,
     incremental_xueqiu,
     rollup_tickers,
+    execute_xueqiu_author_backfill,
+    prepare_xueqiu_author_backfill,
     run_xueqiu_jobs,
     sync_xueqiu_to_global_retail,
     tag_posts,
     xueqiu_status,
+    xueqiu_author_backfill_status,
 )
 
 
@@ -127,6 +132,72 @@ def cmd_gr_xueqiu_status(args):
     xueqiu_status()
 
 
+def cmd_gr_xueqiu_author_auth(args):
+    authorize_xueqiu_author_backfill(
+        out_path=args.out,
+        probe_user_id=args.probe_user,
+        timeout_seconds=args.timeout,
+    )
+
+
+def cmd_gr_xueqiu_author_plan(args):
+    result = prepare_xueqiu_author_backfill(
+        csv_path=args.pool_csv,
+        pool_version=args.pool_version,
+        target_size=args.target_size,
+        minimum_size=args.minimum_size,
+        min_followers=args.min_followers,
+        min_statuses=args.min_statuses,
+        days=args.days,
+        include_reserve=not args.selected_only,
+        only_user_ids=csv_values(getattr(args, "only_users", None)),
+        per_page=args.per_page,
+        max_pages=args.max_pages,
+        force=args.force,
+    )
+    print(result)
+
+
+def cmd_gr_xueqiu_author_run(args):
+    execute_xueqiu_author_backfill(
+        pool_version=args.pool_version,
+        only_user_ids=csv_values(getattr(args, "only_users", None)),
+        selected_only=args.selected_only,
+        order_mode=args.order,
+        max_attempts=args.max_attempts,
+        max_jobs=args.max_jobs,
+        sleep=args.sleep,
+        headless=args.headless,
+        storage_state=args.storage_state,
+        retry_failed=args.retry_failed,
+        retry_blocked=args.retry_blocked,
+        allow_guest_page_one=args.allow_guest_page_one,
+        expand_tickers=args.expand_tickers,
+        since_days=args.days,
+    )
+
+
+def cmd_gr_xueqiu_author_status(args):
+    xueqiu_author_backfill_status(pool_version=args.pool_version)
+
+
+def cmd_gr_xueqiu_author_drain(args):
+    drain_xueqiu_author_backfill(
+        pool_version=args.pool_version,
+        batch_size=args.batch_size,
+        cooldown_seconds=args.cooldown,
+        failure_cooldown_seconds=args.failure_cooldown,
+        max_failure_cooldown_seconds=args.max_failure_cooldown,
+        max_cycles=args.max_cycles,
+        sleep=args.sleep,
+        headless=args.headless,
+        storage_state=args.storage_state,
+        max_attempts=args.max_attempts,
+        expand_tickers=args.expand_tickers,
+        since_days=args.days,
+    )
+
+
 def cmd_gr_quote(args):
     # 各 gr 标的最新价（Yahoo 15m chart）→ gr_quote，供标的页展示最新价/涨跌幅。
     fetch_quotes()
@@ -230,6 +301,66 @@ def register_commands(sub, root) -> None:
     sp.set_defaults(func=cmd_gr_xueqiu_enrich_authors)
 
     sub.add_parser("gr-xueqiu-status").set_defaults(func=cmd_gr_xueqiu_status)
+
+    sp = sub.add_parser("gr-xueqiu-author-auth")
+    sp.add_argument("--out", default=".xueqiu_storage_state.json")
+    sp.add_argument("--probe-user", default="9692447746")
+    sp.add_argument("--timeout", type=int, default=300)
+    sp.set_defaults(func=cmd_gr_xueqiu_author_auth)
+
+    sp = sub.add_parser("gr-xueqiu-author-plan")
+    sp.add_argument(
+        "--pool-csv",
+        default="reports/xueqiu_author_pool_discovery_2026-07-10.csv",
+    )
+    sp.add_argument("--pool-version", default="xueqiu-sv-pool-20260710-v2")
+    sp.add_argument("--target-size", type=int, default=300)
+    sp.add_argument("--minimum-size", type=int, default=300)
+    sp.add_argument("--min-followers", type=int, default=500)
+    sp.add_argument("--min-statuses", type=int, default=300)
+    sp.add_argument("--days", type=int, default=365)
+    sp.add_argument("--selected-only", action="store_true", help="只创建选中 300 人任务，默认含替补")
+    sp.add_argument("--only-users", default=None, help="逗号分隔雪球 user id（smoke 用）")
+    sp.add_argument("--per-page", type=int, default=20)
+    sp.add_argument("--max-pages", type=int, default=1200)
+    sp.add_argument("--force", action="store_true")
+    sp.set_defaults(func=cmd_gr_xueqiu_author_plan)
+
+    sp = sub.add_parser("gr-xueqiu-author-run")
+    sp.add_argument("--pool-version", default="xueqiu-sv-pool-20260710-v2")
+    sp.add_argument("--max-jobs", type=int, default=None)
+    sp.add_argument("--only-users", default=None, help="逗号分隔雪球 user id")
+    sp.add_argument("--selected-only", action="store_true", help="只运行正式选中的作者")
+    sp.add_argument("--order", choices=["rank", "activity"], default="rank")
+    sp.add_argument("--max-attempts", type=int, default=5)
+    sp.add_argument("--sleep", type=float, default=2.0)
+    sp.add_argument("--headless", action="store_true")
+    sp.add_argument("--storage-state", default=".xueqiu_storage_state.json")
+    sp.add_argument("--retry-failed", action="store_true")
+    sp.add_argument("--retry-blocked", action="store_true")
+    sp.add_argument("--allow-guest-page-one", action="store_true", help="仅用于验证首屏；不能完成一年回填")
+    sp.add_argument("--expand-tickers", action="store_true")
+    sp.add_argument("--days", type=int, default=365)
+    sp.set_defaults(func=cmd_gr_xueqiu_author_run)
+
+    sp = sub.add_parser("gr-xueqiu-author-status")
+    sp.add_argument("--pool-version", default="xueqiu-sv-pool-20260710-v2")
+    sp.set_defaults(func=cmd_gr_xueqiu_author_status)
+
+    sp = sub.add_parser("gr-xueqiu-author-drain")
+    sp.add_argument("--pool-version", default="xueqiu-sv-pool-20260710-v2")
+    sp.add_argument("--batch-size", type=int, default=4)
+    sp.add_argument("--cooldown", type=int, default=300)
+    sp.add_argument("--failure-cooldown", type=int, default=1800)
+    sp.add_argument("--max-failure-cooldown", type=int, default=3600)
+    sp.add_argument("--max-cycles", type=int, default=0, help="0=持续到正式池完成或达到重试上限")
+    sp.add_argument("--sleep", type=float, default=2.0)
+    sp.add_argument("--headless", action="store_true")
+    sp.add_argument("--storage-state", default=".xueqiu_storage_state.json")
+    sp.add_argument("--max-attempts", type=int, default=5)
+    sp.add_argument("--expand-tickers", action="store_true")
+    sp.add_argument("--days", type=int, default=365)
+    sp.set_defaults(func=cmd_gr_xueqiu_author_drain)
     sub.add_parser("gr-quote").set_defaults(func=cmd_gr_quote)
 
     sp = sub.add_parser("toss")

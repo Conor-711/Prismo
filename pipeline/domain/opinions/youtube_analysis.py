@@ -12,9 +12,12 @@ import json
 import os
 import re
 import shutil
+import sqlite3
 import subprocess
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
+from types import SimpleNamespace
 
 import requests
 from sqlalchemy import delete, select, text, update
@@ -102,10 +105,26 @@ def _normalize(data: dict) -> dict | None:
 
 def _analyze_real(v: YtVideo, mode: str, low_res: bool) -> dict | None:
     if mode == "transcript":
-        tx = fetch_transcript(v.id)
+        with session_scope() as s:
+            stored = s.execute(
+                select(YtFulltext.content_en, YtFulltext.content_zh).where(
+                    YtFulltext.video_id == v.id
+                )
+            ).first()
+        tx = (
+            str((stored.content_en or stored.content_zh) if stored else "").strip()
+            or fetch_transcript(v.id)
+        )
         if not tx:
             return None
-        return _normalize(gemini.messages_json(SYSTEM, f"{_prompt(v)}\n\n字幕：\n{tx}", max_tokens=1200) or {})
+        return _normalize(
+            gemini.messages_json(
+                SYSTEM,
+                f"{_prompt(v)}\n\n完整口播：\n{tx[:24000]}",
+                max_tokens=1200,
+            )
+            or {}
+        )
     return _normalize(gemini.video_json(v.url, _prompt(v), system=SYSTEM, low_res=low_res, max_tokens=1200) or {})
 
 
@@ -125,7 +144,9 @@ def _mock_one(v: YtVideo) -> dict:
 
 def tag(top_native: int = 2, only_new: bool = True, mock: bool = False,
         per_ticker_cap: int | None = None, workers: int = 1,
-        only: set[str] | None = None) -> int:
+        only: set[str] | None = None, since_days: int | None = None,
+        min_subscribers: int = 0, min_duration_seconds: int = 0,
+        transcript_only: bool = False) -> int:
     _ensure_tables()
     use_real = settings.has_gemini and not mock
     only = {t.strip().upper() for t in only} if only else None  # 仅跑这些标的（如「前十讨论度」）
@@ -134,8 +155,42 @@ def tag(top_native: int = 2, only_new: bool = True, mock: bool = False,
     # 这样 --per-ticker 10 = 保证每标的最热 10 条都看过，而不是「再多看 10 条」。
     with session_scope() as s:
         all_vids = list(s.execute(select(YtVideo)).scalars())
+        analysis_tickers = {
+            str(video_id): str(ticker or "").upper()
+            for video_id, ticker in s.execute(select(YtAnalysis.video_id, YtAnalysis.ticker))
+        }
+        eligibility_clauses = ["1=1"]
+        eligibility_params: dict[str, object] = {}
+        join_channel = ""
+        if since_days is not None and since_days > 0:
+            eligibility_clauses.append("v.published_utc >= :cutoff")
+            eligibility_params["cutoff"] = dt.datetime.utcnow() - dt.timedelta(days=since_days)
+        if min_duration_seconds > 0:
+            eligibility_clauses.append("COALESCE(v.duration_s,0) > :min_duration")
+            eligibility_params["min_duration"] = min_duration_seconds
+        if min_subscribers > 0:
+            join_channel = "JOIN yt_channel c ON c.channel_id=v.channel_id"
+            eligibility_clauses.append("COALESCE(c.subscriber_count,0) >= :min_subscribers")
+            eligibility_params["min_subscribers"] = min_subscribers
+        if transcript_only:
+            eligibility_clauses.append(
+                "EXISTS (SELECT 1 FROM yt_fulltext f WHERE f.video_id=v.id "
+                "AND (LENGTH(COALESCE(f.content_en,''))>0 OR LENGTH(COALESCE(f.content_zh,''))>0))"
+            )
+        eligible_ids = {
+            str(row[0])
+            for row in s.execute(
+                text(
+                    f"SELECT v.id FROM yt_video v {join_channel} "
+                    f"WHERE {' AND '.join(eligibility_clauses)}"
+                ),
+                eligibility_params,
+            )
+        }
     grouped: dict[str, list[YtVideo]] = {}
     for v in all_vids:
+        if v.id not in eligible_ids:
+            continue
         grouped.setdefault(v.ticker, []).append(v)
     by_tk: dict[str, list[YtVideo]] = {}
     for k, lst in grouped.items():
@@ -144,7 +199,14 @@ def tag(top_native: int = 2, only_new: bool = True, mock: bool = False,
         lst = sorted(lst, key=lambda x: -x.view_count)
         if per_ticker_cap:
             lst = lst[:per_ticker_cap]  # 每标的 top-N（按播放量，含已分析的）
-        todo = [v for v in lst if not (only_new and v.analyzed)]  # 跳过已 Gemini 看过的
+        todo = [
+            v for v in lst
+            if not (
+                only_new
+                and v.analyzed
+                and analysis_tickers.get(str(v.id)) == str(v.ticker or "").upper()
+            )
+        ]  # ticker 变化后的旧分析必须重做，不能只信 analyzed 旗标
         if todo:
             by_tk[k] = todo
     # 「档位跨标的」排序：先每个标的的第 1 热门，再第 2……→ 预算在标的间铺开，
@@ -158,7 +220,7 @@ def tag(top_native: int = 2, only_new: bool = True, mock: bool = False,
 
     # 并发路径（billing 解锁 8h/天后用）：多线程真看视频，主线程逐批落库。
     if use_real and workers > 1:
-        return _tag_concurrent(plan, len(by_tk), top_native, workers)
+        return _tag_concurrent(plan, len(by_tk), top_native, workers, transcript_only=transcript_only)
 
     budget = float(settings.yt_daily_video_minutes)  # 原生看视频分钟预算（8h/天上限留余量）
     done = fail = skip = 0
@@ -210,7 +272,7 @@ def tag(top_native: int = 2, only_new: bool = True, mock: bool = False,
 
 
 def _tag_concurrent(plan: list[tuple[int, str, "YtVideo"]], n_tk: int,
-                    top_native: int, workers: int) -> int:
+                    top_native: int, workers: int, transcript_only: bool = False) -> int:
     """billing 版：多线程真看视频（top_native 条全清、其余低清省成本）。
 
     transcript 这台 IP 抓不到 → 一律原生 video。主线程 as_completed 逐批落库（单写者，避锁）。
@@ -226,15 +288,15 @@ def _tag_concurrent(plan: list[tuple[int, str, "YtVideo"]], n_tk: int,
     done = fail = skip = 0
     consec_fail = 0
     abort = threading.Event()
-    buf: list[tuple[str, "YtVideo", dict]] = []
+    buf: list[tuple[str, "YtVideo", dict, str]] = []
 
     def _flush() -> None:
         nonlocal done
         if not buf:
             return
         with session_scope() as s:
-            for tk, v, res in buf:
-                s.merge(YtAnalysis(video_id=v.id, ticker=tk, mode="video",
+            for tk, v, res, mode in buf:
+                s.merge(YtAnalysis(video_id=v.id, ticker=tk, mode=mode,
                                    model=f"gemini:{settings.gemini_model}",
                                    analyzed_at=dt.datetime.utcnow(), **res))
                 s.execute(update(YtVideo).where(YtVideo.id == v.id).values(analyzed=True))
@@ -245,10 +307,16 @@ def _tag_concurrent(plan: list[tuple[int, str, "YtVideo"]], n_tk: int,
         if abort.is_set():
             return None
         rank, tk, v = item
+        if transcript_only or rank >= top_native:
+            transcript_result = _analyze_real(v, "transcript", low_res=True)
+            if transcript_result is not None:
+                return tk, v, transcript_result, "transcript"
+            if transcript_only:
+                return None
         if (v.duration_s or 0) > MAX_NATIVE_S:  # 超长 → 跳过原生(不计 consec)，DeepSeek 文本兜底
             return None
         res = _analyze_real(v, "video", low_res=(rank >= top_native))  # top-N 全清，其余低清
-        return tk, v, res
+        return tk, v, res, "video"
 
     with ThreadPoolExecutor(max_workers=workers) as ex:
         futs = [ex.submit(_work, it) for it in plan]
@@ -270,8 +338,8 @@ def _tag_concurrent(plan: list[tuple[int, str, "YtVideo"]], n_tk: int,
                     print(f"[yt-tag] 连续 {consec_fail} 条无结果（疑似系统性失败），中止后续；已分析的已落库。", flush=True)
                 continue
             consec_fail = 0
-            tk, v, res = out
-            buf.append((tk, v, res))
+            tk, v, res, mode = out
+            buf.append((tk, v, res, mode))
             print(f"  [yt-tag] ✓ {tk} {v.id} {res.get('stance')} [{done + len(buf)}/{total}] skip={skip} fail={fail}", flush=True)
             if len(buf) >= 10:
                 _flush()
@@ -301,7 +369,9 @@ def _text_input(v: YtVideo) -> str:
     return f"标的 {v.ticker}。频道《{v.channel}》。\n标题：{v.title}\n简介：{desc}"
 
 
-def tag_text(per_ticker: int = 20, workers: int = 6, only: set[str] | None = None) -> int:
+def tag_text(per_ticker: int = 20, workers: int = 6, only: set[str] | None = None,
+             since_days: int | None = None, min_subscribers: int = 0,
+             min_duration_seconds: int = 0) -> int:
     """无 Gemini 配额的兜底分析：用 **标题+简介** 跑 DeepSeek(flash) 出双语观点 → yt_analysis(mode=text)。
 
     覆盖 Gemini 没看的视频，至少做到「翻译 + 立场/理由推断」而非照搬原标题。
@@ -316,21 +386,54 @@ def tag_text(per_ticker: int = 20, workers: int = 6, only: set[str] | None = Non
     only = {t.strip().upper() for t in only} if only else None
     with session_scope() as s:
         all_vids = list(s.execute(select(YtVideo)).scalars())
-        have = set(s.execute(select(YtAnalysis.video_id)).scalars())
+        have = {
+            str(video_id): str(ticker or "").upper()
+            for video_id, ticker in s.execute(select(YtAnalysis.video_id, YtAnalysis.ticker))
+        }
+        eligibility_clauses = ["1=1"]
+        eligibility_params: dict[str, object] = {}
+        join_channel = ""
+        if since_days is not None and since_days > 0:
+            eligibility_clauses.append("v.published_utc >= :cutoff")
+            eligibility_params["cutoff"] = dt.datetime.utcnow() - dt.timedelta(days=since_days)
+        if min_duration_seconds > 0:
+            eligibility_clauses.append("COALESCE(v.duration_s,0) > :min_duration")
+            eligibility_params["min_duration"] = min_duration_seconds
+        if min_subscribers > 0:
+            join_channel = "JOIN yt_channel c ON c.channel_id=v.channel_id"
+            eligibility_clauses.append("COALESCE(c.subscriber_count,0) >= :min_subscribers")
+            eligibility_params["min_subscribers"] = min_subscribers
+        eligible_ids = {
+            str(row[0])
+            for row in s.execute(
+                text(
+                    f"SELECT v.id FROM yt_video v {join_channel} "
+                    f"WHERE {' AND '.join(eligibility_clauses)}"
+                ),
+                eligibility_params,
+            )
+        }
     by_tk: dict[str, list[YtVideo]] = {}
     for v in all_vids:
+        if v.id not in eligible_ids:
+            continue
         if only and (v.ticker or "").upper() not in only:
             continue
-        if v.id in have:
+        if have.get(str(v.id)) == str(v.ticker or "").upper():
             continue
         by_tk.setdefault(v.ticker, []).append(v)
     plan: list[YtVideo] = []
     for k in by_tk:
         by_tk[k].sort(key=lambda x: -x.view_count)
-        plan += by_tk[k][:per_ticker]
+        plan += by_tk[k][:per_ticker] if per_ticker > 0 else by_tk[k]
 
     total = len(plan)
-    print(f"[yt-text] 计划 {total} 视频 / {len(by_tk)} 标的（DeepSeek 标题+简介，model={llm.model_label(llm.LOW)}）", flush=True)
+    print(
+        f"[yt-text] 计划 {total} 视频 / {len(by_tk)} 标的（标题+简介，"
+        f"近 {since_days or '不限'} 天, min_subscribers={min_subscribers}, "
+        f"min_duration={min_duration_seconds}s, model={llm.model_label(llm.LOW)}）",
+        flush=True,
+    )
     if not total:
         return 0
     done = fail = skip = 0
@@ -691,7 +794,10 @@ def _split_speech_text(text: str, target: int = 220, hard: int = 320) -> list[st
 def gen_fulltext(only: set[str] | None = None, per_ticker: int = 10, workers: int = 4,
                  force: bool = False, low_res: bool = False, max_native_min: int = 150,
                  frames: bool = True, limit: int | None = None, fail_after: int = 3,
-                 max_rate_waits: int = 4) -> int:
+                 max_rate_waits: int = 4, video_ids: set[str] | None = None,
+                 db_path: str | Path | None = None,
+                 max_total_minutes: int | None = None,
+                 prefer_transcript: bool = False) -> int:
     """Gemini 真看视频 → 结构化「完整内容」（优化口播 + 关键画面**真实视频帧**）→ yt_fulltext。
 
     每视频：① Gemini 出有序段落(口播/画面+文案，剔宣传) → ② yt-dlp 下载(360p,瞬时,截完即删)
@@ -699,7 +805,29 @@ def gen_fulltext(only: set[str] | None = None, per_ticker: int = 10, workers: in
     ④ 命中帧存 web/public/yt-frames/、段落记 frame 路径；未命中的画面段丢弃(宁缺勿错) →
     存 segments(有序) + content_zh(扁平口播)。顺序处理、逐条落库(可续)。按 only + 每标的 top-N 播放量。
     """
-    _ensure_fulltext_table()
+    local_db = Path(db_path).expanduser().resolve() if db_path else None
+    if local_db:
+        with sqlite3.connect(local_db) as con:
+            con.executescript(
+                """CREATE TABLE IF NOT EXISTS yt_fulltext (
+                     video_id TEXT PRIMARY KEY,
+                     ticker TEXT NOT NULL,
+                     content_zh TEXT NOT NULL,
+                     content_en TEXT NOT NULL,
+                     model TEXT NOT NULL,
+                     created_at TEXT NOT NULL,
+                     segments TEXT
+                   );
+                   CREATE TABLE IF NOT EXISTS yt_fulltext_fail (
+                     video_id TEXT PRIMARY KEY,
+                     ticker TEXT NOT NULL DEFAULT '',
+                     attempts INTEGER NOT NULL DEFAULT 0,
+                     reason TEXT NOT NULL DEFAULT '',
+                     updated_at TEXT NOT NULL DEFAULT ''
+                   );"""
+            )
+    else:
+        _ensure_fulltext_table()
     if not settings.has_gemini:
         print("[yt-full] 无 GEMINI_API_KEY，跳过。", flush=True)
         return 0
@@ -711,30 +839,115 @@ def gen_fulltext(only: set[str] | None = None, per_ticker: int = 10, workers: in
     tmpdir = ROOT / "data" / "_ytframes_tmp"
     tmpdir.mkdir(parents=True, exist_ok=True)
 
-    with session_scope() as s:
-        all_vids = list(s.execute(select(YtVideo)).scalars())
-        have = set(s.execute(select(YtFulltext.video_id)).scalars()) if not force else set()
-    failed = _load_fulltext_failures(fail_after) if not force else set()
+    if local_db:
+        with sqlite3.connect(local_db) as con:
+            con.row_factory = sqlite3.Row
+            requested = {str(video_id) for video_id in (video_ids or set()) if video_id}
+            if requested:
+                all_vids = []
+                for offset in range(0, len(requested), 500):
+                    batch = sorted(requested)[offset : offset + 500]
+                    placeholders = ",".join("?" for _ in batch)
+                    all_vids.extend(
+                        SimpleNamespace(**dict(row))
+                        for row in con.execute(
+                            f"SELECT * FROM yt_video WHERE id IN ({placeholders})",
+                            batch,
+                        )
+                    )
+            else:
+                all_vids = [
+                    SimpleNamespace(**dict(row))
+                    for row in con.execute("SELECT * FROM yt_video")
+                ]
+            have = (
+                {str(row[0]) for row in con.execute("SELECT video_id FROM yt_fulltext")}
+                if not force
+                else set()
+            )
+            failed = (
+                {
+                    str(row[0])
+                    for row in con.execute(
+                        "SELECT video_id FROM yt_fulltext_fail WHERE attempts>=?",
+                        (fail_after,),
+                    )
+                }
+                if not force and fail_after > 0
+                else set()
+            )
+    else:
+        with session_scope() as s:
+            all_vids = list(s.execute(select(YtVideo)).scalars())
+            have = set(s.execute(select(YtFulltext.video_id)).scalars()) if not force else set()
+        failed = _load_fulltext_failures(fail_after) if not force else set()
+    requested_ids = {str(video_id) for video_id in (video_ids or set()) if video_id}
     grouped: dict[str, list[YtVideo]] = {}
     for v in all_vids:
+        if requested_ids and v.id not in requested_ids:
+            continue
         if only and (v.ticker or "").upper() not in only:
             continue
         grouped.setdefault(v.ticker, []).append(v)
     plan: list[YtVideo] = []
     for lst in grouped.values():
-        for v in sorted(lst, key=lambda x: -x.view_count)[:per_ticker]:
-            if v.id not in have and v.id not in failed and (v.duration_s or 0) <= cap_s:
+        ranked = sorted(lst, key=lambda x: -x.view_count)
+        selected = ranked if requested_ids else ranked[:per_ticker]
+        for v in selected:
+            if (
+                v.id not in have
+                and v.id not in failed
+                and ((v.duration_s or 0) <= cap_s or prefer_transcript)
+            ):
                 plan.append(v)
+    if max_total_minutes and max_total_minutes > 0:
+        used_seconds = 0
+        if local_db:
+            today = dt.datetime.utcnow().date().isoformat()
+            with sqlite3.connect(local_db) as con:
+                row = con.execute(
+                    """SELECT
+                         COALESCE((SELECT SUM(v.duration_s)
+                           FROM yt_fulltext f JOIN yt_video v ON v.id=f.video_id
+                          WHERE substr(f.created_at,1,10)=? AND f.model LIKE 'gemini:%'),0)
+                         + COALESCE((SELECT SUM(v.duration_s * ff.attempts)
+                           FROM yt_fulltext_fail ff JOIN yt_video v ON v.id=ff.video_id
+                          WHERE substr(ff.updated_at,1,10)=?),0)""",
+                    (today, today),
+                ).fetchone()
+                used_seconds = int((row or [0])[0] or 0)
+        remaining = max(0, max_total_minutes * 60 - used_seconds)
+        budgeted: list[YtVideo] = []
+        for video in plan:
+            duration = max(60, int(video.duration_s or 300))
+            if duration > remaining:
+                continue
+            budgeted.append(video)
+            remaining -= duration
+        plan = budgeted
     if limit and limit > 0:
         plan = plan[:limit]
 
     total = len(plan)
-    print(f"[yt-full] 计划 {total} 视频 / {len(grouped)} 标的（结构化+真帧, model={settings.gemini_model}, force={force}, limit={limit or 'all'}, fail_after={fail_after}, rate_waits={max_rate_waits}）", flush=True)
+    print(f"[yt-full] 计划 {total} 视频 / {len(grouped)} 标的（结构化+真帧, model={settings.gemini_model}, force={force}, limit={limit or 'all'}, daily_minutes={max_total_minutes or 'unlimited'}, fail_after={fail_after}, rate_waits={max_rate_waits}）", flush=True)
     if not total:
         return 0
 
     def _process(v: YtVideo) -> tuple[YtVideo, str, list[dict], int] | None:
         prompt = f"标的 {v.ticker}。频道《{v.channel}》。按系统要求结构化还原该视频。"
+        if prefer_transcript:
+            caption_segments = _fulltext_from_transcript(v)
+            if caption_segments:
+                flat_caption = "\n\n".join(
+                    (f"{s['speaker']}：{_strip_md(s['text'])}" if s.get("speaker") else _strip_md(s["text"]))
+                    for s in caption_segments if s["type"] == "speech"
+                )
+                return v, flat_caption, caption_segments, 0
+            if (v.duration_s or 0) > cap_s:
+                raise RuntimeError(
+                    f"transcript unavailable and duration {v.duration_s}s exceeds "
+                    f"native-video limit {cap_s}s"
+                )
         try:
             data = gemini.video_json(v.url, prompt, system=SYSTEM_FULLTEXT, low_res=low_res,
                                      max_tokens=8000, timeout=180, retries=2, max_rate_waits=max_rate_waits)
@@ -802,7 +1015,52 @@ def gen_fulltext(only: set[str] | None = None, per_ticker: int = 10, workers: in
         nframes = sum(1 for s in final if s.get("type") == "visual")
         return v, flat, final, nframes
 
+    def _record_failure(v: YtVideo, reason: str) -> None:
+        if not local_db:
+            _record_fulltext_failure(v.id, v.ticker, reason)
+            return
+        now = dt.datetime.utcnow().isoformat()
+        with sqlite3.connect(local_db) as con:
+            con.execute(
+                """INSERT INTO yt_fulltext_fail(video_id,ticker,attempts,reason,updated_at)
+                   VALUES(?,?,1,?,?)
+                   ON CONFLICT(video_id) DO UPDATE SET
+                     ticker=excluded.ticker,
+                     attempts=yt_fulltext_fail.attempts + 1,
+                     reason=excluded.reason,
+                     updated_at=excluded.updated_at""",
+                (v.id, v.ticker, reason[:500], now),
+            )
+
+    def _clear_failure(video_id: str) -> None:
+        if not local_db:
+            _clear_fulltext_failure(video_id)
+            return
+        with sqlite3.connect(local_db) as con:
+            con.execute("DELETE FROM yt_fulltext_fail WHERE video_id=?", (video_id,))
+
     def _save(v: YtVideo, flat: str, final: list[dict]) -> None:
+        if local_db:
+            with sqlite3.connect(local_db) as con:
+                con.execute(
+                    """INSERT INTO yt_fulltext
+                       (video_id,ticker,content_zh,content_en,model,created_at,segments)
+                       VALUES(?,?,?,?,?,?,?)
+                       ON CONFLICT(video_id) DO UPDATE SET
+                         ticker=excluded.ticker,content_zh=excluded.content_zh,
+                         content_en=excluded.content_en,model=excluded.model,
+                         created_at=excluded.created_at,segments=excluded.segments""",
+                    (
+                        v.id,
+                        v.ticker,
+                        flat,
+                        "",
+                        f"gemini:{settings.gemini_model}",
+                        dt.datetime.utcnow().isoformat(),
+                        json.dumps(final, ensure_ascii=False),
+                    ),
+                )
+            return
         with session_scope() as s:
             s.merge(YtFulltext(video_id=v.id, ticker=v.ticker, content_zh=flat, content_en="",
                                segments=final, model=f"gemini:{settings.gemini_model}",
@@ -818,17 +1076,17 @@ def gen_fulltext(only: set[str] | None = None, per_ticker: int = 10, workers: in
                     out = fut.result()
                 except Exception as e:  # noqa: BLE001
                     fail += 1
-                    _record_fulltext_failure(v.id, v.ticker, str(e))
+                    _record_failure(v, str(e))
                     print(f"  [yt-full] ✗ {v.ticker} {v.id}: {str(e)[:100]}", flush=True)
                     continue
                 if out is None:
                     skip += 1
-                    _record_fulltext_failure(v.id, v.ticker, "no_segments")
+                    _record_failure(v, "no_segments")
                     print(f"  [yt-full] – {v.ticker} {v.id} 无段落", flush=True)
                     continue
                 vv, flat, final, nframes = out
                 _save(vv, flat, final)
-                _clear_fulltext_failure(vv.id)
+                _clear_failure(vv.id)
                 done += 1
                 print(f"  [yt-full] ✓ {vv.ticker} {vv.id} 段{len(final)}/帧{nframes} [{done}/{total}] skip={skip} fail={fail}", flush=True)
     else:
@@ -837,17 +1095,17 @@ def gen_fulltext(only: set[str] | None = None, per_ticker: int = 10, workers: in
                 out = _process(v)
                 if out is None:
                     skip += 1
-                    _record_fulltext_failure(v.id, v.ticker, "no_segments")
+                    _record_failure(v, "no_segments")
                     print(f"  [yt-full] – {v.ticker} {v.id} 无段落", flush=True)
                     continue
                 vv, flat, final, nframes = out
                 _save(vv, flat, final)
-                _clear_fulltext_failure(vv.id)
+                _clear_failure(vv.id)
                 done += 1
                 print(f"  [yt-full] ✓ {vv.ticker} {vv.id} 段{len(final)}/帧{nframes} [{done}/{total}] skip={skip} fail={fail}", flush=True)
             except Exception as e:  # noqa: BLE001
                 fail += 1
-                _record_fulltext_failure(v.id, v.ticker, str(e))
+                _record_failure(v, str(e))
                 print(f"  [yt-full] ✗ {v.ticker} {v.id}: {str(e)[:100]}", flush=True)
     print(f"[yt-full] 完成 {done}（跳过 {skip}，失败 {fail}）", flush=True)
     return done

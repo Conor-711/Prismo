@@ -155,11 +155,11 @@ export function DistributionPanel({ board, zh }: { board: SvBoard; zh: boolean }
         <StatCell label={zh ? "全量作者" : "Investors"} value={`${board.totalInvestors ?? distribution.count}`} tone="text-reddit" />
         <StatCell label="Median" value={`${distribution.median}`} />
         <StatCell label="IQR" value={`${distribution.q25}-${distribution.q75}`} />
-        <StatCell label="Top 10" value={`${distribution.top10Threshold}`} tone="text-bull" />
-        <StatCell label="Bottom 10" value={`${distribution.bottom10Threshold}`} tone="text-bear" />
+        <StatCell label="Top 10%" value={`${distribution.top10Threshold}`} tone="text-bull" />
+        <StatCell label="Bottom 10%" value={`${distribution.bottom10Threshold}`} tone="text-bear" />
       </div>
       <div className="min-h-0 flex-1 px-4 pb-4">
-        <div className="relative flex h-full min-h-[210px] items-end gap-1.5 border-b border-line/80 px-1 pb-7 pt-4">
+        <div className="relative flex h-full min-h-[170px] items-end gap-1.5 border-b border-line/80 px-1 pb-7 pt-4 xl:min-h-[210px]">
           {distribution.bins.map((bin, index) => (
             <div key={`${bin.from}:${bin.to}:${index}`} className="flex min-w-0 flex-1 items-end">
               <div
@@ -306,12 +306,12 @@ export function TypePanel({ board, zh }: { board: SvBoard; zh: boolean }) {
   const maxCount = Math.max(1, ...groups.map((g) => g.count));
 
   return (
-    <Panel className="overflow-hidden">
+    <Panel className="flex min-h-0 flex-col overflow-hidden">
       <div className="border-b border-line px-4 py-3">
         <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-reddit">Investor Types</div>
         <h2 className="mt-1 font-display text-[17px] font-extrabold text-cream">{zh ? "投资者类型分布" : "Investor type distribution"}</h2>
       </div>
-      <div className="space-y-3 p-4">
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
         {groups.slice(0, 6).map((group) => (
           <div key={group.key}>
             <div className="mb-1 flex items-center justify-between gap-2 text-[12px]">
@@ -370,14 +370,14 @@ export function TypicalPanel({ board, zh }: { board: SvBoard; zh: boolean }) {
   }, [board, zh]);
 
   return (
-    <Panel className="overflow-hidden">
+    <Panel className="flex min-h-0 flex-col overflow-hidden">
       <div className="border-b border-line px-4 py-3">
         <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-reddit">Typical Cases</div>
         <h2 className="mt-1 font-display text-[17px] font-extrabold text-cream">{zh ? "典型投资者" : "Typical investors"}</h2>
       </div>
-      <div className="grid grid-cols-1 divide-y divide-line/70">
+      <div className="min-h-0 flex-1 divide-y divide-line/70 overflow-y-auto">
         {cases.map(([label, inv, why]) => (
-          <div key={label} className="grid grid-cols-[94px_minmax(0,1fr)] items-center gap-2 px-4 py-2.5">
+          <div key={label} className="grid grid-cols-[88px_minmax(0,1fr)] items-center gap-2 px-4 py-2.5 xl:grid-cols-[94px_minmax(0,1fr)]">
             <div className="text-[11px] font-bold text-neutral-500">{label}</div>
             <InvestorMini inv={inv} zh={zh} metric={why} />
           </div>

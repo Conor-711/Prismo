@@ -10,15 +10,14 @@ web/.env
 *.local
 # 雪球浏览器 cookie（会话 token，绝不入库）
 .xueqiu_cookie*
+.xueqiu_storage_state*
 # Apple Sign in 私钥（绝不入库）
 *.p8
 AuthKey_*.p8
 
-# Data / DB（仅忽略根目录 data/ 下的运行期库，pipeline/data 字典样本照常入库）
+# Data / DB（本地真源不进 Git；pipeline/data 字典样本照常入库）
 data/*.db
-# dev.db 是可再生的数据快照（make cloud-pull / make site-cloud 从 Supabase 生成）；
-# 体积大且非源代码，故 Prismo 精简仓库不入库。部署前用 make site-cloud 生成即可；
-# 若某次部署确需把快照入库，可在网络稳定时临时 `git add -f data/dev.db` 单独提交。
+# data/dev.db 是 Prismo 本地内容真源；仓库只提交 make snapshot-db 生成的压缩部署快照。
 data/*.db-wal
 data/*.db-shm
 data/sec_company_tickers.json
@@ -27,6 +26,8 @@ data/*.db.*
 !data/dev.db.xz
 !data/dev.db.xz.part-*
 !data/dev.db.xz.parts
+!data/dev.db.snapshot.json
+data/.snapshot-*/
 # YouTube 完整内容管线的临时视频/帧下载（截完即删，偶有残留），体积大不入库
 data/_ytframes_tmp/
 # 实验/管线中间产物导出（可由 make 重新生成，体积大，不入库）
@@ -57,12 +58,16 @@ marketing/remotion/cap/test/
 .codex/
 .agents/
 .playwright-cli/
+.wrangler/
 
 # 本地抓取/分析输出（可再生，不入库）
 /output/
 /reports/
 /equity_trader_kol_tweets_2025h2/
 /roster_tweets_6m_f5000/
+/roster_tweets_20260626_20260711/
+/roster_tweets_20260711_20260716/
+/data/reports/sv_indicator_event_evidence.csv
 /twitter_selected_tickers_unlabeled_sample_100_quick_labels.csv
 
 # OS / editor

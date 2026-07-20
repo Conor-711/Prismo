@@ -1,8 +1,9 @@
 import { all, parseJSON } from "@/lib/db";
+import { cache } from "react";
 import type { Bi, KolJudgment, TweetReply, YtChannel, YtDigest } from "@/shared/market/mockDetail";
 import { bucketHorizon, currentPrice, parseRange, safe, stanceOf, type Refined } from "./shared";
 
-export function refinedMap(symbol: string): Map<string, Refined> {
+export const refinedMap = cache(function refinedMap(symbol: string): Map<string, Refined> {
   const rows = safe(
     () =>
       all<any>(
@@ -24,10 +25,10 @@ export function refinedMap(symbol: string): Map<string, Refined> {
     });
   }
   return m;
-}
+});
 
 // kol_viewpoint（pipeline kol-viewpoint 产出）：source:item_id -> 有序视角键数组（首个为主视角）。
-export function viewpointMap(symbol: string): Map<string, string[]> {
+export const viewpointMap = cache(function viewpointMap(symbol: string): Map<string, string[]> {
   const rows = safe(
     () => all<any>(`SELECT source, item_id, viewpoints FROM kol_viewpoint WHERE ticker = ?`, symbol),
     []
@@ -38,10 +39,10 @@ export function viewpointMap(symbol: string): Map<string, string[]> {
     if (Array.isArray(vps) && vps.length) m.set(`${r.source}:${r.item_id}`, vps);
   }
   return m;
-}
+});
 
 // author_avatar（pipeline/platforms/author_assets/avatars.py 爬取）→ "source:handle" -> url
-export function avatarMap(): Map<string, string> {
+export const avatarMap = cache(function avatarMap(): Map<string, string> {
   const rows = safe(
     () => all<{ source: string; handle: string; url: string }>(
       `SELECT source, handle, url FROM author_avatar WHERE url IS NOT NULL AND url <> ''`
@@ -51,7 +52,7 @@ export function avatarMap(): Map<string, string> {
   const m = new Map<string, string>();
   for (const r of rows) m.set(`${r.source}:${r.handle}`, r.url);
   return m;
-}
+});
 
 // yt_channel（pipeline/platforms/youtube/channels.py 爬取）→ channel_id -> 作者基础信息（粉丝/视频/简介/@handle）
 export function ytChannelMap(): Map<string, YtChannel> {

@@ -22,6 +22,9 @@ def run_sv_v0(
     reddit_min_author_posts: int,
     youtube_min_subs: int,
     youtube_since_days: int,
+    xueqiu_pool_version: str,
+    xueqiu_since_days: int,
+    xueqiu_allow_partial: bool,
     force: bool,
 ) -> None:
     """Run the legacy Smart Voice v0 scorer through the domain boundary."""
@@ -45,6 +48,9 @@ def run_sv_v0(
             reddit_min_author_posts=reddit_min_author_posts,
             youtube_min_subs=youtube_min_subs,
             youtube_since_days=youtube_since_days,
+            xueqiu_pool_version=xueqiu_pool_version,
+            xueqiu_since_days=xueqiu_since_days,
+            xueqiu_allow_partial=xueqiu_allow_partial,
             force=force,
         )
     )

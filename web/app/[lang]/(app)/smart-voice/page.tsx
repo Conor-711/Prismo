@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { SmartVoiceWorkspace } from "@/features/smart-voice";
-import { getSmartVoiceBoard } from "@/features/smart-voice/svMock";
+import { getSmartVoiceBoard, getSmartVoiceDetailInvestors } from "@/features/smart-voice/svMock";
+import { getSmartVoiceLiveCalls, getSmartVoiceMarketData, getSmartVoiceOverviewStats } from "@/server/queries/smartVoiceQueries";
 import { defaultLocale, isLocale, type Locale } from "@/lib/i18n";
 
 export function generateMetadata({ params }: { params: { lang: string } }): Metadata {
@@ -9,12 +10,16 @@ export function generateMetadata({ params }: { params: { lang: string } }): Meta
   return {
     title: `${zh ? "Smart Voice 工作台" : "Smart Voice Workbench"} · Prismo`,
     description: zh
-      ? "追踪投资者 Smart Voice 分布、排名、警报与典型投资者。"
-      : "Track investor Smart Voice distribution, ranks, alerts and typical investor cases.",
+      ? "发现高 SV 作者集中关注的标的、投资者排行榜与实时有效观点。"
+      : "Discover ticker concentration, investor rankings and live actionable calls from high-SV voices.",
   };
 }
 
 export default function SmartVoicePage({ params }: { params: { lang: string } }) {
   const board = getSmartVoiceBoard();
-  return <SmartVoiceWorkspace board={board} />;
+  const marketData = getSmartVoiceMarketData(24);
+  const liveCalls = getSmartVoiceLiveCalls(320);
+  const stats = getSmartVoiceOverviewStats();
+  const profileIds = getSmartVoiceDetailInvestors(board).map((investor) => investor.id);
+  return <SmartVoiceWorkspace board={board} marketData={marketData} liveCalls={liveCalls} stats={stats} profileIds={profileIds} />;
 }

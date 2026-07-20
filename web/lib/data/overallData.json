@@ -199,157 +199,263 @@
     "updated_at": "2026-06-29T03:15:22.589936"
   },
   "MU": {
+    "anomalies": [],
+    "divergence": {
+      "series": [
+        {
+          "day": "2026-07-02",
+          "smart": 0.249,
+          "retail": -1.0
+        },
+        {
+          "day": "2026-07-06",
+          "smart": 0.054,
+          "retail": 0.004
+        },
+        {
+          "day": "2026-07-07",
+          "smart": 0.287,
+          "retail": 0.0
+        },
+        {
+          "day": "2026-07-08",
+          "smart": 0.525,
+          "retail": 0.0
+        },
+        {
+          "day": "2026-07-09",
+          "smart": 1.0,
+          "retail": -0.0
+        },
+        {
+          "day": "2026-07-10",
+          "smart": 0.549,
+          "retail": 0.0
+        },
+        {
+          "day": "2026-07-13",
+          "smart": 0.653,
+          "retail": -0.0
+        },
+        {
+          "day": "2026-07-14",
+          "smart": 0.701,
+          "retail": -0.001
+        },
+        {
+          "day": "2026-07-15",
+          "smart": 0.381,
+          "retail": 0.0
+        },
+        {
+          "day": "2026-07-16",
+          "smart": -0.105,
+          "retail": -0.002
+        },
+        {
+          "day": "2026-07-17",
+          "smart": 0.0,
+          "retail": 0.0
+        }
+      ],
+      "read": {
+        "smart": "bull",
+        "retail": "neutral",
+        "diverging": false
+      },
+      "smartAuthors": 67
+    },
+    "window": {
+      "start": "2026-07-02",
+      "end": "2026-07-17"
+    },
+    "updated_at": "2026-07-18T07:57:30.324232"
+  },
+  "NVDA": {
     "anomalies": [
       {
-        "day": "2026-06-08",
+        "day": "2026-07-06",
         "metric": "volume",
         "direction": "up",
-        "z": 9.17,
+        "z": 4.4,
         "reason": {
-          "zh": "HBM4价格预期2027年将翻倍，直接引爆内存板块炒作",
-          "en": "HBM4 pricing expected to more than double by 2027, directly triggering memory sector speculation"
+          "zh": "英伟达（NVDA）因市场传闻其Kyber NVL144和NVL576产品可能延迟，导致股价波动，公司随后发布声明否认了这些延迟。",
+          "en": "NVDA's stock fluctuated due to market rumors of potential delays in its Kyber NVL144 and NVL576 products, which the company subsequently denied."
         }
       },
       {
-        "day": "2026-06-09",
-        "metric": "volume",
-        "direction": "up",
-        "z": 9.41,
-        "reason": {
-          "zh": "瑞银分析师Timothy Arcuri预测MU三财季营收达360亿美元，远超预期",
-          "en": "UBS analyst Timothy Arcuri predicts MU's Q3 revenue at $36B, far exceeding expectations"
-        }
-      },
-      {
-        "day": "2026-06-22",
+        "day": "2026-07-07",
         "metric": "sentiment",
         "direction": "up",
-        "z": 9.17,
+        "z": 2.51,
         "reason": {
-          "zh": "MU与Anthropic达成AI基础设施战略合作，引爆市场对HBM需求的预期",
-          "en": "MU's strategic AI infrastructure deal with Anthropic ignited HBM demand expectations"
+          "zh": "市场对三星电子利润超预期并超越英伟达成为全球最赚钱公司反应负面，引发对英伟达盈利能力的担忧，但英伟达通过反驳CPO延迟报告等方式稳定了市场情绪。",
+          "en": "Negative market reaction to Samsung's record profit surpassing Nvidia as the most profitable company, raising concerns for Nvidia, was countered by Nvidia refuting CPO delay reports."
         }
       },
       {
-        "day": "2026-06-22",
-        "metric": "volume",
+        "day": "2026-07-08",
+        "metric": "sentiment",
         "direction": "up",
-        "z": 3.63,
+        "z": 8.05,
         "reason": {
-          "zh": "MU与Anthropic达成AI基础设施战略合作，引爆市场对HBM需求的预期",
-          "en": "MU's strategic AI infrastructure deal with Anthropic ignited HBM demand expectations"
+          "zh": "中国批准英伟达H200芯片出口，市场预期这将显著提振英伟达在华销售，从而推动股价上涨。",
+          "en": "China approved NVIDIA H200 chip exports, expected to significantly boost NVIDIA's sales in China and drive stock price up."
+        }
+      },
+      {
+        "day": "2026-07-16",
+        "metric": "sentiment",
+        "direction": "down",
+        "z": -2.19,
+        "reason": {
+          "zh": "市场对AI泡沫破裂的担忧加剧，尤其是在韩国股市KOSPI200自6月26日以来大幅下跌近75,000韩元后，引发了对AI相关股票的普遍悲观情绪。",
+          "en": "Market fears of an AI bubble burst intensified after the KOSPI200 plunged nearly 75,000 won since June 26th, fueling widespread pessimism for AI-related stocks."
         }
       }
     ],
     "divergence": {
       "series": [
         {
-          "day": "2026-05-26",
-          "smart": 0.0,
-          "retail": 0.764
+          "day": "2026-07-02",
+          "smart": 0.678,
+          "retail": -0.061
         },
         {
-          "day": "2026-05-27",
-          "smart": 0.0,
-          "retail": -0.094
-        },
-        {
-          "day": "2026-05-28",
-          "smart": 0.0,
-          "retail": 0.195
-        },
-        {
-          "day": "2026-05-29",
-          "smart": 0.0,
-          "retail": 0.542
-        },
-        {
-          "day": "2026-06-01",
-          "smart": 0.742,
-          "retail": 0.371
-        },
-        {
-          "day": "2026-06-02",
-          "smart": 0.078,
-          "retail": 0.215
-        },
-        {
-          "day": "2026-06-03",
-          "smart": 0.037,
-          "retail": 0.124
-        },
-        {
-          "day": "2026-06-04",
-          "smart": 0.006,
-          "retail": -0.549
-        },
-        {
-          "day": "2026-06-05",
-          "smart": 0.111,
+          "day": "2026-07-06",
+          "smart": 0.089,
           "retail": -1.0
         },
         {
-          "day": "2026-06-08",
-          "smart": 0.307,
-          "retail": -0.157
+          "day": "2026-07-07",
+          "smart": 0.297,
+          "retail": -0.528
         },
         {
-          "day": "2026-06-09",
-          "smart": -0.062,
-          "retail": -0.338
-        },
-        {
-          "day": "2026-06-10",
-          "smart": 0.008,
-          "retail": -0.412
-        },
-        {
-          "day": "2026-06-11",
-          "smart": 0.146,
-          "retail": 0.289
-        },
-        {
-          "day": "2026-06-12",
-          "smart": 0.17,
-          "retail": 0.393
-        },
-        {
-          "day": "2026-06-15",
-          "smart": -0.14,
-          "retail": 0.987
-        },
-        {
-          "day": "2026-06-16",
-          "smart": -0.053,
-          "retail": 0.248
-        },
-        {
-          "day": "2026-06-17",
-          "smart": 0.2,
-          "retail": 0.384
-        },
-        {
-          "day": "2026-06-18",
-          "smart": 0.47,
-          "retail": 0.774
-        },
-        {
-          "day": "2026-06-22",
+          "day": "2026-07-08",
           "smart": 1.0,
-          "retail": 0.948
+          "retail": 0.694
+        },
+        {
+          "day": "2026-07-09",
+          "smart": 0.355,
+          "retail": 0.132
+        },
+        {
+          "day": "2026-07-10",
+          "smart": 0.677,
+          "retail": 0.002
+        },
+        {
+          "day": "2026-07-13",
+          "smart": 0.501,
+          "retail": 0.002
+        },
+        {
+          "day": "2026-07-14",
+          "smart": 0.811,
+          "retail": 0.001
+        },
+        {
+          "day": "2026-07-15",
+          "smart": 0.911,
+          "retail": 0.04
+        },
+        {
+          "day": "2026-07-16",
+          "smart": 0.291,
+          "retail": -0.028
+        },
+        {
+          "day": "2026-07-17",
+          "smart": 0.0,
+          "retail": -0.013
         }
       ],
       "read": {
         "smart": "bull",
-        "retail": "bull",
+        "retail": "neutral",
         "diverging": false
       },
-      "smartAuthors": 399
+      "smartAuthors": 64
     },
     "window": {
-      "start": "2026-05-26",
-      "end": "2026-06-22"
+      "start": "2026-07-02",
+      "end": "2026-07-17"
     },
-    "updated_at": "2026-07-01T08:55:09.080347"
+    "updated_at": "2026-07-18T07:57:39.433700"
+  },
+  "MSTR": {
+    "anomalies": [],
+    "divergence": {
+      "series": [
+        {
+          "day": "2026-07-02",
+          "smart": 0.079,
+          "retail": 0.264
+        },
+        {
+          "day": "2026-07-06",
+          "smart": 0.081,
+          "retail": -1.0
+        },
+        {
+          "day": "2026-07-07",
+          "smart": 0.19,
+          "retail": -0.007
+        },
+        {
+          "day": "2026-07-08",
+          "smart": 0.215,
+          "retail": -0.079
+        },
+        {
+          "day": "2026-07-09",
+          "smart": 1.0,
+          "retail": 0.003
+        },
+        {
+          "day": "2026-07-10",
+          "smart": 0.548,
+          "retail": 0.0
+        },
+        {
+          "day": "2026-07-13",
+          "smart": 0.863,
+          "retail": 0.01
+        },
+        {
+          "day": "2026-07-14",
+          "smart": 0.256,
+          "retail": 0.0
+        },
+        {
+          "day": "2026-07-15",
+          "smart": 0.515,
+          "retail": -0.004
+        },
+        {
+          "day": "2026-07-16",
+          "smart": 0.277,
+          "retail": -0.012
+        },
+        {
+          "day": "2026-07-17",
+          "smart": 0.0,
+          "retail": 0.0
+        }
+      ],
+      "read": {
+        "smart": "bull",
+        "retail": "neutral",
+        "diverging": false
+      },
+      "smartAuthors": 19
+    },
+    "window": {
+      "start": "2026-07-02",
+      "end": "2026-07-17"
+    },
+    "updated_at": "2026-07-18T07:57:31.754039"
   }
 }

@@ -138,7 +138,7 @@ export function AsiaDivergingBars({
 // 情绪日历热力：x=日期(或任意类目，rawX=true 时不按日期裁剪) y=标的，红→绿映射 -1..1。
 export function AsiaHeatmap({
   x, y, cells, height = 220, rawX = false,
-}: { x: string[]; y: string[]; cells: [number, number, number][]; height?: number; rawX?: boolean }) {
+}: { x: string[]; y: string[]; cells: [number, number, number][]; height?: number | string; rawX?: boolean }) {
   const light = useIsLight();
   const axis = light ? "#5a6b77" : "#7a8a96";
   const mid = light ? "#e7e3ea" : "#2c2b33";

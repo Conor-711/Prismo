@@ -28,6 +28,8 @@ def cmd_kol_viewpoint(args):
     # KOL 个体观点 视角分类（7 选 1-3）→ kol_viewpoint。读已蒸馏的 kol_refined + yt_analysis。
     classify_viewpoints(
         only=csv_values(getattr(args, "only", None)),
+        sources=csv_values(getattr(args, "source", None)),
+        since_days=args.since_days,
         force=args.force,
         workers=args.workers,
         reclassify_other=getattr(args, "reclassify_other", False),
@@ -101,6 +103,8 @@ def register_commands(sub, root) -> None:
 
     sp = sub.add_parser("kol-viewpoint")
     sp.add_argument("--only", type=str, default=None, help="逗号分隔 ticker")
+    sp.add_argument("--source", type=str, default=None, help="逗号分隔来源；省略=全部")
+    sp.add_argument("--since-days", type=int, default=None, help="只分类近 N 天；省略=不限")
     sp.add_argument("--workers", type=int, default=8, help="LLM 并发数")
     sp.add_argument("--force", action="store_true", help="重分类全部（默认只补未分类的）")
     sp.add_argument("--reclassify-other", action="store_true", help="只重判当前 other 行（用新 prompt 把实质观点归到正确视角）")

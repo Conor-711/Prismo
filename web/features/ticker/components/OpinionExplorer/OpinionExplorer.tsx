@@ -15,6 +15,7 @@ import { useOpinionFilters } from "@/features/ticker/hooks/useOpinionFilters";
 import { useOpinionPersonalization } from "@/features/ticker/hooks/useOpinionPersonalization";
 import { useSelectedOpinion } from "@/features/ticker/hooks/useSelectedOpinion";
 import { useOpinionSorting } from "@/features/ticker/hooks/useOpinionSorting";
+import { getOpinionSvMeta } from "@/features/ticker/opinionExplorerLogic";
 import type {
   SortMode,
 } from "@/features/ticker/opinionExplorerTypes";
@@ -74,6 +75,7 @@ export function OpinionExplorer({
     setSort(defaultSort);
     selection.clearSelection();
   };
+  const selectedSvMeta = selection.selected ? getOpinionSvMeta(selection.selected, filters.svIndex.byKey) : null;
 
   return (
     <div className={fill ? "flex h-full min-h-0 flex-col" : ""}>
@@ -142,6 +144,12 @@ export function OpinionExplorer({
               setShowT={selection.setShowTranslation}
               fill={fill}
               recReasons={sort === "personal" && personalConfigured ? personalRank.get(selection.selected.id)?.reasons ?? [] : []}
+              svRank={selectedSvMeta ? {
+                rank: selectedSvMeta.rank,
+                count: filters.svIndex.count,
+                percentile: selectedSvMeta.percentile,
+                score: selectedSvMeta.score,
+              } : undefined}
               onBack={overview ? selection.clearSelection : undefined}
             />
           ) : overview ? (

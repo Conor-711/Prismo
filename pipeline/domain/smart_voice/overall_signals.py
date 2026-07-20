@@ -12,8 +12,9 @@
   ② aspects —— 近 14 天 KOL 被讨论最密集的 3 个『方面』，各含 标签(zh/en) + 多空倾向 + 一条代表性原推（论据）。
      代表引文用模型回选的**真实推文编号**映射回原文/作者/链接（不让模型自由生成，杜绝杜撰）。
 
-KOL 文本源：当前用 `/tmp/<ticker>_x6m.jsonl`（朋友的 6 个月 X 大V 推文抽取，f5000=粉丝≥5000=KOL；
-字段 id/h/aid/cu/text/eng）。云端 tw_tweet 已空，故暂走此抽取；X 正式入 x_opinion 后改读 DB 即可。
+KOL 文本源：显式传入的 JSONL 优先；文件不存在或为空时读取本地真源 `x_opinion`。聪明钱分歧线优先
+兼容旧实验缓存，缓存不存在时使用 `sv_call` + 历史时点 `sv_investor_score_asof` 的前 10% 作者，
+确保作者权重只使用 call 当时已知的分数。
 
 运行（务必 venv，需 .env 里的 QWEN_API_KEY）：
     pipeline/.venv/bin/python -m pipeline.manage overall-signals --ticker PLTR
@@ -79,6 +80,32 @@ def _load_tweets(path: str):
                    "cu": d, "text": text, "eng": eng}
             byday[d].append(rec)
             allrows.append(rec)
+    return byday, allrows
+
+
+def _load_local_x(con: sqlite3.Connection, ticker: str):
+    """从本地 x_opinion 还原归因所需的统一推文结构。"""
+    byday: dict[str, list] = defaultdict(list)
+    allrows: list[dict] = []
+    for tweet_id, handle, created, body, engagement in con.execute(
+        "SELECT tweet_id, handle, created, text, "
+        "COALESCE(likes,0)+COALESCE(retweets,0)+COALESCE(replies,0)+COALESCE(quotes,0) "
+        "FROM x_opinion WHERE ticker=? ORDER BY created",
+        (ticker,),
+    ):
+        text_value = str(body or "").strip()
+        day = str(created or "")[:10]
+        if not text_value or text_value.startswith("RT @") or not day:
+            continue
+        rec = {
+            "id": str(tweet_id or ""),
+            "h": str(handle or "").lstrip("@"),
+            "cu": day,
+            "text": text_value,
+            "eng": int(engagement or 0),
+        }
+        byday[day].append(rec)
+        allrows.append(rec)
     return byday, allrows
 
 
@@ -203,14 +230,81 @@ def _sign(stance: str) -> float:
     return 1.0 if stance == "bull" else (-1.0 if stance == "bear" else 0.0)
 
 
+def _divergence_payload(smart: dict[str, float], retail: dict[str, float], win: list[str],
+                        smart_authors: int):
+    sm = [smart.get(d, 0.0) for d in win]
+    rt = [retail.get(d, 0.0) for d in win]
+
+    def norm(values):
+        peak = max((abs(x) for x in values), default=0) or 1.0
+        return [round(x / peak, 3) for x in values]
+
+    sm_norm, rt_norm = norm(sm), norm(rt)
+    series = [{"day": d, "smart": sm_norm[i], "retail": rt_norm[i]} for i, d in enumerate(win)]
+
+    def stance_of(values):
+        recent = [v for v in values if abs(v) > 1e-9][-3:]
+        if not recent:
+            return "neutral"
+        mean = sum(recent) / len(recent)
+        return "bull" if mean > 0.05 else ("bear" if mean < -0.05 else "neutral")
+
+    smart_stance, retail_stance = stance_of(sm_norm), stance_of(rt_norm)
+    diverging = (
+        smart_stance != "neutral"
+        and retail_stance != "neutral"
+        and smart_stance != retail_stance
+    )
+    return {
+        "series": series,
+        "read": {"smart": smart_stance, "retail": retail_stance, "diverging": diverging},
+        "smartAuthors": smart_authors,
+    }
+
+
+def _local_sv_divergence(ticker: str, con: sqlite3.Connection, win: list[str]):
+    """使用 call 当日的历史 SV 百分位构建无前视的聪明钱情绪线。"""
+    smart: dict[str, float] = defaultdict(float)
+    authors: set[str] = set()
+    rows = con.execute(
+        "SELECT c.investor_id, substr(c.created_at,1,10), c.direction, c.call_weight, "
+        "(SELECT a.percentile FROM sv_investor_score_asof a "
+        " WHERE a.investor_id=c.investor_id AND a.asof_day<=substr(c.created_at,1,10) "
+        " ORDER BY a.asof_day DESC LIMIT 1), "
+        "(SELECT a.raw_z FROM sv_investor_score_asof a "
+        " WHERE a.investor_id=c.investor_id AND a.asof_day<=substr(c.created_at,1,10) "
+        " ORDER BY a.asof_day DESC LIMIT 1), "
+        "(SELECT a.n_eff FROM sv_investor_score_asof a "
+        " WHERE a.investor_id=c.investor_id AND a.asof_day<=substr(c.created_at,1,10) "
+        " ORDER BY a.asof_day DESC LIMIT 1) "
+        "FROM sv_call c WHERE c.ticker=? AND c.is_actionable_call=1 "
+        "AND c.direction IN ('bull','bear') AND substr(c.created_at,1,10) BETWEEN ? AND ?",
+        (ticker, win[0], win[-1]),
+    )
+    for investor_id, day, direction, call_weight, percentile, raw_z, n_eff in rows:
+        # percentile 越小排名越高；只使用当日前 10%、正技能且达到最低有效样本的作者。
+        if percentile is None or float(percentile) > 10.0 or float(raw_z or 0) <= 0 or float(n_eff or 0) < 4:
+            continue
+        investor = str(investor_id or "")
+        if not investor:
+            continue
+        authors.add(investor)
+        weight = max(0.1, float(call_weight or 0)) * float(raw_z)
+        smart[str(day)] += _sign(str(direction)) * weight
+
+    retail = {d: float(v or 0) for d, v in con.execute(
+        "SELECT day, net FROM retail_sentiment_daily WHERE ticker=? ORDER BY day", (ticker,))}
+    return _divergence_payload(smart, retail, win, len(authors))
+
+
 def compute_divergence(ticker: str, con: sqlite3.Connection, skill_dir: str, win: list[str], allrows: list[dict]):
     """两条净情绪线：smart=技能加权 KOL（仅 z>0 已验证作者，按 z×ln(1+互动) 加权），retail=retail_sentiment_daily。
     两线各按自身窗口峰值归一到 [-1,1]（比的是方向/分歧、不是绝对量级）；附『当前读数』(谁多谁空 + 是否背离)。"""
     try:
         overall = _skill_map(skill_dir)
         pls = json.load(open(f"{skill_dir}/{ticker.lower()}_x6m_stance.json", encoding="utf-8"))
-    except FileNotFoundError:
-        return None
+    except (FileNotFoundError, json.JSONDecodeError):
+        return _local_sv_divergence(ticker, con, win)
     smart: dict[str, float] = defaultdict(float)
     n_skilled = 0
     for r in allrows:  # allrows 已过滤 RT、含 id/h/cu/eng
@@ -227,26 +321,7 @@ def compute_divergence(ticker: str, con: sqlite3.Connection, skill_dir: str, win
         smart[r["cu"]] += _sign(s) * z * (1.0 + math.log1p(max(0, r["eng"])))
     retail = {d: float(v or 0) for d, v in con.execute(
         "SELECT day, net FROM retail_sentiment_daily WHERE ticker=? ORDER BY day", (ticker,))}
-    sm = [smart.get(d, 0.0) for d in win]
-    rt = [retail.get(d, 0.0) for d in win]
-
-    def norm(a):
-        mx = max((abs(x) for x in a), default=0) or 1.0
-        return [round(x / mx, 3) for x in a]
-
-    smN, rtN = norm(sm), norm(rt)
-    series = [{"day": d, "smart": smN[i], "retail": rtN[i]} for i, d in enumerate(win)]
-
-    def stance_of(vals):
-        recent = [v for v in vals if abs(v) > 1e-9][-3:]
-        if not recent:
-            return "neutral"
-        m = sum(recent) / len(recent)
-        return "bull" if m > 0.05 else ("bear" if m < -0.05 else "neutral")
-
-    sS, rS = stance_of(smN), stance_of(rtN)
-    diverging = sS != "neutral" and rS != "neutral" and sS != rS
-    return {"series": series, "read": {"smart": sS, "retail": rS, "diverging": diverging}, "smartAuthors": n_skilled}
+    return _divergence_payload(smart, retail, win, n_skilled)
 
 
 # ----------------------------- 主流程 -----------------------------
@@ -275,7 +350,8 @@ def run(ticker: str, kol_file: str, window: int, look: int, aspect_days: int, ca
 
     byday, allrows = _load_tweets(kol_file)
     if not allrows:
-        print(f"[overall] ⚠ KOL 文本源为空：{kol_file} → 异动归因将缺失", flush=True)
+        byday, allrows = _load_local_x(con, ticker)
+        print(f"[overall] KOL 文本源回退本地 x_opinion：{len(allrows)} 条", flush=True)
 
     # 每个异常「日」一条归因（同日多指标共用；reason 为「当天发生了什么」，与指标无关）
     by_anom_day: dict[str, list] = defaultdict(list)

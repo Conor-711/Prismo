@@ -1,7 +1,7 @@
 """KOL 个体观点 · AI 提炼 + 双语（标的页「个体观点·KOL」模块）。
 
 把各社区**照搬过来的原文**提炼成「ta 为什么看多/看空/中性 + 2-3 条要点」，并同时产出
-zh/en 双语（提炼与翻译合一，一次 DeepSeek(LOW/flash) 调用）。覆盖文本源 reddit / x / xueqiu / toss / yahoojp；
+zh/en 双语（提炼与翻译合一，默认按 Qwen → DeepSeek → Gemini 依次兜底）。覆盖文本源 reddit / x / xueqiu / toss / yahoojp；
 YouTube 复用 `yt_analysis`（Gemini 已产出同形 summary+key_points，不在此重复花配额）。
 
 设计要点：
@@ -17,10 +17,12 @@ from __future__ import annotations
 
 import datetime as dt
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import os
 
 from sqlalchemy import bindparam, text
 
-from ...common import llm
+from ...common import deepseek, gemini, llm
+from ...common.config import settings
 from ...common.db import engine, session_scope
 from ...common.models import KolRefined
 
@@ -50,6 +52,59 @@ SYSTEM = (
     "quote 与 reason 不同：reason 是你的提炼，quote 是 ta 本人说的原话（忠实翻译、用于建立可信度）；原文若已是中/英则照引该句。"
     "若信息太少无法判断理由，reason 写「未给出明确理由」/\"no clear thesis given\"、stance 取 neutral、quote 留空。"
 )
+
+
+def _provider_order() -> list[str]:
+    raw = os.environ.get("KOL_REFINE_PROVIDERS", "qwen,deepseek,gemini")
+    order: list[str] = []
+    for provider in raw.split(","):
+        name = provider.strip().lower()
+        if name in {"qwen", "deepseek", "gemini"} and name not in order:
+            order.append(name)
+    return order or ["qwen", "deepseek", "gemini"]
+
+
+def _provider_available(provider: str) -> bool:
+    if provider == "qwen":
+        return llm.available(llm.LOW)
+    if provider == "deepseek":
+        return settings.has_deepseek
+    if provider == "gemini":
+        return settings.has_gemini
+    return False
+
+
+def _provider_label(provider: str) -> str:
+    if provider == "qwen":
+        return llm.model_label(llm.LOW)
+    if provider == "deepseek":
+        return f"deepseek:{settings.deepseek_model_low}"
+    if provider == "gemini":
+        return f"gemini:{settings.gemini_model}"
+    return provider
+
+
+def _messages_json_with(provider: str, user: str) -> dict | None:
+    try:
+        if provider == "qwen":
+            return llm.messages_json(llm.LOW, SYSTEM, user, max_tokens=800)
+        if provider == "deepseek":
+            return deepseek.messages_json(
+                SYSTEM,
+                user,
+                model=settings.deepseek_model_low,
+                max_tokens=800,
+            )
+        if provider == "gemini":
+            return gemini.messages_json(
+                SYSTEM,
+                user,
+                model=settings.gemini_model,
+                max_tokens=800,
+            )
+    except Exception:
+        return None
+    return None
 
 
 def _ensure_table() -> None:
@@ -182,8 +237,9 @@ def refine(sources: list[str] | None = None, per_source: int = DEFAULT_PER_SOURC
            only: list[str] | None = None, force: bool = False, workers: int = 6,
            since_days: int = DEFAULT_SINCE_DAYS) -> int:
     _ensure_table()
-    if not llm.available(llm.LOW):
-        print("[kol-refine] 无 DeepSeek key（DEEPSEEK_API_KEY），跳过。", flush=True)
+    providers = [provider for provider in _provider_order() if _provider_available(provider)]
+    if not providers:
+        print("[kol-refine] 无可用 provider(Qwen/DeepSeek/Gemini)，跳过。", flush=True)
         return 0
     srcs = [s for s in (sources or list(TEXT_SOURCES)) if s in TEXT_SOURCES]
     only_set = {t.strip().upper() for t in only} if only else None
@@ -197,42 +253,46 @@ def refine(sources: list[str] | None = None, per_source: int = DEFAULT_PER_SOURC
                 if (r["source"], str(r["item_id"]), (r["ticker"] or "").upper()) not in have]
 
     total = len(plan)
+    labels = " -> ".join(_provider_label(provider) for provider in providers)
     print(f"[kol-refine] 计划 {total} 条（源 {','.join(srcs)}, per_source={per_source}, "
-          f"近 {since_days} 天, model={llm.model_label(llm.LOW)}, force={force}）", flush=True)
+          f"近 {since_days} 天, model={labels}, force={force}）", flush=True)
     if not total:
         return 0
 
     done = fail = skip = 0
     now = dt.datetime.utcnow()
-    label = llm.model_label(llm.LOW)
-    buf: list[tuple[dict, dict]] = []
+    buf: list[tuple[dict, dict, str]] = []
 
     def _flush() -> None:
         nonlocal done
         if not buf:
             return
         with session_scope() as s:  # 主线程单写者 → 无 sqlite 锁竞争
-            for r, norm in buf:
+            for r, norm, model_label in buf:
                 s.merge(KolRefined(
                     source=r["source"], item_id=str(r["item_id"]), ticker=(r["ticker"] or "").upper(),
                     stance=norm["stance"], reason_zh=norm["reason_zh"], reason_en=norm["reason_en"],
                     points_zh=norm["points_zh"], points_en=norm["points_en"],
                     quote_zh=norm["quote_zh"], quote_en=norm["quote_en"],
                     created=str(r.get("created") or "")[:32],
-                    lang_src="", model=label, refined_at=now))
+                    lang_src="", model=model_label, refined_at=now))
         done += len(buf)
         buf.clear()
 
-    def _work(r: dict) -> tuple[dict, dict | None]:
-        data = llm.messages_json(llm.LOW, SYSTEM, _user(r["source"], r["ticker"], r["txt"], r.get("hint")),
-                                 max_tokens=800)
-        return r, _norm(data, fallback_stance=str(r.get("hint") or "neutral"))
+    def _work(r: dict) -> tuple[dict, dict | None, str]:
+        user = _user(r["source"], r["ticker"], r["txt"], r.get("hint"))
+        fallback_stance = str(r.get("hint") or "neutral")
+        for provider in providers:
+            norm = _norm(_messages_json_with(provider, user), fallback_stance=fallback_stance)
+            if norm is not None:
+                return r, norm, _provider_label(provider)
+        return r, None, ""
 
     with ThreadPoolExecutor(max_workers=max(1, workers)) as ex:
         futs = [ex.submit(_work, r) for r in plan]
         for i, fut in enumerate(as_completed(futs), 1):
             try:
-                r, norm = fut.result()
+                r, norm, model_label = fut.result()
             except Exception as e:  # noqa: BLE001
                 fail += 1
                 if fail <= 8:
@@ -241,7 +301,7 @@ def refine(sources: list[str] | None = None, per_source: int = DEFAULT_PER_SOURC
             if norm is None:
                 skip += 1
                 continue
-            buf.append((r, norm))
+            buf.append((r, norm, model_label))
             if len(buf) >= 40:  # 增量落库：中途被杀也不丢已完成的
                 _flush()
             if i % 50 == 0:

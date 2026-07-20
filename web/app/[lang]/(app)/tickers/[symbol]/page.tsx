@@ -5,6 +5,7 @@ import { getGrTickerSymbols, getGrTickerDetail, getGrQuote } from "@/server/quer
 import { getTickerMock, getKolFlow } from "@/shared/market/mockDetail";
 import { getKolArguments, getKolFlowReal, getKolNewcomersDaily, getKolOpinions, getKolSentimentDaily, getKolVolumeDaily, getRetailSentimentDaily, getRetailVolumeDaily, getRetailNewcomersDaily, getKolTargetPrices } from "@/server/queries/kolQueries";
 import { getOverallData } from "@/server/queries/overallData";
+import { getTickerSmartVoiceSignals } from "@/server/queries/smartVoiceTickerSignals";
 import { getTickerSmartVoice, getTickerSmartVoicePool } from "@/features/smart-voice/svMock";
 import { TICKER_UNIVERSE } from "@/shared/market/tickerMeta";
 import { isLocale, defaultLocale, type Locale } from "@/lib/i18n";
@@ -68,7 +69,7 @@ export default function TickerDetail({ params }: { params: { lang: string; symbo
           overview={
             <TickerOverviewPanel
               zh={zh}
-              flow={flow}
+              flowDays={flow.days}
               sentiment={getKolSentimentDaily(ticker.ticker)}
               volume={getKolVolumeDaily(ticker.ticker)}
               retailSentiment={getRetailSentimentDaily(ticker.ticker)}
@@ -79,6 +80,7 @@ export default function TickerDetail({ params }: { params: { lang: string; symbo
               targetPrices={getKolTargetPrices(ticker.ticker)}
               argumentsData={getKolArguments(ticker.ticker)}
               smartVoice={smartVoice}
+              smartVoiceSignals={getTickerSmartVoiceSignals(ticker.ticker)}
             />
           }
         />

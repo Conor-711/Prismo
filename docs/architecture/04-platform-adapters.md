@@ -52,3 +52,5 @@
 - 高结构化平台：YouTube、X、Reddit。可以稳定拿到作者、互动、时间、正文或字幕。
 - 半结构化社区：雪球、Toss、Yahoo Finance、Naver、PTT。正文可拿，但作者、粉丝、互动、历史窗口差异很大。
 - 受限平台：需要浏览器、登录态或 WAF 绕行的平台，必须把 crawl、raw 保存、sync 分离，避免失败时污染产品表。
+
+雪球作者时间线属于受限平台流程：未登录只能抓作者首屏，翻页必须使用用户本人授权后保存的 Playwright storage state。会话文件必须 gitignore，平台层只能消费会话，不得接收或记录账号密码；raw 写入、ticker 扩展和 SV 分析保持分步执行。

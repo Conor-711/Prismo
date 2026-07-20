@@ -12,9 +12,10 @@
 """
 from __future__ import annotations
 
+import os
 from typing import Any
 
-from . import deepseek, qwen
+from . import deepseek, gemini, qwen
 from .config import settings
 
 LOW = "low"
@@ -24,10 +25,20 @@ HIGH = "high"
 # provider 标识
 _QWEN = "qwen"
 _DEEPSEEK = "deepseek"
+_GEMINI = "gemini"
 
 
 def _route(tier: str) -> tuple[str, str]:
     """档位 → (provider, model)。"""
+    override = os.environ.get("LLM_PROVIDER", "").strip().lower()
+    if override == _GEMINI:
+        return _GEMINI, settings.gemini_model
+    if override == _DEEPSEEK:
+        model = settings.deepseek_model_mid if tier in (MID, HIGH) else settings.deepseek_model_low
+        return _DEEPSEEK, model
+    if override == _QWEN:
+        model = settings.qwen_model if tier in (MID, HIGH) else settings.qwen_model_low
+        return _QWEN, model
     if tier == HIGH:
         return _QWEN, settings.qwen_model
     if tier == MID:
@@ -44,7 +55,11 @@ def model_label(tier: str) -> str:
 def available(tier: str) -> bool:
     """该档位对应 provider 的 key 是否就绪（不就绪时调用方应回退 mock）。"""
     provider, _ = _route(tier)
-    return settings.has_qwen if provider == _QWEN else settings.has_deepseek
+    if provider == _QWEN:
+        return settings.has_qwen
+    if provider == _GEMINI:
+        return settings.has_gemini
+    return settings.has_deepseek
 
 
 def chat(tier: str, system: str, user: str, max_tokens: int = 1200,
@@ -53,6 +68,9 @@ def chat(tier: str, system: str, user: str, max_tokens: int = 1200,
     if provider == _QWEN:
         return qwen.chat(system, user, model=model, max_tokens=max_tokens,
                          temperature=temperature, enable_thinking=enable_thinking)
+    if provider == _GEMINI:
+        return gemini.chat(system, user, model=model, max_tokens=max_tokens,
+                           temperature=temperature)
     return deepseek.chat(system, user, model=model, max_tokens=max_tokens, temperature=temperature)
 
 
@@ -62,4 +80,6 @@ def messages_json(tier: str, system: str, user: str, max_tokens: int = 1200,
     if provider == _QWEN:
         return qwen.messages_json(system, user, model=model, max_tokens=max_tokens,
                                   enable_thinking=enable_thinking)
+    if provider == _GEMINI:
+        return gemini.messages_json(system, user, model=model, max_tokens=max_tokens)
     return deepseek.messages_json(system, user, model=model, max_tokens=max_tokens)

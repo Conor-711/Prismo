@@ -176,12 +176,16 @@ def fetch_nasdaq_history(ticker: str, start: dt.date, end_inclusive: dt.date) ->
         "Referer": "https://www.nasdaq.com/",
     }
     symbol = yahoo_symbol(ticker)
+    # Nasdaq rejects same-day from/to ranges. Expand the request window and
+    # filter parsed rows back to the caller's inclusive range below.
+    request_start = start - dt.timedelta(days=1)
+    request_end = end_inclusive + dt.timedelta(days=1)
     for assetclass in ("stocks", "etf"):
         query = urllib.parse.urlencode(
             {
                 "assetclass": assetclass,
-                "fromdate": start.isoformat(),
-                "todate": end_inclusive.isoformat(),
+                "fromdate": request_start.isoformat(),
+                "todate": request_end.isoformat(),
                 "limit": 9999,
             }
         )
@@ -195,7 +199,10 @@ def fetch_nasdaq_history(ticker: str, start: dt.date, end_inclusive: dt.date) ->
             close = parse_number(row.get("close"))
             if not raw_day or close is None:
                 continue
-            day = dt.datetime.strptime(str(raw_day), "%m/%d/%Y").strftime("%Y-%m-%d")
+            parsed_day = dt.datetime.strptime(str(raw_day), "%m/%d/%Y").date()
+            if parsed_day < start or parsed_day > end_inclusive:
+                continue
+            day = parsed_day.isoformat()
             open_ = parse_number(row.get("open")) or close
             high = parse_number(row.get("high")) or max(open_, close)
             low = parse_number(row.get("low")) or min(open_, close)

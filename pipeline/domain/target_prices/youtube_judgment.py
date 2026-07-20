@@ -22,8 +22,9 @@ import sqlite3
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from ...common import llm
+from ...common.config import RUNTIME_DATA_DIR
 
-DB = os.environ.get("PRICE_DB", os.path.join(os.path.dirname(__file__), "..", "..", "data", "dev.db"))
+DB = os.environ.get("PRICE_DB", str(RUNTIME_DATA_DIR / "dev.db"))
 
 SYSTEM = (
     "你是金融观点结构化抽取器。给你一位分析者对某只美股的**已蒸馏**观点（摘要 + 论据要点，可能中英混合）"
@@ -111,12 +112,19 @@ def run(force: bool = False, only: set[str] | None = None, workers: int = 8) -> 
         return 0
     con = sqlite3.connect(os.path.abspath(DB))
     _ensure(con)
-    done = {r[0] for r in con.execute("SELECT video_id FROM yt_judgment").fetchall()} if not force else set()
+    done = {
+        str(video_id): str(ticker or "").upper()
+        for video_id, ticker in con.execute("SELECT video_id,ticker FROM yt_judgment").fetchall()
+    } if not force else {}
     rows = con.execute(
         "SELECT video_id, ticker, stance, summary_zh, summary_en, key_points_zh, key_points_en, price_target "
         "FROM yt_analysis"
     ).fetchall()
-    todo = [r for r in rows if r[0] not in done and (not only or (r[1] or "").upper() in only)]
+    todo = [
+        r for r in rows
+        if done.get(str(r[0])) != str(r[1] or "").upper()
+        and (not only or (r[1] or "").upper() in only)
+    ]
     print(f"[yt-judgment] 计划 {len(todo)} 条（已有 {len(done)} / 共 {len(rows)}；model={llm.model_label(llm.LOW)}）", flush=True)
     if not todo:
         con.close()

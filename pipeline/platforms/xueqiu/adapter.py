@@ -127,6 +127,84 @@ def enrich_authors(*, since_days: int) -> dict[str, int]:
     return run_enrich(since_days=since_days)
 
 
+def authorize_authors(
+    *, out_path: str, probe_user_id: str, timeout_seconds: int
+) -> dict[str, Any]:
+    """Capture a user-authorized Xueqiu browser session."""
+    from .author_timeline import authorize_storage_state
+
+    return authorize_storage_state(
+        out_path=out_path,
+        probe_user_id=probe_user_id,
+        timeout_seconds=timeout_seconds,
+    )
+
+
+def plan_author_backfill(
+    *,
+    pool_version: str,
+    days: int,
+    include_reserve: bool,
+    only_user_ids: list[str] | None,
+    per_page: int,
+    max_pages: int,
+    force: bool,
+) -> dict[str, int]:
+    """Plan resumable author timeline backfill jobs."""
+    from .author_timeline import plan_author_jobs
+
+    return plan_author_jobs(
+        pool_version=pool_version,
+        days=days,
+        include_reserve=include_reserve,
+        only_user_ids=only_user_ids,
+        per_page=per_page,
+        max_pages=max_pages,
+        force=force,
+    )
+
+
+def run_author_backfill(
+    *,
+    pool_version: str,
+    only_user_ids: list[str] | None,
+    selected_only: bool,
+    order_mode: str,
+    max_attempts: int,
+    max_jobs: int | None,
+    sleep: float,
+    headless: bool,
+    storage_state: str,
+    retry_failed: bool,
+    retry_blocked: bool,
+    allow_guest_page_one: bool,
+) -> dict[str, Any]:
+    """Run pending author timeline backfill jobs."""
+    from .author_timeline import run_author_jobs
+
+    return run_author_jobs(
+        pool_version=pool_version,
+        only_user_ids=only_user_ids,
+        selected_only=selected_only,
+        order_mode=order_mode,
+        max_attempts=max_attempts,
+        max_jobs=max_jobs,
+        sleep=sleep,
+        headless=headless,
+        storage_state=storage_state,
+        retry_failed=retry_failed,
+        retry_blocked=retry_blocked,
+        allow_guest_page_one=allow_guest_page_one,
+    )
+
+
+def author_backfill_status(*, pool_version: str | None) -> dict[str, Any]:
+    """Report author-pool and timeline-job status."""
+    from .author_timeline import author_status
+
+    return author_status(pool_version=pool_version)
+
+
 def status() -> dict[str, Any]:
     """Report Xueqiu crawl-pipeline status."""
     from .pipeline import status as run_status

@@ -2,6 +2,9 @@
 
 from .workflows import (
     backfill_price_history,
+    build_sv_indicator_backtest,
+    export_sv_indicator_backtest_reports,
+    build_ticker_sv_signals,
     build_overall_signals,
     match_x_topics,
     rollup_kol_newcomers,
@@ -16,6 +19,9 @@ from .workflows import (
 
 __all__ = [
     "backfill_price_history",
+    "build_sv_indicator_backtest",
+    "export_sv_indicator_backtest_reports",
+    "build_ticker_sv_signals",
     "build_overall_signals",
     "match_x_topics",
     "rollup_kol_newcomers",

@@ -206,11 +206,19 @@ function evalReturn(
   return { entry: entryPt.close, latest: latestPt.close, latestDay: latestPt.day, heldDays, ret };
 }
 
-// generateStaticParams 用：所有有视频的频道 id（= 可被链接到作者页的全集）。
+// generateStaticParams 用：投资者榜单实际展示并可下钻的 YouTube 作者。
+// 榜单固定展示前 24 名；不要为库中所有历史频道生成数千个不可达静态页面。
 export function getYoutubeChannelIds(): string[] {
   return safe(
     () =>
-      all<{ channel_id: string }>(`SELECT DISTINCT channel_id FROM yt_video WHERE channel_id <> ''`).map(
+      all<{ channel_id: string }>(
+        `SELECT channel_id
+           FROM yt_video
+          WHERE channel_id <> ''
+          GROUP BY channel_id
+          ORDER BY SUM(view_count) DESC
+          LIMIT 24`
+      ).map(
         (r) => r.channel_id
       ),
     []

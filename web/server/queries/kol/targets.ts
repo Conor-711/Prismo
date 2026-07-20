@@ -1,6 +1,14 @@
 import { all } from "@/lib/db";
 import type { Bi, KolSource, KolTargetData, TargetMark } from "@/shared/market/mockDetail";
-import { bucketHorizon, currentPrice, parseRange, safe, svHorizon } from "./shared";
+import {
+  bucketHorizon,
+  currentPrice,
+  parseRange,
+  safe,
+  svHorizon,
+  YOUTUBE_MIN_DISPLAY_DURATION_SECONDS,
+  YOUTUBE_MIN_DISPLAY_SUBSCRIBERS,
+} from "./shared";
 import { refinedMap } from "./lookups";
 
 function priceWindow(symbol: string, days: number): { day: string; close: number }[] {
@@ -117,8 +125,16 @@ export function getKolTargetPrices(symbol: string): KolTargetData {
                   v.channel AS author, v.url AS url, v.published_utc AS created,
                   COALESCE(a.summary_zh,'') AS sz, COALESCE(a.summary_en,'') AS se
              FROM yt_judgment yj JOIN yt_video v ON v.id = yj.video_id
+             JOIN yt_channel c ON c.channel_id = v.channel_id
              LEFT JOIN yt_analysis a ON a.video_id = yj.video_id
-            WHERE yj.ticker=? AND v.published_utc>=?`, symbol, cutoff),
+            WHERE yj.ticker=? AND v.published_utc>=?
+              AND COALESCE(v.duration_s,0) > ?
+              AND COALESCE(c.subscriber_count,-1) >= ?`,
+          symbol,
+          cutoff,
+          YOUTUBE_MIN_DISPLAY_DURATION_SECONDS,
+          YOUTUBE_MIN_DISPLAY_SUBSCRIBERS
+        ),
         []
       );
       for (const r of yt) {

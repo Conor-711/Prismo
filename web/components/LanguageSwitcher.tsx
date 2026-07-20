@@ -1,13 +1,11 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { stripLang, type Locale } from "@/lib/i18n";
+import { stripLang, type PublishedLocale } from "@/lib/i18n";
 
-const OPTS: { code: Locale; label: string }[] = [
+const OPTS: { code: PublishedLocale; label: string }[] = [
   { code: "zh", label: "中" },
   { code: "en", label: "EN" },
-  { code: "ja", label: "日" },
-  { code: "ko", label: "한" },
 ];
 
 export function LanguageSwitcher() {
@@ -15,7 +13,7 @@ export function LanguageSwitcher() {
   const router = useRouter();
   const { lang, rest } = stripLang(path);
 
-  const go = (target: Locale) => {
+  const go = (target: PublishedLocale) => {
     if (target === lang) return;
     try {
       localStorage.setItem("prismo:lang", target);

@@ -8,157 +8,65 @@ import { fmtCompact } from "@/shared/formatting/format";
 import {
   NARRATIVE_LABELS,
   SV_HORIZONS,
+  smartVoiceBottomDecile,
+  smartVoiceDecileSize,
+  smartVoiceTopDecile,
   getPortfolioSmartVoice,
   investorTickerSv,
   type SvBoard,
-  type SvConfidence,
   type SvHorizon,
   type SvInvestor,
   type SvTickerBoard,
 } from "@/features/smart-voice/svMock";
-import { Avatar, SOURCE } from "@/shared/market/kolPresentation";
+import { HorizonBars, InvestorIdentity, InvestorRow, SegmentBar, SmallMetric, SmartVoiceScore, confidenceLabel, svTone } from "./SmartVoicePrimitives";
 
-const ACCENT = "#57D7BA";
-const LINE = "#2a2d2f";
-
-function confidenceLabel(c: SvConfidence, zh: boolean) {
-  if (c === "high") return zh ? "高置信" : "High confidence";
-  if (c === "medium") return zh ? "中置信" : "Medium confidence";
-  if (c === "low") return zh ? "低置信" : "Low confidence";
-  return zh ? "观察中" : "Observing";
-}
-
-function svTone(score: number) {
-  if (score >= 120) return "text-bull";
-  if (score >= 105) return "text-cream";
-  if (score >= 95) return "text-neutral-400";
-  return "text-bear";
-}
-
-function sourceLabel(source: SvInvestor["source"]) {
-  return source === "youtube" ? "YouTube" : "X";
-}
-
-export function SmartVoiceScore({
-  score,
-  label = "SV",
-  size = "md",
-}: {
-  score: number;
-  label?: string;
-  size?: "sm" | "md" | "lg";
-}) {
-  const text = size === "lg" ? "text-[30px]" : size === "sm" ? "text-[18px]" : "text-[22px]";
-  return (
-    <div className="text-right">
-      <div className="text-[9.5px] font-bold uppercase tracking-[0.16em] text-neutral-600">{label}</div>
-      <div className={`font-display font-extrabold leading-none tabular ${text} ${svTone(score)}`}>{score}</div>
-    </div>
-  );
-}
-
-function SegmentBar({ value, max = 145 }: { value: number; max?: number }) {
-  const width = Math.max(4, Math.min(100, ((value - 80) / (max - 80)) * 100));
-  return (
-    <div className="h-1.5 overflow-hidden rounded-full bg-white/[.06]">
-      <div className="h-full rounded-full bg-reddit" style={{ width: `${width}%` }} />
-    </div>
-  );
-}
-
-function InvestorIdentity({ inv, compact = false }: { inv: SvInvestor; compact?: boolean }) {
-  const color = inv.source === "youtube" ? SOURCE.youtube.color : SOURCE.x.color;
-  const content = (
-    <>
-      <Avatar src={inv.avatar} color={color} name={inv.name} size={compact ? 28 : 34} />
-      <div className="min-w-0">
-        <div className="truncate text-[13px] font-semibold leading-tight text-cream">{inv.name}</div>
-        <div className="mt-0.5 flex items-center gap-1.5 text-[10.5px] text-neutral-500">
-          <span className="rounded px-1.5 py-px font-medium" style={{ background: `${color}22`, color }}>
-            {sourceLabel(inv.source)}
-          </span>
-          <span>{inv.language.toUpperCase()}</span>
-        </div>
-      </div>
-    </>
-  );
-
-  return (
-    <a href={inv.url} target="_blank" rel="noopener noreferrer" className="flex min-w-0 items-center gap-2.5 transition hover:opacity-85">
-      {content}
-    </a>
-  );
-}
-
-function InvestorRow({
-  inv,
-  rank,
-  zh,
-  score,
-  suffix,
-}: {
-  inv: SvInvestor;
-  rank: number;
-  zh: boolean;
-  score?: number;
-  suffix?: React.ReactNode;
-}) {
-  const displayScore = score ?? inv.sv;
-  const rationale = zh ? inv.rationaleZh : inv.rationaleEn;
-  return (
-    <div className="grid grid-cols-[26px_minmax(0,1fr)_auto] items-center gap-3 border-b border-line/70 px-3 py-2.5 last:border-b-0">
-      <div className="text-center font-mono text-[13px] font-bold tabular text-neutral-600">{rank}</div>
-      <div className="min-w-0">
-        <InvestorIdentity inv={inv} />
-        <div className="mt-1 flex flex-wrap items-center gap-1">
-          {inv.topTickers.slice(0, 4).map((t) => (
-            <LocaleLink key={t} href={`/tickers/${t}`} className="rounded bg-white/[.04] px-1.5 py-px font-mono text-[10px] text-neutral-400 hover:text-cream">
-              {t}
-            </LocaleLink>
-          ))}
-          <span className="rounded bg-reddit/10 px-1.5 py-px text-[10px] text-reddit ring-1 ring-inset ring-reddit/15">
-            {confidenceLabel(inv.confidence, zh)}
-          </span>
-        </div>
-        <p className="mt-1 truncate text-[11.5px] text-neutral-500">{rationale}</p>
-        {suffix}
-      </div>
-      <div className="shrink-0">
-        <SmartVoiceScore score={displayScore} size="sm" />
-      </div>
-    </div>
-  );
-}
-
-function SmallMetric({ label, value, tone = "text-cream" }: { label: string; value: string; tone?: string }) {
-  return (
-    <div className="rounded-lg bg-white/[.025] px-2.5 py-2 ring-1 ring-inset ring-white/[.06]">
-      <div className="text-[9.5px] uppercase tracking-wide text-neutral-600">{label}</div>
-      <div className={`mt-0.5 font-mono text-[13px] font-bold leading-none tabular ${tone}`}>{value}</div>
-    </div>
-  );
-}
-
-export function SmartVoiceLeaderboard({ board }: { board: SvBoard }) {
-  const [tab, setTab] = useState<"global" | "x" | "youtube" | SvHorizon | "semis" | "ai_infra">("global");
+export function SmartVoiceLeaderboard({ board, expandable = false }: { board: SvBoard; expandable?: boolean }) {
+  const [tab, setTab] = useState<"global" | "x" | "youtube" | "reddit" | SvHorizon | "semis" | "ai_infra">("global");
+  const [band, setBand] = useState<"top" | "bottom">("top");
+  const [visible, setVisible] = useState(8);
   const { lang } = useLocale();
   const zh = lang === "zh";
+  const decileSize = smartVoiceDecileSize(board);
+  const step = 24;
+  const activePlatformBand = tab === "x" || tab === "youtube" || tab === "reddit" ? board.platformBands?.[tab] : undefined;
 
   const items = useMemo(() => {
-    const scored = board.investors.map((inv) => {
+    const pool = activePlatformBand
+      ? (band === "bottom" ? activePlatformBand.bottom10 : activePlatformBand.top10)
+      : band === "bottom"
+        ? smartVoiceBottomDecile(board)
+        : expandable
+          ? smartVoiceTopDecile(board)
+          : board.investors;
+    const scored = pool.map((inv) => {
       let score = inv.sv;
-      if (tab === "x" || tab === "youtube") score = inv.source === tab ? inv.platformScores[tab] ?? inv.sv : inv.sv - 14;
-      else if (SV_HORIZONS.includes(tab as SvHorizon)) score = inv.horizonScores[tab as SvHorizon] ?? inv.sv - 10;
-      else if (tab === "semis" || tab === "ai_infra") score = inv.narrativeScores[tab] ?? inv.sv - 12;
+      if (tab === "x" || tab === "youtube" || tab === "reddit") {
+        score = inv.source === tab ? inv.platformScores[tab] ?? inv.sv : inv.sv - 14;
+      } else if (band === "top") {
+        if (SV_HORIZONS.includes(tab as SvHorizon)) score = inv.horizonScores[tab as SvHorizon] ?? inv.sv - 10;
+        else if (tab === "semis" || tab === "ai_infra") score = inv.narrativeScores[tab] ?? inv.sv - 12;
+      }
       return { inv, score };
     });
-    return scored.sort((a, b) => b.score - a.score).slice(0, 8);
-  }, [board.investors, tab]);
+    const sorted = scored.sort((a, b) => (band === "bottom" ? a.score - b.score : b.score - a.score));
+    return sorted.slice(0, expandable ? visible : 8);
+  }, [activePlatformBand, band, board, expandable, tab, visible]);
+
+  const available = activePlatformBand
+    ? (band === "bottom" ? activePlatformBand.bottom10.length : activePlatformBand.top10.length)
+    : band === "bottom"
+      ? smartVoiceBottomDecile(board).length
+      : expandable
+        ? smartVoiceTopDecile(board).length
+        : board.investors.length;
+  const targetSize = activePlatformBand ? Math.max(1, Math.ceil(activePlatformBand.rankedCount * 0.1)) : decileSize;
+  const canExpand = expandable && visible < available;
 
   const tabs: { key: typeof tab; zh: string; en: string }[] = [
     { key: "global", zh: "当前总分", en: "Global" },
     { key: "x", zh: "X", en: "X" },
     { key: "youtube", zh: "YouTube", en: "YouTube" },
+    { key: "reddit", zh: "Reddit", en: "Reddit" },
     { key: "1D", zh: "1D", en: "1D" },
     { key: "5D", zh: "5D", en: "5D" },
     { key: "20D", zh: "20D", en: "20D" },
@@ -175,25 +83,52 @@ export function SmartVoiceLeaderboard({ board }: { board: SvBoard }) {
             {zh ? "当前最值得参考的投资者" : "Most valuable voices right now"}
           </h2>
           <p className="mt-1.5 text-[12px] text-neutral-500">
-            {zh ? "Mock SV：准确性为主，叙事热度用于当前市场权重。" : "Mock SV: accuracy first, narrative heat adjusts current-market relevance."}
+            {zh ? "按最新结算后的全局分、平台分与有效样本展示。" : "Latest settled global, platform, and effective-sample scores."}
           </p>
         </div>
         <div className="grid grid-cols-3 gap-2">
           <SmallMetric label={zh ? "中位数" : "Median"} value="100" />
-          <SmallMetric label={zh ? "样本池" : "Pool"} value={`${board.investors.length}`} />
-          <SmallMetric label={zh ? "平台" : "Platforms"} value="X/YT" tone="text-reddit" />
+          <SmallMetric label={zh ? "样本池" : "Pool"} value={fmtCompact(board.totalInvestors ?? board.investors.length)} />
+          <SmallMetric label={zh ? "平台" : "Platforms"} value="X/YT/RD" tone="text-reddit" />
         </div>
       </div>
 
       <div className="border-b border-line px-4 py-2">
+        {expandable && (
+          <div className="mb-2 flex flex-wrap gap-1.5">
+            {(["top", "bottom"] as const).map((key) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => {
+                  setBand(key);
+                  setVisible(8);
+                  if (key === "bottom" && tab !== "global" && tab !== "x" && tab !== "youtube" && tab !== "reddit") setTab("global");
+                }}
+                className={`rounded-md px-2.5 py-1 text-[11.5px] font-semibold ring-1 ring-inset transition ${
+                  band === key ? "bg-white/[.07] text-cream ring-white/15" : "text-neutral-500 ring-line hover:text-cream"
+                }`}
+              >
+                {key === "top" ? (zh ? "前 10%" : "Top 10%") : (zh ? "后 10%" : "Bottom 10%")}
+              </button>
+            ))}
+            <span className="self-center text-[11px] text-neutral-600">
+              {zh ? `目标 ${targetSize} 位 · 已导出 ${available} 位` : `target ${targetSize} · exported ${available}`}
+            </span>
+          </div>
+        )}
         <div className="flex flex-wrap gap-1.5">
           {tabs.map((x) => (
             <button
               key={x.key}
               type="button"
-              onClick={() => setTab(x.key)}
+              disabled={band === "bottom" && x.key !== "global" && x.key !== "x" && x.key !== "youtube" && x.key !== "reddit"}
+              onClick={() => {
+                setTab(x.key);
+                setVisible(8);
+              }}
               className={`rounded-md px-2.5 py-1 text-[11.5px] font-semibold ring-1 ring-inset transition ${
-                tab === x.key ? "bg-reddit/12 text-reddit ring-reddit/35" : "text-neutral-500 ring-line hover:text-cream"
+                tab === x.key ? "bg-reddit/12 text-reddit ring-reddit/35" : "text-neutral-500 ring-line hover:text-cream disabled:cursor-not-allowed disabled:opacity-35"
               }`}
             >
               {zh ? x.zh : x.en}
@@ -208,24 +143,31 @@ export function SmartVoiceLeaderboard({ board }: { board: SvBoard }) {
             key={`${tab}:${inv.id}`}
             inv={inv}
             score={score}
-            rank={i + 1}
+            rank={activePlatformBand && inv.platformRank ? `#${inv.platformRank}` : inv.rank ? `#${inv.rank}` : i + 1}
             zh={zh}
-            suffix={
-              <div className="mt-1.5 grid grid-cols-4 gap-1.5">
-                {SV_HORIZONS.map((h) => (
-                  <div key={h}>
-                    <div className="mb-0.5 flex justify-between text-[9.5px] text-neutral-600">
-                      <span>{h}</span>
-                      <span className="font-mono">{inv.horizonScores[h] ?? "—"}</span>
-                    </div>
-                    {typeof inv.horizonScores[h] === "number" && <SegmentBar value={inv.horizonScores[h] as number} />}
-                  </div>
-                ))}
-              </div>
-            }
+            suffix={<HorizonBars inv={inv} />}
           />
         ))}
       </div>
+
+      {expandable && (
+        <div className="flex items-center justify-between gap-3 border-t border-line px-4 py-2.5 text-[11px] text-neutral-500">
+          <span>
+            {zh
+              ? `当前显示 ${items.length}/${available} 位${band === "bottom" && available < decileSize ? "；当前快照尚未完整导出后 10%" : ""}`
+              : `Showing ${items.length}/${available}${band === "bottom" && available < decileSize ? "; current snapshot has not exported the full bottom 10%" : ""}`}
+          </span>
+          {canExpand && (
+            <button
+              type="button"
+              onClick={() => setVisible((n) => Math.min(available, n + step))}
+              className="rounded-md px-2 py-1 text-[11px] font-semibold text-reddit ring-1 ring-inset ring-reddit/25 hover:bg-reddit/10"
+            >
+              {visible + step >= available ? (zh ? "展开到 10%" : "Show full 10%") : (zh ? `再展开 ${Math.min(step, available - visible)} 位` : `Show ${Math.min(step, available - visible)} more`)}
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-2 border-t border-line px-4 py-2.5 text-[11px] text-neutral-500">
         <span>{zh ? "当前叙事权重" : "Current narrative weights"}</span>

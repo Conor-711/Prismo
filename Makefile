@@ -2,10 +2,16 @@ PY := pipeline/.venv/bin/python
 SYS_PY := python3
 PIP := pipeline/.venv/bin/pip
 MANAGE := $(PY) -m pipeline.manage
+SV_INDICATOR_WINDOWS := 1,3,7,30,90
+SV_INDICATOR_SOURCES := all,x,youtube,reddit,xueqiu
+SV_SEGMENT_WINDOWS := 3,7,14,30
+SV_SEGMENT_TYPES := horizon,narrative,investor_type
+SV_SEGMENT_BANDS := top10,top25
 
 .PHONY: install venv db-init migrate seed seed-cn sample ingest refresh extract analyze analyze-mock \
         rollup narratives narrative-rotation brief worker daily daily-build cn-backfill demo stats test web-install web-dev clean help \
-        arch-check sv-price-history sv-v0-candidates sv-v0 sv-v0-prod reddit-sv-authors sv-v0-reddit-candidates sv-v0-reddit-prod tw-match cf-deploy
+        arch-check sv-price-history sv-v0-candidates sv-v0 sv-v0-prod sv-ticker-signals sv-indicator-backtest sv-indicator-report sv-segment-backtest reddit-sv-authors sv-v0-reddit-candidates sv-v0-reddit-prod tw-match cf-deploy \
+        backup-db snapshot-db restore-db data-clean data-status xueqiu-author-auth xueqiu-author-plan xueqiu-author-run xueqiu-author-drain xueqiu-author-status xueqiu-sv-full
 
 help:
 	@echo "Reddit 版 Kaito Pro — 常用命令"
@@ -28,12 +34,24 @@ help:
 	@echo "  make sv-price-history     补齐 SV 所需日线价格"
 	@echo "  make sv-v0                运行 Smart Voice v0：候选召回 → LLM 结构化 → 结算 → 导出"
 	@echo "  make sv-v0-prod           生产级 SV：更大候选池 + 作者均衡 LLM 抽样"
+	@echo "  make sv-ticker-signals    标的 SV 分层、聚集事件与无泄漏历史回测"
+	@echo "  make sv-indicator-backtest  回测 SV 发现页指标的胜率、盈亏比和超额收益"
+	@echo "  make sv-indicator-report    导出逐事件、逐原文证据和稳健性细分数据"
+	@echo "  make sv-segment-backtest    按周期、赛道和投资类型子 SV 做垂直集中回测"
+	@echo "  make xueqiu-author-plan   导入雪球候选池并创建一年作者时间线任务"
+	@echo "  make xueqiu-author-auth   由用户登录雪球并保存本地会话（不保存密码）"
+	@echo "  make xueqiu-author-run    断点运行雪球作者时间线任务"
+	@echo "  make xueqiu-author-drain  低频冷却长跑正式 300 人作者池"
+	@echo "  make xueqiu-sv-full       回填完整作者池后自动召回、抽取、结算并导出雪球 SV"
 	@echo "  make reddit-sv-authors    补 Reddit SV 作者历史和作者资料"
 	@echo "  make sv-v0-reddit-prod    运行 Reddit 帖子版 Smart Voice"
 	@echo "  --- Web ---"
 	@echo "  make web-install   安装前端依赖    make web-dev  启动 Next.js"
 	@echo "  make cf-deploy     构建并上传 web/out 到 Cloudflare Pages（PROJECT=prismo 可改项目名）"
 	@echo "  make arch-check    检查前端/管线架构边界"
+	@echo "  make backup-db     备份本地真源到项目外（默认只保留最近一份）"
+	@echo "  make snapshot-db   生成可提交的压缩部署快照（不提交原始 dev.db）"
+	@echo "  make data-status   查看主库、部署快照和外部备份大小"
 
 # ---------- 环境 ----------
 venv:
@@ -152,6 +170,26 @@ gr:
 gr-quote:
 	$(MANAGE) gr-quote
 
+# 雪球 SV 作者池：候选池导入 → 一年作者时间线任务 → 断点回填。
+# 首次运行需 `make xueqiu-author-auth`，用户在弹出的 Chrome 中自行登录。
+xueqiu-author-auth:
+	DATABASE_URL='sqlite:///./data/dev.db' $(MANAGE) gr-xueqiu-author-auth
+
+xueqiu-author-plan:
+	DATABASE_URL='sqlite:///./data/dev.db' $(MANAGE) gr-xueqiu-author-plan --pool-csv $(or $(POOL_CSV),reports/xueqiu_author_pool_discovery_2026-07-10.csv) --pool-version $(or $(POOL_VERSION),xueqiu-sv-pool-20260710-v2) --min-followers $(or $(MIN_FOLLOWERS),500) --min-statuses $(or $(MIN_STATUSES),300) --days $(or $(DAYS),365) $(if $(ONLY_USERS),--only-users $(ONLY_USERS),) $(if $(SELECTED_ONLY),--selected-only,) $(if $(FORCE),--force,)
+
+xueqiu-author-run:
+	DATABASE_URL='sqlite:///./data/dev.db' $(MANAGE) gr-xueqiu-author-run --pool-version $(or $(POOL_VERSION),xueqiu-sv-pool-20260710-v2) --max-jobs $(or $(MAX_JOBS),4) --sleep $(or $(SLEEP),2.0) --headless --selected-only --order activity --expand-tickers $(if $(ONLY_USERS),--only-users $(ONLY_USERS),) $(if $(RETRY_FAILED),--retry-failed,) $(if $(RETRY_BLOCKED),--retry-blocked,)
+
+xueqiu-author-drain:
+	DATABASE_URL='sqlite:///./data/dev.db' $(MANAGE) gr-xueqiu-author-drain --pool-version $(or $(POOL_VERSION),xueqiu-sv-pool-20260710-v2) --batch-size $(or $(BATCH_SIZE),3) --cooldown $(or $(COOLDOWN),300) --failure-cooldown $(or $(FAILURE_COOLDOWN),1800) --max-failure-cooldown $(or $(MAX_FAILURE_COOLDOWN),3600) --max-cycles $(or $(MAX_CYCLES),0) --sleep $(or $(SLEEP),2.0) --max-attempts $(or $(MAX_ATTEMPTS),5) --headless --expand-tickers
+
+xueqiu-author-status:
+	DATABASE_URL='sqlite:///./data/dev.db' $(MANAGE) gr-xueqiu-author-status --pool-version $(or $(POOL_VERSION),xueqiu-sv-pool-20260710-v2)
+
+xueqiu-sv-full:
+	POOL_VERSION=$(or $(POOL_VERSION),xueqiu-sv-pool-20260710-v2) bash scripts/run_xueqiu_sv_full.sh
+
 # SV scoring price history: backfill Nasdaq daily OHLC into local price_daily.
 # 可局部补齐：make sv-price-history ONLY=MU,NVDA
 sv-price-history:
@@ -203,7 +241,8 @@ youtube-creator-view:
 	@echo "" && echo "✅ YouTube 作者×标的综合完成。出站：make site。"
 
 # KOL 个体观点 AI 提炼+双语：把 reddit/x/雪球/Toss 照搬的原文 → 「为什么看多/看空 + 2-3 要点」(zh/en) → kol_refined。
-# 只提炼每标的每源 top-N(默认 20)；增量(只补未提炼)。YouTube 复用 yt_analysis 无需在此。需 DEEPSEEK_API_KEY。
+# 只提炼每标的每源 top-N(默认 20)；增量(只补未提炼)。YouTube 复用 yt_analysis 无需在此。
+# 默认 Qwen→DeepSeek→Gemini，可用 KOL_REFINE_PROVIDERS 改顺序；需至少一个对应 provider key。
 # 本地：DATABASE_URL='sqlite:///./data/dev.db' make kol-refine
 kol-refine:
 	$(MANAGE) kol-refine --per-source 20
@@ -293,7 +332,7 @@ kol-argument:
 	@echo "" && echo "✅ KOL 论点综合完成。出站：make site（标的页 KOL 模块『按视角』下的论点）。"
 
 # KOL 原帖完整忠实翻译（逐句直译、不压缩）→ kol_refined.trans_zh/en。供『按视角·原帖流』的「译」选项。
-# 与提炼解耦、可独立重跑；只译已展示(已提炼)的原帖。增量(只补未译)；需 QWEN_API_KEY。
+# 与提炼解耦、可独立重跑；只译已展示(已提炼)的原帖。增量(只补未译)，同一 source+item 跨 ticker 只调用一次并复用；默认 Qwen→DeepSeek→Gemini，可用 KOL_TRANSLATE_PROVIDERS 改顺序。
 # 本地：DATABASE_URL='sqlite:///./data/dev.db' make kol-translate
 kol-translate:
 	$(MANAGE) kol-translate --per-source 200 --since-days 30
@@ -377,6 +416,22 @@ sv-v0-prod:
 sv-v0-reddit-prod:
 	$(MANAGE) sv-v0 --source reddit --stage all --candidate-limit $(or $(LIMIT),50000) --extract-limit $(or $(EXTRACT),10000) --extract-mode author-balanced --per-author-min $(or $(MIN),10) --per-author-max $(or $(MAX),50) --workers $(or $(WORKERS),4) --reddit-author-limit $(or $(AUTHORS),1000) --reddit-since-days $(or $(DAYS),365) --reddit-min-author-posts $(or $(MIN_POSTS),8)
 
+# 标的级 SV 信号：历史时点作者百分位 → 7 天观点聚集 → 下一交易日开盘后的多周期回测。
+# 可局部重建：make sv-ticker-signals ONLY=MU,NVDA
+sv-ticker-signals:
+	$(MANAGE) sv-ticker-signals $(if $(ONLY),--only $(ONLY),) --window-days $(or $(WINDOW),7) --min-authors $(or $(MIN_AUTHORS),3) --consensus-threshold $(or $(CONSENSUS),0.65) --effective-voices $(or $(EFFECTIVE),2.5)
+
+# SV 发现页四类指标：历史平台内 Top/Bottom 10% → 事件化 → 下一交易日开盘多周期回测。
+sv-indicator-backtest:
+	$(MANAGE) sv-indicator-backtest $(if $(ONLY),--only $(ONLY),) --windows $(or $(WINDOWS),$(SV_INDICATOR_WINDOWS)) --source-scopes $(or $(SOURCES),$(SV_INDICATOR_SOURCES)) --report $(or $(REPORT),data/reports/sv_indicator_backtest.csv)
+
+sv-indicator-report:
+	$(MANAGE) sv-indicator-report --report-dir $(or $(REPORT_DIR),data/reports)
+
+# 子 SV 垂直集中回测：历史周期/赛道/投资类型排名 → 滚动事件 → 匹配周期超额。
+sv-segment-backtest:
+	$(MANAGE) sv-segment-backtest $(if $(ONLY),--only $(ONLY),) --windows $(or $(WINDOWS),$(SV_SEGMENT_WINDOWS)) --sources $(or $(SOURCES),x) --segment-types $(or $(SEGMENTS),$(SV_SEGMENT_TYPES)) --rank-bands $(or $(BANDS),$(SV_SEGMENT_BANDS)) --report $(or $(REPORT),data/reports/sv_segment_backtest/sv_segment_backtest.csv)
+
 # ---------- Web ----------
 web-install:
 	cd web && npm install
@@ -398,7 +453,8 @@ serve:
 # Cloudflare Pages：本地用 Node 22 读 dev.db 构建静态产物，再用 Wrangler Direct Upload 发布。
 # 当前产品只部署 zh/en；web/out 里若有 ja/ko 历史产物，会先排除到临时目录，避免上传体积过大。
 # 首次使用前需要：npx wrangler login。项目名默认 prismo，可用 PROJECT=xxx 覆盖。
-cf-deploy: site
+cf-deploy:
+	NEXT_BUILD_CPUS=$(or $(CPUS),1) $(MAKE) site
 	rm -rf /tmp/prismo-out-cf
 	rsync -a --exclude='/ja/' --exclude='/ko/' web/out/ /tmp/prismo-out-cf/
 	npx wrangler pages deploy /tmp/prismo-out-cf --project-name $(or $(PROJECT),prismo) --branch main --commit-dirty=true
@@ -433,9 +489,29 @@ cloud-pull:
 	@$(MAKE) backup-db
 	PRISMO_ALLOW_CLOUD_PULL=1 $(MANAGE) cloud-pull
 
-# 备份本地 dev.db（带时间戳）。改动数据前先跑它。
+# 事务一致地备份本地 dev.db 到项目外；默认只保留最近一份。
 backup-db:
-	@cp data/dev.db data/dev.db.bak-$$(date +%Y%m%d-%H%M%S) && echo "✅ 已备份 → data/dev.db.bak-<时间戳>"
+	@$(SYS_PY) scripts/data_snapshot.py backup --keep $(or $(KEEP),1)
+
+# 生成 Railway/Docker 部署快照。原始 dev.db 不入 Git；压缩后 <=90MB 用单文件，
+# 否则自动生成 24MB 普通 Git 分片和 manifest，且不会同时保留两份压缩副本。
+snapshot-db:
+	@$(SYS_PY) scripts/data_snapshot.py snapshot
+
+# 从仓库压缩快照还原本地库。会覆盖现有 dev.db，必须显式 FORCE=1。
+restore-db:
+	@if [ -z "$(FORCE)" ]; then \
+	  echo "⛔ restore-db 会覆盖 data/dev.db；确认后执行 FORCE=1 make restore-db"; \
+	  exit 1; \
+	fi
+	@$(SYS_PY) scripts/data_snapshot.py restore --force
+
+# 清理项目内旧备份/抽帧缓存，并安全截断 SQLite WAL；不删除 dev.db。
+data-clean:
+	@$(SYS_PY) scripts/data_snapshot.py cleanup
+
+data-status:
+	@$(SYS_PY) scripts/data_snapshot.py status
 
 # 出站构建：Prismo = 本地真源，**不再 cloud-pull**。保留 site-cloud 名字（防 muscle-memory 误清）= 等同 make site。
 site-cloud:

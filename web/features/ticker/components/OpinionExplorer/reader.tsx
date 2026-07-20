@@ -114,6 +114,28 @@ function JudgmentLine({ j, zh }: { j: KolJudgment; zh: boolean }) {
   );
 }
 
+type SvRankMeta = {
+  rank: number;
+  count: number;
+  percentile: number;
+  score: number;
+};
+
+function SvRankBadge({ meta, zh }: { meta: SvRankMeta; zh: boolean }) {
+  const count = Math.max(1, Math.floor(meta.count || 1));
+  const rank = Math.max(1, Math.floor(meta.rank || 1));
+  const topPct = Math.max(1, Math.min(100, Math.ceil((rank / count) * 100)));
+  const score = Math.round(meta.score);
+  return (
+    <span
+      className="shrink-0 rounded bg-[#57D7BA]/10 px-1.5 py-0.5 font-mono tabular text-[11px] text-[#57D7BA] ring-1 ring-inset ring-[#57D7BA]/35"
+      title={zh ? `SV 排名 #${rank}/${count}，百分位 ${Math.round(meta.percentile)}%，分数 ${score}` : `SV rank #${rank}/${count}, percentile ${Math.round(meta.percentile)}%, score ${score}`}
+    >
+      {zh ? `SV ${score} · 前 ${topPct}%` : `SV ${score} · top ${topPct}%`}
+    </span>
+  );
+}
+
 export function Reader({
   o,
   zh,
@@ -121,6 +143,7 @@ export function Reader({
   setShowT,
   fill = false,
   recReasons = [],
+  svRank,
   onBack,
 }: {
   o: KolOpinion;
@@ -129,6 +152,7 @@ export function Reader({
   setShowT: (v: boolean) => void;
   fill?: boolean;
   recReasons?: RecommendationReason[];
+  svRank?: SvRankMeta;
   onBack?: () => void;
 }) {
   const src = SOURCE[o.source];
@@ -179,6 +203,7 @@ export function Reader({
         </div>
         <span className="shrink-0 text-[12px] font-medium" style={{ color: st.color }}>{zh ? st.zh : st.en}</span>
         {o.source !== "x" && <span className="shrink-0 font-mono tabular text-[12px] text-neutral-500">{fmtCompact(o.interactions)}</span>}
+        {svRank && <SvRankBadge meta={svRank} zh={zh} />}
         {typeof o.quality === "number" && (
           <span className="shrink-0 rounded bg-elevated px-1.5 py-0.5 font-mono tabular text-[11px] text-neutral-400" title={zh ? "帖子质量(含金量)" : "post quality"}>
             {zh ? "质 " : "Q "}{o.quality}
@@ -219,7 +244,7 @@ export function Reader({
         <YtReader segments={o.ytSegments} digest={o.ytDigest} judgment={o.judgment} zh={zh} noCollapse />
       ) : (
         displayText && (
-          <p className="mt-3 whitespace-pre-line text-[13.5px] leading-relaxed text-neutral-100">
+          <p className="mt-3 whitespace-pre-line text-[14.5px] leading-relaxed text-neutral-100">
             {displayText}
           </p>
         )

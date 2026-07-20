@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { KolModule } from "./KolModule";
 import { SmartVoiceTickerModule } from "@/features/smart-voice";
-import type { KolFlow, KolTargetData } from "@/shared/market/mockDetail";
+import { SmartVoiceTickerSignals } from "./SmartVoiceTickerSignals";
+import type { KolCandle, KolTargetData } from "@/shared/market/mockDetail";
 import type { DailyNet, DailyVol, KolNew, RetailVol, RetailNew, WindowedArguments } from "@/server/queries/kolQueries";
 import type { OverallData } from "@/server/queries/overallData";
 import type { SvTickerBoard } from "@/features/smart-voice/svMock";
+import type { SvTickerSignalData } from "@/server/queries/smartVoiceTickerSignals";
 
 function InfoHint({ text }: { text: string }) {
   return (
@@ -50,7 +52,7 @@ function MaximizeIcon({ minimized = false }: { minimized?: boolean }) {
 
 type Props = {
   zh: boolean;
-  flow: KolFlow;
+  flowDays: KolCandle[];
   sentiment?: DailyNet[];
   volume?: DailyVol[];
   retailSentiment?: DailyNet[];
@@ -61,11 +63,12 @@ type Props = {
   targetPrices?: KolTargetData;
   argumentsData?: WindowedArguments;
   smartVoice?: SvTickerBoard | null;
+  smartVoiceSignals?: SvTickerSignalData | null;
 };
 
 export function TickerOverviewPanel({
   zh,
-  flow,
+  flowDays,
   sentiment,
   volume,
   retailSentiment,
@@ -76,6 +79,7 @@ export function TickerOverviewPanel({
   targetPrices,
   argumentsData,
   smartVoice,
+  smartVoiceSignals,
 }: Props) {
   const [full, setFull] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -106,7 +110,7 @@ export function TickerOverviewPanel({
 
   const dataModule = (
     <KolModule
-      flow={flow}
+      flowDays={flowDays}
       sentiment={sentiment}
       volume={volume}
       retailSentiment={retailSentiment}
@@ -118,13 +122,22 @@ export function TickerOverviewPanel({
       argumentsData={argumentsData}
     />
   );
+  const smartVoiceModule = smartVoiceSignals ? (
+    <SmartVoiceTickerSignals data={smartVoiceSignals} board={smartVoice} zh={zh} />
+  ) : smartVoice ? (
+    <SmartVoiceTickerModule board={smartVoice} zh={zh} />
+  ) : null;
 
   const panelBody = (
     <>
       {dataModule}
-      {smartVoice && <div className="mt-4"><SmartVoiceTickerModule board={smartVoice} zh={zh} /></div>}
+      {smartVoiceModule && <div className="mt-4">{smartVoiceModule}</div>}
       <p className="mt-3 border-t border-line/70 pt-2 text-[10.5px] text-neutral-600">
-        {zh ? "异动 / 信号 / 风险等模块为演示数据（mock），用于展示模块设计；接入真实管线后替换。" : "Modules use mock demo data to showcase the design; to be wired to the real pipeline."}
+        {smartVoiceSignals
+          ? (zh
+              ? "SV 聚集、目标价、观点变化、分歧、仓位匹配和历史回测均来自真实 Call、历史时点 SV 与价格结算；整体数据中的早期缺口仍可能使用稳定补全值。"
+              : "SV clusters, targets, opinion changes, divergence, position fit and backtests use real calls, point-in-time SV and price settlements; earlier gaps in the general overview may still use stable fills.")
+          : (zh ? "异动 / 信号 / 风险等模块为演示数据（mock），用于展示模块设计；接入真实管线后替换。" : "Modules use mock demo data to showcase the design; to be wired to the real pipeline.")}
       </p>
     </>
   );
@@ -180,13 +193,13 @@ export function TickerOverviewPanel({
                   </button>
                 </div>
                 <div className="min-h-0 overflow-y-auto p-4">
-                  <div className="grid min-h-full gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
+                  <div className="grid min-h-full gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(460px,0.8fr)]">
                     <div className="min-w-0 rounded-xl bg-card/50 p-4 ring-1 ring-inset ring-line">
                       {dataModule}
                     </div>
                     <div className="min-w-0">
-                      {smartVoice ? (
-                        <SmartVoiceTickerModule board={smartVoice} zh={zh} />
+                      {smartVoiceModule ? (
+                        smartVoiceModule
                       ) : (
                         <div className="rounded-xl bg-card/45 p-6 text-sm text-neutral-600 ring-1 ring-inset ring-line">
                           {zh ? "暂无 SV 投资者数据" : "No SV investor data"}

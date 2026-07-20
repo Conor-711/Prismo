@@ -55,6 +55,15 @@ export const hasSubstantiveText = (o: KolOpinion): boolean => {
 export const isHighQuality = (o: KolOpinion): boolean =>
   qualOf(o) >= QUALITY_MIN_BY_SOURCE[o.source] && relOf(o) >= 60 && hasSubstantiveText(o);
 
+export const highQualityFallbackScore = (o: KolOpinion): number => {
+  const quality = Math.max(0, qualOf(o));
+  const relevance = Math.max(0, relOf(o));
+  const engagement = Math.log1p(Math.max(0, o.interactions || 0)) * 2;
+  const textBonus = hasSubstantiveText(o) ? 20 : 0;
+  const aiBonus = o.trans?.zh || o.trans?.en || o.reason?.zh || o.reason?.en || o.ytDigest ? 6 : 0;
+  return quality * 0.55 + relevance * 0.35 + engagement + textBonus + aiBonus;
+};
+
 const svSourceFor = (source: KolSource): SvSource | null => {
   if (source === "x" || source === "youtube") return source;
   return null;
@@ -86,7 +95,17 @@ export const svKeysForInvestor = (inv: SvTickerBoard["investors"][number]): stri
 export function getOpinionSvMeta(o: KolOpinion, byKey: Map<string, SvOpinionMeta>): SvOpinionMeta | null {
   const source = svSourceFor(o.source);
   if (!source) return null;
-  return byKey.get(`${source}:${normalizeSvKey(o.author)}`) ?? null;
+  const refTail = o.authorRefId?.replace(new RegExp(`^${source}:`, "i"), "");
+  const keys = [
+    refTail,
+    o.channel?.handle,
+    o.author,
+  ].map(normalizeSvKey).filter(Boolean);
+  for (const key of keys) {
+    const meta = byKey.get(`${source}:${key}`);
+    if (meta) return meta;
+  }
+  return null;
 }
 
 const cleanNumericText = (value: string) => value.replace(/[$,%\s,]/g, "");

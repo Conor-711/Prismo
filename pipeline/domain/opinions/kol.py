@@ -27,6 +27,8 @@ def refine_opinions(
 def classify_viewpoints(
     *,
     only: list[str] | None,
+    sources: list[str] | None,
+    since_days: int | None,
     force: bool,
     workers: int,
     reclassify_other: bool,
@@ -36,6 +38,8 @@ def classify_viewpoints(
 
     return classify(
         only=only,
+        sources=sources,
+        since_days=since_days,
         force=force,
         workers=workers,
         reclassify_other=reclassify_other,

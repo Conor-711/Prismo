@@ -49,6 +49,23 @@ ticker/
 - `components/TargetPricePanel.tsx`
 - `components/TickerDetailHeader.tsx`
 - `components/TickerOverviewPanel.tsx`
+- `components/SmartVoiceTickerSignals.tsx`
+- `components/SmartVoiceSignalChart.tsx`
+- `components/SmartVoiceSignalDiagnostics.tsx`
+- `components/SmartVoiceDecisionSuite.tsx`
+- `components/SmartVoiceWeightedTargets.tsx`
+- `components/SmartVoiceChangeRadar.tsx`
+- `components/SmartVoiceOpportunityStrip.tsx`
+- `components/SmartVoicePersonalAssistant.tsx`
+- `components/SmartVoiceResearchSuite.tsx`
+- `components/SmartVoiceThesisLifecycle.tsx`
+- `components/SmartVoicePlatformDiffusion.tsx`
+- `components/SmartVoiceAuthorAbilityMatrix.tsx`
+- `components/SmartVoicePortfolioRisk.tsx`
+- `components/SmartVoiceAlertCenter.tsx`
+- `smartVoiceSignalLogic.ts`
+- `smartVoiceDecisionLogic.ts`
+- `smartVoiceResearchLogic.ts`
 - `components/TickerSignalBoards.tsx`
 - `components/TickerTable.tsx`
 - `components/OpinionExplorer/OpinionExplorer.tsx`
@@ -59,3 +76,7 @@ ticker/
 - `components/OpinionExplorer/reader.tsx`
 - `components/OpinionExplorer/YtReader.tsx`
 - `components/OpinionExplorer/YtFullContent.tsx`
+
+观点浏览器只接收服务端构造的有界展示池；原始全量帖子保留在 SQLite，不应直接作为 Client Component props 下发。
+
+标的级 SV 信号由 `web/server/queries/smartVoiceTickerSignals.ts` 读取离线派生表。首批仅 `MU`、`NVDA`、`MSTR` 使用新版聚集、回测与决策实验室，其余标的保持旧 SV 投资者模块。前端只选择周期和 Top/Bottom 分位，不重算分数或回测；高低分歧、周期结构、加速/反转和目标/失效聚合在 `smartVoiceSignalLogic.ts` 中纯派生，SV 加权目标价、观点生命周期变化、拥挤/置信度和仓位匹配在 `smartVoiceDecisionLogic.ts` 中纯派生，投资逻辑生命周期、平台扩散、作者能力、组合视角暴露与提醒在 `smartVoiceResearchLogic.ts` 中纯派生。

@@ -19,6 +19,8 @@ from collections import defaultdict
 
 from sqlalchemy import create_engine, text
 
+from ...common.youtube_filters import YOUTUBE_MIN_DISPLAY_DURATION_SECONDS, YOUTUBE_MIN_DISPLAY_SUBSCRIBERS
+
 LOCAL_URL = "sqlite:///./data/dev.db"
 
 # KOL 平台键（有身份/粉丝象征；不含 Reddit/本土论坛）。顺序 = 落库列顺序。
@@ -61,7 +63,15 @@ def rollup() -> int:
 
         # YouTube：yt_video 按 channel_id(频道=作者) 取该标的最早一天
         tally(first_days(c.execute(text(
-            "SELECT ticker, channel_id, substr(published_utc,1,10) FROM yt_video WHERE channel_id<>''"))), "youtube")
+            "SELECT v.ticker, v.channel_id, substr(v.published_utc,1,10) "
+            "FROM yt_video v JOIN yt_channel yc ON yc.channel_id=v.channel_id "
+            "WHERE v.channel_id<>'' "
+            "AND COALESCE(v.duration_s,0) > :min_duration "
+            "AND COALESCE(yc.subscriber_count,-1) >= :min_subscribers"),
+            {
+                "min_duration": YOUTUBE_MIN_DISPLAY_DURATION_SECONDS,
+                "min_subscribers": YOUTUBE_MIN_DISPLAY_SUBSCRIBERS,
+            })), "youtube")
         print(f"[kol-newcomers] youtube ✓（累计 {len(acc)} 格）", flush=True)
 
         # 雪球：gr_post source=xueqiu 按 author 取该标的最早一天

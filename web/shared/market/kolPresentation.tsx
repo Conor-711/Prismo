@@ -151,7 +151,7 @@ export function OpinionCard({ o, zh, tag, compact }: { o: KolOpinion; zh: boolea
         </span>
       </div>
       {displayText && (
-        <p className="mt-1 whitespace-pre-line text-[13.5px] leading-relaxed text-cream">
+        <p className="mt-1 whitespace-pre-line text-[14.5px] leading-relaxed text-cream">
           {displayText}
         </p>
       )}

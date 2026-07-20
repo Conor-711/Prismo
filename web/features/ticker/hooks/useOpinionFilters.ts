@@ -11,6 +11,7 @@ import {
 } from "@/features/ticker/opinionExplorerConstants";
 import {
   getOpinionSvMeta,
+  highQualityFallbackScore,
   isHighQuality,
   langOf,
   opinionAuthorRefId,
@@ -87,14 +88,13 @@ export function useOpinionFilters({
   const svHighBound = Math.max(svFilter.low, svFilter.high);
   const svEnabled = Boolean(svFilter.enabled && svIndex.count);
 
-  const baseFiltered = useMemo(() => {
+  const preQualityFiltered = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return opinions.filter((o) => {
       if (trackedAuthorsOnly && (o.source === "yahoojp" || !isSaved("author", opinionAuthorRefId(o)))) return false;
       if (langs.size && !langs.has(langOf(o))) return false;
       if (stanceFilter.size && !stanceFilter.has(o.stance)) return false;
       if (sinceEff && o.day < sinceEff) return false;
-      if (hiQ && !isHighQuality(o)) return false;
       if (svEnabled) {
         const meta = getOpinionSvMeta(o, svIndex.byKey);
         if (!meta || meta.percentile < svLowBound || meta.percentile > svHighBound) return false;
@@ -116,7 +116,39 @@ export function useOpinionFilters({
       }
       return true;
     });
-  }, [opinions, trackedAuthorsOnly, isSaved, langs, stanceFilter, sinceEff, hiQ, svEnabled, svIndex.byKey, svLowBound, svHighBound, query]);
+  }, [opinions, trackedAuthorsOnly, isSaved, langs, stanceFilter, sinceEff, svEnabled, svIndex.byKey, svLowBound, svHighBound, query]);
+
+  const highQualityIds = useMemo(() => {
+    if (!hiQ) return null;
+    const ids = new Set<string>();
+    const keyOf = (opinion: KolOpinion) => `${opinion.source}:${opinion.id}`;
+    const bySource = new Map<KolSource, KolOpinion[]>();
+    for (const opinion of preQualityFiltered) {
+      const list = bySource.get(opinion.source);
+      if (list) list.push(opinion);
+      else bySource.set(opinion.source, [opinion]);
+    }
+
+    for (const rows of bySource.values()) {
+      const strict = rows.filter(isHighQuality);
+      strict.forEach((opinion) => ids.add(keyOf(opinion)));
+
+      const floor = Math.ceil(rows.length * 0.1);
+      if (strict.length >= floor) continue;
+
+      rows
+        .filter((opinion) => !ids.has(keyOf(opinion)))
+        .sort((a, b) => highQualityFallbackScore(b) - highQualityFallbackScore(a))
+        .slice(0, floor - strict.length)
+        .forEach((opinion) => ids.add(keyOf(opinion)));
+    }
+    return ids;
+  }, [hiQ, preQualityFiltered]);
+
+  const baseFiltered = useMemo(() => {
+    if (!hiQ || !highQualityIds) return preQualityFiltered;
+    return preQualityFiltered.filter((o) => highQualityIds.has(`${o.source}:${o.id}`));
+  }, [hiQ, highQualityIds, preQualityFiltered]);
 
   const sourceCounts = useMemo(() => {
     const counts: Partial<Record<KolSource, number>> = {};

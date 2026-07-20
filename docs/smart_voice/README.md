@@ -38,6 +38,18 @@ pipeline/jobs/smart_voice/workflows.py
 = 当前 job 编排入口。
 ```
 
+首版 YouTube 平台内 Top/Bottom 结果与限制见：
+
+- `docs/smart_voice/youtube_author_pool_audit_2026-07-10.md`
+- `docs/smart_voice/youtube_top_bottom_report_2026-07-11.md`
+- `docs/smart_voice/youtube_transcript_sv_migration_2026-07-11.md`
+
+当前全局榜、分平台榜、重点标的专项榜与数据成熟度审计见：
+
+- `docs/smart_voice/sv_ranking_report_2026-07-18.md`
+- `docs/smart_voice/sv_head_tail_evidence_2026-07-18.md`：全局 Top/Bottom 10 的分数拆解、代表性原帖与市场结算证据。
+- `docs/smart_voice/sv_head_tail_original_links_2026-07-18.md`：以原推文/原视频链接为主体的头尾作者证据索引。
+
 不要把五个平台的完整算法复制成五份。平台文件只写“这个平台如何进入共用核心算法”，共用的市场结算和打分逻辑应保留在核心算法中。
 
 ## 2. 产品语义
@@ -401,8 +413,8 @@ x:
 
 youtube:
   candidate adapter 已实现
-  extract/settle/score/export 走共用流程
-  yt_video + yt_channel 是必需输入；yt_analysis / yt_digest / yt_fulltext / yt_judgment 是可选增强输入
+  完整 yt_fulltext 是正式 Call 的强制输入
+  YouTube 专用口播抽取后，settle/score/export 走共用流程
 
 reddit:
   candidate adapter 已实现
@@ -436,7 +448,7 @@ x, youtube, reddit
 执行前先备份数据库：
 
 ```bash
-cp data/dev.db data/dev.db.bak-sv-$(date +%Y%m%d-%H%M%S)
+make backup-db
 ```
 
 ### X
@@ -467,7 +479,19 @@ python3 -m pipeline.manage sv-v0 \
   --min-score 12
 ```
 
-抽取所有 pending YouTube candidates：
+先为作者均衡候选生成完整口播：
+
+```bash
+python3 -m pipeline.manage sv-v0 \
+  --stage transcripts \
+  --source youtube \
+  --extract-limit 10000 \
+  --per-author-min 20 \
+  --per-author-max 40 \
+  --workers 4
+```
+
+再抽取所有口播验证的 pending YouTube candidates：
 
 ```bash
 python3 -m pipeline.manage sv-v0 \
@@ -544,7 +568,7 @@ concentration.svGlobalDeviation
 
 - 不要把五个平台原始 raw_z 直接放进一个池子归一化。
 - 不要让一条多 ticker 内容产生线性多倍权重。
-- 不要把 YouTube transcript 是否完整当作质量分因子。
+- 不要把 YouTube transcript 完整度加进预测能力分；缺口播属于处理未完成，不能生成正式 Call。
 - 不要把相关度分数加入质量或 SV 准入；相关度用于排序和召回，不代表投资判断能力。
 - 不要把纯新闻、纯情绪、纯复盘炫耀放进 SV 结算。
 - 不要在用户要求一年数据时使用作者上限导致高产作者视频被截断。
@@ -556,7 +580,7 @@ concentration.svGlobalDeviation
 - 先确认内容单元。
 - 先确认是否只覆盖美股股票和 ETF。
 - 先把内容转成统一 `sv_call_candidate`。
-- 再用共用 LLM schema 转成 `sv_call`。
+- 再用平台专用抽取规则转成共用 `sv_call` schema。
 - 再走统一 settlement 和 scoring。
 - 最后检查 `SV_Platform` 与 `SV_Global` 的语义是否正确。
 

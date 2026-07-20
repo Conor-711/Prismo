@@ -43,6 +43,19 @@ export function useOpinionPersonalization({
     }
   }, [personalKey, setSort]);
 
+  useEffect(() => {
+    const sync = (event: Event) => {
+      const detail = (event as CustomEvent<{ symbol?: string; prefs?: PersonalPrefs }>).detail;
+      if (!detail?.prefs || (detail.symbol || "global") !== (symbol || "global")) return;
+      const next = { ...EMPTY_PERSONAL_PREFS, ...detail.prefs };
+      setPersonal(next);
+      setPersonalDraft(next);
+      setSort(isPersonalConfigured(next) ? "personal" : "rel");
+    };
+    window.addEventListener("prismo:opinion-personal-update", sync);
+    return () => window.removeEventListener("prismo:opinion-personal-update", sync);
+  }, [setSort, symbol]);
+
   const applyPersonal = useCallback(() => {
     const next = { ...EMPTY_PERSONAL_PREFS, ...personalDraft };
     setPersonal(next);

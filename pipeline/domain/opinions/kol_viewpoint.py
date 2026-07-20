@@ -93,15 +93,16 @@ def _candidates() -> list[dict]:
     rows: list[dict] = []
     with session_scope() as s:
         for r in s.execute(text(
-            "SELECT source, item_id, ticker, stance, reason_zh, reason_en, points_zh, points_en "
+            "SELECT source, item_id, ticker, stance, reason_zh, reason_en, points_zh, points_en, created "
             "FROM kol_refined")):
             rows.append(dict(r._mapping))
         # YouTube：复用 yt_analysis（summary→reason、key_points→points）
         try:
             for r in s.execute(text(
-                "SELECT 'youtube' AS source, video_id AS item_id, ticker, stance, "
+                "SELECT 'youtube' AS source, a.video_id AS item_id, a.ticker, a.stance, "
                 "summary_zh AS reason_zh, summary_en AS reason_en, "
-                "key_points_zh AS points_zh, key_points_en AS points_en FROM yt_analysis")):
+                "key_points_zh AS points_zh, key_points_en AS points_en, v.published_utc AS created "
+                "FROM yt_analysis a LEFT JOIN yt_video v ON v.id=a.video_id")):
                 rows.append(dict(r._mapping))
         except Exception:
             pass
@@ -133,16 +134,23 @@ def _user(r: dict) -> str:
 
 
 def classify(only: list[str] | None = None, force: bool = False, workers: int = 8,
-             reclassify_other: bool = False) -> int:
+             reclassify_other: bool = False, sources: list[str] | None = None,
+             since_days: int | None = None) -> int:
     _ensure_table()
     if not llm.available(llm.LOW):
         print("[kol-viewpoint] 无 DeepSeek key（DEEPSEEK_API_KEY），跳过。", flush=True)
         return 0
     only_set = {t.strip().upper() for t in only} if only else None
+    source_set = {s.strip().lower() for s in sources} if sources else None
 
     cand = _candidates()
     if only_set:
         cand = [r for r in cand if str(r.get("ticker") or "").upper() in only_set]
+    if source_set:
+        cand = [r for r in cand if str(r.get("source") or "").lower() in source_set]
+    if since_days is not None and since_days > 0:
+        cutoff = (dt.date.today() - dt.timedelta(days=since_days)).isoformat()
+        cand = [r for r in cand if str(r.get("created") or "")[:10] >= cutoff]
     if reclassify_other:
         # 只重判当前为 ['other'] 的行（用新 prompt）：实质观点会进对应视角，no-thesis 仍落 other。
         keys = _other_keys()
@@ -166,7 +174,8 @@ def classify(only: list[str] | None = None, force: bool = False, workers: int = 
 
     total = len(todo)
     print(f"[kol-viewpoint] 候选 {len(cand)}：LLM 分类 {total}，预判 other {len(pre_other)}"
-          f"（model={llm.model_label(llm.LOW)}, force={force}）", flush=True)
+          f"（sources={','.join(sorted(source_set)) if source_set else 'all'}, "
+          f"近 {since_days or '不限'} 天, model={llm.model_label(llm.LOW)}, force={force}）", flush=True)
 
     now = dt.datetime.utcnow()
     label = llm.model_label(llm.LOW)

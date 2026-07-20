@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from ...jobs.smart_voice import (
     backfill_price_history,
+    build_sv_indicator_backtest,
+    export_sv_indicator_backtest_reports,
+    build_ticker_sv_signals,
     build_overall_signals,
     match_x_topics,
     rollup_kol_newcomers,
@@ -13,6 +16,7 @@ from ...jobs.smart_voice import (
     run_sv_v0,
     score_x_sentiment,
 )
+from ._utils import csv_values
 
 
 def cmd_tw_sentiment(args):
@@ -58,8 +62,41 @@ def cmd_sv_v0(args):
         reddit_min_author_posts=args.reddit_min_author_posts,
         youtube_min_subs=args.youtube_min_subs,
         youtube_since_days=args.youtube_since_days,
+        xueqiu_pool_version=args.xueqiu_pool_version,
+        xueqiu_since_days=args.xueqiu_since_days,
+        xueqiu_allow_partial=args.xueqiu_allow_partial,
         force=args.force,
     )
+
+
+def cmd_sv_ticker_signals(args):
+    result = build_ticker_sv_signals(
+        db_path=args.db,
+        only=csv_values(args.only, upper=True),
+        window_days=args.window_days,
+        min_authors=args.min_authors,
+        consensus_threshold=args.consensus_threshold,
+        effective_voice_threshold=args.effective_voices,
+    )
+    print("[sv-ticker-signals] " + " ".join(f"{key}={value}" for key, value in result.items()))
+
+
+def cmd_sv_indicator_backtest(args):
+    windows = tuple(int(value) for value in csv_values(args.windows) if int(value) > 0)
+    scopes = tuple(value.lower() for value in csv_values(args.source_scopes))
+    result = build_sv_indicator_backtest(
+        db_path=args.db,
+        report_path=args.report,
+        only=csv_values(args.only, upper=True),
+        windows=windows,
+        source_scopes=scopes,
+    )
+    print("[sv-indicator-backtest] " + " ".join(f"{key}={value}" for key, value in result.items()))
+
+
+def cmd_sv_indicator_report(args):
+    result = export_sv_indicator_backtest_reports(db_path=args.db, report_dir=args.report_dir)
+    print("[sv-indicator-report] " + " ".join(f"{key}={value}" for key, value in result.items()))
 
 
 def cmd_kol_sentiment(args):
@@ -135,7 +172,7 @@ def register_commands(sub, root) -> None:
     sp.set_defaults(func=cmd_sv_price_history)
 
     sp = sub.add_parser("sv-v0")
-    sp.add_argument("--stage", choices=["candidates", "extract", "settle", "score", "export", "all"], default="all")
+    sp.add_argument("--stage", choices=["candidates", "transcripts", "extract", "settle", "score", "export", "all"], default="all")
     sp.add_argument("--source", default="x", help="Comma-separated source subset: x,youtube,reddit,xueqiu,toss,all. Default keeps legacy X-only behavior.")
     sp.add_argument("--candidate-limit", type=int, default=50_000, help="0 means insert all recalled candidates.")
     sp.add_argument("--extract-limit", type=int, default=1_000, help="0 means all pending candidates.")
@@ -149,10 +186,35 @@ def register_commands(sub, root) -> None:
     sp.add_argument("--reddit-author-limit", type=int, default=1_000, help="Top Reddit author pool size for candidate recall; 0 means all authors.")
     sp.add_argument("--reddit-since-days", type=int, default=365, help="Reddit candidate lookback window.")
     sp.add_argument("--reddit-min-author-posts", type=int, default=8, help="Minimum ticker-mentioned Reddit posts for Reddit author-pool eligibility.")
-    sp.add_argument("--youtube-min-subs", type=int, default=1_000, help="Minimum public YouTube subscribers for creator pool eligibility.")
+    sp.add_argument("--youtube-min-subs", type=int, default=2_000, help="Minimum public YouTube subscribers for SV eligibility (shared product threshold).")
     sp.add_argument("--youtube-since-days", type=int, default=365, help="YouTube candidate lookback window.")
+    sp.add_argument("--xueqiu-pool-version", default="", help="Versioned selected Xueqiu author pool; empty uses the latest pool.")
+    sp.add_argument("--xueqiu-since-days", type=int, default=365, help="Xueqiu candidate lookback window.")
+    sp.add_argument("--xueqiu-allow-partial", action="store_true", help="Allow candidate recall before every selected Xueqiu author job is done; disabled by default.")
     sp.add_argument("--force", action="store_true", help="Re-extract candidates already in sv_call.")
     sp.set_defaults(func=cmd_sv_v0)
+
+    sp = sub.add_parser("sv-ticker-signals")
+    sp.add_argument("--db", default=str(root / "data" / "dev.db"))
+    sp.add_argument("--only", default="", help="Comma-separated ticker subset; empty rebuilds all tickers.")
+    sp.add_argument("--window-days", type=int, default=7, help="Calendar-day clustering window.")
+    sp.add_argument("--min-authors", type=int, default=3)
+    sp.add_argument("--consensus-threshold", type=float, default=0.65)
+    sp.add_argument("--effective-voices", type=float, default=2.5)
+    sp.set_defaults(func=cmd_sv_ticker_signals)
+
+    sp = sub.add_parser("sv-indicator-backtest")
+    sp.add_argument("--db", default=str(root / "data" / "dev.db"))
+    sp.add_argument("--report", default=str(root / "data" / "reports" / "sv_indicator_backtest.csv"))
+    sp.add_argument("--only", default="", help="Comma-separated ticker subset; empty rebuilds the full market.")
+    sp.add_argument("--windows", default="1,3,7,30,90", help="Comma-separated calendar-day signal windows.")
+    sp.add_argument("--source-scopes", default="all,x,youtube,reddit,xueqiu", help="Comma-separated source scopes.")
+    sp.set_defaults(func=cmd_sv_indicator_backtest)
+
+    sp = sub.add_parser("sv-indicator-report")
+    sp.add_argument("--db", default=str(root / "data" / "dev.db"))
+    sp.add_argument("--report-dir", default=str(root / "data" / "reports"))
+    sp.set_defaults(func=cmd_sv_indicator_report)
 
     sub.add_parser("kol-sentiment").set_defaults(func=cmd_kol_sentiment)
     sub.add_parser("kol-volume").set_defaults(func=cmd_kol_volume)

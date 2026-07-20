@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import { SITE_URL, BASE_PATH } from "@/lib/site";
-import { locales } from "@/lib/i18n";
+import { publishedLocales } from "@/lib/i18n";
 import { getGrTickerSymbols } from "@/server/queries/globalQueries";
 import { REGION_ORDER } from "@/shared/market/regions";
 import { getNarrativeSlugs } from "@/server/queries/narrativeRotation";
@@ -17,7 +17,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const narratives = getNarrativeSlugs();
 
   const out: MetadataRoute.Sitemap = [];
-  for (const lang of locales) {
+  for (const lang of publishedLocales) {
     for (const p of staticPaths) {
       out.push({ url: `${base}/${lang}${p}/`, lastModified: now, changeFrequency: "daily", priority: p === "" ? 1 : 0.7 });
     }

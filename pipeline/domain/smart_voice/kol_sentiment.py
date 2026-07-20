@@ -4,7 +4,8 @@
 得到**无界净情绪值** net（>0 偏多=绿，<0 偏空=红）——量纲随声量×情绪强度放大（像 Kaito 那张图）。
 
 源（混合本地 + 云端）：
-  - **本地 dev.db**：Reddit(item_analysis.sentiment_score)、雪球(gr_post.sentiment)、YouTube(yt_analysis.sentiment)，
+  - **本地 dev.db**：Reddit(item_analysis.sentiment_score)、X(x_opinion + kol_refined.stance)、
+    雪球(gr_post.sentiment)、YouTube(yt_analysis.sentiment)，
     互动取各自引擎量，相关性取 kol_relevance(0-100，缺省 0.7)。
   - **云端 Supabase**：X 推文 = tw_tweet_topic ⋈ tw_tweet ⋈ tw_tweet_sentiment（先跑 `tw-sentiment`），
     互动=赞+转+回+引，相关性用关键词命中强度 strong(1.0)/weak(0.6) 代理（X 全量无逐帖 relevance）。
@@ -22,6 +23,7 @@ from collections import defaultdict
 from sqlalchemy import create_engine, text
 
 from ...common.config import ROOT, normalize_db_url, settings
+from ...common.youtube_filters import YOUTUBE_MIN_DISPLAY_DURATION_SECONDS, YOUTUBE_MIN_DISPLAY_SUBSCRIBERS
 
 LOCAL_URL = "sqlite:///./data/dev.db"
 
@@ -57,6 +59,7 @@ def rollup() -> int:
 
     acc: dict[tuple[str, str], dict] = defaultdict(
         lambda: {"net": 0.0, "n": 0, "bull": 0, "bear": 0, "reddit": 0.0, "x": 0.0, "xueqiu": 0.0, "youtube": 0.0})
+    local_x_pairs: set[tuple[str, str]] = set()
 
     def add(ticker, day, senti, w, src):
         if not ticker or not day:
@@ -97,9 +100,31 @@ def rollup() -> int:
             "SELECT v.ticker, substr(v.published_utc,1,10), a.sentiment, "
             "COALESCE(v.like_count,0)+COALESCE(v.comment_count,0), COALESCE(r.score,70)/100.0 "
             "FROM yt_video v JOIN yt_analysis a ON a.video_id=v.id "
-            "LEFT JOIN kol_relevance r ON r.source='youtube' AND r.item_id=v.id AND r.ticker=v.ticker")):
+            "JOIN yt_channel yc ON yc.channel_id=v.channel_id "
+            "LEFT JOIN kol_relevance r ON r.source='youtube' AND r.item_id=v.id AND r.ticker=v.ticker "
+            "WHERE COALESCE(v.duration_s,0) > :min_duration "
+            "AND COALESCE(yc.subscriber_count,-1) >= :min_subscribers"),
+            {
+                "min_duration": YOUTUBE_MIN_DISPLAY_DURATION_SECONDS,
+                "min_subscribers": YOUTUBE_MIN_DISPLAY_SUBSCRIBERS,
+            }):
             add(tk, day, senti, _w(eng or 0, rel or 0.7), "youtube")
         print(f"[kol-sentiment] youtube ✓（累计 {len(acc)} 格）", flush=True)
+
+        nx_local = 0
+        for tweet_id, tk, day, stance, eng, rel in c.execute(text(
+            "SELECT x.tweet_id, x.ticker, substr(x.created,1,10), r.stance, "
+            "COALESCE(x.likes,0)+COALESCE(x.retweets,0)+COALESCE(x.replies,0)+COALESCE(x.quotes,0), "
+            "COALESCE(rel.score,70)/100.0 "
+            "FROM x_opinion x JOIN kol_refined r "
+            "ON r.source='x' AND r.item_id=x.tweet_id AND r.ticker=x.ticker "
+            "LEFT JOIN kol_relevance rel "
+            "ON rel.source='x' AND rel.item_id=x.tweet_id AND rel.ticker=x.ticker")):
+            sentiment = 1.0 if stance == "bull" else -1.0 if stance == "bear" else 0.0
+            add(tk, day, sentiment, _w(eng or 0, rel or 0.7), "x")
+            local_x_pairs.add((str(tweet_id), str(tk).upper()))
+            nx_local += 1
+        print(f"[kol-sentiment] X 本地 ✓（{nx_local:,} 条已提炼推文；累计 {len(acc)} 格）", flush=True)
 
     # ---- 云端 X ----
     cu = _cloud_url()
@@ -108,22 +133,26 @@ def rollup() -> int:
         nx = 0
         with cloud.connect() as c:
             # tw_tweet_topic 的标的列是 symbol（topic 的 symbol），不是 ticker
-            for tk, day, senti, eng, strong in c.execute(text(
-                "SELECT tt.symbol, to_char(tw.created_at,'YYYY-MM-DD'), s.sentiment, "
+            for tweet_id, tk, day, senti, eng, strong in c.execute(text(
+                "SELECT tw.tweet_id, tt.symbol, to_char(tw.created_at,'YYYY-MM-DD'), s.sentiment, "
                 "COALESCE(tw.like_count,0)+COALESCE(tw.retweet_count,0)+COALESCE(tw.reply_count,0)+COALESCE(tw.quote_count,0), tt.strong "
                 "FROM tw_tweet_topic tt JOIN tw_tweet tw ON tw.tweet_id=tt.tweet_id "
                 "JOIN tw_tweet_sentiment s ON s.tweet_id=tt.tweet_id")):
+                if (str(tweet_id), str(tk).upper()) in local_x_pairs:
+                    continue
                 add(tk, day, senti, _w(float(eng or 0), 1.0 if strong else 0.6), "x")
                 nx += 1
             # 大票补 X：cashtag 在**本地临时匹配**归属（不写云端共享 tw_tweet_topic）。情绪分已由 tw-sentiment 打过。
             from .tweet_sentiment import MEGACAP, megacap_regex
             nm = 0
             for sym, tags in MEGACAP.items():
-                for day, senti, eng in c.execute(text(
-                    "SELECT to_char(tw.created_at,'YYYY-MM-DD'), s.sentiment, "
+                for tweet_id, day, senti, eng in c.execute(text(
+                    "SELECT tw.tweet_id, to_char(tw.created_at,'YYYY-MM-DD'), s.sentiment, "
                     "COALESCE(tw.like_count,0)+COALESCE(tw.retweet_count,0)+COALESCE(tw.reply_count,0)+COALESCE(tw.quote_count,0) "
                     "FROM tw_tweet tw JOIN tw_tweet_sentiment s ON s.tweet_id=tw.tweet_id "
                     "WHERE tw.text ~* :pat"), {"pat": megacap_regex(tags)}):
+                    if (str(tweet_id), sym) in local_x_pairs:
+                        continue
                     add(sym, day, senti, _w(float(eng or 0), 1.0), "x")
                     nm += 1
             print(f"[kol-sentiment] X 大票补充 ✓（{nm:,} 条 cashtag 命中，本地归属）", flush=True)

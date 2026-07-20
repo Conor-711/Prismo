@@ -17,6 +17,7 @@ from sqlalchemy import bindparam, text
 from ...common import llm
 from ...common.db import engine, session_scope
 from ...common.models import KolRelevance
+from ...common.youtube_filters import YOUTUBE_MIN_DISPLAY_DURATION_SECONDS, YOUTUBE_MIN_DISPLAY_SUBSCRIBERS
 from .kol_refine import DEFAULT_PER_SOURCE, DEFAULT_SINCE_DAYS, TEXT_SOURCES, _load
 
 RELEVANCE_SYSTEM = (
@@ -63,10 +64,16 @@ def _load_youtube(only: set[str] | None, since_days: int) -> list[dict]:
         SELECT v.id AS item_id, v.ticker AS ticker, COALESCE(v.title,'') AS title,
                COALESCE(a.summary_zh,'') AS sz, COALESCE(a.summary_en,'') AS se, v.published_utc AS created
           FROM yt_video v JOIN yt_analysis a ON a.video_id = v.id
+          JOIN yt_channel c ON c.channel_id = v.channel_id
+         WHERE COALESCE(v.duration_s,0) > :min_duration
+           AND COALESCE(c.subscriber_count,-1) >= :min_subscribers
          ORDER BY v.ticker, v.published_utc DESC
     """
     with session_scope() as s:
-        rows = [dict(r._mapping) for r in s.execute(text(sql))]
+        rows = [dict(r._mapping) for r in s.execute(text(sql), {
+            "min_duration": YOUTUBE_MIN_DISPLAY_DURATION_SECONDS,
+            "min_subscribers": YOUTUBE_MIN_DISPLAY_SUBSCRIBERS,
+        })]
     cutoff = (dt.date.today() - dt.timedelta(days=since_days)).isoformat() if since_days > 0 else ""
     out: list[dict] = []
     for r in rows:

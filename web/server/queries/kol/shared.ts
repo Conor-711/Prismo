@@ -1,6 +1,9 @@
 import { all } from "@/lib/db";
 import type { Bi, KolCandle, KolJudgment, KolSource, Stance, TweetMetrics, YtSeg } from "@/shared/market/mockDetail";
 
+export const YOUTUBE_MIN_DISPLAY_SUBSCRIBERS = 2_000;
+export const YOUTUBE_MIN_DISPLAY_DURATION_SECONDS = 60;
+
 export function safe<T>(fn: () => T, fb: T): T {
   try {
     return fn();

@@ -1,5 +1,5 @@
 import generatedSmartVoice from "@/lib/data/smartVoice.json";
-import type { SvBoard, SvConfidence, SvDistribution, SvHorizon, SvInvestor, SvSource } from "./types";
+import type { SvBoard, SvConfidence, SvDistribution, SvHorizon, SvInvestor, SvPlatformBand, SvSource } from "./types";
 import { FALLBACK_NARRATIVES, sourceUrl } from "./constants";
 
 function normalizeLanguage(value: unknown): SvInvestor["language"] {
@@ -32,11 +32,15 @@ function normalizeScoreMap(value: unknown): Record<string, number> {
 function normalizeRealInvestor(value: unknown): SvInvestor | null {
   const raw = value as Partial<SvInvestor> | null;
   if (!raw || typeof raw !== "object" || !raw.id || typeof raw.sv !== "number") return null;
-  const source: SvSource = raw.source === "youtube" ? "youtube" : "x";
+  const source: SvSource = raw.source === "youtube" || raw.source === "reddit" || raw.source === "xueqiu" || raw.source === "toss"
+    ? raw.source
+    : "x";
   const handle = String(raw.handle || raw.name || raw.id);
   return {
     id: String(raw.id),
     rank: typeof raw.rank === "number" ? raw.rank : undefined,
+    platformRank: typeof raw.platformRank === "number" ? raw.platformRank : undefined,
+    observationRank: typeof raw.observationRank === "number" ? raw.observationRank : undefined,
     svDelta: typeof raw.svDelta === "number" ? raw.svDelta : null,
     rankDelta: typeof raw.rankDelta === "number" ? raw.rankDelta : null,
     nEffDelta: typeof raw.nEffDelta === "number" ? raw.nEffDelta : null,
@@ -66,22 +70,70 @@ function normalizeRealInvestor(value: unknown): SvInvestor | null {
   };
 }
 
+function normalizePlatformBand(value: unknown, source: SvSource): SvPlatformBand | null {
+  const raw = value as Partial<SvPlatformBand> | null;
+  if (!raw || typeof raw !== "object" || !raw.distribution) return null;
+  const investors = (items: unknown): SvInvestor[] => Array.isArray(items)
+    ? items.map(normalizeRealInvestor).filter((item): item is SvInvestor => Boolean(item))
+    : [];
+  return {
+    source,
+    scoreKind: "SV_Platform",
+    totalCount: Number(raw.totalCount || 0),
+    qualifiedCount: Number(raw.qualifiedCount || 0),
+    rankedCount: Number(raw.rankedCount || 0),
+    population: raw.population === "all_scored_fallback" ? "all_scored_fallback" : "qualified",
+    distribution: raw.distribution as SvDistribution,
+    top25Threshold: Number(raw.top25Threshold || 0),
+    bottom25Threshold: Number(raw.bottom25Threshold || 0),
+    ranked: investors(raw.ranked),
+    observed: investors(raw.observed),
+    top10: investors(raw.top10),
+    bottom10: investors(raw.bottom10),
+    top25: investors(raw.top25),
+    bottom25: investors(raw.bottom25),
+  };
+}
+
 export function getGeneratedSmartVoiceBoard(): SvBoard | null {
   const raw = generatedSmartVoice as unknown as Partial<SvBoard>;
-  const investors = Array.isArray(raw.investors) ? raw.investors.map(normalizeRealInvestor).filter((i): i is SvInvestor => Boolean(i)) : [];
-  const bottomInvestors = Array.isArray(raw.bottomInvestors) ? raw.bottomInvestors.map(normalizeRealInvestor).filter((i): i is SvInvestor => Boolean(i)) : [];
+  const rawBands = raw.platformBands && typeof raw.platformBands === "object" ? raw.platformBands : {};
+  const platformBands: Partial<Record<SvSource, SvPlatformBand>> = {};
+  for (const source of ["x", "youtube", "reddit", "xueqiu", "toss"] as SvSource[]) {
+    const band = normalizePlatformBand(rawBands[source], source);
+    if (band) platformBands[source] = band;
+  }
+  const platformInvestorById = new Map<string, SvInvestor>();
+  for (const band of Object.values(platformBands)) {
+    if (!band) continue;
+    for (const investor of band.ranked) platformInvestorById.set(investor.id, investor);
+  }
+  const normalizeList = (items: unknown): SvInvestor[] => Array.isArray(items)
+    ? items.map(normalizeRealInvestor).filter((i): i is SvInvestor => Boolean(i)).map((investor) => {
+      const platformInvestor = platformInvestorById.get(investor.id);
+      return platformInvestor?.platformRank ? { ...investor, platformRank: platformInvestor.platformRank } : investor;
+    })
+    : [];
+  const investors = normalizeList(raw.investors);
+  const bottomInvestors = normalizeList(raw.bottomInvestors);
   if (!investors.length) return null;
   const sorted = investors.sort((a, b) => b.sv - a.sv);
+  const rootX = normalizeList(raw.x);
+  const rootYoutube = normalizeList(raw.youtube);
   return {
     investors: sorted,
     bottomInvestors: bottomInvestors.sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0)),
-    x: sorted.filter((i) => i.source === "x"),
-    youtube: sorted.filter((i) => i.source === "youtube"),
+    x: platformBands.x?.top25 ?? (rootX.length ? rootX : sorted.filter((i) => i.source === "x")),
+    youtube: platformBands.youtube?.top25 ?? (rootYoutube.length ? rootYoutube : sorted.filter((i) => i.source === "youtube")),
+    reddit: platformBands.reddit?.top25 ?? normalizeList(raw.reddit),
+    xueqiu: platformBands.xueqiu?.top25 ?? normalizeList(raw.xueqiu),
+    toss: platformBands.toss?.top25 ?? normalizeList(raw.toss),
     currentNarratives: Array.isArray(raw.currentNarratives) && raw.currentNarratives.length ? raw.currentNarratives : FALLBACK_NARRATIVES,
     updatedAt: raw.updatedAt || new Date().toISOString().slice(0, 10),
     scoringVersion: typeof raw.scoringVersion === "string" ? raw.scoringVersion : undefined,
     totalInvestors: typeof raw.totalInvestors === "number" ? raw.totalInvestors : investors.length,
     exportedInvestors: typeof raw.exportedInvestors === "number" ? raw.exportedInvestors : investors.length,
     distribution: raw.distribution as SvDistribution | undefined,
+    platformBands,
   };
 }

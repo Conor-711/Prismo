@@ -1,4 +1,4 @@
-export type SvSource = "x" | "youtube";
+export type SvSource = "x" | "youtube" | "reddit" | "xueqiu" | "toss";
 export type SvHorizon = "1D" | "5D" | "20D" | "60D" | "90D" | "180D";
 export type SvConfidence = "observing" | "low" | "medium" | "high";
 
@@ -17,6 +17,8 @@ export interface SvDistribution {
 export interface SvInvestor {
   id: string;
   rank?: number;
+  platformRank?: number;
+  observationRank?: number;
   svDelta?: number | null;
   rankDelta?: number | null;
   nEffDelta?: number | null;
@@ -45,11 +47,42 @@ export interface SvInvestor {
     investorTypeShare?: Record<string, number>;
     topTicker?: string;
     topTickerWeightShare?: number;
+    topPositiveTicker?: string;
+    topPositiveContributionShare?: number;
     effectiveTickersByWeight?: number;
+    effectiveTickersByPositiveContribution?: number;
+    cap?: number;
     capApplied?: boolean;
+    rawSvBeforeConcentrationCap?: number;
+    svPlatform?: number;
+    svPlatformRaw?: number;
+    svGlobal?: number;
+    svGlobalDeviation?: number;
+    confidenceFactor?: number;
+    platformBaseline?: number;
+    primaryPlatform?: string;
+    platformPool?: { qualified?: number; total?: number };
   };
   rationaleZh: string;
   rationaleEn: string;
+}
+
+export interface SvPlatformBand {
+  source: SvSource;
+  scoreKind: "SV_Platform";
+  totalCount: number;
+  qualifiedCount: number;
+  rankedCount: number;
+  population: "qualified" | "all_scored_fallback";
+  distribution: SvDistribution;
+  top25Threshold: number;
+  bottom25Threshold: number;
+  ranked: SvInvestor[];
+  observed: SvInvestor[];
+  top10: SvInvestor[];
+  bottom10: SvInvestor[];
+  top25: SvInvestor[];
+  bottom25: SvInvestor[];
 }
 
 export interface SvBoard {
@@ -57,12 +90,16 @@ export interface SvBoard {
   bottomInvestors?: SvInvestor[];
   x: SvInvestor[];
   youtube: SvInvestor[];
+  reddit: SvInvestor[];
+  xueqiu: SvInvestor[];
+  toss: SvInvestor[];
   currentNarratives: { key: string; zh: string; en: string; weight: number }[];
   updatedAt: string;
   scoringVersion?: string;
   totalInvestors?: number;
   exportedInvestors?: number;
   distribution?: SvDistribution;
+  platformBands?: Partial<Record<SvSource, SvPlatformBand>>;
 }
 
 export interface SvTickerBoard {
