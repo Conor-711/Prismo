@@ -102,11 +102,15 @@ def build_indicator_outcomes(con: sqlite3.Connection) -> int:
     spy = _price_series(con, "SPY")
     spy_by_day = {str(row["day"]): row for row in spy}
     by_ticker: dict[str, list[dict[str, Any]]] = {}
+    days_by_ticker: dict[str, list[str]] = {}
     output: list[tuple[Any, ...]] = []
     for event in events:
         ticker = str(event["ticker"])
-        series = by_ticker.setdefault(ticker, _price_series(con, ticker))
-        days = [str(row["day"]) for row in series]
+        if ticker not in by_ticker:
+            by_ticker[ticker] = _price_series(con, ticker)
+            days_by_ticker[ticker] = [str(row["day"]) for row in by_ticker[ticker]]
+        series = by_ticker[ticker]
+        days = days_by_ticker[ticker]
         entry_index = bisect.bisect_right(days, str(event["signal_day"]))
         if entry_index >= len(series):
             for horizon in OUTCOME_HORIZONS:

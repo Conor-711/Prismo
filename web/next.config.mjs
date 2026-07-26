@@ -6,6 +6,9 @@ const buildCpus = Math.max(1, Number(process.env.NEXT_BUILD_CPUS || "1"));
 
 const nextConfig = {
   reactStrictMode: true,
+  // Dev and production builds may run from separate terminals. Keeping their
+  // caches isolated prevents either process from invalidating the other's pages.
+  distDir: process.env.NODE_ENV === "development" ? ".next-dev" : ".next",
   // 静态导出：构建期读 DB 生成快照，产物在 out/，可部署到任何静态托管。
   // 静态导出仅用于生产构建(make site/make serve)；dev 用普通服务端模式，
   // 否则 output:export + 动态路由(/ticker/[symbol]) 在 next dev 下会误报缺 generateStaticParams。

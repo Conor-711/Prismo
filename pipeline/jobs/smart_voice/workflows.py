@@ -4,6 +4,9 @@ from __future__ import annotations
 from ...domain.smart_voice import signals
 from ...domain.smart_voice.indicator_backtest import build_sv_indicator_backtest as build_sv_indicator_backtest_domain
 from ...domain.smart_voice.indicator_backtest_reporting import export_sv_indicator_backtest_reports as export_sv_indicator_backtest_reports_domain
+from ...domain.smart_voice.portfolio_backtest import build_x_sv_portfolio_backtest as build_x_sv_portfolio_backtest_domain
+from ...domain.smart_voice.rank_event_research import build_x_rank_event_research as build_x_rank_event_research_domain
+from ...domain.smart_voice.segment_backtest import build_sv_segment_backtest as build_sv_segment_backtest_domain
 from ...domain.smart_voice.v0 import run_sv_v0 as run_sv_v0_domain
 from ...domain.smart_voice.ticker_signals import build_ticker_sv_signals as build_ticker_sv_signals_domain
 from ...platforms.market_data import backfill_price_history as backfill_price_history_platform
@@ -208,3 +211,65 @@ def export_sv_indicator_backtest_reports(
 ) -> dict[str, int]:
     """Export detailed event, evidence, and robustness files without rebuilding signals."""
     return export_sv_indicator_backtest_reports_domain(db_path=db_path, report_dir=report_dir)
+
+
+def build_sv_segment_backtest(
+    *,
+    db_path: str,
+    report_path: str,
+    only: list[str] | None,
+    windows: tuple[int, ...],
+    sources: tuple[str, ...],
+    segment_types: tuple[str, ...],
+    rank_bands: tuple[str, ...],
+    min_authors: int,
+    consensus_threshold: float,
+    effective_voice_threshold: float,
+    segment_min_n_eff: float,
+    segment_min_settled_calls: int,
+) -> dict[str, int]:
+    """Backtest vertical concentration using historical sub-SV ranks."""
+    return build_sv_segment_backtest_domain(
+        db_path=db_path,
+        report_path=report_path,
+        only=only,
+        windows=windows,
+        sources=sources,
+        segment_types=segment_types,
+        rank_bands=rank_bands,
+        min_authors=min_authors,
+        consensus_threshold=consensus_threshold,
+        effective_voice_threshold=effective_voice_threshold,
+        segment_min_n_eff=segment_min_n_eff,
+        segment_min_settled_calls=segment_min_settled_calls,
+    )
+
+
+def build_x_sv_portfolio_backtest(
+    *,
+    db_path: str,
+    report_dir: str,
+    windows: tuple[int, ...],
+    holding_days: tuple[int, ...],
+    position_modes: tuple[str, ...],
+) -> dict[str, int]:
+    """Build annualized X-only SV signal and author portfolios."""
+    return build_x_sv_portfolio_backtest_domain(
+        db_path=db_path,
+        report_dir=report_dir,
+        windows=windows,
+        holding_days=holding_days,
+        position_modes=position_modes,
+    )
+
+
+def build_x_rank_event_research(
+    *,
+    db_path: str,
+    report_dir: str,
+) -> dict[str, int]:
+    """Search and split-test X SV rank-event strategy parameters."""
+    return build_x_rank_event_research_domain(
+        db_path=db_path,
+        report_dir=report_dir,
+    )

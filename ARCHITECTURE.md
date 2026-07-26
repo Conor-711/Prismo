@@ -2,7 +2,7 @@
 
 > **维护约定**：本文件是项目的「活地图」。**每次对项目结构或功能有实质改动后，必须同步更新本文件对应章节**
 > （新增/删除模块、改数据流、改命令、改部署方式、改 schema 等）。详见根目录 `CLAUDE.md`。
-> 最近更新：2026-07-19。
+> 最近更新：2026-07-20。
 
 ---
 
@@ -139,7 +139,7 @@ crypto_us/
 │   │   ├── author_assets/     #   作者头像等跨平台作者资产刷新（旧 ingest/author_avatars.py 为 wrapper）
 │   │   ├── global_retail/     #   全球散户多区抓取、雪球导入与报价
 │   │   └── xueqiu/            #   雪球 direct crawler 与长期任务管道
-│   ├── domain/                #   目标边界：opinions/authors/tickers/narratives/SV/target_prices 跨平台逻辑；smart_voice/ticker_signal_* 负责标的历史信号，indicator_backtest* 负责发现页四指标无泄漏回测、证据审计、细分报告和成功/失败案例集
+│   ├── domain/                #   目标边界：opinions/authors/tickers/narratives/SV/target_prices 跨平台逻辑；smart_voice/ticker_signal_* 负责标的历史信号，indicator_backtest* 负责发现页四指标回测，segment_backtest* 负责周期/赛道/投资类型子 SV 垂直回测
 │   ├── jobs/                  #   目标边界：完整任务编排（global_retail/ticker_detail/youtube_fulltext/SV）
 │   ├── common/
 │   │   ├── config.py          #   配置/环境变量（含 normalize_db_url：Supabase 串自动转 psycopg+SSL）
@@ -249,7 +249,8 @@ crypto_us/
 | 派生聚合 | `ticker_rollup` `market_mood` `trending` | 声量榜 / 市场情绪 / 异动（每次全量重算，可弃） |
 | 叙事/简报 | `narratives` `narrative_tickers` `narrative_posts` `daily_briefs` | 主导叙事 + 每日简报 |
 | 叙事轮动(构建期 JSON) | `web/lib/data/narrativeRotation.json` | **新 `/narratives` 页面数据源**：固定板块 taxonomy 的跨社区叙事轮动；由 `make narrative-rotation` 从 `gr_post`、Reddit、X、YouTube 聚合生成，记录每日 rank/share/sentiment 与详情来源/地区/标的分布；**不使用旧 Reddit-only `narratives` 表**，不把财报/政策/估值等事件项作为板块 |
-| Smart Voice 指标回测(本地派生) | `sv_investor_score_asof` `sv_indicator_signal_daily` `sv_indicator_event` `sv_indicator_outcome` `sv_indicator_stat` | 历史时点平台正式池 SV/排名 → 发现页四类指标的 1/3/7/30/90D 滚动信号 → 连续同向事件 → 下一交易日开盘后的 1/5/20/60/90D 调整价方向收益、相对 SPY 超额、胜率、Wilson 区间、盈亏比和利润因子；`make sv-indicator-backtest` 全量重建，`make sv-indicator-report` 另导出逐事件、逐原文证据、成本/时间/标的/强度/质量/不重叠持仓细分 CSV 及 40 例原帖证据案例集 |
+| Smart Voice 指标回测(本地派生) | `sv_investor_score_asof` `sv_indicator_signal_daily` `sv_indicator_event` `sv_indicator_outcome` `sv_indicator_stat` | 历史时点平台正式池 SV/排名 → 发现页四类指标的 1/3/7/30/90D 滚动信号 → 连续同向事件 → 下一交易日开盘后的 1/5/20/60/90D 调整价方向收益、相对 SPY 超额、胜率、Wilson 区间、盈亏比和利润因子；`make sv-indicator-backtest` 全量重建，`make sv-indicator-report` 另导出逐事件、逐原文证据、成本/时间/标的/强度/质量/不重叠持仓细分 CSV 及 40 例原帖证据案例集；`make sv-portfolio-backtest` 在 X 历史时点事件和作者 Call 上构建不重叠等权组合，输出 0/10/25bps 成本下的 CAGR、夏普和回撤，不新增主库日净值表 |
+| Smart Voice 子 SV 垂直回测(本地派生) | `sv_segment_score_asof` `sv_segment_signal_daily` `sv_segment_event` `sv_segment_outcome` `sv_segment_stat` | 仅用每个历史时点之前已结算的 Call 重建周期、赛道和投资类型子 SV，按子类内部 Top 10%/25% 作者生成 3/7/14/30D 集中方向事件，再从下一交易日开盘计算 1/5/20/60/90/180D 调整价方向收益和相对 SPY 超额；默认至少 3 位作者、65% 同向度和 2.5 有效声音，结果与原文证据写入 `data/reports/sv_segment_backtest/`，不修改当前作者分数或页面榜单 |
 | 全球散户(隔离) | `gr_post` `gr_ticker_region` `gr_ticker` | 日韩台+中国大陆(雪球)爬精选跨区美股的散户帖(flash 打标 sentiment+stance) + 每 region×ticker 滚动(region `us`/`cn`/`jp`/`kr`/`tw`；**US 不入 gr_post，rollup 只读现有 Reddit**；CN 经浏览器过 WAF 导入) + 每 ticker 跨区派生(共识/分歧)。与 us/cn 主表隔离，供正式页面读取 |
 | YouTube 观点(隔离) | `yt_video` `yt_analysis` `yt_ticker_summary` | 按标的近 24h、浏览量>1000 的**全语种**财经视频(YouTube Data API)→ Gemini **混合分析**(top N 原生看视频[画面+音频] + 其余优先读取 `yt_fulltext` 完整口播/在线字幕，再回退低清原生视频)出 stance/sentiment/双语摘要 → 每标的浏览量加权汇总。**两条分析路径**：① `youtube-tag` Gemini 视频/口播分析，支持 `--since-days`、`--min-subscribers`、`--min-duration-seconds` 精确限制产品候选，`--workers>1` 走并发付费模式；幂等判定同时校验 `yt_analysis.ticker == yt_video.ticker`，同一视频被新 ticker 搜索命中后会自动重分析；② `youtube-tag-text` **无配额兜底**：用**标题+简介**跑 LOW 档出双语观点(mode=`text`)，覆盖 Gemini 没看的长尾、**不占 `analyzed` 旗标**→ 日后 Gemini 仍能升级覆盖。**纳入站外当地分析者**(韩 슈퍼개미/日 testa/美 FinTube)。YouTube 数据经 `kolQueries.youtubeOps` 并入标的页**观点浏览器**(`OpinionExplorer`)；展示口径要求频道 `yt_channel.subscriber_count >= 2000` 且视频 `duration_s > 60`，目标价时间线、YouTube 相关性/质量候选、KOL 情绪/讨论度/新增 KOL 日序列都使用同一口径；详情阅读器按 channel_id 匹配 YouTube 作者 SV 并显示具体 SV 分数。**原独立『YouTube 观点』模块已移除**(与浏览器重复，删 `YouTubeOpinions.tsx`+`youtubeQueries.ts`)；缺 key 回退 mock |
 | YouTube 完整口播(隔离) | `yt_fulltext` | 视频「完整口播」：Gemini 真看视频→**只还原口播**(不描述画面)成有序段落 `{type:speech, speaker, text}`：**按语义分段**(3-6 句/段) + **行内 Markdown 划重点**(`**加粗**`关键结论/数据/标的、`*斜体*`转折，克制)；**多人(访谈/播客)每段标 `speaker`、独白留空**；剔赞助订阅VIP二维码宣传。列 content_zh(扁平**纯文本**,去 Markdown)+segments(JSON 有序带 Markdown)。前端 `YtFullContent.tsx`(被 `YtReader.tsx` 包裹，见 `yt_digest` 行)：行内 Markdown 渲染(`inline`/`RichText`)；单人→限行宽分段长文、多人→按说话人分回合对话排版；传入 chapters 时在对应 speech 段前插**章节标题+锚点 `data-ch`**。`youtube-fulltext --only/--per-ticker/--force/--no-frames`。⚠ 旧档 `visual` 段(关键帧)代码休眠、新提示不产出(下载/OCR 配方备查见 memory `project-youtube-fulltext`) |
@@ -311,6 +312,9 @@ crypto_us/
 | `make sv-ticker-signals ONLY=MU,NVDA,MSTR` | 标的级 SV：历史时点作者百分位 → 7 日观点聚集 → 下一交易日开盘后的 1/5/20/60/90/180 日相对 SPY 回测；首批详情页只消费 MU/NVDA/MSTR |
 | `make sv-indicator-backtest` | Smart Voice 发现页四指标：历史平台内正式 Top/Bottom 10% → 1/3/7/30/90D 加权净强度、作者净人数、人数突变和高低分歧 → 连续信号事件化 → 1/5/20/60/90D 胜率、盈亏比、利润因子及相对 SPY 超额；CSV 写 `data/reports/sv_indicator_backtest.csv` |
 | `make sv-indicator-report` | 不重算信号，基于现有 `sv_indicator_*` 导出逐事件结果、逐 Call 原文/URL、紧凑证据、稳健性统计和四指标各 5 个成功/5 个失败的原帖证据案例集到 `data/reports/` |
+| `make sv-segment-backtest` | X 作者周期/赛道/投资类型子 SV 垂直回测：历史时点子类排名 → Top 10%/25% 的 3/7/14/30D 集中事件 → 1/5/20/60/90/180D 方向收益、相对 SPY 超额和原帖证据；报告写 `data/reports/sv_segment_backtest/` |
+| `make sv-portfolio-backtest` | 只使用 X：将历史时点 SV 集体信号和逐作者已结算 Call 转成真实资金占用的组合净值，按下一交易日调整开盘、同标的不重叠、活跃持仓等权、空窗持有现金计算多空/只多/只空及 1/5/20/60/90/180D 的总收益、CAGR、年化波动、夏普、最大回撤和成本敏感性；输出 `data/reports/sv_portfolio_backtest/` |
+| `make sv-rank-event-research` | 只使用 X 历史时点排名事件：强度阈值只读信号日前历史，宽参数搜索头部跟随、底部反向和头尾背离，并以前半段 50bps 净收益选参、后半段固定验证，同时做流动性、成本、延迟成交和剔除主要贡献标的压力测试；输出 `data/reports/sv_portfolio_backtest/x_sv_rank_event_*` |
 | `pipeline.manage overall-signals --ticker MU` | 重算标的页整体数据的异常归因与聪明钱/散户分歧：归因优先读显式 JSONL、缺失时读本地 `x_opinion`；聪明钱线缺旧实验缓存时读取 `sv_call` 并按 call 当日 `sv_investor_score_asof` 前 10% 作者加权，避免前视；输出 `web/lib/data/overallData.json` |
 | `make xueqiu-author-plan / xueqiu-author-auth / xueqiu-author-run / xueqiu-author-drain / xueqiu-author-status` | 雪球 SV 作者池：版本化候选池 → 用户登录授权 → 一年作者时间线断点回填（`drain` 为小批次冷却长跑）→ 状态统计；固定写本地 `data/dev.db` |
 | `make xueqiu-sv-full` | 雪球 SV 完整长跑：自适应退避回填正式 300 人作者池 → 校验全部完成 → 扩展标的映射 → 候选召回 → 作者均衡 LLM 抽取 → 结算/评分/导出；作者池不完整则停止在评分前 |

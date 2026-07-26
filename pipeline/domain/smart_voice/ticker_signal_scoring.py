@@ -18,8 +18,14 @@ from .v0_impl import (
 )
 
 
-def _score_pool(rows_by_investor: dict[str, list[sqlite3.Row]]) -> list[dict[str, Any]]:
-    stats = {investor: aggregate_stats(rows, 30.0) for investor, rows in rows_by_investor.items()}
+def _score_pool(
+    rows_by_investor: dict[str, list[sqlite3.Row]],
+    as_of_day: str,
+) -> list[dict[str, Any]]:
+    stats = {
+        investor: aggregate_stats(rows, 30.0, as_of_day=as_of_day)
+        for investor, rows in rows_by_investor.items()
+    }
     stats = {investor: value for investor, value in stats.items() if value}
     sources = {
         investor: primary_source_for_rows(rows_by_investor[investor])
@@ -141,7 +147,7 @@ def rebuild_point_in_time_scores(con: sqlite3.Connection, call_days: Iterable[st
             row = settlement_rows[cursor]
             rows_by_investor[str(row["investor_id"])].append(row)
             cursor += 1
-        scored = _score_pool(rows_by_investor)
+        scored = _score_pool(rows_by_investor, day)
         con.executemany(
             """INSERT INTO sv_investor_score_asof
                (asof_day,investor_id,source,sv,raw_z,rank_no,percentile,confidence,n_eff,settled_calls,

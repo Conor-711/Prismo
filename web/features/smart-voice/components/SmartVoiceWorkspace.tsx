@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { useLocale } from "@/components/i18n/LocaleProvider";
-import type { SvBoard } from "@/features/smart-voice/svMock";
+import type { SmartVoiceLeaderboardData } from "@/features/smart-voice/svLeaderboardData";
 import { fmtCompact } from "@/shared/formatting/format";
 import { ViewportWorkspace } from "@/shared/layout/ViewportWorkspace";
 import type { SmartVoiceLiveCall, SmartVoiceMarketData, SmartVoiceOverviewStats } from "@/server/queries/smartVoiceQueries";
+import type { SmartVoiceRepresentativeEvidenceMap } from "@/server/queries/smartVoiceInvestorQueries";
 import { SmartVoiceLeaderboardView } from "./SmartVoiceLeaderboardView";
 import { SmartVoiceLiveView } from "./SmartVoiceLiveView";
 import { SmartVoiceMarketView } from "./SmartVoiceMarketView";
@@ -17,17 +18,25 @@ function latestDay(value: string, fallback: string) {
 }
 
 export function SmartVoiceWorkspace({
-  board,
+  boardMeta,
+  leaderboard,
   marketData,
   liveCalls,
   stats,
   profileIds,
+  representativeEvidence,
 }: {
-  board: SvBoard;
+  boardMeta: {
+    totalInvestors: number;
+    updatedAt: string;
+    scoringVersion?: string;
+  };
+  leaderboard: SmartVoiceLeaderboardData;
   marketData: SmartVoiceMarketData;
   liveCalls: SmartVoiceLiveCall[];
   stats: SmartVoiceOverviewStats;
   profileIds: string[];
+  representativeEvidence: SmartVoiceRepresentativeEvidenceMap;
 }) {
   const { lang } = useLocale();
   const zh = lang === "zh";
@@ -41,7 +50,7 @@ export function SmartVoiceWorkspace({
   ]).size;
   const tabs: { key: WorkspaceView; zh: string; en: string; count: string }[] = [
     { key: "market", zh: "标的发现", en: "Top tickers", count: String(tickerCount) },
-    { key: "leaderboard", zh: "投资者榜", en: "Leaderboard", count: fmtCompact(stats.scoredInvestors || board.totalInvestors || 0) },
+    { key: "leaderboard", zh: "投资者榜", en: "Leaderboard", count: fmtCompact(stats.scoredInvestors || boardMeta.totalInvestors) },
     { key: "live", zh: "实时观点", en: "Live calls", count: fmtCompact(liveCalls.length) },
   ];
 
@@ -63,7 +72,7 @@ export function SmartVoiceWorkspace({
         <div className="flex shrink-0 items-end divide-x divide-line text-right">
           <div className="px-3 first:pl-0">
             <div className="text-[9px] uppercase tracking-[0.1em] text-neutral-600">{zh ? "已评分作者" : "Scored voices"}</div>
-            <div className="mt-1 font-mono text-[14px] font-bold leading-none text-cream">{fmtCompact(stats.scoredInvestors || board.totalInvestors || 0)}</div>
+            <div className="mt-1 font-mono text-[14px] font-bold leading-none text-cream">{fmtCompact(stats.scoredInvestors || boardMeta.totalInvestors)}</div>
           </div>
           <div className="px-3">
             <div className="text-[9px] uppercase tracking-[0.1em] text-neutral-600">{zh ? "高置信作者" : "High confidence"}</div>
@@ -75,7 +84,7 @@ export function SmartVoiceWorkspace({
           </div>
           <div className="px-3 pr-0">
             <div className="text-[9px] uppercase tracking-[0.1em] text-neutral-600">{zh ? "更新" : "Updated"}</div>
-            <div className="mt-1 font-mono text-[14px] font-bold leading-none text-neutral-300">{latestDay(stats.latestCallAt, board.updatedAt)}</div>
+            <div className="mt-1 font-mono text-[14px] font-bold leading-none text-neutral-300">{latestDay(stats.latestCallAt, boardMeta.updatedAt)}</div>
           </div>
         </div>
       </header>
@@ -94,13 +103,20 @@ export function SmartVoiceWorkspace({
           </button>
         ))}
         <div className="ml-auto pb-2.5 text-[10px] text-neutral-600">
-          {zh ? `覆盖 ${stats.platformCount || 4} 个来源 · ${board.scoringVersion ?? "SV"}` : `${stats.platformCount || 4} sources · ${board.scoringVersion ?? "SV"}`}
+          {zh ? `覆盖 ${stats.platformCount || 4} 个来源 · ${boardMeta.scoringVersion ?? "SV"}` : `${stats.platformCount || 4} sources · ${boardMeta.scoringVersion ?? "SV"}`}
         </div>
       </nav>
 
       <main className="mt-3 min-h-0 flex-1 overflow-hidden rounded-lg bg-card/55 ring-1 ring-inset ring-line">
         {view === "market" ? <SmartVoiceMarketView marketData={marketData} zh={zh} /> : null}
-        {view === "leaderboard" ? <SmartVoiceLeaderboardView board={board} profileIds={profileIds} zh={zh} /> : null}
+        {view === "leaderboard" ? (
+          <SmartVoiceLeaderboardView
+            leaderboard={leaderboard}
+            profileIds={profileIds}
+            representativeEvidence={representativeEvidence}
+            zh={zh}
+          />
+        ) : null}
         {view === "live" ? <SmartVoiceLiveView calls={liveCalls} profileIds={profileIds} zh={zh} /> : null}
       </main>
     </ViewportWorkspace>
