@@ -18,11 +18,75 @@ Smart Voice has two layers:
 
 ```text
 raw call performance
+-> point-in-time time decay
 -> platform-specific candidate and weight tuning
 -> SV_Platform
 -> confidence-adjusted platform deviation
 -> SV_Global
 ```
+
+## Time Decay
+
+Current SV is a measure of current, demonstrated judgment quality rather than a
+permanent career score. Only outcomes known before the score's `as_of_day` are
+eligible. A result that settles on `as_of_day` is first available on the next
+day, which keeps historical score reconstruction free of look-ahead leakage.
+
+Decay starts from `exit_day`, not content publication time:
+
+```text
+age_days_i = as_of_day - exit_day_i
+decay_i = 0.5 ^ (age_days_i / half_life_days[horizon_i])
+```
+
+Default half-lives:
+
+```text
+1D    45 calendar days
+5D    60 calendar days
+20D  120 calendar days
+60D  240 calendar days
+90D  360 calendar days
+180D 540 calendar days
+```
+
+Long-horizon theses therefore remain relevant longer than short-term trading
+calls. The same schedule is used across platforms; platform normalization still
+happens after decay.
+
+Decay is applied as fractional evidence:
+
+```text
+decayed_contribution = sum(decay_i * contribution_i)
+decayed_variance = sum(
+  decay_i * score_weight_i^2 * expected_hit_i * (1 - expected_hit_i)
+)
+z_recent = decayed_contribution / sqrt(decayed_variance)
+```
+
+The effective sample size also decays:
+
+```text
+evidence_mass = sum(score_weight_i * decay_i)
+decayed_n_eff =
+  evidence_mass^2 / sum(score_weight_i^2 * decay_i)
+```
+
+The existing sample shrinkage then remains active:
+
+```text
+raw_z = z_recent * decayed_n_eff / (decayed_n_eff + k)
+```
+
+This combination has three intended properties:
+
+- Recent outcomes affect current SV more than old outcomes.
+- A small number of fresh wins cannot overwhelm the sample-size prior.
+- An inactive investor gradually returns toward the platform baseline and can
+  eventually leave the qualified pool as `decayed_n_eff` falls.
+
+Concentration metrics use the same decay weights so an old single-ticker record
+does not permanently dominate a currently diversified author profile.
 
 ## SV Platform
 

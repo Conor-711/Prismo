@@ -11,9 +11,8 @@ import {
   type SvBoard,
   type SvInvestor,
 } from "@/features/smart-voice/svMock";
-import type { SmartVoiceEvidenceCall, SmartVoiceInvestorEvidence } from "@/server/queries/smartVoiceInvestorQueries";
+import type { SmartVoiceInvestorEvidence } from "@/server/queries/smartVoiceInvestorQueries";
 import {
-  EvidencePill,
   SegmentBar,
   SmallMetric,
   SmartVoiceScore,
@@ -21,6 +20,8 @@ import {
   sourceLabel,
   svTone,
 } from "./SmartVoicePrimitives";
+import { SmartVoiceEvidenceChart } from "./SmartVoiceEvidenceChart";
+import { SmartVoicePerformanceLedger } from "./SmartVoicePerformanceLedger";
 
 const TYPE_LABEL: Record<string, { zh: string; en: string }> = {
   technical: { zh: "技术分析", en: "Technical" },
@@ -55,18 +56,6 @@ function bandOf(profile: SvInvestor, board: SvBoard) {
   if (rank > 0 && rank <= decile) return "top";
   if (rank > 0 && rank > total - decile) return "bottom";
   return profile.sv >= 100 ? "top" : "bottom";
-}
-
-function directionLabel(direction: SmartVoiceEvidenceCall["direction"], zh: boolean) {
-  if (direction === "bull") return zh ? "看多" : "Bull";
-  if (direction === "bear") return zh ? "看空" : "Bear";
-  return zh ? "中性" : "Neutral";
-}
-
-function directionTone(direction: SmartVoiceEvidenceCall["direction"]) {
-  if (direction === "bull") return "#57D7BA";
-  if (direction === "bear") return "#FF5C6C";
-  return "#9CA3AF";
 }
 
 function strongestWeakest(profile: SvInvestor) {
@@ -233,66 +222,34 @@ function StyleModule({ profile, zh }: { profile: SvInvestor; zh: boolean }) {
   );
 }
 
-function CallItem({ call, zh }: { call: SmartVoiceEvidenceCall; zh: boolean }) {
-  const summary = (zh ? call.summaryZh : call.summaryEn) || call.evidenceSpan || call.text;
-  const tone = directionTone(call.direction);
+function EvidenceModule({ evidence, zh }: { evidence: SmartVoiceInvestorEvidence; zh: boolean }) {
   return (
-    <li className="rounded-lg bg-card p-3 ring-1 ring-inset ring-line">
-      <div className="flex flex-wrap items-center gap-2">
-        <LocaleLink href={`/tickers/${call.ticker}`} className="font-mono text-[12px] font-bold text-cream hover:text-reddit">
-          {call.ticker}
-        </LocaleLink>
-        <span className="rounded px-1.5 py-px text-[10.5px] font-semibold" style={{ color: tone, background: `${tone}22` }}>
-          {directionLabel(call.direction, zh)}
-        </span>
-        <span className="text-[10.5px] text-neutral-600">{call.day}</span>
-        {call.url && (
-          <a href={call.url} target="_blank" rel="noopener noreferrer" className="ml-auto text-[10.5px] text-neutral-500 hover:text-cream">
-            {zh ? "原文 ↗" : "Source ↗"}
-          </a>
-        )}
-      </div>
-      <p className="mt-2 text-[12px] leading-relaxed text-neutral-400 line-clamp-2">{summary}</p>
-      <div className="mt-2 flex flex-wrap gap-1.5">
-        <EvidencePill label={zh ? "贡献" : "Contribution"} value={call.contribution == null ? "—" : call.contribution.toFixed(2)} />
-        <EvidencePill label={zh ? "收益" : "Return"} value={call.returnPct == null ? "—" : pct(call.returnPct)} />
-        <EvidencePill label={zh ? "超额" : "Excess"} value={call.excessReturnPct == null ? "—" : pct(call.excessReturnPct)} />
-        <EvidencePill label={zh ? "互动" : "Interactions"} value={call.interactions} />
-        {call.actualHit != null && <EvidencePill label={zh ? "命中" : "Hit"} value={call.actualHit ? (zh ? "是" : "Yes") : (zh ? "否" : "No")} />}
-      </div>
-    </li>
-  );
-}
-
-function CallList({ title, items, zh }: { title: string; items: SmartVoiceEvidenceCall[]; zh: boolean }) {
-  return (
-    <div>
-      <h3 className="mb-2 font-display text-[14px] font-bold text-cream">{title}</h3>
-      {items.length ? (
-        <ul className="space-y-2">{items.map((call) => <CallItem key={call.candidateId} call={call} zh={zh} />)}</ul>
-      ) : (
-        <div className="rounded-lg bg-card p-4 text-[12px] text-neutral-500 ring-1 ring-inset ring-line">
-          {zh ? "暂无可展示的已结算样本。" : "No settled examples to show yet."}
+    <Panel className="p-4 sm:p-5">
+      <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-reddit">Evidence Calls</div>
+          <h2 className="mt-1 font-display text-[17px] font-bold text-cream">{zh ? "SV 贡献证据与价格路径" : "SV evidence on price action"}</h2>
+          <p className="mt-1.5 text-[12px] leading-relaxed text-neutral-500">
+            {zh ? "代表性已结算观点按贡献方向落在对应标的日 K 上。" : "Representative settled calls are positioned on each ticker's daily candles by score contribution."}
+          </p>
         </div>
-      )}
-    </div>
+      </div>
+      <SmartVoiceEvidenceChart evidence={evidence} zh={zh} />
+    </Panel>
   );
 }
 
-function EvidenceModule({ evidence, low, zh }: { evidence: SmartVoiceInvestorEvidence; low: boolean; zh: boolean }) {
+function PerformanceModule({ evidence, zh }: { evidence: SmartVoiceInvestorEvidence; zh: boolean }) {
   return (
     <Panel className="p-4 sm:p-5">
       <div className="mb-4">
-        <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-reddit">Evidence Calls</div>
-        <h2 className="mt-1 font-display text-[17px] font-bold text-cream">{zh ? "代表性样本" : "Representative calls"}</h2>
+        <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-reddit">Full Track Record</div>
+        <h2 className="mt-1 font-display text-[17px] font-bold text-cream">{zh ? "完整已结算战绩" : "Complete settled track record"}</h2>
         <p className="mt-1.5 text-[12px] leading-relaxed text-neutral-500">
-          {zh ? "展示加分和扣分最大的已结算 call，帮助判断分数来自哪些真实观点。" : "Shows the biggest positive and negative settled calls behind the score."}
+          {zh ? "覆盖该作者全部已到期观点；每条记录均按观点主周期结算，可回溯至原帖。" : "All matured calls for this investor, settled on each call's primary horizon and traceable to the source."}
         </p>
       </div>
-      <div className="grid gap-4 lg:grid-cols-2">
-        <CallList title={low ? (zh ? "主要扣分样本" : "Main deductions") : (zh ? "主要加分样本" : "Main contributors")} items={low ? evidence.weakCalls : evidence.bestCalls} zh={zh} />
-        <CallList title={low ? (zh ? "少数加分样本" : "Positive exceptions") : (zh ? "主要扣分样本" : "Main deductions")} items={low ? evidence.bestCalls : evidence.weakCalls} zh={zh} />
-      </div>
+      <SmartVoicePerformanceLedger evidence={evidence} zh={zh} />
     </Panel>
   );
 }
@@ -342,7 +299,8 @@ export function SmartVoiceInvestorProfile({
 
       <ExplanationModule profile={profile} board={board} zh={zh} />
       <StyleModule profile={profile} zh={zh} />
-      <EvidenceModule evidence={evidence} low={low} zh={zh} />
+      <EvidenceModule evidence={evidence} zh={zh} />
+      <PerformanceModule evidence={evidence} zh={zh} />
     </div>
   );
 }

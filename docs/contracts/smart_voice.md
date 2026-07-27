@@ -12,7 +12,7 @@ Smart Voice 描述作者或观点在某个标的下的可信声音指标。
 | `score` | number | SV 分数 |
 | `rank` | number | 标的内排名 |
 | `percentile` | number | 标的内百分位，0 表示最头部，100 表示最尾部 |
-| `n_effective` | number | 有效样本量 |
+| `n_effective` | number | 截至 `updated_at` 按结算时间衰减后的有效样本量 |
 | `settled_calls` | number | 已结算观点数 |
 | `updated_at` | ISO datetime | 更新时间 |
 
@@ -26,6 +26,18 @@ SV 区间筛选使用 `percentile`：
 - 自定义区间：用户选择 `[low, high]`
 
 前端不得重新计算 `score`，只能基于已导出的 `percentile` 或 `rank` 过滤。
+
+## Version And Time Semantics
+
+Call 抽取与作者排名分别版本化：
+
+- `callScoringVersion = v1.8-transcript-lifecycle`：结构化 Call 和完整口播证据版本；
+- `scoringVersion = v1.9-time-decay`：作者聚合、平台排名和全局排名版本。
+
+作者排名使用 `docs/smart_voice/GLOBAL_ALGORITHM.md` 定义的周期化半衰期，从
+`exit_day` 开始衰减。`n_effective`、平台资格、置信度和集中度均使用衰减后证据；
+`settled_calls` 仍是截至 `as_of_day` 的实际已结算 Call 去重数量。历史榜单只允许
+读取 `exit_day < as_of_day` 的结果，当日或未来结算不得参与。
 
 ## Platform Top / Bottom Export
 
@@ -99,6 +111,12 @@ Smart Voice 发现页的四类指标使用独立的无未来函数回测层：
 
 `sv_investor_score_asof` 的平台历史字段为 `platform_sv`、`platform_rank_no`、`platform_population`、`platform_percentile` 和 `platform_qualified`。历史平台排名只包含当时达到对应平台 `n_eff`/已结算 Call 门槛的作者，且至少有 10 位合格作者时才形成 Top/Bottom 10% 信号。
 
+组合年化层不得使用当前作者排名回填历史交易。集体信号必须读取 `sv_indicator_event.source_scope='x'`；作者可执行口径必须要求观点当日 `sv_investor_score_asof.platform_qualified=1`。年化结果是报告产物，不回写 `sv_investor_score`，也不得用于重新训练同一历史区间的 SV 分数。
+
+排名事件研究同样只能使用观点发布当日的 `sv_investor_score_asof` 排名。事件强度分位必须使用严格早于信号日的历史事件计算，并设置最小历史样本；不得使用全样本中位数或分位数回填过去。参数筛选只能读取训练期指标，时间外收益不得参与候选排序。宽参数结果必须与固定前后半段、成交额过滤、成本、延迟成交和标的集中度压力结果一并输出；任何产品文案不得把样本内最高年化直接称为预期收益或可复制收益。
+
+头部跟随、底部反向和头尾背离的事件必须按 Call 发布日的 `platform_rank_no / platform_population` 划分 Top/Bottom 10% 或 25%。滚动窗口内每位作者只保留最新 actionable Call；单侧至少 2 位作者且同向度至少 65%。底部反向必须显式翻转底部共识方向；头尾背离必须要求两侧分别达标且方向相反，不能仅凭净值差异触发。
+
 回测必须遵守以下口径：
 
 - 作者在某日的分数只使用 `exit_day < asof_day` 的结算；观点按发布日当时的平台排名分组，不用当前排名回填。
@@ -111,6 +129,33 @@ Smart Voice 发现页的四类指标使用独立的无未来函数回测层：
 - 回测价格优先使用 `adj_close`，入场开盘按 `open * adj_close / close` 同因子调整；明细报告必须保留事件状态、成本敏感性和同标的同策略入场时的未平仓数量。
 - `sv_indicator_event_evidence*.csv` 必须能从事件追溯到 `candidate_id`、发帖日平台排名、权重/作者票、摘要、原始证据和 URL；期权方向未解析、看空标签与卖出 Put 冲突、条件入场分别使用审计标记，不得静默删除。
 - `sv_indicator_casebook.md` 固定使用全平台、7 日信号窗和 20 个交易日结果；四个指标各取相对 SPY 超额最好 5 个与最差 5 个不同标的，引用证据必须满足 `used_by_indicator=1` 并保留原始 URL。
+
+## Segment SV Vertical Backtest
+
+子 SV 垂直回测用于验证“某一能力子类中的高排名作者集中判断”是否具有与该子类匹配的预测价值。它不得使用当前 `sv_segment_score` 回填历史，必须建立独立的历史时点派生层：
+
+| 表 | 粒度 | 说明 |
+|---|---|---|
+| `sv_segment_score_asof` | 日期 × 子类别 × 作者 × 来源 | 只使用 `exit_day < asof_day` 的已结算证据重建子 SV、排名、百分位和资格 |
+| `sv_segment_signal_daily` | 标的 × 日期 × 子类别 × 来源范围 × 窗口 × 排名带 | 子 SV Top 10%/25% 作者的滚动集中方向 |
+| `sv_segment_event` | 连续同向垂直信号 | 聚集开始/结束、作者集合、下一交易日入场价 |
+| `sv_segment_outcome` | 事件 × 回测周期 | 方向收益、相对 SPY 超额、命中、MFE、MAE 和状态 |
+| `sv_segment_stat` | 子类别 × 窗口 × 排名带 × 回测周期 | 样本量、胜率、Wilson 区间、收益、盈亏比和利润因子 |
+
+首版稳定子类别为：
+
+- `horizon`: `1D/5D/20D/60D/90D/180D`，子 SV 衡量作者全部有效判断在对应后续周期的历史表现；主结论只使用与子 SV key 相同的 outcome horizon。
+- `narrative`: 固定美股赛道 taxonomy，例如 `semis`、`ai_infra`、`software`、`crypto`；作者排名和信号标的必须属于同一赛道。
+- `investor_type`: `fundamental/technical/event_driven/macro/flow_momentum/mixed`；作者历史证据和新 Call 必须使用相同分析类型，`unknown` 不进入正式垂直事件。
+
+回测约束：
+
+- 子 SV 资格默认要求该子类 `n_eff >= 4` 且至少 5 个已结算 Call；同一来源和子类别至少 10 位合格作者才形成分位。
+- 集中事件按每位 `source + investor_id` 的窗口内最新 Call 去重，至少 3 位作者、主方向占比至少 65%、主方向有效声音至少 2.5。
+- 默认比较 Top 10% 和 Top 25%，使用子 SV 及其历史样本强度计算观点权重，不读取 `SV_Global` 或当前平台排名。
+- 信号窗口使用自然日，事件在信号日结束后形成，并从下一交易日调整后开盘进入；连续同向交易日合并为一个事件。
+- 时间周期子 SV 可导出全部 outcome horizon 供稳健性检查，但“短/中/长周期能力有效”的正式结论必须基于匹配周期，不能从其他周期择优替代。
+- 不同子类别、窗口和标的的事件可能重叠；统计结果是信号研究，不等同于含手续费、滑点、仓位和相关性约束的组合业绩。
 
 ## Ticker Signal Diagnostics
 

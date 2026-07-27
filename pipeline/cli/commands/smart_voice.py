@@ -3,6 +3,9 @@ from __future__ import annotations
 from ...jobs.smart_voice import (
     backfill_price_history,
     build_sv_indicator_backtest,
+    build_sv_segment_backtest,
+    build_x_sv_portfolio_backtest,
+    build_x_rank_event_research,
     export_sv_indicator_backtest_reports,
     build_ticker_sv_signals,
     build_overall_signals,
@@ -97,6 +100,43 @@ def cmd_sv_indicator_backtest(args):
 def cmd_sv_indicator_report(args):
     result = export_sv_indicator_backtest_reports(db_path=args.db, report_dir=args.report_dir)
     print("[sv-indicator-report] " + " ".join(f"{key}={value}" for key, value in result.items()))
+
+
+def cmd_sv_segment_backtest(args):
+    result = build_sv_segment_backtest(
+        db_path=args.db,
+        report_path=args.report,
+        only=csv_values(args.only, upper=True),
+        windows=tuple(int(value) for value in csv_values(args.windows) if int(value) > 0),
+        sources=tuple(value.lower() for value in csv_values(args.sources)),
+        segment_types=tuple(value.lower() for value in csv_values(args.segment_types)),
+        rank_bands=tuple(value.lower() for value in csv_values(args.rank_bands)),
+        min_authors=args.min_authors,
+        consensus_threshold=args.consensus_threshold,
+        effective_voice_threshold=args.effective_voices,
+        segment_min_n_eff=args.segment_min_n_eff,
+        segment_min_settled_calls=args.segment_min_calls,
+    )
+    print("[sv-segment-backtest] " + " ".join(f"{key}={value}" for key, value in result.items()))
+
+
+def cmd_sv_portfolio_backtest(args):
+    result = build_x_sv_portfolio_backtest(
+        db_path=args.db,
+        report_dir=args.report_dir,
+        windows=tuple(int(value) for value in csv_values(args.windows) if int(value) > 0),
+        holding_days=tuple(int(value) for value in csv_values(args.holding_days) if int(value) > 0),
+        position_modes=tuple(value.lower() for value in csv_values(args.position_modes)),
+    )
+    print("[sv-portfolio-backtest] " + " ".join(f"{key}={value}" for key, value in result.items()))
+
+
+def cmd_sv_rank_event_research(args):
+    result = build_x_rank_event_research(
+        db_path=args.db,
+        report_dir=args.report_dir,
+    )
+    print("[sv-rank-event-research] " + " ".join(f"{key}={value}" for key, value in result.items()))
 
 
 def cmd_kol_sentiment(args):
@@ -215,6 +255,44 @@ def register_commands(sub, root) -> None:
     sp.add_argument("--db", default=str(root / "data" / "dev.db"))
     sp.add_argument("--report-dir", default=str(root / "data" / "reports"))
     sp.set_defaults(func=cmd_sv_indicator_report)
+
+    sp = sub.add_parser("sv-segment-backtest")
+    sp.add_argument("--db", default=str(root / "data" / "dev.db"))
+    sp.add_argument("--report", default=str(root / "data" / "reports" / "sv_segment_backtest" / "sv_segment_backtest.csv"))
+    sp.add_argument("--only", default="", help="Comma-separated ticker subset; empty rebuilds the full market.")
+    sp.add_argument("--windows", default="3,7,14,30", help="Comma-separated calendar-day signal windows.")
+    sp.add_argument("--sources", default="x", help="Comma-separated source keys; the first production study uses X only.")
+    sp.add_argument("--segment-types", default="horizon,narrative,investor_type")
+    sp.add_argument("--rank-bands", default="top10,top25")
+    sp.add_argument("--min-authors", type=int, default=3)
+    sp.add_argument("--consensus-threshold", type=float, default=0.65)
+    sp.add_argument("--effective-voices", type=float, default=2.5)
+    sp.add_argument("--segment-min-n-eff", type=float, default=4.0)
+    sp.add_argument("--segment-min-calls", type=int, default=5)
+    sp.set_defaults(func=cmd_sv_segment_backtest)
+
+    sp = sub.add_parser("sv-portfolio-backtest")
+    sp.add_argument("--db", default=str(root / "data" / "dev.db"))
+    sp.add_argument(
+        "--report-dir",
+        default=str(root / "data" / "reports" / "sv_portfolio_backtest"),
+    )
+    sp.add_argument("--windows", default="1,3,7,14,30")
+    sp.add_argument("--holding-days", default="1,5,20,60,90,180")
+    sp.add_argument(
+        "--position-modes",
+        default="long_short,long_only,short_only",
+        help="Comma-separated: long_short,long_only,short_only.",
+    )
+    sp.set_defaults(func=cmd_sv_portfolio_backtest)
+
+    sp = sub.add_parser("sv-rank-event-research")
+    sp.add_argument("--db", default=str(root / "data" / "dev.db"))
+    sp.add_argument(
+        "--report-dir",
+        default=str(root / "data" / "reports" / "sv_portfolio_backtest"),
+    )
+    sp.set_defaults(func=cmd_sv_rank_event_research)
 
     sub.add_parser("kol-sentiment").set_defaults(func=cmd_kol_sentiment)
     sub.add_parser("kol-volume").set_defaults(func=cmd_kol_volume)

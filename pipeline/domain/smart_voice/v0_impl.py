@@ -41,6 +41,15 @@ from ...common.youtube_filters import (
     YOUTUBE_MIN_DISPLAY_DURATION_SECONDS,
     YOUTUBE_MIN_DISPLAY_SUBSCRIBERS,
 )
+from .time_decay import (
+    DEFAULT_TIME_DECAY_CONFIG,
+    TIME_DECAY_VERSION,
+    SVTimeDecayConfig,
+    evidence_age_days,
+    evidence_decay_weight,
+    evidence_is_available,
+    parse_day,
+)
 from .youtube_transcript_calls import (
     TranscriptDocument,
     YOUTUBE_TRANSCRIPT_CALL_VERSION,
@@ -66,7 +75,10 @@ SOURCE_LABELS = {
     "toss": {"zh": "Toss", "en": "Toss"},
 }
 HORIZONS = {"1D": 1, "5D": 5, "20D": 20, "60D": 60, "90D": 90, "180D": 180}
+# Call extraction and investor aggregation are versioned independently. Existing
+# transcript-backed calls remain valid when the ranking formula changes.
 SV_SCORING_VERSION = "v1.8-transcript-lifecycle"
+SV_RANKING_VERSION = "v1.9-time-decay"
 YOUTUBE_UPLOAD_MAPPING_VERSION = "youtube-title-v3"
 YOUTUBE_UPLOAD_MIN_MAPPING_CONFIDENCE = 0.90
 PLATFORM_QUALIFICATION = {
@@ -3267,21 +3279,69 @@ def settle_calls(con: sqlite3.Connection) -> int:
     return len(out)
 
 
-def aggregate_stats(rows: list[sqlite3.Row], k: float = 30.0) -> dict[str, Any] | None:
+def aggregate_stats(
+    rows: list[sqlite3.Row],
+    k: float = 30.0,
+    *,
+    as_of_day: str | dt.date | None = None,
+    decay_config: SVTimeDecayConfig = DEFAULT_TIME_DECAY_CONFIG,
+) -> dict[str, Any] | None:
     vals = [r for r in rows if r["status"] == "settled" and r["actual_hit"] is not None]
+    scoring_day = parse_day(as_of_day)
+    if scoring_day is not None:
+        vals = [r for r in vals if evidence_is_available(r["exit_day"], scoring_day)]
     if not vals:
         return None
-    sum_contrib = sum(float(r["contribution"] or 0) for r in vals)
-    variance = sum((float(r["score_weight"] or 0) ** 2) * float(r["expected_hit"] or 0.5) * (1 - float(r["expected_hit"] or 0.5)) for r in vals)
+
+    decay_weights = [
+        evidence_decay_weight(r["exit_day"], r["horizon"], scoring_day, decay_config)
+        if scoring_day is not None
+        else 1.0
+        for r in vals
+    ]
+    sum_contrib = sum(
+        decay * float(r["contribution"] or 0)
+        for r, decay in zip(vals, decay_weights)
+    )
+    # Decay is fractional evidence, so both contribution and Bernoulli
+    # information are discounted once. Uniformly stale evidence therefore
+    # loses significance instead of retaining the same z-score.
+    variance = sum(
+        decay
+        * (float(r["score_weight"] or 0) ** 2)
+        * float(r["expected_hit"] or 0.5)
+        * (1 - float(r["expected_hit"] or 0.5))
+        for r, decay in zip(vals, decay_weights)
+    )
     z = sum_contrib / math.sqrt(variance) if variance > 1e-9 else 0.0
-    weights = [float(r["score_weight"] or 0) for r in vals if float(r["score_weight"] or 0) > 0]
-    n_eff = (sum(weights) ** 2 / sum(w * w for w in weights)) if weights else 0.0
+    weighted_evidence = [
+        (float(r["score_weight"] or 0), decay)
+        for r, decay in zip(vals, decay_weights)
+        if float(r["score_weight"] or 0) > 0
+    ]
+    evidence_mass = sum(weight * decay for weight, decay in weighted_evidence)
+    evidence_variance_mass = sum(
+        weight * weight * decay for weight, decay in weighted_evidence
+    )
+    n_eff = (
+        evidence_mass * evidence_mass / evidence_variance_mass
+        if evidence_variance_mass > 1e-12
+        else 0.0
+    )
+    lifetime_weights = [weight for weight, _ in weighted_evidence]
+    lifetime_n_eff = (
+        sum(lifetime_weights) ** 2 / sum(weight * weight for weight in lifetime_weights)
+        if lifetime_weights
+        else 0.0
+    )
     ticker_weights: collections.Counter[str] = collections.Counter()
     ticker_positive_contrib: collections.Counter[str] = collections.Counter()
-    for r in vals:
+    for r, decay in zip(vals, decay_weights):
         ticker = str(r["ticker"])
-        ticker_weights[ticker] += float(r["score_weight"] or 0)
-        ticker_positive_contrib[ticker] += max(0.0, float(r["contribution"] or 0))
+        ticker_weights[ticker] += decay * float(r["score_weight"] or 0)
+        ticker_positive_contrib[ticker] += decay * max(
+            0.0, float(r["contribution"] or 0)
+        )
     total_ticker_weight = sum(ticker_weights.values())
     top_ticker, top_ticker_weight = ticker_weights.most_common(1)[0] if ticker_weights else ("", 0.0)
     top_weight_share = top_ticker_weight / total_ticker_weight if total_ticker_weight > 0 else 0.0
@@ -3301,12 +3361,38 @@ def aggregate_stats(rows: list[sqlite3.Row], k: float = 30.0) -> dict[str, Any] 
         else 0.0
     )
     z_shrunk = z * n_eff / (n_eff + k)
+    ages = [
+        evidence_age_days(r["exit_day"], scoring_day)
+        for r in vals
+        if scoring_day is not None
+    ]
+    valid_ages = [age for age in ages if age is not None]
+    latest_exit_day = max(
+        (str(r["exit_day"])[:10] for r in vals if r["exit_day"]),
+        default="",
+    )
     return {
         "raw_z": z_shrunk,
         "n_eff": n_eff,
+        "lifetime_n_eff": lifetime_n_eff,
         "settled_calls": len({r["candidate_id"] for r in vals}),
         "active_days": len({str(r["created_at"])[:10] for r in vals}),
         "covered_tickers": len({r["ticker"] for r in vals}),
+        "time_decay": {
+            "version": TIME_DECAY_VERSION if scoring_day is not None else "disabled",
+            "asOfDay": scoring_day.isoformat() if scoring_day is not None else None,
+            "latestExitDay": latest_exit_day or None,
+            "weightedEvidenceMass": round(evidence_mass, 4),
+            "decayedNEff": round(n_eff, 4),
+            "lifetimeNEff": round(lifetime_n_eff, 4),
+            "meanAgeDays": (
+                round(sum(valid_ages) / len(valid_ages), 1) if valid_ages else None
+            ),
+            "halfLifeDays": {
+                key: int(value)
+                for key, value in decay_config.half_life_days_by_horizon.items()
+            },
+        },
         "concentration": {
             "topTicker": top_ticker,
             "topTickerWeightShare": round(top_weight_share, 4),
@@ -3415,6 +3501,7 @@ def score_investors(
     xueqiu_pool_version: str = "",
 ) -> int:
     ensure_tables(con)
+    scoring_as_of = dt.datetime.now(dt.timezone.utc).date()
     youtube_pool_filter = ""
     score_params: list[Any] = []
     if table_exists(con, "yt_author_pool") and table_exists(con, "yt_author_pool_run"):
@@ -3494,7 +3581,10 @@ def score_investors(
         if r["investor_id"]:
             by_inv[str(r["investor_id"])].append(r)
 
-    global_stats = {inv: aggregate_stats(rows, 30.0) for inv, rows in by_inv.items()}
+    global_stats = {
+        inv: aggregate_stats(rows, 30.0, as_of_day=scoring_as_of)
+        for inv, rows in by_inv.items()
+    }
     global_stats = {k: v for k, v in global_stats.items() if v}
     primary_sources = {inv: primary_source_for_rows(rows) for inv, rows in by_inv.items() if inv in global_stats}
     raw_by_platform: dict[str, dict[str, float]] = collections.defaultdict(dict)
@@ -3552,31 +3642,31 @@ def score_investors(
         segment_scores: dict[tuple[str, str], int] = {}
         for h in HORIZONS:
             sub = [r for r in rows if r["horizon"] == h]
-            ag = aggregate_stats(sub, 25.0)
+            ag = aggregate_stats(sub, 25.0, as_of_day=scoring_as_of)
             if ag and ag["n_eff"] >= 2:
                 segment_scores[("horizon", h)] = int(round(clamp(100 + 10 * ag["raw_z"], 40, 180)))
                 segment_rows.append(("horizon", h, inv, segment_scores[("horizon", h)], ag["raw_z"], ag["n_eff"], ag["settled_calls"]))
         for t, _ in ticker_counts.most_common(12):
             sub = [r for r in rows if r["ticker"] == t]
-            ag = aggregate_stats(sub, 10.0)
+            ag = aggregate_stats(sub, 10.0, as_of_day=scoring_as_of)
             if ag and ag["n_eff"] >= 1.5:
                 segment_scores[("ticker", t)] = int(round(clamp(100 + 10 * ag["raw_z"], 40, 180)))
                 segment_rows.append(("ticker", t, inv, segment_scores[("ticker", t)], ag["raw_z"], ag["n_eff"], ag["settled_calls"]))
         for n in set(TICKER_NARRATIVE.get(str(r["ticker"]), "other") for r in rows):
             sub = [r for r in rows if TICKER_NARRATIVE.get(str(r["ticker"]), "other") == n]
-            ag = aggregate_stats(sub, 20.0)
+            ag = aggregate_stats(sub, 20.0, as_of_day=scoring_as_of)
             if ag and ag["n_eff"] >= 2:
                 segment_scores[("narrative", n)] = int(round(clamp(100 + 10 * ag["raw_z"], 40, 180)))
                 segment_rows.append(("narrative", n, inv, segment_scores[("narrative", n)], ag["raw_z"], ag["n_eff"], ag["settled_calls"]))
         for analysis_type in set(analysis_counts):
             sub = [r for r in rows if row_analysis_type(r) == analysis_type]
-            ag = aggregate_stats(sub, 20.0)
+            ag = aggregate_stats(sub, 20.0, as_of_day=scoring_as_of)
             if ag and ag["n_eff"] >= 2:
                 segment_scores[("investor_type", analysis_type)] = int(round(clamp(100 + 10 * ag["raw_z"], 40, 180)))
                 segment_rows.append(("investor_type", analysis_type, inv, segment_scores[("investor_type", analysis_type)], ag["raw_z"], ag["n_eff"], ag["settled_calls"]))
         for source in set(source_counts):
             sub = [r for r in rows if str(r["source"] or "x") == source]
-            ag = aggregate_stats(sub, 20.0)
+            ag = aggregate_stats(sub, 20.0, as_of_day=scoring_as_of)
             if ag and ag["n_eff"] >= 2:
                 segment_scores[("platform", source)] = int(round(clamp(100 + 10 * ag["raw_z"], 40, 180)))
                 segment_rows.append(("platform", source, inv, segment_scores[("platform", source)], ag["raw_z"], ag["n_eff"], ag["settled_calls"]))
@@ -3596,6 +3686,7 @@ def score_investors(
         concentration = dict(st.get("concentration") or {})
         concentration.update(
             {
+                "timeDecay": st.get("time_decay") or {},
                 "cap": conc_cap,
                 "capApplied": conc_cap < raw_platform_sv,
                 "rawSvBeforeConcentrationCap": raw_platform_sv,
@@ -3625,8 +3716,8 @@ def score_investors(
                 }),
                 jdump(horizon_json), jdump(narrative_json), jdump(ticker_json),
                 jdump(concentration),
-                f"基于 {st['settled_calls']} 个已结算 {source_label['zh']} call；先在平台内计算 SV_Platform={platform_sv}，再按置信度折算为 SV_Global={sv}。",
-                f"Based on {st['settled_calls']} settled {source_label['en']} calls; SV_Platform={platform_sv} is normalized inside the platform and converted to SV_Global={sv} with confidence adjustment.",
+                f"基于 {st['settled_calls']} 个已结算 {source_label['zh']} call，并按结算时间衰减；先在平台内计算 SV_Platform={platform_sv}，再按置信度折算为 SV_Global={sv}。",
+                f"Based on {st['settled_calls']} settled {source_label['en']} calls with settlement-time decay; SV_Platform={platform_sv} is normalized inside the platform and converted to SV_Global={sv} with confidence adjustment.",
                 utc_now(),
             )
         )
@@ -3748,7 +3839,7 @@ def investor_profile_assets(
 
 def export_json(con: sqlite3.Connection) -> None:
     snapshot_created_at = utc_now()
-    run_id = f"{SV_SCORING_VERSION}:{snapshot_created_at}"
+    run_id = f"{SV_RANKING_VERSION}:{snapshot_created_at}"
     prev_run = con.execute(
         "SELECT run_id FROM sv_investor_score_snapshot GROUP BY run_id ORDER BY MAX(created_at) DESC LIMIT 1"
     ).fetchone()
@@ -3793,7 +3884,7 @@ def export_json(con: sqlite3.Connection) -> None:
         [
             (
                 run_id,
-                SV_SCORING_VERSION,
+                SV_RANKING_VERSION,
                 snapshot_created_at,
                 r["investor_id"],
                 r["source"],
@@ -3977,7 +4068,8 @@ def export_json(con: sqlite3.Connection) -> None:
     ]
     payload = {
         "version": 7,
-        "scoringVersion": SV_SCORING_VERSION,
+        "scoringVersion": SV_RANKING_VERSION,
+        "callScoringVersion": SV_SCORING_VERSION,
         "scoreSemantics": {
             "sv": "SV_Global. It ranks platform-relative deviation after confidence adjustment.",
             "platformScores": "SV_Platform. Each score is normalized inside that platform only.",

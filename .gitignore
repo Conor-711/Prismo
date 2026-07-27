@@ -37,6 +37,7 @@ data/exports/
 # Node / Next
 web/node_modules/
 web/.next/
+web/.next-dev/
 web/out/
 web/prisma/dev.db
 *.tsbuildinfo

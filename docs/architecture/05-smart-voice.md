@@ -22,6 +22,7 @@ pipeline/domain/smart_voice/
   candidates.py        # 候选观点/作者召回
   evidence.py          # 证据标准化
   settlement.py        # 价格/事件结算
+  time_decay.py        # 历史时点安全的周期化证据衰减
   scoring.py           # 平台内分数和 global score
   ticker_signal_schema.py  # 标的级 SV 信号表
   ticker_signal_scoring.py # 历史时点作者分数/百分位
@@ -32,6 +33,16 @@ pipeline/domain/smart_voice/
   indicator_backtest_outcomes.py # 事件、收益、盈亏比和报告
   indicator_backtest_reporting.py # 逐事件、逐原文证据和稳健性导出
   indicator_backtest_casebook.py # 四指标成功/失败案例和原帖链接
+  portfolio_backtest_engine.py   # 组合净值、成本、CAGR、夏普和回撤纯计算
+  portfolio_backtest.py          # X 集体 SV 信号与逐作者年化编排
+  portfolio_backtest_reporting.py # 集体场景、逐作者 CSV 和研究报告
+  rank_event_backtest.py         # 历史头部跟随、底部反向和头尾背离事件
+  rank_event_research.py         # 排名事件宽参数、分段、流动性与压力测试
+  segment_backtest_schema.py      # 子 SV 历史排名/信号/事件/收益/统计表
+  segment_backtest_scoring.py     # 历史时点周期/赛道/投资类型子 SV
+  segment_backtest.py             # 子类排名、滚动集中信号和任务编排
+  segment_backtest_outcomes.py    # 子类事件合并、收益和统计
+  segment_backtest_reporting.py   # 子类统计、逐事件证据和覆盖导出
   export.py            # web/lib/data/smartVoice.json
   README.md
 ```
@@ -65,6 +76,7 @@ pipeline/domain/smart_voice/
 `pipeline.manage sv-ticker-signals` 把作者 SV 转成可回测的标的信号：
 
 1. 每个观点日仅使用该日之前已结算的观点重建作者分数和百分位，禁止未来结算泄漏。
+   当前榜单与历史重建均按 `exit_day` 执行同一套周期化时间衰减；历史重建必须显式传入当日 `as_of_day`。
 2. 按 `Top/Bottom 10%/25%`、观点周期和 7 个自然日窗口聚合独立作者的多空方向。
 3. 至少 3 位作者、同向占比至少 65%、有效声音数至少 2.5 才形成聚集事件。
 4. 事件从下一交易日开盘入场，按 1/5/20/60/90/180 个交易日结算，并计算相对 SPY 的方向性超额、命中、MFE、MAE 和峰值时间。
@@ -76,6 +88,22 @@ Bottom 分组不是反向策略：其作者原始方向同样按“说多后涨�
 `pipeline.manage sv-indicator-backtest` 单独回测发现页的加权净强度、作者净人数、作者净人数突变和高低 SV 分歧。它扩展 `sv_investor_score_asof` 保存历史平台内正式池排名，按 1/3/7/30/90 个自然日窗口生成信号，把连续同向交易日合并为事件，并从下一交易日开盘计算 1/5/20/60/90 日方向收益和相对 SPY 超额；价格使用调整后收盘和同因子调整的开盘。输出写入 `sv_indicator_*` 四表及 `data/reports/sv_indicator_backtest.csv`；该流程不修改当前作者 SV 或页面榜单。
 
 `pipeline.manage sv-indicator-report` 不重建历史信号，直接从现有结果导出逐事件长表、逐 Call 原文证据、紧凑证据和稳健性分层。分层覆盖标的、月份、方向、信号强度、前后时间段、证据审计、10/25bps 成本及同标的同策略不重叠持仓；证据层标记卖出 Put 与看空标签冲突、期权标的方向未解析和条件入场，供人工复核而不是事后删样本。报告同时固定 `all / 7D / 20D` 口径，为四个指标各选相对 SPY 超额最好 5 例和最差 5 例（每侧标的不重复），生成只引用实际参与指标计算 Call 的 `sv_indicator_casebook.md`。
+
+## 子 SV 垂直集中回测
+
+`pipeline.manage sv-segment-backtest` 不使用 global SV，而是在每个历史时点分别重建三类子 SV 排名：观点周期 `1D/5D/20D/60D/90D/180D`、赛道 taxonomy、投资类型。每个子分数只读取 `exit_day < asof_day` 的已结算 Call；资格要求默认 `n_eff >= 4`、至少 5 个已结算 Call，且该日同来源同子类至少 10 位合格作者才形成可比较排名。
+
+回测把每位作者在窗口内的最新 actionable Call 映射到对应子类，使用该子类当日 Top 10%/25% 排名和子 SV 计算权重。3/7/14/30 个自然日窗口至少需要 3 位独立作者、65% 同向度和 2.5 有效声音才形成事件；连续同向交易日合并后，从下一交易日调整开盘入场，计算 1/5/20/60/90/180 个交易日的方向收益、相对 SPY 超额、Wilson 区间、盈亏比和利润因子。产物写入 `sv_segment_*` 五表及 `data/reports/sv_segment_backtest/`，其中逐事件报告保留实际参与 Call 的原始链接。该流程当前默认仅回测 X，不修改当前作者 SV、页面榜单或发现页排序。
+
+## X SV 组合年化
+
+`pipeline.manage sv-portfolio-backtest` 把事件收益扩展为可比较的账户净值。第一版只读取 X：集体策略消费 `sv_indicator_event(source_scope='x')`，因此作者排名和 Top/Bottom 分组均来自观点发布当日的 `sv_investor_score_asof`；逐作者策略消费 `sv_call_settlement`，同时输出全部 actionable 帖子的描述性口径，以及作者当日已进入正式平台池之后才允许跟随的可执行口径。
+
+统一组合规则为下一交易日调整开盘入场、同策略同标的不重叠加仓、活跃持仓等权、无信号持有现金。报告覆盖 1/5/20/60/90/180 个交易日持有期，多空/只做多/只做空，以及 0/10/25bps 完整往返成本，输出总收益、CAGR、年化波动、夏普、最大回撤、命中率和利润因子。逐作者另有代表口径：每条帖子使用自己的 `horizon_bucket`，未知周期统一按 20 个交易日。结果只写 `data/reports/sv_portfolio_backtest/`，不增加主库派生表，避免重复保存日净值。
+
+同一命令另生成三类显式排名事件：`top_follow` 跟随历史时点头部作者共识，`bottom_contrarian` 交易底部作者共识的反方向，`top_bottom_divergence` 仅在头部与底部均达标且方向相反时跟随头部。每组至少要求 2 位独立作者和 65% 同向度，同时比较 Top/Bottom 10% 与 25%。事件使用每位作者在滚动窗口内的最新 Call，一位作者只投一票。
+
+`pipeline.manage sv-rank-event-research` 在同一历史时点事件定义上扩展分位、信号窗口和持有期。第一层做前后半段固定区间验证，第二层加入信号强度、共识、独立作者数与价格/成交额过滤，第三层只对高流动性候选执行 50/100bps 成本、延迟 1/2/10 个交易日入场，以及剔除收益贡献最高 1/3/5 个标的的压力测试。`strength_top50/top25` 只能由事件发生日前至少 20 个历史事件确定阈值，同日及未来事件不得进入阈值。时间外表只用前半段 50bps 净收益选择参数，再固定参数计算后半段 10/50/100bps 和延迟成交结果。报告必须同时保留原始最高年化和时间外结果，禁止只用宽网格中的样本内最高值描述可复制收益。
 
 标的页在离线结果之上提供四个只读诊断，不改写 SV 分数：
 
