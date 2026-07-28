@@ -79,6 +79,7 @@ def _gen(parts: list, system: str | None, max_tokens: int, temperature: float,
     last = ""
     tries = 0          # 普通错误（5xx/网络）重试预算
     rate_waits = 0     # 429 限流等待次数（独立、更耐心——限流是 per-minute、会过去）
+    retried_without_thinking_config = False
     while True:
         try:
             _reserve_request_slot()
@@ -105,6 +106,16 @@ def _gen(parts: list, system: str | None, max_tokens: int, temperature: float,
                     f"attempt={rate_waits}/{max_rate_waits}",
                     flush=True,
                 )
+                continue
+            if (
+                r.status_code == 400
+                and not retried_without_thinking_config
+                and "thinkingConfig" in body["generationConfig"]
+            ):
+                # Some newer Flash/Flash-Lite models reject thinkingConfig even
+                # though they support the same generateContent endpoint.
+                body["generationConfig"].pop("thinkingConfig", None)
+                retried_without_thinking_config = True
                 continue
             last = f"HTTP {r.status_code}: {r.text[:300]}"
         except Exception as e:  # noqa: BLE001

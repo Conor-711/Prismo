@@ -3,7 +3,7 @@ import { OpinionExplorer, TickerDetailHeader, TickerOverviewPanel } from "@/feat
 import { ViewportWorkspace } from "@/shared/layout/ViewportWorkspace";
 import { getGrTickerSymbols, getGrTickerDetail, getGrQuote } from "@/server/queries/globalQueries";
 import { getTickerMock, getKolFlow } from "@/shared/market/mockDetail";
-import { getKolArguments, getKolFlowReal, getKolNewcomersDaily, getKolOpinions, getKolSentimentDaily, getKolVolumeDaily, getRetailSentimentDaily, getRetailVolumeDaily, getRetailNewcomersDaily, getKolTargetPrices } from "@/server/queries/kolQueries";
+import { getKolArguments, getKolFlowReal, getKolOpinions, getKolSentimentDaily, getKolVolumeDaily, getRetailSentimentDaily, getRetailVolumeDaily, getKolTargetPrices } from "@/server/queries/kolQueries";
 import { getOverallData } from "@/server/queries/overallData";
 import { getTickerSmartVoiceSignals } from "@/server/queries/smartVoiceTickerSignals";
 import { getTickerSmartVoice, getTickerSmartVoicePool } from "@/features/smart-voice/svMock";
@@ -74,8 +74,6 @@ export default function TickerDetail({ params }: { params: { lang: string; symbo
               volume={getKolVolumeDaily(ticker.ticker)}
               retailSentiment={getRetailSentimentDaily(ticker.ticker)}
               retailVolume={getRetailVolumeDaily(ticker.ticker)}
-              retailNewcomers={getRetailNewcomersDaily(ticker.ticker)}
-              kolNewcomers={getKolNewcomersDaily(ticker.ticker)}
               overall={overall}
               targetPrices={getKolTargetPrices(ticker.ticker)}
               argumentsData={getKolArguments(ticker.ticker)}

@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/ui";
 import { TrackingView, type TrackingCatalog } from "@/features/tracking";
-import { getGrTickers, getGrTickerRegions, getGrRegionSummary } from "@/server/queries/globalQueries";
+import { getGrTickers, getGrTickerRegions } from "@/server/queries/globalQueries";
 import { getInvestorBoard, type InvestorBoard } from "@/server/queries/investorQueries";
 import { getNarrativeRotation, trendLabel } from "@/server/queries/narrativeRotation";
-import { REGION_ORDER } from "@/shared/market/regions";
 import { getDictionary, isLocale, defaultLocale, type Locale } from "@/lib/i18n";
 import type { KolSource } from "@/shared/market/mockDetail";
 
@@ -22,8 +21,6 @@ export default function TrackingPage({ params }: { params: { lang: string } }) {
   const regions = getGrTickerRegions();
   const investorBoard = getInvestorBoard();
   const narrativeData = getNarrativeRotation();
-  const regionSummary = getGrRegionSummary();
-  const summaryMap = new Map(regionSummary.map((r) => [r.region, r]));
   const sourceOrder: (keyof InvestorBoard)[] = ["x", "youtube", "reddit", "xueqiu", "toss", "yahoojp"];
   const catalog: TrackingCatalog = {
     authors: sourceOrder.flatMap((source) =>
@@ -53,17 +50,6 @@ export default function TrackingPage({ params }: { params: { lang: string } }) {
         volume: leader?.volume ?? 0,
         trendZh: leader ? trendLabel(leader.trend, "zh") : "低活跃",
         trendEn: leader ? trendLabel(leader.trend, "en") : "Quiet",
-      };
-    }),
-    regions: REGION_ORDER.map((region) => {
-      const s = summaryMap.get(region);
-      return {
-        refId: region,
-        posts: s?.posts ?? 0,
-        tickers: s?.tickers ?? 0,
-        avgSentiment: s?.avg_sentiment ?? 0,
-        bullPct: s?.bull_pct ?? 0,
-        bearPct: s?.bear_pct ?? 0,
       };
     }),
   };

@@ -6,7 +6,7 @@ import type { SmartVoiceLeaderboardData } from "@/features/smart-voice/svLeaderb
 import { fmtCompact } from "@/shared/formatting/format";
 import { ViewportWorkspace } from "@/shared/layout/ViewportWorkspace";
 import type { SmartVoiceLiveCall, SmartVoiceMarketData, SmartVoiceOverviewStats } from "@/server/queries/smartVoiceQueries";
-import type { SmartVoiceRepresentativeEvidenceMap } from "@/server/queries/smartVoiceInvestorQueries";
+import type { SmartVoiceRepresentativeEvidenceBundle } from "@/server/queries/smartVoiceInvestorQueries";
 import { SmartVoiceLeaderboardView } from "./SmartVoiceLeaderboardView";
 import { SmartVoiceLiveView } from "./SmartVoiceLiveView";
 import { SmartVoiceMarketView } from "./SmartVoiceMarketView";
@@ -36,7 +36,7 @@ export function SmartVoiceWorkspace({
   liveCalls: SmartVoiceLiveCall[];
   stats: SmartVoiceOverviewStats;
   profileIds: string[];
-  representativeEvidence: SmartVoiceRepresentativeEvidenceMap;
+  representativeEvidence: SmartVoiceRepresentativeEvidenceBundle;
 }) {
   const { lang } = useLocale();
   const zh = lang === "zh";

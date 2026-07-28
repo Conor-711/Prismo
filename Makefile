@@ -159,7 +159,7 @@ analyze-qwen:
 	$(MANAGE) narratives --mock
 
 # 全球散户多区数据：日韩台爬精选跨区美股 + DeepSeek flash 打标 + 跨区滚动(US 读现有 Reddit)。
-# 隔离表 gr_*，供总览、标的、区域、追踪等正式页面读取。本地跑：DATABASE_URL='sqlite:///./data/dev.db' make gr
+# 隔离表 gr_*，供总览、标的、叙事、追踪等正式页面读取。本地跑：DATABASE_URL='sqlite:///./data/dev.db' make gr
 gr:
 	$(MANAGE) gr-crawl --per-board 120 --since-days 14
 	$(MANAGE) gr-tag

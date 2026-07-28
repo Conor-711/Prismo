@@ -22,8 +22,17 @@ const mmdd = (ds: string) => { const [, m, d] = (ds || "").split("-"); return m 
 const DEFAULT_PRICE_ZOOM = 2;
 const BUCKETS = ["short", "mid", "long"] as const;
 const PLATFORM_ORDER: KolSource[] = ["x", "youtube", "reddit", "xueqiu", "toss", "yahoojp"];
+const RECENCY_OPTIONS = [1, 3, 7, 14, 30, 60, 90] as const;
 type BucketFilter = "all" | (typeof BUCKETS)[number];
 type SourceFilter = "all" | KolSource;
+type RecencyFilter = (typeof RECENCY_OPTIONS)[number];
+type SvFilter = "top5" | "top10" | "top25" | "top50" | "scored" | "all";
+
+const shiftDay = (day: string, delta: number) => {
+  const date = new Date(`${day}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + delta);
+  return date.toISOString().slice(0, 10);
+};
 
 // 同一天多条 → 稳定左右抖动（±0.15 天），按作者+侧+价位散开，避免重叠成一团。
 function jitterMs(m: TargetMark): number {
@@ -137,18 +146,39 @@ export function TargetPricePanel({ data, zh }: { data: KolTargetData; zh: boolea
   const { current, priceLine, marks } = data;
   const [bucket, setBucket] = useState<BucketFilter>("all");
   const [source, setSource] = useState<SourceFilter>("all");
+  const [recency, setRecency] = useState<RecencyFilter>(30);
+  const [svFilter, setSvFilter] = useState<SvFilter>("top25");
+
+  const anchorDay = useMemo(
+    () => [...priceLine.map((p) => p.day), ...marks.map((m) => m.date)].sort().at(-1) ?? new Date().toISOString().slice(0, 10),
+    [priceLine, marks]
+  );
+  const cutoffDay = useMemo(() => shiftDay(anchorDay, -(recency - 1)), [anchorDay, recency]);
 
   const sourceOptions = useMemo(
     () => PLATFORM_ORDER.filter((s) => marks.some((m) => m.source === s)),
     [marks]
   );
   const filteredMarks = useMemo(
-    () => marks.filter((m) => (bucket === "all" || m.bucket === bucket) && (source === "all" || m.source === source)),
-    [marks, bucket, source]
+    () => marks.filter((m) => {
+      if (m.date < cutoffDay || m.date > anchorDay) return false;
+      if (bucket !== "all" && m.bucket !== bucket) return false;
+      if (source !== "all" && m.source !== source) return false;
+      if (svFilter === "all") return true;
+      if (m.svPercentile == null) return false;
+      if (svFilter === "scored") return true;
+      const percentileCut = { top5: 5, top10: 10, top25: 25, top50: 50 }[svFilter];
+      return m.svPercentile <= percentileCut;
+    }),
+    [marks, cutoffDay, anchorDay, bucket, source, svFilter]
+  );
+  const filteredPriceLine = useMemo(
+    () => priceLine.filter((point) => point.day >= cutoffDay && point.day <= anchorDay),
+    [priceLine, cutoffDay, anchorDay]
   );
 
   const option = useMemo(() => {
-    const lineData = priceLine.map((p) => [+new Date(p.day), p.close] as [number, number]);
+    const lineData = filteredPriceLine.map((p) => [+new Date(p.day), p.close] as [number, number]);
     const markData = filteredMarks.map((m) => ({
       value: [+new Date(m.date) + jitterMs(m), m.lo, m.hi],
       opinionId: m.opinionId,
@@ -201,6 +231,10 @@ export function TargetPricePanel({ data, zh }: { data: KolTargetData; zh: boolea
           const reason = m.reason ? (zh ? m.reason.zh : m.reason.en) : "";
           let html = `<div style="font-weight:600;color:${color}">${m.author}</div>`;
           html += `<div style="color:#9a9da1;margin:2px 0 4px">${plat} · ${m.date}</div>`;
+          if (m.svScore != null && m.svPercentile != null) {
+            const top = Math.max(1, Math.ceil(m.svPercentile));
+            html += `<div style="color:#57D7BA;margin-bottom:3px">SV <b>${Math.round(m.svScore)}</b> · ${zh ? `平台 Top ${top}%` : `Platform top ${top}%`}</div>`;
+          }
           html += `<div><span style="color:#73757a">${kind} </span><b style="color:${color}">${fmtRange(m.lo, m.hi)}</b><span style="color:#73757a">${dl}</span></div>`;
           if (horizon || bk) html += `<div style="color:#cfcfcf;margin-top:2px">${zh ? "周期" : "Horizon"}: ${horizon}${bk ? `（${bk}）` : ""}</div>`;
           if (reason) html += `<div style="color:#aeb4bb;margin-top:3px;border-top:1px solid ${LINE};padding-top:4px">${reason.slice(0, 90)}</div>`;
@@ -304,7 +338,7 @@ export function TargetPricePanel({ data, zh }: { data: KolTargetData; zh: boolea
         },
       ],
     };
-  }, [priceLine, filteredMarks, current, zh]);
+  }, [filteredPriceLine, filteredMarks, current, zh]);
 
   if (!marks.length && !priceLine.length) return null;
 
@@ -313,7 +347,7 @@ export function TargetPricePanel({ data, zh }: { data: KolTargetData; zh: boolea
       <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1 px-1">
         <span className="text-[11.5px] font-semibold text-neutral-400">{zh ? "买入 / 卖出价 时间线" : "Buy / sell price timeline"}</span>
         <span className="text-[10.5px] text-neutral-600">
-          {zh ? "近 3 个月 · 悬浮看作者/依据/周期 · 右侧缩放条缩放价格轴" : "last 3mo · hover for author/why/horizon · use the right zoom bar"}
+          {zh ? "默认近 1 月 SV Top 25% · 悬浮看作者/依据 · 右侧缩放价格轴" : "defaults to 1M SV top 25% · hover for evidence · right bar zooms price"}
         </span>
         <span className="ml-auto flex items-center gap-2.5 text-[10px] text-neutral-500">
           <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: BUY }} />{zh ? "买入" : "Buy"}</span>
@@ -323,6 +357,41 @@ export function TargetPricePanel({ data, zh }: { data: KolTargetData; zh: boolea
         </span>
       </div>
       <div className="mb-2 flex flex-wrap items-center gap-2 px-1">
+        <div className="inline-flex rounded-md bg-elevated/50 p-0.5 text-[10.5px] ring-1 ring-inset ring-line">
+          {RECENCY_OPTIONS.map((days) => (
+            <button
+              key={days}
+              type="button"
+              onClick={() => setRecency(days)}
+              className={`min-w-10 rounded px-2 py-0.5 font-semibold transition ${recency === days ? "bg-card text-reddit ring-1 ring-inset ring-reddit/45" : "text-neutral-500 hover:text-neutral-300"}`}
+            >
+              {days === 14
+                ? (zh ? "2周" : "2W")
+                : days >= 30
+                  ? `${days / 30}${zh ? "月" : "M"}`
+                  : `${days}${zh ? "天" : "D"}`}
+            </button>
+          ))}
+        </div>
+        <div className="inline-flex rounded-md bg-elevated/50 p-0.5 text-[10.5px] ring-1 ring-inset ring-line">
+          {([
+            ["top5", "SV Top 5%", "SV Top 5%"],
+            ["top10", "SV Top 10%", "SV Top 10%"],
+            ["top25", "SV Top 25%", "SV Top 25%"],
+            ["top50", "SV Top 50%", "SV Top 50%"],
+            ["scored", "有 SV", "Scored"],
+            ["all", "全部作者", "All authors"],
+          ] as const).map(([value, labelZh, labelEn]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setSvFilter(value)}
+              className={`rounded px-2 py-0.5 font-semibold transition ${svFilter === value ? "bg-card text-reddit ring-1 ring-inset ring-reddit/45" : "text-neutral-500 hover:text-neutral-300"}`}
+            >
+              {zh ? labelZh : labelEn}
+            </button>
+          ))}
+        </div>
         <div className="inline-flex rounded-md bg-elevated/50 p-0.5 text-[10.5px] ring-1 ring-inset ring-line">
           <button
             type="button"
@@ -361,6 +430,9 @@ export function TargetPricePanel({ data, zh }: { data: KolTargetData; zh: boolea
             </button>
           ))}
         </div>
+        <span className="ml-auto text-[10px] tabular-nums text-neutral-600">
+          {zh ? `${filteredMarks.length} / ${marks.length} 条` : `${filteredMarks.length} / ${marks.length}`}
+        </span>
       </div>
       {filteredMarks.length ? (
         <>
@@ -382,11 +454,27 @@ export function TargetPricePanel({ data, zh }: { data: KolTargetData; zh: boolea
           <TargetDistributionChart marks={filteredMarks} current={current} zh={zh} />
         </>
       ) : (
-        <p className="px-1 py-6 text-center text-[12px] text-neutral-600">
-          {marks.length
-            ? (zh ? "没有符合筛选的目标价" : "No target prices match the filters")
-            : (zh ? "暂无明确买卖价位（KOL 多数只给方向、不给具体价位）" : "No explicit buy/sell prices yet")}
-        </p>
+        <div className="flex items-center justify-center gap-3 px-1 py-6 text-[12px] text-neutral-600">
+          <span>
+            {marks.length
+              ? (zh ? "没有符合筛选的目标价" : "No target prices match the filters")
+              : (zh ? "暂无明确买卖价位（KOL 多数只给方向、不给具体价位）" : "No explicit buy/sell prices yet")}
+          </span>
+          {marks.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                setRecency(90);
+                setSvFilter("all");
+                setBucket("all");
+                setSource("all");
+              }}
+              className="rounded px-2 py-1 font-semibold text-reddit ring-1 ring-inset ring-reddit/45 transition hover:bg-reddit/10"
+            >
+              {zh ? "查看全部" : "Show all"}
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

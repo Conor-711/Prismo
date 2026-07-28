@@ -212,10 +212,19 @@ def register_commands(sub, root) -> None:
     sp.set_defaults(func=cmd_sv_price_history)
 
     sp = sub.add_parser("sv-v0")
-    sp.add_argument("--stage", choices=["candidates", "transcripts", "extract", "settle", "score", "export", "all"], default="all")
+    sp.add_argument(
+        "--stage",
+        choices=["candidates", "transcripts", "extract", "audit", "settle", "score", "export", "all"],
+        default="all",
+    )
     sp.add_argument("--source", default="x", help="Comma-separated source subset: x,youtube,reddit,xueqiu,toss,all. Default keeps legacy X-only behavior.")
     sp.add_argument("--candidate-limit", type=int, default=50_000, help="0 means insert all recalled candidates.")
-    sp.add_argument("--extract-limit", type=int, default=1_000, help="0 means all pending candidates.")
+    sp.add_argument(
+        "--extract-limit",
+        type=int,
+        default=1_000,
+        help="0 means all pending candidates; for --stage audit this caps active X calls.",
+    )
     sp.add_argument("--extract-mode", choices=["rank", "author-balanced"], default="rank")
     sp.add_argument("--per-author-min", type=int, default=20)
     sp.add_argument("--per-author-max", type=int, default=80)

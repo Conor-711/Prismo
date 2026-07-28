@@ -63,7 +63,6 @@ export function SmartVoiceDecisionSuite({
       </div>
       <SmartVoiceResearchSuite
         data={data}
-        horizon={horizon}
         asOfDay={asOfDay}
         divergence={divergence}
         momentum={momentum}

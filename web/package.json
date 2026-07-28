@@ -2,6 +2,9 @@
   "name": "reddit-kaito-web",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20 <23"
+  },
   "scripts": {
     "dev": "NODE_OPTIONS=--experimental-sqlite next dev",
     "build": "NODE_OPTIONS=--experimental-sqlite next build",

@@ -206,7 +206,7 @@ export function SmartVoiceTickerModule({ board, zh }: { board: SvTickerBoard; zh
             suffix={
               <div className="mt-1 flex items-center justify-between gap-2 text-[10.5px] text-neutral-600">
                 <span>{zh ? inv.basisZh : inv.basisEn}</span>
-                <span className="font-mono tabular">{fmtCompact(inv.nEff)} n_eff · {inv.settledCalls} calls</span>
+                <span className="font-mono tabular">{inv.settledCalls} {zh ? "个已结算观点" : "settled views"}</span>
               </div>
             }
           />

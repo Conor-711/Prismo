@@ -66,8 +66,7 @@ marketing/remotion/cap/test/
 /reports/
 /equity_trader_kol_tweets_2025h2/
 /roster_tweets_6m_f5000/
-/roster_tweets_20260626_20260711/
-/roster_tweets_20260711_20260716/
+/roster_tweets_*/
 /data/reports/sv_indicator_event_evidence.csv
 /twitter_selected_tickers_unlabeled_sample_100_quick_labels.csv
 

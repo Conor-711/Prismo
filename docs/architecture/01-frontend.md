@@ -65,7 +65,6 @@ index.ts          # 对外导出，页面只从这里拿模块
 - YouTube 作者详情：`web/features/investor/`。
 - 搜索页：`web/features/search/`。
 - Smart Voice 展示模块：`web/features/smart-voice/`。
-- 区域详情页模块：`web/features/region/`。
 - 追踪/自选页：`web/features/tracking/`。
 - 侧边栏和 viewport 工作区：`web/shared/layout/`。
 - Dropdown、SegmentedControl、Tooltip、Skeleton：`web/shared/ui/`。
@@ -129,9 +128,6 @@ feature component 接收已经组装好的 view model。
 - `web/features/narrative/components/NarrativeRotationCharts.tsx`：叙事轮动图表组件，包含 mindshare 堆叠图、排名、占比、情绪和详情时间线。
 - `web/features/search/index.ts`：search feature public API，搜索页从这里引入搜索组件。
 - `web/features/search/components/TickerSearch.tsx`：搜索页标的搜索组件，包含输入、结果列表和热门标的。
-- `web/features/region/index.ts`：region feature public API，区域详情页从这里引入区域图表和热榜组件。
-- `web/features/region/components/DetailCharts.tsx`：区域详情页图表组件，包含仪表、环形、趋势和轮动条形图。
-- `web/features/region/components/HotList.tsx`：区域详情页热榜组件。
 - `web/features/tracking/index.ts`：tracking feature public API，追踪页从这里引入客户端追踪视图。
 - `web/features/tracking/components/TrackingView.tsx`：追踪页客户端视图 shell，负责登录态、收藏读取、筛选和排序；类型在 `trackingTypes.ts`，卡片/空态/区块在 `trackingCards.tsx`。
 - `web/features/investor/index.ts`：investor feature public API，投资者榜单和 YouTube 作者详情页从这里引入组件。
@@ -178,8 +174,6 @@ feature component 接收已经组装好的 view model。
 - `web/components/prismo/Bits.tsx`：兼容导出，旧 import 转发到 `web/shared/ui/prismoBits.tsx`。
 - `web/components/prismo/CreatorProfile.tsx`：兼容导出，旧 import 转发到 `web/features/investor`。
 - `web/components/prismo/DetailBits.tsx`：兼容导出，旧 import 转发到 `web/shared/ui/detailBits.tsx`。
-- `web/components/prismo/DetailCharts.tsx`：兼容导出，旧 import 转发到 `web/features/region`。
-- `web/components/prismo/HotList.tsx`：兼容导出，旧 import 转发到 `web/features/region`。
 - `web/components/prismo/InvestorBoard.tsx`：兼容导出，旧 import 转发到 `web/features/investor`。
 - `web/components/prismo/KolModule.tsx`：兼容导出，旧 import 不再承载实现。
 - `web/components/prismo/NarrativeRotationCharts.tsx`：兼容导出，旧 import 转发到 `web/features/narrative`。

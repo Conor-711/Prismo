@@ -113,34 +113,6 @@ export function getGrTickerSymbols(): string[] {
   );
 }
 
-// 按地区聚合（总览 + 区域总览用）：帖数、覆盖标的、帖数加权情绪/多空、互动合计。
-export interface GrRegionSummary {
-  region: string;
-  posts: number;
-  tickers: number;
-  avg_sentiment: number;
-  bull_pct: number;
-  bear_pct: number;
-  engagement: number;
-}
-export function getGrRegionSummary(): GrRegionSummary[] {
-  return safe(
-    () =>
-      all<GrRegionSummary>(
-        `SELECT region,
-                SUM(post_count) AS posts,
-                COUNT(DISTINCT ticker) AS tickers,
-                CASE WHEN SUM(post_count) > 0 THEN SUM(sentiment_avg * post_count) / SUM(post_count) ELSE 0 END AS avg_sentiment,
-                CASE WHEN SUM(post_count) > 0 THEN SUM(bull_pct * post_count) / SUM(post_count) ELSE 0 END AS bull_pct,
-                CASE WHEN SUM(post_count) > 0 THEN SUM(bear_pct * post_count) / SUM(post_count) ELSE 0 END AS bear_pct,
-                SUM(COALESCE(engagement, 0)) AS engagement
-           FROM gr_ticker_region
-          GROUP BY region`
-      ),
-    []
-  );
-}
-
 // 单个标的：gr_ticker 主行 + 其各地区分解（标的详情页）。
 export interface GrTickerDetail {
   ticker: GrTickerRow | null;
@@ -162,28 +134,6 @@ export function getGrTickerDetail(symbol: string): GrTickerDetail {
       return { ticker: t ?? null, regions };
     },
     { ticker: null, regions: [] }
-  );
-}
-
-// 单个地区：该区各标的（join 名称），按帖数排序（区域详情页）。
-export interface GrRegionTickerRow extends GrRegionCell {
-  name_en: string;
-  name_zh: string;
-}
-export function getGrRegionDetail(region: string): GrRegionTickerRow[] {
-  return safe(
-    () =>
-      all<GrRegionTickerRow>(
-        `SELECT r.region, r.ticker, r.post_count, r.sentiment_avg, r.mood_label,
-                r.bull_pct, r.bear_pct, r.neutral_pct, r.engagement,
-                COALESCE(t.name_en, '') AS name_en, COALESCE(t.name_zh, '') AS name_zh
-           FROM gr_ticker_region r
-           LEFT JOIN gr_ticker t ON t.ticker = r.ticker
-          WHERE r.region = ?
-          ORDER BY r.post_count DESC`,
-        region
-      ),
-    []
   );
 }
 

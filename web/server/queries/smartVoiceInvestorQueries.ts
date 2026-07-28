@@ -80,14 +80,32 @@ export interface SmartVoiceRepresentativeCall {
   actualHit: number | null;
   entryDay: string;
   exitDay: string;
+  entryPrice: number | null;
+  exitPrice: number | null;
+}
+
+export interface SmartVoiceRepresentativeShowcase {
+  ticker: string;
+  kind: "best" | "weak";
+  focusContribution: number;
+  focusCallCount: number;
+  calls: SmartVoiceRepresentativeCall[];
 }
 
 export interface SmartVoiceRepresentativeEvidence {
-  bestCalls: SmartVoiceRepresentativeCall[];
-  weakCalls: SmartVoiceRepresentativeCall[];
+  best: SmartVoiceRepresentativeShowcase | null;
+  weak: SmartVoiceRepresentativeShowcase | null;
 }
 
-export type SmartVoiceRepresentativeEvidenceMap = Record<string, SmartVoiceRepresentativeEvidence>;
+export type SmartVoiceRepresentativePricePoint = [
+  day: string,
+  close: number,
+];
+
+export interface SmartVoiceRepresentativeEvidenceBundle {
+  byInvestor: Record<string, SmartVoiceRepresentativeEvidence>;
+  priceByTicker: Record<string, SmartVoiceRepresentativePricePoint[]>;
+}
 
 interface RawCall {
   candidateId: string;
@@ -116,7 +134,9 @@ interface RawCall {
 
 interface RawRepresentativeCall extends SmartVoiceRepresentativeCall {
   investorId: string;
-  evidenceKind: "best" | "weak";
+  focusKind: "best" | "weak";
+  focusContribution: number;
+  focusCallCount: number;
 }
 
 function mapCall(row: RawCall): SmartVoiceEvidenceCall {
@@ -274,7 +294,9 @@ function shiftDay(day: string, offset: number) {
   return date.toISOString().slice(0, 10);
 }
 
-function evidencePrices(calls: SmartVoiceEvidenceCall[]): Record<string, SmartVoiceEvidencePriceBar[]> {
+function evidencePrices(
+  calls: Pick<SmartVoiceEvidenceCall, "ticker" | "day" | "entryDay" | "exitDay">[],
+): Record<string, SmartVoiceEvidencePriceBar[]> {
   const ranges = new Map<string, { start: string; end: string }>();
   for (const call of calls) {
     const ticker = call.ticker.toUpperCase();
@@ -291,24 +313,29 @@ function evidencePrices(calls: SmartVoiceEvidenceCall[]): Record<string, SmartVo
   }
   if (!ranges.size) return {};
 
-  const where: string[] = [];
-  const params: unknown[] = [];
-  for (const [ticker, range] of ranges) {
-    where.push("(upper(ticker) = ? AND day BETWEEN ? AND ?)");
-    params.push(ticker, range.start, range.end);
+  const rows: (SmartVoiceEvidencePriceBar & { ticker: string })[] = [];
+  const entries = [...ranges.entries()];
+  for (let offset = 0; offset < entries.length; offset += 200) {
+    const batch = entries.slice(offset, offset + 200);
+    const where: string[] = [];
+    const params: unknown[] = [];
+    for (const [ticker, range] of batch) {
+      where.push("(ticker = ? AND day BETWEEN ? AND ?)");
+      params.push(ticker, range.start, range.end);
+    }
+    rows.push(...all<SmartVoiceEvidencePriceBar & { ticker: string }>(
+      `SELECT ticker, day,
+              open, high, low, close, COALESCE(volume, 0) AS volume
+         FROM price_daily
+        WHERE close IS NOT NULL
+          AND open IS NOT NULL
+          AND high IS NOT NULL
+          AND low IS NOT NULL
+          AND (${where.join(" OR ")})
+        ORDER BY ticker, day`,
+      ...params,
+    ));
   }
-  const rows = all<SmartVoiceEvidencePriceBar & { ticker: string }>(
-    `SELECT upper(ticker) AS ticker, day,
-            open, high, low, close, COALESCE(volume, 0) AS volume
-       FROM price_daily
-      WHERE close IS NOT NULL
-        AND open IS NOT NULL
-        AND high IS NOT NULL
-        AND low IS NOT NULL
-        AND (${where.join(" OR ")})
-      ORDER BY ticker, day`,
-    ...params,
-  );
   const result: Record<string, SmartVoiceEvidencePriceBar[]> = {};
   for (const row of rows) {
     const ticker = String(row.ticker);
@@ -326,10 +353,10 @@ function evidencePrices(calls: SmartVoiceEvidenceCall[]): Record<string, SmartVo
 
 export function getSmartVoiceRepresentativeEvidence(
   investorIds: string[],
-  limitPerKind = 2,
-): SmartVoiceRepresentativeEvidenceMap {
+  limitPerShowcase = 10,
+): SmartVoiceRepresentativeEvidenceBundle {
   const ids = [...new Set(investorIds.filter(Boolean))];
-  if (!ids.length || limitPerKind < 1) return {};
+  if (!ids.length || limitPerShowcase < 1) return { byInvestor: {}, priceByTicker: {} };
   const placeholders = ids.map(() => "?").join(", ");
   const rows = safe(
     () =>
@@ -351,8 +378,10 @@ export function getSmartVoiceRepresentativeEvidence(
                   s.actual_hit AS actualHit,
                   COALESCE(s.entry_day, '') AS entryDay,
                   COALESCE(s.exit_day, '') AS exitDay,
+                  s.entry_price AS entryPrice,
+                  s.exit_price AS exitPrice,
                   COALESCE(cc.interactions, 0) AS interactions,
-                  CASE WHEN s.contribution > 0 THEN 'best' ELSE 'weak' END AS evidenceKind
+                  CASE WHEN s.contribution > 0 THEN 'best' ELSE 'weak' END AS contributionKind
              FROM sv_call c
              LEFT JOIN sv_call_candidate cc ON cc.candidate_id = c.candidate_id
              INNER JOIN sv_call_settlement s
@@ -365,29 +394,60 @@ export function getSmartVoiceRepresentativeEvidence(
               AND s.contribution IS NOT NULL
               AND s.contribution != 0
          ),
-         ranked AS (
+         ticker_stats AS (
+           SELECT investorId,
+                  ticker,
+                  contributionKind AS focusKind,
+                  SUM(ABS(contribution)) AS magnitude,
+                  SUM(contribution) AS focusContribution,
+                  COUNT(*) AS focusCallCount
+             FROM eligible
+            GROUP BY investorId, ticker, contributionKind
+         ),
+         ranked_tickers AS (
            SELECT *,
                   row_number() OVER (
-                    PARTITION BY investorId, evidenceKind
-                    ORDER BY abs(contribution) DESC, interactions DESC, day DESC
-                  ) AS evidenceRank
-             FROM eligible
+                    PARTITION BY investorId, focusKind
+                    ORDER BY magnitude DESC, focusCallCount DESC, ticker
+                  ) AS tickerRank
+             FROM ticker_stats
+         ),
+         showcases AS (
+           SELECT investorId, ticker, focusKind, focusContribution, focusCallCount
+             FROM ranked_tickers
+            WHERE tickerRank = 1
+         ),
+         ranked_calls AS (
+           SELECT s.focusKind,
+                  s.focusContribution,
+                  s.focusCallCount,
+                  e.*,
+                  row_number() OVER (
+                    PARTITION BY e.investorId, s.focusKind
+                    ORDER BY ABS(e.contribution) DESC, e.interactions DESC, e.day DESC
+                  ) AS callRank
+             FROM showcases s
+             INNER JOIN eligible e
+                     ON e.investorId = s.investorId
+                    AND e.ticker = s.ticker
          )
          SELECT investorId, candidateId, ticker, source, day, direction, horizon,
                 summaryZh, summaryEn, url, contribution, returnPct,
-                excessReturnPct, actualHit, entryDay, exitDay, evidenceKind
-           FROM ranked
-          WHERE evidenceRank <= ?
-          ORDER BY investorId, evidenceKind, evidenceRank`,
+                excessReturnPct, actualHit, entryDay, exitDay, entryPrice, exitPrice,
+                focusKind, focusContribution, focusCallCount
+           FROM ranked_calls
+          WHERE callRank <= ?
+          ORDER BY investorId, focusKind, day, candidateId`,
         ...ids,
-        limitPerKind,
+        limitPerShowcase,
       ),
     [],
   );
 
-  const result: SmartVoiceRepresentativeEvidenceMap = {};
+  const result: Record<string, SmartVoiceRepresentativeEvidence> = {};
+  const chartCalls: SmartVoiceRepresentativeCall[] = [];
   for (const row of rows) {
-    const group = (result[row.investorId] ??= { bestCalls: [], weakCalls: [] });
+    const group = (result[row.investorId] ??= { best: null, weak: null });
     const call: SmartVoiceRepresentativeCall = {
       candidateId: row.candidateId,
       ticker: row.ticker,
@@ -404,10 +464,32 @@ export function getSmartVoiceRepresentativeEvidence(
       actualHit: typeof row.actualHit === "number" ? row.actualHit : null,
       entryDay: row.entryDay,
       exitDay: row.exitDay,
+      entryPrice: typeof row.entryPrice === "number" ? row.entryPrice : null,
+      exitPrice: typeof row.exitPrice === "number" ? row.exitPrice : null,
     };
-    (row.evidenceKind === "best" ? group.bestCalls : group.weakCalls).push(call);
+    const showcase = group[row.focusKind] ??= {
+      ticker: row.ticker,
+      kind: row.focusKind,
+      focusContribution: Number(row.focusContribution),
+      focusCallCount: Number(row.focusCallCount),
+      calls: [],
+    };
+    showcase.calls.push(call);
+    chartCalls.push(call);
   }
-  return result;
+  const priceByTicker = Object.fromEntries(
+    Object.entries(evidencePrices(chartCalls)).map(([ticker, prices]) => [
+      ticker,
+      prices.map((price): SmartVoiceRepresentativePricePoint => [
+        price.day,
+        price.close,
+      ]),
+    ]),
+  );
+  return {
+    byInvestor: result,
+    priceByTicker,
+  };
 }
 
 export function getSmartVoiceInvestorEvidence(investorId: string): SmartVoiceInvestorEvidence {

@@ -37,7 +37,6 @@ export const zh = {
     smartVoice: "Smart Voice",
     tickers: "标的",
     investors: "作者",
-    regions: "区域",
     cnstocks: "中概·港股",
     search: "搜索",
     tracking: "追踪",

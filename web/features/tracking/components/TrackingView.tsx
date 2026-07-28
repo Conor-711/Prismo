@@ -1,6 +1,6 @@
 "use client";
 
-// 追踪页（私密）：展示用户追踪的标的、作者、叙事、区域与社区。
+// 追踪页（私密）：展示用户追踪的标的、作者、叙事与社区。
 // 静态导出友好：页面把可追踪对象目录烤进 props；客户端只负责读写 Supabase user_collections。
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -11,7 +11,6 @@ import { listCollection, type CollectionRow } from "@/lib/favorites";
 import { withLang, type Locale } from "@/lib/i18n";
 import { SmartVoicePortfolioModule } from "@/features/smart-voice";
 import { fmtCompact } from "@/shared/formatting/format";
-import { regionColor, regionLabel, regionSource } from "@/shared/market/regions";
 import type { GrTickerRow, GrRegionCell } from "@/server/queries/globalQueries";
 import {
   TRACK_KINDS,
@@ -34,7 +33,6 @@ import {
   NarrativeCard,
   OverviewButton,
   QuickAdd,
-  RegionCard,
   SignInPrompt,
   TickerSection,
 } from "./trackingCards";
@@ -76,8 +74,7 @@ export function TrackingView({
         ticker: lists[0],
         author: lists[1],
         narrative: lists[2],
-        region: lists[3],
-        subreddit: lists[4],
+        subreddit: lists[3],
       });
       setBusy(false);
     });
@@ -105,7 +102,6 @@ export function TrackingView({
 
   const authorMap = useMemo(() => new Map(catalog.authors.map((a) => [a.refId, a])), [catalog.authors]);
   const narrativeMap = useMemo(() => new Map(catalog.narratives.map((n) => [n.refId, n])), [catalog.narratives]);
-  const regionMap = useMemo(() => new Map(catalog.regions.map((r) => [r.refId, r])), [catalog.regions]);
 
   const trackedSymbols = useMemo(
     () => collections.ticker.map((r) => r.ref_id.toUpperCase()),
@@ -124,7 +120,7 @@ export function TrackingView({
       kind: "ticker",
       refId: r.ticker.toUpperCase(),
       label: `${r.ticker.toUpperCase()} · ${zh ? r.name_zh || r.name_en : r.name_en || r.name_zh}`,
-      sub: `${fmtCompact(r.total_posts)} ${zh ? "讨论" : "posts"} · ${r.regions_present} ${zh ? "区域" : "regions"}`,
+      sub: `${fmtCompact(r.total_posts)} ${zh ? "讨论" : "posts"} · ${r.regions_present} ${zh ? "社区" : "communities"}`,
       href: `/tickers/${r.ticker.toUpperCase()}`,
       ticker: r.ticker.toUpperCase(),
     }));
@@ -145,16 +141,8 @@ export function TrackingView({
       href: `/narratives/${n.refId}`,
       color: n.color,
     }));
-    const regionItems: QuickCandidate[] = catalog.regions.map((r) => ({
-      kind: "region",
-      refId: r.refId,
-      label: regionLabel(r.refId, lang),
-      sub: `${regionSource(r.refId)} · ${fmtCompact(r.posts)} ${zh ? "讨论" : "posts"}`,
-      href: `/regions/${r.refId}`,
-      color: regionColor(r.refId),
-    }));
     const q = query.trim().toLowerCase();
-    return [...tickerItems, ...authorItems, ...narrativeItems, ...regionItems]
+    return [...tickerItems, ...authorItems, ...narrativeItems]
       .filter((c) => !q || `${c.label} ${c.sub} ${c.refId}`.toLowerCase().includes(q))
       .sort((a, b) => {
         const as = isSaved(a.kind, a.refId) ? 1 : 0;
@@ -174,10 +162,10 @@ export function TrackingView({
         query={query}
         setQuery={setQuery}
         candidates={quickCandidates}
-        onSeeAll={() => router.push(withLang(lang, active === "author" ? "/investors" : active === "narrative" ? "/narratives" : active === "region" ? "/regions" : "/tickers"))}
+        onSeeAll={() => router.push(withLang(lang, active === "author" ? "/investors" : active === "narrative" ? "/narratives" : "/tickers"))}
       />
 
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-5">
         {(["all", ...TRACK_KINDS] as ActiveTab[]).map((kind) => (
           <OverviewButton
             key={kind}
@@ -234,17 +222,6 @@ export function TrackingView({
             >
               {collections.narrative.map((row) => (
                 <NarrativeCard key={row.ref_id} row={row} meta={narrativeMap.get(row.ref_id)} zh={zh} />
-              ))}
-            </GenericSection>
-          )}
-          {(active === "all" || active === "region") && (
-            <GenericSection
-              title={kindLabel("region", zh)}
-              count={collections.region.length}
-              empty={zh ? "还没有追踪区域。" : "No followed regions yet."}
-            >
-              {collections.region.map((row) => (
-                <RegionCard key={row.ref_id} row={row} meta={regionMap.get(row.ref_id)} lang={lang} />
               ))}
             </GenericSection>
           )}

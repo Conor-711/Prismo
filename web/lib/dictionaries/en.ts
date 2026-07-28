@@ -38,7 +38,6 @@ export const en: Dictionary = {
     smartVoice: "Smart Voice",
     tickers: "Tickers",
     investors: "Authors",
-    regions: "Regions",
     cnstocks: "China & HK",
     search: "Search",
     tracking: "Watchlist",

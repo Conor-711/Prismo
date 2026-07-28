@@ -212,7 +212,7 @@ export function getTickerSmartVoiceSignals(symbol: string): SvTickerSignalData |
            FROM sv_ticker_signal_daily d
           WHERE ticker = ?
        )
-       SELECT * FROM ranked WHERE rn <= 45 ORDER BY day, horizon, cohort`,
+       SELECT * FROM ranked WHERE rn <= 260 ORDER BY day, horizon, cohort`,
       ticker,
     );
     const latestSignalDay = currentRows.map((row) => String(row.day)).sort().pop()!;

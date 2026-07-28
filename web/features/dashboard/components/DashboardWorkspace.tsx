@@ -2,9 +2,9 @@ import { LocaleLink } from "@/components/i18n/LocaleLink";
 import { AsiaHeatmap } from "@/components/asia/AsiaCharts";
 import { ViewportWorkspace } from "@/shared/layout/ViewportWorkspace";
 import { TickerLogo } from "@/shared/market/TickerLogo";
-import { RegionBadge, SentScore, StanceBar } from "@/shared/ui/prismoBits";
+import { SentScore, StanceBar } from "@/shared/ui/prismoBits";
 import { fmtCompact, fmtInt, timeAgo } from "@/shared/formatting/format";
-import { regionLabel, regionSource } from "@/shared/market/regions";
+import { regionLabel } from "@/shared/market/regions";
 import { smartVoiceInvestorHref } from "@/features/smart-voice";
 import type { Locale } from "@/lib/i18n";
 import type { DashboardModel } from "../types";
@@ -44,7 +44,7 @@ function KpiStrip({ model, zh }: { model: DashboardModel; zh: boolean }) {
     {
       label: zh ? "覆盖标的" : "Tickers",
       value: fmtInt(model.meta.tickers),
-      sub: zh ? `${model.meta.regions} 个地区` : `${model.meta.regions} regions`,
+      sub: zh ? `${model.meta.regions} 个社区` : `${model.meta.regions} communities`,
       tone: "text-cream",
     },
     {
@@ -94,35 +94,6 @@ function KpiStrip({ model, zh }: { model: DashboardModel; zh: boolean }) {
   );
 }
 
-function RegionMoodPanel({ model, lang }: { model: DashboardModel; lang: Locale }) {
-  const zh = lang === "zh";
-  return (
-    <PanelShell
-      title={zh ? "五地区情绪" : "Regional mood"}
-      meta={zh ? "跨社区加权" : "weighted"}
-      bodyClassName="min-h-0 flex-1 overflow-y-auto"
-    >
-      {model.regions.map((item) => (
-        <LocaleLink
-          key={item.region}
-          href={`/regions/${item.region}`}
-          className="block border-b border-line/70 px-3 py-1 transition last:border-b-0 hover:bg-white/[.035]"
-        >
-          <div className="flex min-w-0 items-center gap-2">
-            <RegionBadge region={item.region} lang={lang} className="min-w-0 !text-[11px] !font-semibold !text-cream" />
-            <span className="min-w-0 flex-1 truncate text-[9px] text-neutral-600">{regionSource(item.region)}</span>
-            <SentScore score={item.sentiment} className="shrink-0 text-[10.5px]" />
-          </div>
-          <div className="mt-1 flex items-center gap-2">
-            <div className="min-w-0 flex-1"><StanceBar bull={item.bull} bear={item.bear} neutral={item.neutral} /></div>
-            <span className="shrink-0 text-[8.5px] tabular text-neutral-600">{fmtCompact(item.posts)} {zh ? "帖" : "posts"}</span>
-          </div>
-        </LocaleLink>
-      ))}
-    </PanelShell>
-  );
-}
-
 function BuzzPanel({ model, lang }: { model: DashboardModel; lang: Locale }) {
   const zh = lang === "zh";
   return (
@@ -160,7 +131,7 @@ function BuzzPanel({ model, lang }: { model: DashboardModel; lang: Locale }) {
           </div>
           <div className="text-right">
             <div className="font-mono text-[10.5px] tabular text-neutral-300">{fmtCompact(item.posts)}</div>
-            <div className="text-[8.5px] text-neutral-600">{item.regions} {zh ? "区" : "rgn"}</div>
+            <div className="text-[8.5px] text-neutral-600">{item.regions} {zh ? "社区" : "communities"}</div>
           </div>
           <SentScore score={item.sentiment} className="text-right text-[10.5px]" />
         </div>
@@ -268,7 +239,7 @@ export function DashboardWorkspace({ model, lang }: { model: DashboardModel; lan
             </div>
             <span className="hidden h-7 w-px bg-line xl:block" />
             <p className="hidden truncate text-[11px] text-neutral-500 xl:block">
-              {zh ? "跨社区信号、地区情绪与 Smart Voice 的统一工作台" : "Cross-community signals, regional mood and Smart Voice in one workspace"}
+              {zh ? "跨社区信号、市场热度与 Smart Voice 的统一工作台" : "Cross-community signals, market activity and Smart Voice in one workspace"}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2 text-[10px] text-neutral-500">
@@ -291,15 +262,14 @@ export function DashboardWorkspace({ model, lang }: { model: DashboardModel; lan
             <KpiStrip model={model} zh={zh} />
 
             <div className="grid min-h-0 flex-1 gap-2.5 lg:grid-cols-[minmax(210px,0.78fr)_minmax(360px,1.65fr)_minmax(220px,0.9fr)] lg:overflow-hidden">
-              <div className="grid min-h-[520px] min-w-0 grid-rows-[minmax(0,1.12fr)_minmax(0,0.88fr)] gap-2.5 lg:min-h-0">
+              <div className="min-h-[520px] min-w-0 lg:min-h-0">
                 <DashboardSignalPanel signals={model.signals} lang={lang} />
-                <RegionMoodPanel model={model} lang={lang} />
               </div>
 
               <div className="grid min-h-[620px] min-w-0 grid-rows-[minmax(0,1.35fr)_minmax(0,0.85fr)] gap-2.5 lg:min-h-0">
                 <PanelShell
-                  title={zh ? "跨区情绪热力" : "Cross-region sentiment"}
-                  meta={`${model.heatmap.tickers.length} ${zh ? "标的" : "tickers"} · ${heatX.length} ${zh ? "地区" : "regions"}`}
+                  title={zh ? "跨社区情绪热力" : "Cross-community sentiment"}
+                  meta={`${model.heatmap.tickers.length} ${zh ? "标的" : "tickers"} · ${heatX.length} ${zh ? "社区" : "communities"}`}
                   bodyClassName="min-h-0 flex-1 p-1.5"
                 >
                   {model.heatmap.cells.length ? (

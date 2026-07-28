@@ -1,8 +1,8 @@
-// 标的详情页 / 地区详情页的「模块化看板」演示数据（mock）。
+// 标的详情页的「模块化看板」演示数据（mock）。
 // 真实管线尚未产出这些维度（基线/偏离/传导路径/期权占比…），此处用确定性伪随机生成
 // 占位数据，纯为前端模块/图表的视觉与交互原型。后续接真实数据时替换本文件即可。
 //
-// 确定性：同一 symbol / region 每次构建生成相同结果（seed = 字符串哈希），避免快照漂移。
+// 确定性：同一 symbol 每次构建生成相同结果（seed = 字符串哈希），避免快照漂移。
 
 import { REGION_ORDER } from "@/shared/market/regions";
 
@@ -57,23 +57,6 @@ const LOCAL_NOTE: Record<string, Bi> = {
   kr: { zh: "서학개미 + 杠杆ETF + 汇率敏感", en: "Seohak-ant + leveraged ETF + FX-sensitive" },
   tw: { zh: "供应链视角 + 當沖客", en: "Supply-chain lens + day-traders" },
 };
-const PERSONA: Record<string, Bi> = {
-  us: { zh: "WSB 投机派", en: "WSB punters" },
-  cn: { zh: "雪球价值党", en: "Xueqiu value crowd" },
-  jp: { zh: "NISA 长线族", en: "NISA long-holders" },
-  kr: { zh: "서학개미", en: "Seohak-ant" },
-  tw: { zh: "PTT 當沖族", en: "PTT day-traders" },
-};
-const SECTORS: Bi[] = [
-  { zh: "AI / 半导体", en: "AI / Semis" },
-  { zh: "新能源车", en: "EV" },
-  { zh: "加密相关", en: "Crypto-linked" },
-  { zh: "云 / 软件", en: "Cloud / SaaS" },
-  { zh: "金融", en: "Financials" },
-  { zh: "迷因股", en: "Meme stocks" },
-  { zh: "中概", en: "China ADRs" },
-];
-
 export function pick<T>(arr: T[], rnd: () => number): T {
   return arr[Math.floor(rnd() * arr.length)];
 }
@@ -281,126 +264,3 @@ export function getTickerMock(symbol: string) {
 }
 
 export type TickerMock = ReturnType<typeof getTickerMock>;
-
-// =====================================================================
-// 地区详情（横切一个房间）
-// =====================================================================
-export function getRegionMock(region: string) {
-  const rnd = rng("R:" + region);
-  const regions = REGION_ORDER as readonly string[];
-  const TICKERS = ["NVDA", "TSLA", "MSFT", "AVGO", "MU", "GOOGL", "PLTR", "INTC", "MSTR", "SMCI", "AMD", "META", "COIN", "HOOD", "ARM"];
-
-  // 1. 地区脉搏
-  const senti = r2(-0.4 + rnd() * 0.8, 2);
-  const pulse = {
-    sentiment: senti,
-    sentimentChange: r2((rnd() - 0.5) * 0.4, 2),
-    activity: r2(0.7 + rnd() * 1.8, 1), // vs 常态倍数
-    activityChange: r2((rnd() - 0.4) * 0.6, 1),
-    riskIndex: Math.round(20 + rnd() * 70),
-    bullPct: Math.round(35 + rnd() * 35),
-    humanPct: Math.round(55 + rnd() * 40), // 真人占比 / 信噪比
-    spark: trend(rnd, 1, 0.4, 16, 0.02),
-  };
-
-  // 2. 热榜 & 发现（三类榜单）
-  const mkRow = (t: string, kind: "abs" | "surge" | "new", rnk: number) => {
-    const bull = Math.round(30 + rnd() * 45);
-    return {
-      ticker: t,
-      rank: rnk,
-      posts: Math.round((kind === "abs" ? 500 : 120) - rnk * (kind === "abs" ? 35 : 8) + rnd() * 40),
-      vsBaseline: r2(kind === "surge" ? 2 + rnd() * 6 : 1 + rnd() * 1.5, 1),
-      sentiment: r2(-0.4 + rnd() * 0.9, 2),
-      sentimentChange: r2((rnd() - 0.5) * 0.5, 2),
-      bullPct: bull,
-      bearPct: 100 - bull,
-      isNew: kind === "new",
-    };
-  };
-  const hot = {
-    abs: pickN(TICKERS, 6, rnd).map((t, i) => mkRow(t, "abs", i + 1)),
-    surge: pickN(TICKERS, 6, rnd).map((t, i) => mkRow(t, "surge", i + 1)).sort((a, b) => b.vsBaseline - a.vsBaseline),
-    fresh: pickN(TICKERS, 4, rnd).map((t, i) => mkRow(t, "new", i + 1)),
-  };
-
-  // 3. 地区异动
-  const anomalies = pickN(TICKERS, 3, rnd).map((t) => ({
-    target: t,
-    dim: pick([{ zh: "讨论量", en: "Volume" }, { zh: "情绪", en: "Sentiment" }, { zh: "分歧度", en: "Divergence" }, { zh: "新话题", en: "New topic" }] as Bi[], rnd),
-    sigma: r2(1.5 + rnd() * 4, 1),
-    direction: rnd() > 0.5 ? "up" : "down",
-    sinceHours: Math.round(2 + rnd() * 36),
-    attribution: pick(TOPICS, rnd),
-  }));
-
-  // 4. 地区独有叙事
-  const uniqueNarratives = pickN(TOPICS, 3, rnd).map((tp) => ({
-    topic: tp,
-    heatVsBase: r2(1.3 + rnd() * 2.6, 1),
-    sentiment: r2(-0.4 + rnd() * 0.9, 2),
-    note: LOCAL_NOTE[region] ?? { zh: "本地视角", en: "Local lens" },
-    isNewVar: rnd() > 0.5,
-    tickers: pickN(TICKERS, 2, rnd),
-  }));
-
-  // 5. 本区 vs 全球（差值）
-  const dims: Bi[] = [
-    { zh: "情绪", en: "Sentiment" },
-    { zh: "风险偏好", en: "Risk appetite" },
-    { zh: "AI/半导体关注", en: "AI/Semis focus" },
-    { zh: "中概关注", en: "China-ADR focus" },
-    { zh: "多空倾向", en: "Bull tilt" },
-  ];
-  const vsGlobal = dims.map((d) => {
-    const local = Math.round(20 + rnd() * 70);
-    const global = Math.round(30 + rnd() * 45);
-    return { dim: d, local, global, diff: local - global };
-  });
-  const standout = pick(
-    [
-      { zh: "几乎不碰中概股（关注度远低于全球均值）", en: "Barely touches China ADRs (far below global avg)" },
-      { zh: "风险偏好显著高于全球（杠杆 / 期权偏好）", en: "Risk appetite well above global (leverage / options)" },
-      { zh: "AI/半导体关注度领先全球", en: "AI/Semis focus leads the globe" },
-    ],
-    rnd
-  ) as Bi;
-
-  // 6. 地区性格画像（雷达）
-  const persona = {
-    leverage: Math.round(10 + rnd() * 80),
-    meme: Math.round(10 + rnd() * 80),
-    shortTerm: Math.round(20 + rnd() * 75), // 越高越短线/当冲
-    quality: Math.round(20 + rnd() * 70), // DD/真人占比
-    concentration: Math.round(20 + rnd() * 75), // 注意力集中度
-    persona: PERSONA[region] ?? { zh: "本地散户", en: "Local retail" },
-  };
-
-  // 7. 注意力轮动
-  const rotation = pickN(SECTORS, 5, rnd).map((s) => {
-    const ch = r2((rnd() - 0.45) * 80, 0);
-    return { sector: s, heat: Math.round(20 + rnd() * 70), change: ch, flow: ch >= 0 ? "in" : "out" };
-  });
-  const rotateFrom = pick(SECTORS, rnd);
-  const rotateTo = pick(SECTORS.filter((s) => s.zh !== rotateFrom.zh), rnd);
-
-  // 8. 今日引爆
-  const trigger = {
-    headline: pick(
-      [
-        { zh: "某大行上调目标价，引爆 AI 板块讨论", en: "A bank raised PT, igniting AI-sector chatter" },
-        { zh: "汇率急贬，散户涌入杠杆多头", en: "Sharp FX move; retail piles into leveraged longs" },
-        { zh: "做空机构报告刷屏，情绪急转", en: "Short-seller report goes viral; mood flips" },
-      ],
-      rnd
-    ) as Bi,
-    targets: pickN(TICKERS, 3, rnd),
-    volumeDelta: Math.round(80 + rnd() * 320), // %
-    sentimentShift: r2((rnd() - 0.5) * 0.6, 2),
-    scope: rnd() > 0.5 ? "global" : "local",
-  };
-
-  return { region, pulse, hot, anomalies, uniqueNarratives, vsGlobal, standout, persona, rotation, rotateFrom, rotateTo, trigger, allRegions: regions };
-}
-
-export type RegionMock = ReturnType<typeof getRegionMock>;

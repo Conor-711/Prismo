@@ -1,7 +1,7 @@
 export { OpinionExplorer } from "./components/OpinionExplorer/OpinionExplorer";
 export { KolModule } from "./components/KolModule";
 export { OverlayPanel } from "./components/OverlayPanel";
-export { BullBearStructureChart, CrowdingChart, ViewpointStanceChart } from "./components/OverallStructureCharts";
+export { BullBearStructureChart, ViewpointStanceChart } from "./components/OverallStructureCharts";
 export { TickerDetailHeader } from "./components/TickerDetailHeader";
 export { TickerOverviewPanel } from "./components/TickerOverviewPanel";
 export { SmartVoiceTickerSignals } from "./components/SmartVoiceTickerSignals";

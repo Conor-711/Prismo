@@ -30,19 +30,21 @@ export function SmartVoiceOpportunityStrip({
     {
       label: zh ? "高低 SV 预期差" : "High/low SV gap",
       value: `${indicators.divergence.toFixed(0)}/100`,
-      detail: divergence.spread == null ? (zh ? "样本不足" : "Insufficient") : `spread ${divergence.spread >= 0 ? "+" : ""}${divergence.spread.toFixed(2)}`,
+      detail: divergence.spread == null
+        ? (zh ? "样本不足" : "Insufficient")
+        : `${zh ? "方向差" : "Direction gap"} ${divergence.spread >= 0 ? "+" : ""}${divergence.spread.toFixed(2)}`,
       tone: tone(indicators.divergence),
     },
     {
       label: zh ? "观点拥挤风险" : "Thesis crowding",
       value: level(indicators.crowding, zh),
-      detail: `${indicators.crowding.toFixed(0)}/100 · n_eff ${indicators.breadth.toFixed(1)}`,
+      detail: `${zh ? "拥挤度" : "Crowding score"} ${indicators.crowding.toFixed(0)}/100`,
       tone: tone(indicators.crowding, true),
     },
     {
       label: zh ? "目标价离散度" : "Target dispersion",
       value: targets.dispersion == null ? "—" : `${(targets.dispersion * 100).toFixed(0)}%`,
-      detail: `${zh ? "有效样本" : "effective n"} ${targets.effectiveCount.toFixed(1)}`,
+      detail: `${targets.count} ${zh ? "个明确目标价" : "explicit targets"}`,
       tone: targets.dispersion != null && targets.dispersion > 0.5 ? "text-gold" : "text-neutral-300",
     },
     {

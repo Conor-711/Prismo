@@ -1,19 +1,14 @@
-import type { SvSignalHorizon, SvTickerLensProfile, SvTickerSignalEvidence, SvTickerThesisNarrative } from "@/server/queries/smartVoiceTickerSignals";
+import type { SvTickerLensProfile, SvTickerSignalEvidence, SvTickerThesisNarrative } from "@/server/queries/smartVoiceTickerSignals";
 import type { SvDivergenceDiagnostic, SvMomentumDiagnostic } from "./smartVoiceSignalLogic";
 import type { SvOpinionChangeRadar, SvOpportunityIndicators, SvWeightedTargetDistribution } from "./smartVoiceDecisionLogic";
 import { svEvidenceWeight } from "./smartVoiceDecisionLogic";
 
-const DAY_MS = 86_400_000;
 const clamp = (value: number, low: number, high: number) => Math.min(high, Math.max(low, value));
 
 function shiftDay(day: string, delta: number) {
   const date = new Date(`${day}T00:00:00Z`);
   date.setUTCDate(date.getUTCDate() + delta);
   return date.toISOString().slice(0, 10);
-}
-
-function daysBetween(later: string, earlier: string) {
-  return Math.max(0, Math.round((Date.parse(`${later}T00:00:00Z`) - Date.parse(`${earlier}T00:00:00Z`)) / DAY_MS));
 }
 
 export type SvThesisState = "strengthening" | "fading" | "bullish_reversal" | "bearish_reversal" | "stable" | "new";
@@ -88,50 +83,6 @@ export function buildThesisLifecycle(
   }).sort((a, b) => b.currentWeight - a.currentWeight).slice(0, 7);
 }
 
-export interface SvPlatformDiffusionItem {
-  source: string;
-  firstDay: string;
-  latestDay: string;
-  leadDays: number;
-  peakDay: string;
-  calls: number;
-  authors: number;
-  weightedNet: number;
-  weightedShare: number;
-}
-
-export function buildPlatformDiffusion(
-  evidence: SvTickerSignalEvidence[],
-  horizon: SvSignalHorizon,
-  asOfDay: string,
-): SvPlatformDiffusionItem[] {
-  const rows = evidence.filter((item) => item.horizon === horizon);
-  const bySource = new Map<string, SvTickerSignalEvidence[]>();
-  rows.forEach((item) => bySource.set(item.source, [...(bySource.get(item.source) ?? []), item]));
-  const firstDay = rows.map((item) => item.createdAt.slice(0, 10)).sort()[0] ?? asOfDay;
-  const raw = [...bySource.entries()].map(([source, items]) => {
-    const weights = items.map((item) => ({ item, weight: svEvidenceWeight(item, asOfDay) }));
-    const total = weights.reduce((sum, item) => sum + item.weight, 0);
-    const days = items.map((item) => item.createdAt.slice(0, 10)).sort();
-    const daily = new Map<string, number>();
-    weights.forEach(({ item, weight }) => daily.set(item.createdAt.slice(0, 10), (daily.get(item.createdAt.slice(0, 10)) ?? 0) + weight));
-    const peak = [...daily.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? days.at(-1) ?? asOfDay;
-    return {
-      source,
-      firstDay: days[0],
-      latestDay: days.at(-1)!,
-      leadDays: daysBetween(days[0], firstDay),
-      peakDay: peak,
-      calls: items.length,
-      authors: new Set(items.map((item) => item.investorId || item.authorHandle)).size,
-      weightedNet: total ? weights.reduce((sum, item) => sum + item.weight * (item.item.direction === "bull" ? 1 : -1), 0) / total : 0,
-      weightedShare: total,
-    };
-  });
-  const totalWeight = raw.reduce((sum, item) => sum + item.weightedShare, 0);
-  return raw.map((item) => ({ ...item, weightedShare: totalWeight ? item.weightedShare / totalWeight : 0 })).sort((a, b) => a.firstDay.localeCompare(b.firstDay));
-}
-
 export interface SvPortfolioExposure {
   lens: string;
   share: number;
@@ -141,7 +92,6 @@ export interface SvPortfolioExposure {
 export interface SvPortfolioRisk {
   configuredWeight: number;
   concentration: number;
-  effectiveFactors: number;
   exposures: SvPortfolioExposure[];
 }
 
@@ -168,7 +118,6 @@ export function buildPortfolioRisk(profiles: SvTickerLensProfile[], allocations:
   return {
     configuredWeight: totalAllocation,
     concentration: clamp(hhi * 100, 0, 100),
-    effectiveFactors: hhi ? 1 / hhi : 0,
     exposures,
   };
 }
@@ -215,14 +164,14 @@ export function buildExplainableAlerts({
   if (indicators.crowding >= 60) alerts.push({
     id: "crowding", severity: indicators.crowding >= 78 ? "high" : "medium",
     titleZh: "观点存在拥挤风险", titleEn: "Thesis crowding risk",
-    reasonZh: `同向度与有效声音集中度合成 ${indicators.crowding.toFixed(0)}/100，有效广度 ${indicators.breadth.toFixed(1)}。`,
-    reasonEn: `Consensus and voice concentration combine to ${indicators.crowding.toFixed(0)}/100 with ${indicators.breadth.toFixed(1)} effective voices.`,
+    reasonZh: `近期高 SV 作者观点同向且集中，拥挤度为 ${indicators.crowding.toFixed(0)}/100。`,
+    reasonEn: `Recent high-SV views are aligned and concentrated, with a crowding score of ${indicators.crowding.toFixed(0)}/100.`,
   });
   if (targets.impliedMove != null && Math.abs(targets.impliedMove) >= 0.15) alerts.push({
     id: "target-gap", severity: Math.abs(targets.impliedMove) >= 0.3 ? "high" : "medium",
     titleZh: "SV 目标价与现价偏离", titleEn: "SV target diverges from spot",
-    reasonZh: `加权目标中位数隐含 ${targets.impliedMove >= 0 ? "+" : ""}${(targets.impliedMove * 100).toFixed(1)}%，IQR 离散度 ${targets.dispersion == null ? "—" : `${(targets.dispersion * 100).toFixed(0)}%`}。`,
-    reasonEn: `Weighted median implies ${targets.impliedMove >= 0 ? "+" : ""}${(targets.impliedMove * 100).toFixed(1)}%; IQR dispersion is ${targets.dispersion == null ? "—" : `${(targets.dispersion * 100).toFixed(0)}%`}.`,
+    reasonZh: `加权目标中位数隐含 ${targets.impliedMove >= 0 ? "+" : ""}${(targets.impliedMove * 100).toFixed(1)}%，多数目标区间跨度相当于现价的 ${targets.dispersion == null ? "—" : `${(targets.dispersion * 100).toFixed(0)}%`}。`,
+    reasonEn: `The weighted median implies ${targets.impliedMove >= 0 ? "+" : ""}${(targets.impliedMove * 100).toFixed(1)}%; the middle target range spans ${targets.dispersion == null ? "—" : `${(targets.dispersion * 100).toFixed(0)}%`} of spot.`,
   });
   const reversals = radar.counts.reverse + radar.counts.invalidate + radar.counts.close;
   if (reversals > 0) alerts.push({
