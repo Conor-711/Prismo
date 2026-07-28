@@ -6,7 +6,7 @@ import { KolModule } from "./KolModule";
 import { SmartVoiceTickerModule } from "@/features/smart-voice";
 import { SmartVoiceTickerSignals } from "./SmartVoiceTickerSignals";
 import type { KolCandle, KolTargetData } from "@/shared/market/mockDetail";
-import type { DailyNet, DailyVol, KolNew, RetailVol, RetailNew, WindowedArguments } from "@/server/queries/kolQueries";
+import type { DailyNet, DailyVol, RetailVol, WindowedArguments } from "@/server/queries/kolQueries";
 import type { OverallData } from "@/server/queries/overallData";
 import type { SvTickerBoard } from "@/features/smart-voice/svMock";
 import type { SvTickerSignalData } from "@/server/queries/smartVoiceTickerSignals";
@@ -57,8 +57,6 @@ type Props = {
   volume?: DailyVol[];
   retailSentiment?: DailyNet[];
   retailVolume?: RetailVol[];
-  retailNewcomers?: RetailNew[];
-  kolNewcomers?: KolNew[];
   overall?: OverallData | null;
   targetPrices?: KolTargetData;
   argumentsData?: WindowedArguments;
@@ -73,8 +71,6 @@ export function TickerOverviewPanel({
   volume,
   retailSentiment,
   retailVolume,
-  retailNewcomers,
-  kolNewcomers,
   overall,
   targetPrices,
   argumentsData,
@@ -83,9 +79,10 @@ export function TickerOverviewPanel({
 }: Props) {
   const [full, setFull] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [dashboard, setDashboard] = useState<"market" | "sv">("market");
   const overviewHint = zh
-    ? "展示该标的在近一年里的净情绪、讨论度、聪明钱减散户分歧差、新增参与者与拥挤度、观点视角多空分布、目标价分布，以及 AI 识别的异常波动归因。当前更早日期使用稳定 mock 补全，用于呈现一年尺度。"
-    : "Shows one-year net sentiment, discussion volume, smart-money minus retail divergence, newcomers and crowding, viewpoint-by-stance distribution, target price distribution, and AI anomaly attribution. Earlier missing dates are filled with stable mock data for the one-year view.";
+    ? "通过上方按钮切换市场数据与 SV 数据。市场数据展示近一年净情绪、讨论度、聪明钱与散户差异、目标价和股价；SV 数据专门展示优质投资者观点转向、变化广度、目标修正、价格背离及历史表现。"
+    : "Use the header control to switch between market and SV dashboards. Market covers sentiment, discussion, smart-retail differences, targets and price; SV focuses on high-SV view shifts, breadth, target revisions, price divergence and historical outcomes.";
 
   useEffect(() => setMounted(true), []);
 
@@ -115,29 +112,29 @@ export function TickerOverviewPanel({
       volume={volume}
       retailSentiment={retailSentiment}
       retailVolume={retailVolume}
-      retailNewcomers={retailNewcomers}
-      kolNewcomers={kolNewcomers}
       overall={overall}
       targetPrices={targetPrices}
       argumentsData={argumentsData}
     />
   );
   const smartVoiceModule = smartVoiceSignals ? (
-    <SmartVoiceTickerSignals data={smartVoiceSignals} board={smartVoice} zh={zh} />
+    <SmartVoiceTickerSignals data={smartVoiceSignals} zh={zh} />
   ) : smartVoice ? (
     <SmartVoiceTickerModule board={smartVoice} zh={zh} />
   ) : null;
+  const activeModule = dashboard === "sv" && smartVoiceModule ? smartVoiceModule : dataModule;
 
   const panelBody = (
     <>
-      {dataModule}
-      {smartVoiceModule && <div className="mt-4">{smartVoiceModule}</div>}
+      {activeModule}
       <p className="mt-3 border-t border-line/70 pt-2 text-[10.5px] text-neutral-600">
-        {smartVoiceSignals
+        {dashboard === "sv" && smartVoiceSignals
           ? (zh
-              ? "SV 聚集、目标价、观点变化、分歧、仓位匹配和历史回测均来自真实 Call、历史时点 SV 与价格结算；整体数据中的早期缺口仍可能使用稳定补全值。"
-              : "SV clusters, targets, opinion changes, divergence, position fit and backtests use real calls, point-in-time SV and price settlements; earlier gaps in the general overview may still use stable fills.")
-          : (zh ? "异动 / 信号 / 风险等模块为演示数据（mock），用于展示模块设计；接入真实管线后替换。" : "Modules use mock demo data to showcase the design; to be wired to the real pipeline.")}
+              ? "SV 转向、变化广度、目标修正、价格-SV 背离和历史验证均来自真实 Call、历史时点 SV 与价格结算；SV 数字描述观点变化，不代表预期收益。"
+              : "SV shift, breadth, target revisions, price-SV divergence and historical validation use real calls, point-in-time SV and price settlements; SV values describe view changes, not expected returns.")
+          : dashboard === "sv"
+            ? (zh ? "该标的暂未生成可用于变化分析的 SV 历史数据。" : "No SV history is available for change analysis on this ticker yet.")
+            : (zh ? "异动 / 信号 / 风险等模块为演示数据（mock），用于展示模块设计；接入真实管线后替换。" : "Modules use mock demo data to showcase the design; to be wired to the real pipeline.")}
       </p>
     </>
   );
@@ -153,6 +150,31 @@ export function TickerOverviewPanel({
             </h2>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            <div className="flex rounded-md bg-elevated/55 p-0.5 ring-1 ring-inset ring-line" role="tablist" aria-label={zh ? "整体数据看板" : "Overview dashboards"}>
+              {([
+                ["market", zh ? "市场数据" : "Market"],
+                ["sv", "SV"],
+              ] as const).map(([value, label]) => {
+                const disabled = value === "sv" && !smartVoiceModule;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    role="tab"
+                    aria-selected={dashboard === value}
+                    disabled={disabled}
+                    onClick={() => setDashboard(value)}
+                    className={`h-7 rounded px-2.5 text-[10.5px] font-semibold transition ${
+                      dashboard === value
+                        ? "bg-reddit/12 text-reddit ring-1 ring-inset ring-reddit/30"
+                        : "text-neutral-500 hover:text-neutral-300 disabled:cursor-not-allowed disabled:opacity-35"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
             <button
               type="button"
               onClick={() => setFull(true)}
@@ -162,9 +184,6 @@ export function TickerOverviewPanel({
             >
               <MaximizeIcon />
             </button>
-            <span className="rounded-md bg-reddit/12 px-2 py-1 text-[11px] font-semibold text-reddit ring-1 ring-inset ring-reddit/25">
-              {zh ? "Overview" : "Overview"}
-            </span>
           </div>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto p-3">
@@ -180,32 +199,51 @@ export function TickerOverviewPanel({
                   <div className="min-w-0">
                     <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-reddit">Prismo</div>
                     <h2 className="mt-0.5 truncate font-display text-[18px] font-extrabold leading-none">
-                      {zh ? "整体数据看板" : "Overview Dashboard"}
+                      {dashboard === "sv"
+                        ? (zh ? "SV 数据看板" : "SV Dashboard")
+                        : (zh ? "市场数据看板" : "Market Dashboard")}
                     </h2>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setFull(false)}
-                    className="inline-flex h-9 items-center gap-2 rounded-md px-3 text-[12px] font-semibold text-neutral-300 ring-1 ring-inset ring-line transition hover:bg-white/[.05] hover:text-cream"
-                  >
-                    <MaximizeIcon minimized />
-                    {zh ? "退出全屏" : "Exit fullscreen"}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <div className="flex rounded-md bg-elevated/55 p-0.5 ring-1 ring-inset ring-line" role="tablist" aria-label={zh ? "整体数据看板" : "Overview dashboards"}>
+                      {([
+                        ["market", zh ? "市场数据" : "Market"],
+                        ["sv", "SV"],
+                      ] as const).map(([value, label]) => (
+                        <button
+                          key={value}
+                          type="button"
+                          role="tab"
+                          aria-selected={dashboard === value}
+                          disabled={value === "sv" && !smartVoiceModule}
+                          onClick={() => setDashboard(value)}
+                          className={`h-8 rounded px-3 text-[11px] font-semibold transition ${
+                            dashboard === value
+                              ? "bg-reddit/12 text-reddit ring-1 ring-inset ring-reddit/30"
+                              : "text-neutral-500 hover:text-neutral-300 disabled:cursor-not-allowed disabled:opacity-35"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setFull(false)}
+                      className="inline-flex h-9 items-center gap-2 rounded-md px-3 text-[12px] font-semibold text-neutral-300 ring-1 ring-inset ring-line transition hover:bg-white/[.05] hover:text-cream"
+                    >
+                      <MaximizeIcon minimized />
+                      {zh ? "退出全屏" : "Exit fullscreen"}
+                    </button>
+                  </div>
                 </div>
                 <div className="min-h-0 overflow-y-auto p-4">
-                  <div className="grid min-h-full gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(460px,0.8fr)]">
-                    <div className="min-w-0 rounded-xl bg-card/50 p-4 ring-1 ring-inset ring-line">
-                      {dataModule}
-                    </div>
-                    <div className="min-w-0">
-                      {smartVoiceModule ? (
-                        smartVoiceModule
-                      ) : (
-                        <div className="rounded-xl bg-card/45 p-6 text-sm text-neutral-600 ring-1 ring-inset ring-line">
-                          {zh ? "暂无 SV 投资者数据" : "No SV investor data"}
-                        </div>
-                      )}
-                    </div>
+                  <div className="min-h-full min-w-0 rounded-xl bg-card/50 p-4 ring-1 ring-inset ring-line">
+                    {dashboard === "sv" && !smartVoiceModule ? (
+                      <div className="grid min-h-[420px] place-items-center text-sm text-neutral-600">
+                        {zh ? "暂无 SV 变化数据" : "No SV change data"}
+                      </div>
+                    ) : activeModule}
                   </div>
                 </div>
               </div>

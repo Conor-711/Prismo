@@ -32,7 +32,7 @@ export function SmartVoicePortfolioRisk({ profiles, ticker, zh }: { profiles: Sv
           <h4 className="text-[10px] font-semibold text-neutral-300">{zh ? "投资组合叙事风险" : "Portfolio thesis risk"}</h4>
           <p className="mt-0.5 text-[8.5px] text-neutral-600">{zh ? "以三只试点标的真实观点视角穿透表面分散" : "Look through ticker diversification using real thesis-lens exposure"}</p>
         </div>
-        <div className="text-right"><div className={`font-mono text-[15px] font-bold ${concentrationTone}`}>{risk.concentration.toFixed(0)}/100</div><div className="text-[8px] text-neutral-600">{zh ? "因子集中" : "factor concentration"}</div></div>
+        <div className="text-right"><div className={`font-mono text-[15px] font-bold ${concentrationTone}`}>{risk.concentration.toFixed(0)}/100</div><div className="text-[8px] text-neutral-600">{zh ? "投资逻辑集中度" : "Thesis concentration"}</div></div>
       </div>
       <div className="grid grid-cols-3 divide-x divide-line/60 border-b border-line/60">
         {PILOT.map((symbol) => (
@@ -53,8 +53,7 @@ export function SmartVoicePortfolioRisk({ profiles, ticker, zh }: { profiles: Sv
             </div>
           ))}
         </div>
-        <div className="mt-3 flex items-center justify-between border-t border-line/60 pt-2 text-[8px] text-neutral-600">
-          <span>{zh ? "有效叙事因子" : "Effective thesis factors"} <b className="font-mono text-neutral-300">{risk.effectiveFactors.toFixed(1)}</b></span>
+        <div className="mt-3 flex items-center justify-end border-t border-line/60 pt-2 text-[8px] text-neutral-600">
           <span>{zh ? "已配置权重" : "Configured"} <b className="font-mono text-neutral-300">{risk.configuredWeight.toFixed(0)}%</b></span>
         </div>
       </div>

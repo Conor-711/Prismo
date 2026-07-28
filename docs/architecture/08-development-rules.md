@@ -29,7 +29,6 @@
 - 标的详情、观点流、目标价、整体数据：`web/features/ticker`。
 - 叙事轮动：`web/features/narrative`。
 - 投资者榜单、作者详情：`web/features/investor`。
-- 区域页：`web/features/region`。
 - 搜索页：`web/features/search`。
 - 追踪页：`web/features/tracking`。
 - Smart Voice 展示：`web/features/smart-voice`。

@@ -4,7 +4,8 @@
   - 买入价位 buy_lo/buy_hi（入场/加仓）
   - 卖出·目标价位 sell_lo/sell_hi（止盈/卖出，**方向性目标价并入此侧**）
 + 操作周期（原话双语 horizon_zh/en + 归一档 short/mid/long）+ price_raw（原话）+ created（下达日）。
-**反臆造**：没明说一律 null；绝不从涨跌幅/情绪/看多看空推断；prompt 喂当前价锚点剔数量级离谱者。
+**反臆造**：没明说一律 null；绝不从涨跌幅/情绪/看多看空推断；prompt 喂当前价锚点，并在
+模型返回后按最新收盘价 0.2–5× band 做确定性剔噪。
 
 覆盖 reddit / x / xueqiu / toss / yahoojp —— 复用 kol_refine 的候选池（近 ~90 天，覆盖时间线窗口）。YouTube 复用
 yt_judgment(target+horizon)。一次 LOW(qwen-flash) 调用。增量：已在 kol_judgment 的 (source,item_id,
@@ -29,6 +30,8 @@ from ..opinions.kol_refine import TEXT_SOURCES, _SRC_LABEL, _load
 
 DEFAULT_PER_SOURCE = 40
 DEFAULT_SINCE_DAYS = 90  # 时间线默认 3 个月 → 候选池也取近 90 天
+PRICE_ANCHOR_MIN_RATIO = 0.2
+PRICE_ANCHOR_MAX_RATIO = 5.0
 
 SYSTEM = (
     "你是金融交易参数抽取器。给定某社区用户/博主关于一只美股的发言（语言可能为中/英/日/韩），"
@@ -104,6 +107,27 @@ def _norm(d: dict | None) -> dict:
         horizon_en=_clean(d.get("horizon_en"), 64),
         horizon_bucket=bucket,
     )
+
+
+def _enforce_price_anchor(n: dict, px: float | None) -> dict:
+    """Reject a whole price side when its range is implausible versus the latest close."""
+    if not px or px <= 0:
+        return n
+    out = dict(n)
+    floor = px * PRICE_ANCHOR_MIN_RATIO
+    ceiling = px * PRICE_ANCHOR_MAX_RATIO
+
+    for side in ("buy", "sell"):
+        lo_key = f"{side}_lo"
+        hi_key = f"{side}_hi"
+        values = [out.get(lo_key), out.get(hi_key)]
+        if any(v is not None and not floor <= v <= ceiling for v in values):
+            out[lo_key] = None
+            out[hi_key] = None
+
+    if out.get("buy_lo") is None and out.get("sell_lo") is None:
+        out["price_raw"] = ""
+    return out
 
 
 def _has_value(n: dict) -> bool:
@@ -204,11 +228,12 @@ def run(sources: list[str] | None = None, per_source: int = DEFAULT_PER_SOURCE,
 
     def _work(r: dict) -> tuple[dict, dict]:
         data = None
+        px = pxmap.get((r["ticker"] or "").upper())
         for _ in range(3):  # LOW 偶发 JSON None/截断 → 重试
-            data = llm.messages_json(llm.LOW, SYSTEM, _user(r, pxmap.get((r["ticker"] or "").upper())), max_tokens=400)
+            data = llm.messages_json(llm.LOW, SYSTEM, _user(r, px), max_tokens=400)
             if isinstance(data, dict):
                 break
-        return r, _norm(data)
+        return r, _enforce_price_anchor(_norm(data), px)
 
     with ThreadPoolExecutor(max_workers=max(1, workers)) as ex:
         futs = [ex.submit(_work, r) for r in plan]

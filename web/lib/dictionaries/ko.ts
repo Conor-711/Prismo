@@ -39,7 +39,6 @@ export const ko: Dictionary = {
     smartVoice: "Smart Voice",
     tickers: "종목",
     investors: "투자자",
-    regions: "지역",
     cnstocks: "중국·홍콩주",
     search: "검색",
     tracking: "관심목록",

@@ -2,17 +2,16 @@ import type { MetadataRoute } from "next";
 import { SITE_URL, BASE_PATH } from "@/lib/site";
 import { publishedLocales } from "@/lib/i18n";
 import { getGrTickerSymbols } from "@/server/queries/globalQueries";
-import { REGION_ORDER } from "@/shared/market/regions";
 import { getNarrativeSlugs } from "@/server/queries/narrativeRotation";
 
 export const dynamic = "force-static";
 
-// Prismo 站点地图：语言 ×（总览/标的/区域/搜索 + 各标的 + 各地区）。
+// Prismo 站点地图：语言 ×（总览/标的/叙事/搜索 + 各标的 + 各叙事）。
 // 标的从 gr_ticker 取；缺数据时只剩静态路由。账号/设置等私有页不收录。
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = `${SITE_URL}${BASE_PATH}`;
   const now = new Date();
-  const staticPaths = ["", "/dashboard", "/narratives", "/tickers", "/regions", "/search"];
+  const staticPaths = ["", "/dashboard", "/narratives", "/tickers", "/search"];
   const symbols = getGrTickerSymbols();
   const narratives = getNarrativeSlugs();
 
@@ -20,9 +19,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
   for (const lang of publishedLocales) {
     for (const p of staticPaths) {
       out.push({ url: `${base}/${lang}${p}/`, lastModified: now, changeFrequency: "daily", priority: p === "" ? 1 : 0.7 });
-    }
-    for (const r of REGION_ORDER) {
-      out.push({ url: `${base}/${lang}/regions/${r}/`, lastModified: now, changeFrequency: "daily", priority: 0.6 });
     }
     for (const n of narratives) {
       out.push({ url: `${base}/${lang}/narratives/${n}/`, lastModified: now, changeFrequency: "daily", priority: 0.6 });

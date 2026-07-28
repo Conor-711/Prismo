@@ -1,4 +1,4 @@
-import { IconGrid, IconTrend, IconLayers, IconStar, IconTrophy, IconDoc, IconPulse } from "./icons";
+import { IconGrid, IconTrend, IconStar, IconTrophy, IconDoc, IconPulse } from "./icons";
 import type { Dictionary } from "@/lib/i18n";
 
 export type NavItem = {
@@ -24,7 +24,6 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/tickers", key: "tickers", Icon: IconTrend },
       { href: "/narratives", key: "narratives", Icon: IconDoc },
       { href: "/investors", key: "investors", Icon: IconTrophy },
-      { href: "/regions", key: "regions", Icon: IconLayers },
       { href: "/tracking", key: "tracking", Icon: IconStar },
     ],
   },

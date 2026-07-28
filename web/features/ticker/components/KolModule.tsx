@@ -5,13 +5,13 @@
 //   └ 叠加面板(OverlayPanel)：净情绪 / 讨论度 / 聪明钱 / 散户 / 股价 叠到同一条日期轴，按开关显隐。
 import { useMemo, useState } from "react";
 import { useLocale } from "@/components/i18n/LocaleProvider";
-import { KOL_NEW_STACK, KOL_VOL_STACK, RETAIL_NEW_STACK, RETAIL_VOL_STACK, type VolStackItem } from "../overallDataConstants";
+import { KOL_VOL_STACK, RETAIL_VOL_STACK, type VolStackItem } from "../overallDataConstants";
 import type { ChartMarker, VolRow } from "../overallDataTypes";
 import { OverlayPanel } from "./OverlayPanel";
 import { TargetPricePanel } from "./TargetPricePanel";
-import { CrowdingChart, ViewpointStanceChart } from "./OverallStructureCharts";
+import { ViewpointStanceChart } from "./OverallStructureCharts";
 import type { KolCandle, KolTargetData } from "@/shared/market/mockDetail";
-import type { DailyNet, DailyVol, KolNew, RetailVol, RetailNew, WindowedArguments } from "@/server/queries/kolQueries";
+import type { DailyNet, DailyVol, RetailVol, WindowedArguments } from "@/server/queries/kolQueries";
 import type { OverallData, AnomalyMetric, Divergence, SentStance } from "@/server/queries/overallData";
 
 type Cohort = "kol" | "retail";
@@ -122,15 +122,13 @@ function extendPrice(rows: Array<{ day: string; close: number }> | undefined, da
 }
 
 export function KolModule({
-  flowDays, sentiment, volume, retailSentiment, retailVolume, retailNewcomers, kolNewcomers, overall, targetPrices, argumentsData,
+  flowDays, sentiment, volume, retailSentiment, retailVolume, overall, targetPrices, argumentsData,
 }: {
   flowDays: KolCandle[];
   sentiment?: DailyNet[];
   volume?: DailyVol[];
   retailSentiment?: DailyNet[];
   retailVolume?: RetailVol[];
-  retailNewcomers?: RetailNew[];
-  kolNewcomers?: KolNew[];
   overall?: OverallData | null;
   targetPrices?: KolTargetData;
   argumentsData?: WindowedArguments;
@@ -139,8 +137,8 @@ export function KolModule({
   const zh = lang === "zh";
   const [cohort, setCohort] = useState<Cohort>("kol");
   const latestDay = useMemo(
-    () => latestDayOf(flowDays, sentiment, volume, retailSentiment, retailVolume, retailNewcomers, kolNewcomers, overall?.divergence?.series) || "2026-06-22",
-    [flowDays, sentiment, volume, retailSentiment, retailVolume, retailNewcomers, kolNewcomers, overall?.divergence?.series]
+    () => latestDayOf(flowDays, sentiment, volume, retailSentiment, retailVolume, overall?.divergence?.series) || "2026-06-22",
+    [flowDays, sentiment, volume, retailSentiment, retailVolume, overall?.divergence?.series]
   );
   const yearDays = useMemo(() => enumerateDays(dayShift(latestDay, -(YEAR_DAYS - 1)), latestDay), [latestDay]);
   const salt = useMemo(() => hash01(`${flowDays[0]?.close ?? 0}:${flowDays.at(-1)?.close ?? 0}:${latestDay}`) * 9 + 1, [flowDays, latestDay]);
@@ -155,11 +153,8 @@ export function KolModule({
   const curSentiment: DailyNet[] = isRetail ? retailSentiment ?? [] : sentiment ?? [];
   const curVolume: VolRow[] = isRetail ? (retailVolume ?? []) : (volume ?? []);
   const curVolStack: VolStackItem[] = isRetail ? RETAIL_VOL_STACK : KOL_VOL_STACK;
-  const curNewcomers: VolRow[] = isRetail ? (retailNewcomers ?? []) : (kolNewcomers ?? []);
-  const curNewStack: VolStackItem[] = isRetail ? RETAIL_NEW_STACK : KOL_NEW_STACK;
   const yearSentiment = useMemo(() => extendSentiment(curSentiment, yearDays, salt + (isRetail ? 1 : 0)), [curSentiment, yearDays, salt, isRetail]);
   const yearVolume = useMemo(() => extendVolume(curVolume, yearDays, curVolStack, salt + (isRetail ? 2 : 0)), [curVolume, yearDays, curVolStack, salt, isRetail]);
-  const yearNewcomers = useMemo(() => extendVolume(curNewcomers, yearDays, curNewStack, salt + (isRetail ? 4 : 3)), [curNewcomers, yearDays, curNewStack, salt, isRetail]);
   const yearPrice = useMemo(() => extendPrice(flowDays, yearDays, salt), [flowDays, yearDays, salt]);
 
   // 异动标记（金 ⚑ + AI 归因）仅 KOL 口径——归因基于 KOL 序列；切到整体散户时隐藏。
@@ -214,8 +209,7 @@ export function KolModule({
         volMarkers={volMarkers}
       />
 
-      <div className="mt-3 grid gap-3 xl:grid-cols-2">
-        <CrowdingChart newcomers={yearNewcomers} volume={yearVolume} stack={curNewStack} zh={zh} />
+      <div className="mt-3">
         <ViewpointStanceChart data={argumentsData} zh={zh} />
       </div>
 

@@ -56,6 +56,7 @@ from .youtube_transcript_calls import (
     extract_from_transcript,
     transcript_document,
 )
+from .x_call_policy import X_CALL_POLICY_VERSION, enforce_x_policy
 
 
 ROOT = PROJECT_ROOT
@@ -217,11 +218,18 @@ SV_SYSTEM = (
     "Judge only the specified ticker, but first understand whether the post is a single-ticker call, "
     "a basket/sector thesis, a pair trade, a portfolio update, a retrospective, or merely context. "
     "Do not decide whether the call was correct. "
-    "If the content is news, a joke, a repost, a retrospective brag, a pure chart note without direction, "
-    "or only mentions the ticker in a watchlist with no directional implication, mark it non-actionable. "
+    "An actionable X call must be the POST AUTHOR'S OWN forward-looking directional forecast, explicit "
+    "position action, or directional risk-management action for the specified ticker. "
+    "News reporting, market briefs, past price-move recaps, corporate announcements, earnings-result recaps, "
+    "gainer/loser lists, analyst targets, quoted third-party views, jokes, reposts, retrospective brags, "
+    "pure chart observations without direction, and watchlist mentions are non-actionable. "
+    "Never turn a historical move such as 'AMD surged on a partnership' into a bullish forecast. "
+    "Never treat a current price, reported analyst target, or price printed in market data as the author's target. "
     "If the specified ticker is only a comparison, ecosystem reference, or context mention, mark it non-actionable "
     "or set ticker_role to context/comparison/excluded. "
     "If it contains a conditional trade plan, it can be actionable if direction is clear. "
+    "For every actionable call, evidence_span must be a short VERBATIM quote from the post that itself expresses "
+    "the author's forecast or position action. If no such exact quote exists, mark it non-actionable. "
     "Return strict JSON only with these fields: "
     "{\"is_actionable_call\":boolean,\"direction\":\"bull|bear|neutral\","
     "\"horizon_bucket\":\"1D|5D|20D|60D|90D|180D|unknown\",\"horizon_explicit\":boolean,"
@@ -239,12 +247,41 @@ SV_SYSTEM = (
     "\"trigger_condition\":\"short trigger condition if any else empty\","
     "\"invalidation_condition\":\"short invalidation condition if any else empty\","
     "\"evidence_span\":\"short original quote supporting this ticker call\","
+    "\"statement_mode\":\"prediction|position_action|risk_management|education|news|retrospective|other\","
+    "\"instrument_scope\":\"stock|options|portfolio|other\","
+    "\"option_strategy\":\"none|covered_call|protective_put|cash_secured_put|speculative_call|speculative_put|spread|other\","
+    "\"underlying_direction\":\"bull|bear|neutral|unknown\","
+    "\"call_owner\":\"post_author|named_guest|quoted_third_party|unknown\","
+    "\"host_endorsement\":\"explicit|implicit|none|opposes\","
     "\"summary_zh\":\"short Chinese summary\",\"summary_en\":\"short English summary\","
     "\"exclusion_reason\":\"short reason if non-actionable else empty\"}. "
     "Scoring fields are 0..1. evidence_score measures reasoning/data quality, not correctness. "
     "specificity_score measures explicit ticker/target/entry/condition/horizon detail. "
     "ticker_relevance is 0..1 and should be low if the ticker is one of many basket members. "
     "Simple but clear calls are valid. Detailed wrongness is not judged here."
+)
+
+SV_X_AUDIT_SYSTEM = (
+    "You audit existing X/Twitter Smart Voice calls for attribution errors. "
+    "The previous extraction is untrusted. A call survives only when the POST AUTHOR personally makes a "
+    "forward-looking bull/bear forecast, states an actual position action, or gives directional risk management "
+    "for the specified ticker. News reporting, market briefs, historical price recaps, company announcements, "
+    "earnings recaps, analyst targets, quoted views, and lists of movers are not the author's call. "
+    "For example, 'AMD surged on an OpenAI partnership' is past news and must be rejected. "
+    "Do not infer a forecast from positive or negative facts. The evidence_span must be a short exact verbatim "
+    "substring of the supplied post that itself proves the author-owned direction. "
+    "Return strict JSON only: {\"items\":[{"
+    "\"candidate_id\":\"exact supplied id\","
+    "\"is_author_owned_call\":boolean,"
+    "\"direction\":\"bull|bear|neutral\","
+    "\"statement_mode\":\"prediction|position_action|risk_management|education|news|retrospective|other\","
+    "\"call_owner\":\"post_author|quoted_third_party|unknown\","
+    "\"call_type\":\"single_ticker_call|basket_call|pair_trade|sector_call|portfolio_update|retrospective|context_mention\","
+    "\"ticker_role\":\"primary|basket_member|context|comparison|excluded\","
+    "\"evidence_span\":\"exact quote or empty\","
+    "\"target_price_is_authored\":boolean,"
+    "\"exclusion_reason\":\"short reason when rejected\"}]}. "
+    "Return one item for every supplied candidate_id and preserve each id exactly."
 )
 
 TICKER_NARRATIVE: dict[str, str] = {
@@ -637,6 +674,19 @@ def youtube_candidate_eligibility_predicate(
 
 def sv_extract_provider_order() -> list[str]:
     raw = os.environ.get("SV_EXTRACT_PROVIDERS", "qwen,deepseek,gemini")
+    providers: list[str] = []
+    for item in raw.split(","):
+        provider = item.strip().lower()
+        if provider in {"qwen", "deepseek", "gemini"} and provider not in providers:
+            providers.append(provider)
+    return providers or ["qwen", "deepseek", "gemini"]
+
+
+def sv_audit_provider_order() -> list[str]:
+    raw = os.environ.get(
+        "SV_AUDIT_PROVIDERS",
+        os.environ.get("SV_EXTRACT_PROVIDERS", "qwen,deepseek,gemini"),
+    )
     providers: list[str] = []
     for item in raw.split(","):
         provider = item.strip().lower()
@@ -1745,7 +1795,9 @@ def normalize_call(data: Any) -> dict[str, Any]:
     if underlying_direction not in {"bull", "bear", "neutral", "unknown"}:
         underlying_direction = "unknown"
     call_owner = str(d.get("call_owner") or "unknown").strip().lower()
-    if call_owner not in {"channel_host", "named_guest", "quoted_third_party", "unknown"}:
+    if call_owner not in {
+        "post_author", "channel_host", "named_guest", "quoted_third_party", "unknown",
+    }:
         call_owner = "unknown"
     host_endorsement = str(d.get("host_endorsement") or "none").strip().lower()
     if host_endorsement not in {"explicit", "implicit", "none", "opposes"}:
@@ -2515,7 +2567,9 @@ def extract_calls(
                 data = sv_extract_messages_json(provider, system, prompt, max_tokens)
                 if isinstance(data, dict):
                     return data, sv_extract_model_label(provider)
-        return None, provider_labels[-1]
+        raise RuntimeError(
+            "all Smart Voice extraction providers failed to return valid JSON"
+        )
 
     def work(row: sqlite3.Row) -> tuple[sqlite3.Row, dict[str, Any], str]:
         if str(row["source"] or "x") == "youtube":
@@ -2533,8 +2587,12 @@ def extract_calls(
             )
             model = "+".join(dict.fromkeys(used_models)) or provider_labels[-1]
             return row, norm, model
-        data, model = request_with_fallback(SV_SYSTEM, user_prompt(row), 520)
-        return row, normalize_call(data), model
+        data, model = request_with_fallback(SV_SYSTEM, user_prompt(row), 1_200)
+        norm = normalize_call(data)
+        norm["ticker"] = str(row["ticker"] or "").upper()
+        norm = enforce_x_policy(norm, str(row["text"] or ""))
+        norm.pop("ticker", None)
+        return row, norm, model
 
     def flush() -> None:
         nonlocal done, actionable
@@ -2563,6 +2621,225 @@ def extract_calls(
     flush()
     print(f"[sv-v0] extraction done={done} actionable={actionable} fail={fail}", flush=True)
     return done
+
+
+def _x_audit_prompt(rows: list[sqlite3.Row]) -> str:
+    items = []
+    for row in rows:
+        items.append(
+            {
+                "candidate_id": str(row["candidate_id"]),
+                "ticker": str(row["ticker"]),
+                "created_at": str(row["created_at"] or ""),
+                "previous_direction": str(row["direction"] or ""),
+                "previous_target_price": row["target_price"],
+                "previous_summary": str(row["summary_en"] or row["summary_zh"] or ""),
+                "post_text": str(row["source_text"] or "")[:2400],
+            }
+        )
+    return (
+        "Audit every item independently. Previous labels are hints only and may be false positives.\n"
+        + json.dumps(items, ensure_ascii=False, separators=(",", ":"))
+    )
+
+
+def _x_audit_items(data: Any, rows: list[sqlite3.Row]) -> dict[str, dict[str, Any]] | None:
+    if not isinstance(data, dict) or not isinstance(data.get("items"), list):
+        return None
+    expected = {str(row["candidate_id"]) for row in rows}
+    parsed: dict[str, dict[str, Any]] = {}
+    for item in data["items"]:
+        if not isinstance(item, dict):
+            continue
+        candidate_id = str(item.get("candidate_id") or "")
+        if candidate_id in expected:
+            parsed[candidate_id] = item
+    return parsed if set(parsed) == expected else None
+
+
+def audit_x_calls(
+    con: sqlite3.Connection,
+    limit: int,
+    workers: int,
+    force: bool,
+    tickers: set[str] | None = None,
+    batch_size: int = 10,
+) -> int:
+    """Batch-audit every active X call for author ownership and verbatim evidence."""
+    batch_size = max(
+        1,
+        int(os.environ.get("SV_AUDIT_BATCH_SIZE", str(batch_size)) or batch_size),
+    )
+    providers = [
+        provider
+        for provider in sv_audit_provider_order()
+        if sv_extract_provider_available(provider)
+    ]
+    if not providers:
+        print("[sv-v0] no configured provider for X call audit.", flush=True)
+        return 0
+
+    clauses = ["s.source='x'", "s.is_actionable_call=1"]
+    params: list[Any] = []
+    if not force:
+        clauses.append("COALESCE(s.model,'') NOT LIKE ?")
+        params.append(f"audit:{X_CALL_POLICY_VERSION}:%")
+    if tickers:
+        placeholders = ",".join("?" for _ in tickers)
+        clauses.append(f"s.ticker IN ({placeholders})")
+        params.extend(sorted(tickers))
+    sql = (
+        "SELECT s.*, c.text AS source_text "
+        "FROM sv_call s JOIN sv_call_candidate c ON c.candidate_id=s.candidate_id "
+        f"WHERE {' AND '.join(clauses)} "
+        "ORDER BY s.created_at, s.candidate_id"
+    )
+    if limit > 0:
+        sql += " LIMIT ?"
+        params.append(limit)
+    rows = list(con.execute(sql, params))
+    if not rows:
+        print("[sv-v0] no X calls need ownership audit.", flush=True)
+        return 0
+
+    batches = [rows[i : i + max(1, batch_size)] for i in range(0, len(rows), max(1, batch_size))]
+    labels = [sv_extract_model_label(provider) for provider in providers]
+    print(
+        f"[sv-v0] auditing {len(rows)} active X calls in {len(batches)} batches "
+        f"with {' -> '.join(labels)} workers={workers}",
+        flush=True,
+    )
+
+    def request_batch(batch: list[sqlite3.Row]) -> tuple[list[sqlite3.Row], dict[str, dict[str, Any]], str]:
+        prompt = _x_audit_prompt(batch)
+        for provider in providers:
+            for _ in range(2):
+                data = sv_extract_messages_json(
+                    provider,
+                    SV_X_AUDIT_SYSTEM,
+                    prompt,
+                    max(4_000, batch_size * 220),
+                )
+                parsed = _x_audit_items(data, batch)
+                if parsed is not None:
+                    return batch, parsed, sv_extract_model_label(provider)
+        raise RuntimeError("all Smart Voice audit providers failed to return a complete batch")
+
+    audited = kept = rejected = fail = 0
+    pending_updates: list[tuple[sqlite3.Row, dict[str, Any], str]] = []
+
+    def flush() -> None:
+        nonlocal audited, kept, rejected
+        if not pending_updates:
+            return
+        for row, audit, model_label in pending_updates:
+            base = dict(row)
+            base.update(
+                {
+                    "is_actionable_call": bool(audit.get("is_author_owned_call")),
+                    "direction": str(audit.get("direction") or "neutral"),
+                    "statement_mode": str(audit.get("statement_mode") or "other"),
+                    "call_owner": str(audit.get("call_owner") or "unknown"),
+                    "call_type": str(audit.get("call_type") or row["call_type"] or ""),
+                    "ticker_role": str(audit.get("ticker_role") or row["ticker_role"] or ""),
+                    "evidence_span": str(audit.get("evidence_span") or ""),
+                    "exclusion_reason": str(audit.get("exclusion_reason") or ""),
+                    "target_price": (
+                        row["target_price"]
+                        if bool(audit.get("target_price_is_authored"))
+                        else None
+                    ),
+                    "target_price_owner": (
+                        str(row["ticker"]) if bool(audit.get("target_price_is_authored")) else ""
+                    ),
+                }
+            )
+            norm = normalize_call(base)
+            norm["ticker"] = str(row["ticker"] or "").upper()
+            norm = enforce_x_policy(norm, str(row["source_text"] or ""))
+            norm.pop("ticker", None)
+            is_kept = int(norm["is_actionable_call"])
+            old_model = str(row["model"] or "")
+            audit_model = f"audit:{X_CALL_POLICY_VERSION}:{model_label}|base:{old_model}"[:240]
+            con.execute(
+                """UPDATE sv_call
+                      SET is_actionable_call=?, direction=?, horizon_bucket=?, horizon_explicit=?,
+                          target_price=?, conviction_score=?, evidence_score=?, specificity_score=?,
+                          call_weight=?, call_type=?, ticker_role=?, ticker_relevance=?,
+                          target_price_owner=?, investor_style=?, call_structure=?, lifecycle_action=?,
+                          affected_direction=?, entry_status=?, trigger_condition=?,
+                          invalidation_condition=?, evidence_span=?, statement_mode=?, instrument_scope=?,
+                          option_strategy=?, underlying_direction=?, call_owner=?, host_endorsement=?,
+                          scoring_version=?, exclusion_reason=?, model=?, tagged_at=?
+                    WHERE candidate_id=?""",
+                (
+                    norm["is_actionable_call"],
+                    norm["direction"],
+                    norm["horizon_bucket"],
+                    norm["horizon_explicit"],
+                    norm["target_price"],
+                    norm["conviction_score"],
+                    norm["evidence_score"],
+                    norm["specificity_score"],
+                    norm["call_weight"],
+                    norm["call_type"],
+                    norm["ticker_role"],
+                    norm["ticker_relevance"],
+                    norm["target_price_owner"],
+                    norm["investor_style"],
+                    norm["call_structure"],
+                    norm["lifecycle_action"],
+                    norm["affected_direction"],
+                    norm["entry_status"],
+                    norm["trigger_condition"],
+                    norm["invalidation_condition"],
+                    norm["evidence_span"],
+                    norm["statement_mode"],
+                    norm["instrument_scope"],
+                    norm["option_strategy"],
+                    norm["underlying_direction"],
+                    norm["call_owner"],
+                    norm["host_endorsement"],
+                    norm["scoring_version"],
+                    norm["exclusion_reason"],
+                    audit_model,
+                    utc_now(),
+                    row["candidate_id"],
+                ),
+            )
+            kept += is_kept
+            rejected += 1 - is_kept
+            audited += 1
+        con.commit()
+        pending_updates.clear()
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, workers)) as pool:
+        futures = [pool.submit(request_batch, batch) for batch in batches]
+        for i, future in enumerate(concurrent.futures.as_completed(futures), 1):
+            try:
+                batch, parsed, model_label = future.result()
+                for row in batch:
+                    pending_updates.append((row, parsed[str(row["candidate_id"])], model_label))
+            except Exception as exc:  # noqa: BLE001
+                fail += 1
+                if fail <= 8:
+                    print(f"  [sv-v0] audit failed: {str(exc)[:120]}", flush=True)
+            if len(pending_updates) >= 80:
+                flush()
+            if i % 50 == 0:
+                print(
+                    f"  [sv-v0] audited batches {i}/{len(batches)} "
+                    f"rows={audited}+buf{len(pending_updates)} kept={kept} "
+                    f"rejected={rejected} failed_batches={fail}",
+                    flush=True,
+                )
+    flush()
+    print(
+        f"[sv-v0] X audit done={audited} kept={kept} rejected={rejected} "
+        f"failed_batches={fail}",
+        flush=True,
+    )
+    return audited
 
 
 def load_prices(con: sqlite3.Connection) -> dict[str, list[tuple[str, float]]]:
@@ -3967,7 +4244,12 @@ def export_json(con: sqlite3.Connection) -> None:
 
     distribution = distribution_for(all_rows)
 
-    def serialize_investor(r: sqlite3.Row, platform_rank: int | None = None) -> dict[str, Any]:
+    def serialize_investor(
+        r: sqlite3.Row,
+        platform_rank: int | None = None,
+        *,
+        compact: bool = False,
+    ) -> dict[str, Any]:
         handle = str(r["handle"] or "")
         source = str(r["source"] or "x")
         investor_id = str(r["investor_id"] or "")
@@ -3980,7 +4262,8 @@ def export_json(con: sqlite3.Connection) -> None:
         n_eff_delta = round(float(r["n_eff"] or 0) - float(prev["n_eff"] or 0), 1) if prev else None
         settled_delta = int(r["settled_calls"] or 0) - int(prev["settled_calls"] or 0) if prev else None
         avatar, url = investor_profile_assets(source, investor_id, handle)
-        return {
+        concentration = json.loads(r["concentration_json"] or "{}")
+        item = {
             "id": public_id,
             "rank": int(r["rank_no"] or 0),
             "platformRank": platform_rank,
@@ -4003,18 +4286,48 @@ def export_json(con: sqlite3.Connection) -> None:
             "activeDays": int(r["active_days"] or 0),
             "coveredTickers": int(r["covered_tickers"] or 0),
             "topTickers": json.loads(r["top_tickers_json"] or "[]"),
-            "topNarratives": json.loads(r["top_narratives_json"] or "[]"),
             "platformScores": json.loads(r["platform_scores_json"] or "{}"),
             "horizonScores": json.loads(r["horizon_scores_json"] or "{}"),
-            "narrativeScores": json.loads(r["narrative_scores_json"] or "{}"),
-            "tickerScores": json.loads(r["ticker_scores_json"] or "{}"),
-            "concentration": json.loads(r["concentration_json"] or "{}"),
+            "concentration": (
+                {"dominantInvestorType": concentration.get("dominantInvestorType")}
+                if compact
+                else concentration
+            ),
             "rationaleZh": r["rationale_zh"] or "",
             "rationaleEn": r["rationale_en"] or "",
         }
+        if not compact:
+            item.update(
+                {
+                    "topNarratives": json.loads(r["top_narratives_json"] or "[]"),
+                    "narrativeScores": json.loads(r["narrative_scores_json"] or "{}"),
+                    "tickerScores": json.loads(r["ticker_scores_json"] or "{}"),
+                }
+            )
+        return item
 
-    investors = [serialize_investor(r) for r in rows]
-    bottom_investors = [serialize_investor(r) for r in all_rows[-decile_count:]]
+    investor_index: dict[str, dict[str, Any]] = {}
+
+    def index_investor(
+        row: sqlite3.Row,
+        platform_rank: int | None = None,
+        observation_rank: int | None = None,
+        *,
+        compact: bool = False,
+    ) -> str:
+        item = serialize_investor(row, platform_rank, compact=compact)
+        investor_id = str(item["id"])
+        existing = investor_index.get(investor_id)
+        if existing is None or not compact:
+            if existing:
+                item = {**existing, **item}
+            investor_index[investor_id] = item
+        if observation_rank is not None:
+            investor_index[investor_id]["observationRank"] = observation_rank
+        return investor_id
+
+    investor_ids = [index_investor(r) for r in rows]
+    bottom_investor_ids = [index_investor(r) for r in all_rows[-decile_count:]]
     platform_bands: dict[str, dict[str, Any]] = {}
     for source in ("x", "youtube", "reddit", "xueqiu", "toss"):
         band = rank_platform_band_rows(all_rows, source)
@@ -4031,14 +4344,23 @@ def export_json(con: sqlite3.Connection) -> None:
             for index, row in enumerate(observed_rows, 1)
         }
 
-        def serialize_platform_rows(platform_rows: list[sqlite3.Row]) -> list[dict[str, Any]]:
-            serialized: list[dict[str, Any]] = []
+        def index_platform_rows(
+            platform_rows: list[sqlite3.Row],
+            *,
+            compact_unqualified: bool = False,
+        ) -> list[str]:
+            indexed: list[str] = []
             for row in platform_rows:
                 investor_id = str(row["investor_id"])
-                item = serialize_investor(row, platform_ranks.get(investor_id))
-                item["observationRank"] = observation_ranks.get(investor_id)
-                serialized.append(item)
-            return serialized
+                indexed.append(
+                    index_investor(
+                        row,
+                        platform_ranks.get(investor_id),
+                        observation_ranks.get(investor_id),
+                        compact=compact_unqualified and investor_id not in platform_ranks,
+                    )
+                )
+            return indexed
 
         top25_rows = band.pop("top25Rows")
         bottom25_rows = band.pop("bottom25Rows")
@@ -4050,16 +4372,17 @@ def export_json(con: sqlite3.Connection) -> None:
             "distribution": distribution_for(ranked_rows, source),
             "top25Threshold": round(platform_score_value(top25_rows[-1], source), 1) if top25_rows else 0,
             "bottom25Threshold": round(platform_score_value(bottom25_rows[-1], source), 1) if bottom25_rows else 0,
-            "ranked": serialize_platform_rows(ranked_rows),
-            "observed": serialize_platform_rows(observed_rows),
-            "top10": serialize_platform_rows(top10_rows),
-            "bottom10": serialize_platform_rows(bottom10_rows),
-            "top25": serialize_platform_rows(top25_rows),
-            "bottom25": serialize_platform_rows(bottom25_rows),
+            "rankedIds": index_platform_rows(ranked_rows),
+            "observedIds": index_platform_rows(observed_rows, compact_unqualified=True),
+            "top10Ids": index_platform_rows(top10_rows),
+            "bottom10Ids": index_platform_rows(bottom10_rows),
+            "top25Ids": index_platform_rows(top25_rows),
+            "bottom25Ids": index_platform_rows(bottom25_rows),
         }
-    by_source: dict[str, list[dict[str, Any]]] = collections.defaultdict(list)
-    for source, band in platform_bands.items():
-        by_source[source] = list(band["top25"])
+    source_top25_ids = {
+        source: list(band["top25Ids"])
+        for source, band in platform_bands.items()
+    }
     current = [
         {"key": "semis", **NARRATIVE_LABELS["semis"], "weight": 34},
         {"key": "ai_infra", **NARRATIVE_LABELS["ai_infra"], "weight": 24},
@@ -4067,7 +4390,7 @@ def export_json(con: sqlite3.Connection) -> None:
         {"key": "crypto", **NARRATIVE_LABELS["crypto"], "weight": 10},
     ]
     payload = {
-        "version": 7,
+        "version": 8,
         "scoringVersion": SV_RANKING_VERSION,
         "callScoringVersion": SV_SCORING_VERSION,
         "scoreSemantics": {
@@ -4078,21 +4401,21 @@ def export_json(con: sqlite3.Connection) -> None:
         },
         "updatedAt": utc_now()[:10],
         "totalInvestors": len(all_rows),
-        "exportedInvestors": len(investors) + len(bottom_investors),
+        "exportedInvestors": len(investor_ids) + len(bottom_investor_ids),
         "distribution": distribution,
+        "investorIndex": investor_index,
         "platformBands": platform_bands,
-        "investors": investors,
-        "bottomInvestors": bottom_investors,
-        "x": by_source.get("x", []),
-        "reddit": by_source.get("reddit", []),
-        "youtube": by_source.get("youtube", []),
-        "xueqiu": by_source.get("xueqiu", []),
-        "toss": by_source.get("toss", []),
+        "investorIds": investor_ids,
+        "bottomInvestorIds": bottom_investor_ids,
+        "sourceTop25Ids": source_top25_ids,
         "currentNarratives": current,
     }
     EXPORT.parent.mkdir(parents=True, exist_ok=True)
-    EXPORT.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"[sv-v0] exported {len(investors)} investors -> {EXPORT}", flush=True)
+    EXPORT.write_text(
+        json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
+        encoding="utf-8",
+    )
+    print(f"[sv-v0] exported {len(investor_ids)} investors -> {EXPORT}", flush=True)
 
 
 def run(args: argparse.Namespace) -> None:
@@ -4183,6 +4506,14 @@ def run(args: argparse.Namespace) -> None:
             youtube_created_since=youtube_created_since,
             reddit_created_since=reddit_created_since,
         )
+    if "audit" in stages:
+        audit_x_calls(
+            con,
+            args.extract_limit,
+            args.workers,
+            args.force,
+            tickers=only,
+        )
     if "settle" in stages:
         settle_calls(con)
     if "score" in stages:
@@ -4198,7 +4529,7 @@ def run(args: argparse.Namespace) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Smart Voice v0 hybrid scorer")
-    ap.add_argument("--stage", choices=["candidates", "transcripts", "extract", "settle", "score", "export", "all"], default="all")
+    ap.add_argument("--stage", choices=["candidates", "transcripts", "extract", "audit", "settle", "score", "export", "all"], default="all")
     ap.add_argument("--source", default="x", help="Comma-separated source subset: x,youtube,reddit,xueqiu,toss,all. Default keeps legacy X-only behavior.")
     ap.add_argument("--candidate-limit", type=int, default=50_000, help="0 means insert all recalled candidates.")
     ap.add_argument("--extract-limit", type=int, default=1_000, help="0 means all pending candidates.")

@@ -24,7 +24,7 @@ shared/
 - `market/TickerLogo.tsx`：跨页面标的 logo 展示，包含 CDN 失败回退。
 - `market/tickerMeta.ts`：标的交易所、TradingView symbol 和 logo CDN 元信息。
 - `market/regions.ts`：五区顺序、展示名、来源平台和强调色。
-- `market/mockDetail.ts`：兼容聚合导出；`market/mockDetail/marketMock.ts` 保存标的/地区 fallback，`kolTypes.ts` 保存 KOL 观点类型，`kolFlowMock.ts` 保存 KOL mock 流。
+- `market/mockDetail.ts`：兼容聚合导出；`market/mockDetail/marketMock.ts` 保存标的 fallback，`kolTypes.ts` 保存 KOL 观点类型，`kolFlowMock.ts` 保存 KOL mock 流。
 - `charts/PriceSparkline.tsx`：跨页面迷你价格走势折线图。
 - `layout/ViewportWorkspace.tsx`：固定视窗工作区布局，负责禁止页面整体滚动并按视窗高度约束内容区。
 - `ui/prismoBits.tsx`：跨页面 KPI、情绪分、共识、区域、多空条、价格标签等纯展示件。

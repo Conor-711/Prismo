@@ -4,7 +4,6 @@ import { getSmartVoiceBoard } from "@/features/smart-voice";
 import {
   getGrMeta,
   getGrQuotes,
-  getGrRegionSummary,
   getGrTickerRegions,
   getGrTickers,
 } from "@/server/queries/globalQueries";
@@ -15,8 +14,8 @@ export function generateMetadata({ params }: { params: { lang: string } }): Meta
   return {
     title: zh ? "总览看板 · Prismo" : "Overview · Prismo",
     description: zh
-      ? "跨社区美股舆情、地区情绪与 Smart Voice 的统一总览看板。"
-      : "A unified overview of cross-community US-stock sentiment, regional mood and Smart Voice.",
+      ? "跨社区美股舆情、市场信号与 Smart Voice 的统一总览看板。"
+      : "A unified overview of cross-community US-stock sentiment, market signals and Smart Voice.",
   };
 }
 
@@ -26,7 +25,6 @@ export default function Overview({ params }: { params: { lang: string } }) {
     meta: getGrMeta(),
     tickers: getGrTickers(),
     cells: getGrTickerRegions(),
-    summary: getGrRegionSummary(),
     quotes: getGrQuotes(),
     svBoard: getSmartVoiceBoard(),
   });

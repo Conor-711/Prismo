@@ -10,11 +10,9 @@ import type {
 } from "@/features/smart-voice/svLeaderboardData";
 import { Avatar, SOURCE } from "@/shared/market/kolPresentation";
 import { fmtCompact } from "@/shared/formatting/format";
-import type {
-  SmartVoiceRepresentativeCall,
-  SmartVoiceRepresentativeEvidenceMap,
-} from "@/server/queries/smartVoiceInvestorQueries";
+import type { SmartVoiceRepresentativeEvidenceBundle } from "@/server/queries/smartVoiceInvestorQueries";
 import { confidenceLabel, sourceLabel, svTone } from "./SmartVoicePrimitives";
+import { SmartVoiceRepresentativeChart } from "./SmartVoiceRepresentativeChart";
 
 type Platform = "all" | "x" | "youtube" | "reddit" | "xueqiu";
 type Band = "all" | "observed" | "top" | "bottom";
@@ -54,96 +52,6 @@ function uniqueInvestors(investors: SmartVoiceLeaderboardInvestor[]) {
   return [...new Map(investors.map((investor) => [investor.id, investor])).values()];
 }
 
-function signed(value: number, digits = 1) {
-  return `${value >= 0 ? "+" : ""}${value.toFixed(digits)}`;
-}
-
-function directionLabel(direction: SmartVoiceRepresentativeCall["direction"], zh: boolean) {
-  if (direction === "bull") return zh ? "看多" : "Bull";
-  if (direction === "bear") return zh ? "看空" : "Bear";
-  return zh ? "中性" : "Neutral";
-}
-
-function directionTone(direction: SmartVoiceRepresentativeCall["direction"]) {
-  if (direction === "bull") return "text-bull bg-bull/10 ring-bull/20";
-  if (direction === "bear") return "text-bear bg-bear/10 ring-bear/20";
-  return "text-neutral-400 bg-white/[.04] ring-white/[.08]";
-}
-
-function directionalReturn(call: SmartVoiceRepresentativeCall) {
-  if (call.excessReturnPct == null) return null;
-  return (call.direction === "bear" ? -call.excessReturnPct : call.excessReturnPct) * 100;
-}
-
-function RepresentativeWork({
-  calls,
-  weak,
-  zh,
-}: {
-  calls: SmartVoiceRepresentativeCall[];
-  weak: boolean;
-  zh: boolean;
-}) {
-  if (!calls.length) return null;
-  return (
-    <section className="border-t border-line pt-3">
-      <div className="flex items-center justify-between gap-3">
-        <h3 className="text-[10px] font-semibold uppercase tracking-[0.1em] text-neutral-500">
-          {zh ? "代表作" : "Representative calls"}
-        </h3>
-        <span className={`text-[9.5px] font-semibold ${weak ? "text-bear" : "text-bull"}`}>
-          {weak ? (zh ? "主要扣分" : "Largest misses") : (zh ? "主要加分" : "Largest wins")}
-        </span>
-      </div>
-      <div className="mt-2 space-y-2">
-        {calls.map((call) => {
-          const summary = (zh ? call.summaryZh : call.summaryEn) || call.summaryZh || call.summaryEn;
-          const performance = directionalReturn(call);
-          const body = (
-            <>
-              <div className="flex items-center gap-1.5">
-                <span className="font-mono text-[11px] font-bold text-cream">{call.ticker}</span>
-                <span className={`rounded px-1.5 py-0.5 text-[9px] font-semibold ring-1 ring-inset ${directionTone(call.direction)}`}>
-                  {directionLabel(call.direction, zh)}
-                </span>
-                <span className="font-mono text-[9.5px] text-neutral-600">{call.horizon}</span>
-                <span className={`ml-auto font-mono text-[11px] font-bold ${weak ? "text-bear" : "text-bull"}`}>
-                  SV {signed(call.contribution, 2)}
-                </span>
-              </div>
-              <p className="mt-1 line-clamp-2 text-[10.5px] leading-[1.45] text-neutral-400">{summary}</p>
-              <div className="mt-1.5 flex items-center gap-2 font-mono text-[9px] text-neutral-600">
-                <span>{call.entryDay || call.day}{call.exitDay ? ` → ${call.exitDay}` : ""}</span>
-                {performance != null ? (
-                  <span className={performance >= 0 ? "text-bull/80" : "text-bear/80"}>
-                    {zh ? "方向超额" : "Directional excess"} {signed(performance)}%
-                  </span>
-                ) : null}
-                {call.url ? <span className="ml-auto text-reddit">{zh ? "原观点 ↗" : "Source ↗"}</span> : null}
-              </div>
-            </>
-          );
-          return call.url ? (
-            <a
-              key={`${call.candidateId}:${call.horizon}`}
-              href={call.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block rounded-md bg-white/[.02] px-2.5 py-2 ring-1 ring-inset ring-white/[.06] transition hover:bg-white/[.04] hover:ring-reddit/25"
-            >
-              {body}
-            </a>
-          ) : (
-            <div key={`${call.candidateId}:${call.horizon}`} className="rounded-md bg-white/[.02] px-2.5 py-2 ring-1 ring-inset ring-white/[.06]">
-              {body}
-            </div>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
 export function SmartVoiceLeaderboardView({
   leaderboard,
   profileIds,
@@ -152,7 +60,7 @@ export function SmartVoiceLeaderboardView({
 }: {
   leaderboard: SmartVoiceLeaderboardData;
   profileIds: string[];
-  representativeEvidence: SmartVoiceRepresentativeEvidenceMap;
+  representativeEvidence: SmartVoiceRepresentativeEvidenceBundle;
   zh: boolean;
 }) {
   const [platform, setPlatform] = useState<Platform>("all");
@@ -196,14 +104,14 @@ export function SmartVoiceLeaderboardView({
       .sort((a, b) => band === "bottom" ? scoreOf(a, platform, scoreMode) - scoreOf(b, platform, scoreMode) : scoreOf(b, platform, scoreMode) - scoreOf(a, platform, scoreMode));
   }, [band, bandPools, platform, query, scoreMode]);
   const selected = rows.find((inv) => inv.id === selectedId) ?? rows[0];
-  const selectedEvidence = selected ? representativeEvidence[selected.id] : undefined;
+  const selectedEvidence = selected ? representativeEvidence.byInvestor[selected.id] : undefined;
   const showWeakEvidence = band === "bottom" || (band !== "top" && selected ? scoreOf(selected, platform, scoreMode) < 100 : false);
-  const representativeCalls = selectedEvidence
-    ? (showWeakEvidence ? selectedEvidence.weakCalls : selectedEvidence.bestCalls)
-    : [];
+  const representativeShowcase = selectedEvidence
+    ? (showWeakEvidence ? selectedEvidence.weak : selectedEvidence.best)
+    : null;
 
   return (
-    <div className="grid h-full min-h-0 lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_340px]">
+    <div className="grid h-full min-h-0 lg:grid-cols-[minmax(0,1fr)_380px] xl:grid-cols-[minmax(0,1fr)_460px] 2xl:grid-cols-[minmax(0,1fr)_540px]">
       <section className="flex min-h-0 min-w-0 flex-col">
         <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-line px-3 py-2.5">
           <div className="inline-flex h-8 items-center rounded-lg bg-white/[.025] p-0.5 ring-1 ring-inset ring-line">
@@ -357,9 +265,15 @@ export function SmartVoiceLeaderboardView({
               ))}
             </div>
 
-            <div className="mt-4">
-              <RepresentativeWork calls={representativeCalls} weak={showWeakEvidence} zh={zh} />
-            </div>
+            {representativeShowcase ? (
+              <div className="mt-4">
+                <SmartVoiceRepresentativeChart
+                  showcase={representativeShowcase}
+                  prices={representativeEvidence.priceByTicker[representativeShowcase.ticker] ?? []}
+                  zh={zh}
+                />
+              </div>
+            ) : null}
 
             {profileSet.has(selected.id) ? (
               <LocaleLink href={smartVoiceInvestorHref(selected.id)} className="mt-4 flex h-9 shrink-0 items-center justify-center rounded-lg bg-reddit text-[12px] font-bold text-[#12201d] transition hover:brightness-110">

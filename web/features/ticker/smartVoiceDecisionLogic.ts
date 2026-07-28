@@ -57,7 +57,6 @@ export interface SvWeightedTargetPoint {
 export interface SvWeightedTargetDistribution {
   points: SvWeightedTargetPoint[];
   count: number;
-  effectiveCount: number;
   low: number | null;
   median: number | null;
   high: number | null;
@@ -90,7 +89,6 @@ export function buildWeightedTargetDistribution(
   });
   const weighted = points.map((item) => ({ value: item.target, weight: item.weight }));
   const totalWeight = points.reduce((sum, item) => sum + item.weight, 0);
-  const squareWeight = points.reduce((sum, item) => sum + item.weight ** 2, 0);
   const bullWeight = points.filter((item) => item.direction === "bull").reduce((sum, item) => sum + item.weight, 0);
   const low = weightedQuantile(weighted, 0.25);
   const median = weightedQuantile(weighted, 0.5);
@@ -98,7 +96,6 @@ export function buildWeightedTargetDistribution(
   return {
     points,
     count: points.length,
-    effectiveCount: squareWeight ? totalWeight ** 2 / squareWeight : 0,
     low,
     median,
     high,
@@ -188,7 +185,6 @@ export interface SvOpportunityIndicators {
   crowding: number;
   confidence: number;
   freshnessDays: number | null;
-  breadth: number;
 }
 
 export function buildOpportunityIndicators(
@@ -211,7 +207,6 @@ export function buildOpportunityIndicators(
     crowding: top ? clamp(top.consensusStrength * (0.55 + concentration * 0.45) * 100, 0, 100) : 0,
     confidence: clamp(avgQuality * Math.min(1, Math.sqrt(rows.length / 20)) * 100, 0, 100),
     freshnessDays: latest ? dayDistance(asOfDay, latest) : null,
-    breadth: effective,
   };
 }
 

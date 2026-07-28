@@ -203,173 +203,143 @@
     "divergence": {
       "series": [
         {
-          "day": "2026-07-02",
-          "smart": 0.249,
-          "retail": -1.0
-        },
-        {
-          "day": "2026-07-06",
-          "smart": 0.054,
-          "retail": 0.004
-        },
-        {
-          "day": "2026-07-07",
-          "smart": 0.287,
-          "retail": 0.0
-        },
-        {
-          "day": "2026-07-08",
-          "smart": 0.525,
-          "retail": 0.0
-        },
-        {
-          "day": "2026-07-09",
-          "smart": 1.0,
-          "retail": -0.0
-        },
-        {
-          "day": "2026-07-10",
-          "smart": 0.549,
-          "retail": 0.0
-        },
-        {
           "day": "2026-07-13",
-          "smart": 0.653,
-          "retail": -0.0
+          "smart": 0.445,
+          "retail": -0.11
         },
         {
           "day": "2026-07-14",
-          "smart": 0.701,
-          "retail": -0.001
+          "smart": 0.75,
+          "retail": -0.633
         },
         {
           "day": "2026-07-15",
-          "smart": 0.381,
-          "retail": 0.0
+          "smart": 0.926,
+          "retail": 0.226
         },
         {
           "day": "2026-07-16",
-          "smart": -0.105,
-          "retail": -0.002
+          "smart": -0.171,
+          "retail": -1.0
         },
         {
           "day": "2026-07-17",
-          "smart": 0.0,
+          "smart": 0.332,
+          "retail": 0.107
+        },
+        {
+          "day": "2026-07-20",
+          "smart": 0.31,
+          "retail": 0.0
+        },
+        {
+          "day": "2026-07-21",
+          "smart": 0.625,
+          "retail": 0.0
+        },
+        {
+          "day": "2026-07-22",
+          "smart": 1.0,
+          "retail": 0.0
+        },
+        {
+          "day": "2026-07-23",
+          "smart": -0.369,
+          "retail": 0.0
+        },
+        {
+          "day": "2026-07-24",
+          "smart": 0.479,
+          "retail": 0.0
+        },
+        {
+          "day": "2026-07-27",
+          "smart": 0.343,
           "retail": 0.0
         }
       ],
       "read": {
         "smart": "bull",
-        "retail": "neutral",
-        "diverging": false
+        "retail": "bear",
+        "diverging": true
       },
-      "smartAuthors": 67
+      "smartAuthors": 29
     },
     "window": {
-      "start": "2026-07-02",
-      "end": "2026-07-17"
+      "start": "2026-07-13",
+      "end": "2026-07-27"
     },
-    "updated_at": "2026-07-18T07:57:30.324232"
+    "updated_at": "2026-07-28T05:40:01.382928"
   },
   "NVDA": {
     "anomalies": [
       {
-        "day": "2026-07-06",
-        "metric": "volume",
-        "direction": "up",
-        "z": 4.4,
-        "reason": {
-          "zh": "英伟达（NVDA）因市场传闻其Kyber NVL144和NVL576产品可能延迟，导致股价波动，公司随后发布声明否认了这些延迟。",
-          "en": "NVDA's stock fluctuated due to market rumors of potential delays in its Kyber NVL144 and NVL576 products, which the company subsequently denied."
-        }
-      },
-      {
-        "day": "2026-07-07",
-        "metric": "sentiment",
-        "direction": "up",
-        "z": 2.51,
-        "reason": {
-          "zh": "市场对三星电子利润超预期并超越英伟达成为全球最赚钱公司反应负面，引发对英伟达盈利能力的担忧，但英伟达通过反驳CPO延迟报告等方式稳定了市场情绪。",
-          "en": "Negative market reaction to Samsung's record profit surpassing Nvidia as the most profitable company, raising concerns for Nvidia, was countered by Nvidia refuting CPO delay reports."
-        }
-      },
-      {
-        "day": "2026-07-08",
-        "metric": "sentiment",
-        "direction": "up",
-        "z": 8.05,
-        "reason": {
-          "zh": "中国批准英伟达H200芯片出口，市场预期这将显著提振英伟达在华销售，从而推动股价上涨。",
-          "en": "China approved NVIDIA H200 chip exports, expected to significantly boost NVIDIA's sales in China and drive stock price up."
-        }
-      },
-      {
         "day": "2026-07-16",
         "metric": "sentiment",
         "direction": "down",
-        "z": -2.19,
+        "z": -2.21,
         "reason": {
-          "zh": "市场对AI泡沫破裂的担忧加剧，尤其是在韩国股市KOSPI200自6月26日以来大幅下跌近75,000韩元后，引发了对AI相关股票的普遍悲观情绪。",
-          "en": "Market fears of an AI bubble burst intensified after the KOSPI200 plunged nearly 75,000 won since June 26th, fueling widespread pessimism for AI-related stocks."
+          "zh": "KOL热议AI泡沫破裂及半导体板块大幅回调，引发市场恐慌。",
+          "en": "KOLs discuss AI bubble burst and semiconductor selloff, sparking panic."
         }
       }
     ],
     "divergence": {
       "series": [
         {
-          "day": "2026-07-02",
-          "smart": 0.678,
-          "retail": -0.061
-        },
-        {
-          "day": "2026-07-06",
-          "smart": 0.089,
-          "retail": -1.0
-        },
-        {
-          "day": "2026-07-07",
-          "smart": 0.297,
-          "retail": -0.528
-        },
-        {
-          "day": "2026-07-08",
-          "smart": 1.0,
-          "retail": 0.694
-        },
-        {
-          "day": "2026-07-09",
-          "smart": 0.355,
-          "retail": 0.132
-        },
-        {
-          "day": "2026-07-10",
-          "smart": 0.677,
-          "retail": 0.002
-        },
-        {
           "day": "2026-07-13",
-          "smart": 0.501,
-          "retail": 0.002
+          "smart": 0.72,
+          "retail": 0.044
         },
         {
           "day": "2026-07-14",
-          "smart": 0.811,
-          "retail": 0.001
+          "smart": 0.263,
+          "retail": 0.016
         },
         {
           "day": "2026-07-15",
-          "smart": 0.911,
-          "retail": 0.04
+          "smart": 0.088,
+          "retail": 1.0
         },
         {
           "day": "2026-07-16",
-          "smart": 0.291,
-          "retail": -0.028
+          "smart": 0.121,
+          "retail": -0.708
         },
         {
           "day": "2026-07-17",
+          "smart": 0.299,
+          "retail": -0.324
+        },
+        {
+          "day": "2026-07-20",
           "smart": 0.0,
-          "retail": -0.013
+          "retail": 0.0
+        },
+        {
+          "day": "2026-07-21",
+          "smart": 0.347,
+          "retail": 0.0
+        },
+        {
+          "day": "2026-07-22",
+          "smart": 1.0,
+          "retail": 0.0
+        },
+        {
+          "day": "2026-07-23",
+          "smart": 0.973,
+          "retail": 0.0
+        },
+        {
+          "day": "2026-07-24",
+          "smart": 0.309,
+          "retail": 0.0
+        },
+        {
+          "day": "2026-07-27",
+          "smart": 0.0,
+          "retail": 0.0
         }
       ],
       "read": {
@@ -377,85 +347,85 @@
         "retail": "neutral",
         "diverging": false
       },
-      "smartAuthors": 64
+      "smartAuthors": 23
     },
     "window": {
-      "start": "2026-07-02",
-      "end": "2026-07-17"
+      "start": "2026-07-13",
+      "end": "2026-07-27"
     },
-    "updated_at": "2026-07-18T07:57:39.433700"
+    "updated_at": "2026-07-28T05:40:04.214270"
   },
   "MSTR": {
     "anomalies": [],
     "divergence": {
       "series": [
         {
-          "day": "2026-07-02",
-          "smart": 0.079,
-          "retail": 0.264
-        },
-        {
-          "day": "2026-07-06",
-          "smart": 0.081,
-          "retail": -1.0
-        },
-        {
-          "day": "2026-07-07",
-          "smart": 0.19,
-          "retail": -0.007
-        },
-        {
-          "day": "2026-07-08",
-          "smart": 0.215,
-          "retail": -0.079
-        },
-        {
-          "day": "2026-07-09",
-          "smart": 1.0,
-          "retail": 0.003
-        },
-        {
-          "day": "2026-07-10",
-          "smart": 0.548,
-          "retail": 0.0
-        },
-        {
           "day": "2026-07-13",
-          "smart": 0.863,
-          "retail": 0.01
+          "smart": 1.0,
+          "retail": 0.811
         },
         {
           "day": "2026-07-14",
-          "smart": 0.256,
+          "smart": 0.132,
           "retail": 0.0
         },
         {
           "day": "2026-07-15",
-          "smart": 0.515,
-          "retail": -0.004
+          "smart": 0.0,
+          "retail": -0.355
         },
         {
           "day": "2026-07-16",
-          "smart": 0.277,
-          "retail": -0.012
+          "smart": -0.135,
+          "retail": -1.0
         },
         {
           "day": "2026-07-17",
+          "smart": 0.771,
+          "retail": 0.0
+        },
+        {
+          "day": "2026-07-20",
+          "smart": 0.16,
+          "retail": 0.0
+        },
+        {
+          "day": "2026-07-21",
+          "smart": 0.764,
+          "retail": 0.0
+        },
+        {
+          "day": "2026-07-22",
+          "smart": 0.574,
+          "retail": 0.0
+        },
+        {
+          "day": "2026-07-23",
+          "smart": -0.018,
+          "retail": 0.0
+        },
+        {
+          "day": "2026-07-24",
+          "smart": 0.179,
+          "retail": 0.0
+        },
+        {
+          "day": "2026-07-27",
           "smart": 0.0,
           "retail": 0.0
         }
       ],
       "read": {
         "smart": "bull",
-        "retail": "neutral",
-        "diverging": false
+        "retail": "bear",
+        "diverging": true
       },
-      "smartAuthors": 19
+      "smartAuthors": 7
     },
     "window": {
-      "start": "2026-07-02",
-      "end": "2026-07-17"
+      "start": "2026-07-13",
+      "end": "2026-07-27"
     },
-    "updated_at": "2026-07-18T07:57:31.754039"
+    "updated_at": "2026-07-28T05:40:05.014605"
   }
 }

@@ -39,7 +39,6 @@ export const ja: Dictionary = {
     smartVoice: "Smart Voice",
     tickers: "銘柄",
     investors: "投資家",
-    regions: "地域",
     cnstocks: "中国・香港株",
     search: "検索",
     tracking: "ウォッチリスト",

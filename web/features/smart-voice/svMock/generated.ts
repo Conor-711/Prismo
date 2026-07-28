@@ -70,12 +70,35 @@ function normalizeRealInvestor(value: unknown): SvInvestor | null {
   };
 }
 
-function normalizePlatformBand(value: unknown, source: SvSource): SvPlatformBand | null {
-  const raw = value as Partial<SvPlatformBand> | null;
+type NormalizedExport = Partial<SvBoard> & {
+  investorIndex?: Record<string, unknown>;
+  investorIds?: string[];
+  bottomInvestorIds?: string[];
+  sourceTop25Ids?: Partial<Record<SvSource, string[]>>;
+};
+
+function normalizePlatformBand(
+  value: unknown,
+  source: SvSource,
+  investorIndex: Map<string, SvInvestor>,
+): SvPlatformBand | null {
+  const raw = value as (Partial<SvPlatformBand> & {
+    rankedIds?: string[];
+    observedIds?: string[];
+    top10Ids?: string[];
+    bottom10Ids?: string[];
+    top25Ids?: string[];
+    bottom25Ids?: string[];
+  }) | null;
   if (!raw || typeof raw !== "object" || !raw.distribution) return null;
-  const investors = (items: unknown): SvInvestor[] => Array.isArray(items)
-    ? items.map(normalizeRealInvestor).filter((item): item is SvInvestor => Boolean(item))
-    : [];
+  const investors = (items: unknown, ids: unknown): SvInvestor[] => {
+    if (Array.isArray(items)) {
+      return items.map(normalizeRealInvestor).filter((item): item is SvInvestor => Boolean(item));
+    }
+    return Array.isArray(ids)
+      ? ids.map((id) => investorIndex.get(String(id))).filter((item): item is SvInvestor => Boolean(item))
+      : [];
+  };
   return {
     source,
     scoreKind: "SV_Platform",
@@ -86,21 +109,28 @@ function normalizePlatformBand(value: unknown, source: SvSource): SvPlatformBand
     distribution: raw.distribution as SvDistribution,
     top25Threshold: Number(raw.top25Threshold || 0),
     bottom25Threshold: Number(raw.bottom25Threshold || 0),
-    ranked: investors(raw.ranked),
-    observed: investors(raw.observed),
-    top10: investors(raw.top10),
-    bottom10: investors(raw.bottom10),
-    top25: investors(raw.top25),
-    bottom25: investors(raw.bottom25),
+    ranked: investors(raw.ranked, raw.rankedIds),
+    observed: investors(raw.observed, raw.observedIds),
+    top10: investors(raw.top10, raw.top10Ids),
+    bottom10: investors(raw.bottom10, raw.bottom10Ids),
+    top25: investors(raw.top25, raw.top25Ids),
+    bottom25: investors(raw.bottom25, raw.bottom25Ids),
   };
 }
 
 export function getGeneratedSmartVoiceBoard(): SvBoard | null {
-  const raw = generatedSmartVoice as unknown as Partial<SvBoard>;
+  const raw = generatedSmartVoice as unknown as NormalizedExport;
+  const normalizedInvestorIndex = new Map<string, SvInvestor>();
+  if (raw.investorIndex && typeof raw.investorIndex === "object") {
+    for (const [id, value] of Object.entries(raw.investorIndex)) {
+      const investor = normalizeRealInvestor(value);
+      if (investor) normalizedInvestorIndex.set(id, investor);
+    }
+  }
   const rawBands = raw.platformBands && typeof raw.platformBands === "object" ? raw.platformBands : {};
   const platformBands: Partial<Record<SvSource, SvPlatformBand>> = {};
   for (const source of ["x", "youtube", "reddit", "xueqiu", "toss"] as SvSource[]) {
-    const band = normalizePlatformBand(rawBands[source], source);
+    const band = normalizePlatformBand(rawBands[source], source, normalizedInvestorIndex);
     if (band) platformBands[source] = band;
   }
   const platformInvestorById = new Map<string, SvInvestor>();
@@ -108,26 +138,31 @@ export function getGeneratedSmartVoiceBoard(): SvBoard | null {
     if (!band) continue;
     for (const investor of band.ranked) platformInvestorById.set(investor.id, investor);
   }
-  const normalizeList = (items: unknown): SvInvestor[] => Array.isArray(items)
-    ? items.map(normalizeRealInvestor).filter((i): i is SvInvestor => Boolean(i)).map((investor) => {
+  const normalizeList = (items: unknown, ids?: unknown): SvInvestor[] => {
+    const normalized = Array.isArray(items)
+      ? items.map(normalizeRealInvestor).filter((i): i is SvInvestor => Boolean(i))
+      : Array.isArray(ids)
+        ? ids.map((id) => normalizedInvestorIndex.get(String(id))).filter((i): i is SvInvestor => Boolean(i))
+        : [];
+    return normalized.map((investor) => {
       const platformInvestor = platformInvestorById.get(investor.id);
       return platformInvestor?.platformRank ? { ...investor, platformRank: platformInvestor.platformRank } : investor;
-    })
-    : [];
-  const investors = normalizeList(raw.investors);
-  const bottomInvestors = normalizeList(raw.bottomInvestors);
+    });
+  };
+  const investors = normalizeList(raw.investors, raw.investorIds);
+  const bottomInvestors = normalizeList(raw.bottomInvestors, raw.bottomInvestorIds);
   if (!investors.length) return null;
   const sorted = investors.sort((a, b) => b.sv - a.sv);
-  const rootX = normalizeList(raw.x);
-  const rootYoutube = normalizeList(raw.youtube);
+  const rootX = normalizeList(raw.x, raw.sourceTop25Ids?.x);
+  const rootYoutube = normalizeList(raw.youtube, raw.sourceTop25Ids?.youtube);
   return {
     investors: sorted,
     bottomInvestors: bottomInvestors.sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0)),
     x: platformBands.x?.top25 ?? (rootX.length ? rootX : sorted.filter((i) => i.source === "x")),
     youtube: platformBands.youtube?.top25 ?? (rootYoutube.length ? rootYoutube : sorted.filter((i) => i.source === "youtube")),
-    reddit: platformBands.reddit?.top25 ?? normalizeList(raw.reddit),
-    xueqiu: platformBands.xueqiu?.top25 ?? normalizeList(raw.xueqiu),
-    toss: platformBands.toss?.top25 ?? normalizeList(raw.toss),
+    reddit: platformBands.reddit?.top25 ?? normalizeList(raw.reddit, raw.sourceTop25Ids?.reddit),
+    xueqiu: platformBands.xueqiu?.top25 ?? normalizeList(raw.xueqiu, raw.sourceTop25Ids?.xueqiu),
+    toss: platformBands.toss?.top25 ?? normalizeList(raw.toss, raw.sourceTop25Ids?.toss),
     currentNarratives: Array.isArray(raw.currentNarratives) && raw.currentNarratives.length ? raw.currentNarratives : FALLBACK_NARRATIVES,
     updatedAt: raw.updatedAt || new Date().toISOString().slice(0, 10),
     scoringVersion: typeof raw.scoringVersion === "string" ? raw.scoringVersion : undefined,

@@ -10,16 +10,6 @@ export interface DashboardSignalItem {
   divergentRegion: string;
 }
 
-export interface DashboardRegionItem {
-  region: string;
-  posts: number;
-  tickers: number;
-  sentiment: number;
-  bull: number;
-  bear: number;
-  neutral: number;
-}
-
 export interface DashboardBuzzItem {
   ticker: string;
   nameZh: string;
@@ -63,7 +53,6 @@ export interface DashboardModel {
     topDivergence: DashboardSignalItem | null;
   };
   signals: Record<DashboardSignalKey, DashboardSignalItem[]>;
-  regions: DashboardRegionItem[];
   heatmap: {
     regionCodes: string[];
     tickers: string[];

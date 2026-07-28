@@ -106,7 +106,7 @@ function EvidenceColumn({
           </div>
           <div className="mt-1 text-[9px] text-neutral-500">
             {targets.count
-              ? `${zh ? "四分位" : "IQR"} ${money(targets.low)}–${money(targets.high)} · n=${targets.count}`
+              ? `${zh ? "多数目标区间" : "Middle 50%"} ${money(targets.low)}–${money(targets.high)} · ${targets.count} ${zh ? "个目标" : "targets"}`
               : (zh ? "无有效目标价" : "No valid targets")}
           </div>
           {!!targets.count && <div className="mt-1 text-[8.5px] text-neutral-600">{zh ? "多" : "Bull"} {targets.bullCount} · {zh ? "空" : "Bear"} {targets.bearCount} · {zh ? "已到达" : "reached"} {targets.reachedCount}</div>}

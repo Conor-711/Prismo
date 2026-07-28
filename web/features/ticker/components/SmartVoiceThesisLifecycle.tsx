@@ -19,7 +19,7 @@ function NetBar({ value }: { value: number }) {
 
 export function SmartVoiceThesisLifecycle({ items, zh }: { items: SvThesisLifecycleItem[]; zh: boolean }) {
   return (
-    <section className="min-w-0 border-b border-line lg:border-b-0 lg:border-r">
+    <section className="min-w-0 border-b border-line">
       <div className="border-b border-line/70 px-4 py-2.5">
         <h4 className="text-[10px] font-semibold text-neutral-300">{zh ? "投资逻辑生命周期" : "Investment thesis lifecycle"}</h4>
         <p className="mt-0.5 text-[8.5px] text-neutral-600">{zh ? "按观点视角比较最近 7 日与前 7 日的 SV 加权多空结构" : "SV-weighted thesis lenses, latest 7 days vs prior 7"}</p>

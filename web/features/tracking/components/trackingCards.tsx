@@ -8,7 +8,7 @@ import { TickerLogo } from "@/shared/market/TickerLogo";
 import { Avatar } from "@/shared/market/kolPresentation";
 import { Consensus, SentScore, StanceBar } from "@/shared/ui/prismoBits";
 import { fmtCompact } from "@/shared/formatting/format";
-import { regionColor, regionLabel, regionSource } from "@/shared/market/regions";
+import { regionColor, regionLabel } from "@/shared/market/regions";
 import type { Locale } from "@/lib/i18n";
 import type { CollectionRow } from "@/lib/favorites";
 import type { GrTickerRow, GrRegionCell } from "@/server/queries/globalQueries";
@@ -17,7 +17,6 @@ import type {
   SortKey,
   TrackingAuthorCandidate,
   TrackingNarrativeCandidate,
-  TrackingRegionCandidate,
 } from "../trackingTypes";
 import { kindLabel } from "../trackingTypes";
 
@@ -46,7 +45,7 @@ export function QuickAdd({
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder={zh ? "搜索并追踪标的、作者、叙事或区域…" : "Search and follow tickers, authors, narratives or regions…"}
+              placeholder={zh ? "搜索并追踪标的、作者、叙事或社区…" : "Search and follow tickers, authors, narratives or communities…"}
               className="h-10 w-full rounded-lg bg-ink/45 pl-9 pr-3 text-[13px] text-cream ring-1 ring-inset ring-line placeholder:text-neutral-600 outline-none transition focus:ring-reddit/70"
             />
           </div>
@@ -251,7 +250,7 @@ function TrackTickerCard({
       {row && (
         <>
           <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-neutral-500">
-            <span><span className="tabular text-neutral-300">{row.regions_present}</span> {zh ? "覆盖区" : "regions"}</span>
+            <span><span className="tabular text-neutral-300">{row.regions_present}</span> {zh ? "社区" : "communities"}</span>
             <span><span className="tabular text-neutral-300">{fmtCompact(row.total_posts)}</span> {zh ? "帖数" : "posts"}</span>
             <span><span className="font-mono tabular text-neutral-300">{(row.spread ?? 0).toFixed(2)}</span> {zh ? "分歧" : "spread"}</span>
             <span className="ml-auto"><Consensus value={row.consensus} lang={lang} /></span>
@@ -315,23 +314,6 @@ export function NarrativeCard({ row, meta, zh }: { row: CollectionRow; meta?: Tr
   );
 }
 
-export function RegionCard({ row, meta, lang }: { row: CollectionRow; meta?: TrackingRegionCandidate; lang: Locale }) {
-  const zh = lang === "zh";
-  return (
-    <Panel className="flex items-center gap-3 p-3">
-      <span className="h-8 w-8 shrink-0 rounded-lg ring-1 ring-inset ring-white/10" style={{ background: regionColor(row.ref_id) }} />
-      <div className="min-w-0 flex-1">
-        <LocaleLink href={`/regions/${row.ref_id}`} className="block truncate text-[13.5px] font-semibold text-cream hover:text-reddit">{regionLabel(row.ref_id, lang)}</LocaleLink>
-        <div className="mt-1 truncate text-[11px] text-neutral-600">
-          {meta ? `${regionSource(row.ref_id)} · ${fmtCompact(meta.posts)} ${zh ? "讨论" : "posts"} · ${meta.tickers} ${zh ? "标的" : "tickers"}` : regionSource(row.ref_id)}
-        </div>
-      </div>
-      {meta && <SentScore score={meta.avgSentiment} className="text-[13px]" />}
-      <SaveButton kind="region" refId={row.ref_id} variant="follow" size="xs" />
-    </Panel>
-  );
-}
-
 export function CommunityCard({ row }: { row: CollectionRow }) {
   return (
     <Panel className="flex items-center gap-3 p-3">
@@ -361,7 +343,7 @@ export function SignInPrompt({ zh }: { zh: boolean }) {
       <span className="grid h-12 w-12 place-items-center rounded-full bg-reddit/10 text-reddit"><StarIcon /></span>
       <h2 className="font-display font-bold text-cream">{zh ? "登录后查看你的追踪" : "Sign in to see your tracking"}</h2>
       <p className="max-w-xs text-sm leading-relaxed text-neutral-500">
-        {zh ? "追踪标的、作者、叙事和区域，随时回来看它们的关键变化。" : "Follow tickers, authors, narratives and regions, then come back to monitor what changed."}
+        {zh ? "追踪标的、作者、叙事和社区，随时回来看它们的关键变化。" : "Follow tickers, authors, narratives and communities, then come back to monitor what changed."}
       </p>
       <LocaleLink href="/login" className="mt-1 inline-flex items-center gap-1 rounded-full bg-reddit px-4 py-2 text-xs font-semibold text-white transition hover:bg-reddit/90">
         {zh ? "去登录" : "Sign in"} →
@@ -376,7 +358,7 @@ export function EmptyState({ zh }: { zh: boolean }) {
       <span className="grid h-12 w-12 place-items-center rounded-full bg-reddit/10 text-reddit"><StarIcon /></span>
       <h2 className="font-display font-bold text-cream">{zh ? "还没有追踪任何元素" : "Nothing followed yet"}</h2>
       <p className="max-w-sm text-sm leading-relaxed text-neutral-500">
-        {zh ? "从上方搜索框直接添加标的、作者、叙事或区域；之后所有变化都会集中出现在这里。" : "Use the search box above to follow tickers, authors, narratives or regions. Changes will collect here."}
+        {zh ? "从上方搜索框直接添加标的、作者、叙事或社区；之后所有变化都会集中出现在这里。" : "Use the search box above to follow tickers, authors, narratives or communities. Changes will collect here."}
       </p>
     </Panel>
   );

@@ -2,6 +2,7 @@
 
 import ReactECharts from "echarts-for-react";
 import type { SvWeightedTargetDistribution } from "../smartVoiceDecisionLogic";
+import type { SvTargetRevisionMetric } from "../smartVoiceOverviewLogic";
 
 const money = (value: number | null) => value == null
   ? "—"
@@ -10,10 +11,12 @@ const money = (value: number | null) => value == null
 export function SmartVoiceWeightedTargets({
   distribution,
   currentPrice,
+  revision,
   zh,
 }: {
   distribution: SvWeightedTargetDistribution;
   currentPrice: number | null;
+  revision?: SvTargetRevisionMetric;
   zh: boolean;
 }) {
   const maxWeight = Math.max(...distribution.points.map((item) => item.weight), 1);
@@ -93,7 +96,7 @@ export function SmartVoiceWeightedTargets({
       <div className="flex items-center justify-between gap-3 border-b border-line/70 px-4 py-2.5">
         <div>
           <h4 className="text-[10px] font-semibold text-neutral-300">{zh ? "SV 加权目标价分布" : "SV-weighted target distribution"}</h4>
-          <p className="mt-0.5 text-[8.5px] text-neutral-600">{zh ? "权重包含历史时点 SV、证据质量、Call 强度与时间衰减" : "Weighted by point-in-time SV, evidence quality, call strength and recency"}</p>
+          <p className="mt-0.5 text-[8.5px] text-neutral-600">{zh ? "综合作者当时的 SV、证据质量、观点强度与发布时间" : "Combines point-in-time SV, evidence quality, conviction and recency"}</p>
         </div>
         <div className="text-right">
           <div className="font-mono text-[15px] font-bold text-cream">{money(distribution.median)}</div>
@@ -102,11 +105,19 @@ export function SmartVoiceWeightedTargets({
           </div>
         </div>
       </div>
-      <div className="grid grid-cols-4 divide-x divide-line/60 border-b border-line/60 px-4 py-2 text-[8.5px]">
-        <div><span className="text-neutral-600">IQR</span><b className="ml-1 font-mono text-neutral-300">{money(distribution.low)}–{money(distribution.high)}</b></div>
-        <div className="pl-3"><span className="text-neutral-600">n</span><b className="ml-1 font-mono text-neutral-300">{distribution.count}</b></div>
-        <div className="pl-3"><span className="text-neutral-600">n_eff</span><b className="ml-1 font-mono text-neutral-300">{distribution.effectiveCount.toFixed(1)}</b></div>
-        <div className="pl-3"><span className="text-neutral-600">{zh ? "多头权重" : "Bull wt."}</span><b className="ml-1 font-mono text-neutral-300">{(distribution.bullWeightShare * 100).toFixed(0)}%</b></div>
+      <div className="grid grid-cols-3 divide-x divide-line/60 border-b border-line/60 px-4 py-2 text-[8.5px]">
+        <div><span className="text-neutral-600">{zh ? "多数目标区间" : "Middle 50%"}</span><b className="ml-1 font-mono text-neutral-300">{money(distribution.low)}–{money(distribution.high)}</b></div>
+        <div className="pl-3"><span className="text-neutral-600">{zh ? "目标数" : "Targets"}</span><b className="ml-1 font-mono text-neutral-300">{distribution.count}</b></div>
+        <div className="pl-3">
+          <span className="text-neutral-600">{revision ? (zh ? "7日修正" : "7D revision") : (zh ? "看多权重" : "Bull share")}</span>
+          <b className={`ml-1 font-mono ${revision && (revision.changePct ?? 0) < 0 ? "text-bear" : "text-neutral-300"}`}>
+            {revision
+              ? revision.changePct == null
+                ? "—"
+                : `${revision.changePct >= 0 ? "+" : ""}${(revision.changePct * 100).toFixed(1)}%`
+              : `${(distribution.bullWeightShare * 100).toFixed(0)}%`}
+          </b>
+        </div>
       </div>
       {distribution.points.length ? (
         <ReactECharts option={option} style={{ height: 190 }} opts={{ renderer: "canvas" }} notMerge />

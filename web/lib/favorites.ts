@@ -4,7 +4,7 @@
 import { supabase } from "./supabase";
 import type { FeedRow, CommentRow } from "./queries";
 
-export type CollectionKind = "post" | "comment" | "subreddit" | "ticker" | "author" | "narrative" | "region";
+export type CollectionKind = "post" | "comment" | "subreddit" | "ticker" | "author" | "narrative";
 
 // 帖子/评论收藏时一并写入的「展示快照」（个人主页直接渲染，不回查 posts/comments，保持运行时不连库）。
 export interface PostSnapshot {

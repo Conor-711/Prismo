@@ -1,5 +1,5 @@
 import { REGION_ORDER } from "@/shared/market/regions";
-import type { GrMeta, GrQuoteRow, GrRegionCell, GrRegionSummary, GrTickerRow } from "@/server/queries/globalQueries";
+import type { GrMeta, GrQuoteRow, GrRegionCell, GrTickerRow } from "@/server/queries/globalQueries";
 import type { SvBoard } from "@/features/smart-voice";
 import type {
   DashboardBuzzItem,
@@ -23,14 +23,12 @@ export function buildDashboardModel({
   meta,
   tickers,
   cells,
-  summary,
   quotes,
   svBoard,
 }: {
   meta: GrMeta;
   tickers: GrTickerRow[];
   cells: GrRegionCell[];
-  summary: GrRegionSummary[];
   quotes: GrQuoteRow[];
   svBoard: SvBoard;
 }): DashboardModel {
@@ -71,20 +69,8 @@ export function buildDashboardModel({
     };
   });
 
-  const summaryByRegion = new Map(summary.map((item) => [item.region, item]));
-  const regionCodes = REGION_ORDER.filter((region) => summaryByRegion.has(region));
-  const regions = regionCodes.map((region) => {
-    const item = summaryByRegion.get(region)!;
-    return {
-      region,
-      posts: item.posts,
-      tickers: item.tickers,
-      sentiment: item.avg_sentiment,
-      bull: item.bull_pct,
-      bear: item.bear_pct,
-      neutral: Math.max(0, 1 - item.bull_pct - item.bear_pct),
-    };
-  });
+  const presentRegions = new Set(cells.map((cell) => cell.region));
+  const regionCodes = REGION_ORDER.filter((region) => presentRegions.has(region));
 
   const heatTickers = byPosts.slice(0, 12).map((ticker) => ticker.ticker);
   const cellMap = new Map(cells.map((cell) => [`${cell.region}:${cell.ticker}`, cell.sentiment_avg]));
@@ -112,7 +98,6 @@ export function buildDashboardModel({
       topDivergence: divergence[0] ?? null,
     },
     signals: { divergence, bullish, bearish },
-    regions,
     heatmap: { regionCodes, tickers: heatTickers, cells: heatCells },
     buzz,
     voices: [...svBoard.investors]

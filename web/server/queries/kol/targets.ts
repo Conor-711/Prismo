@@ -20,9 +20,74 @@ function priceWindow(symbol: string, days: number): { day: string; close: number
   );
 }
 
-// 「整体数据 · 目标价时间线」取数：近 ~3 个月 kol_judgment(reddit/x/雪球/Toss/Yahoo JP) + yt_judgment(youtube)，
+type SvAuthorRank = Pick<TargetMark, "svScore" | "svPlatformScore" | "svPercentile" | "svRank" | "svPopulation">;
+
+let svAuthorRanksCache: Map<string, SvAuthorRank> | null = null;
+
+const normalizedAuthor = (value: string) => String(value || "")
+  .trim()
+  .replace(/^@/, "")
+  .replace(/^u\//, "")
+  .toLowerCase();
+
+function svAuthorRanks(): Map<string, SvAuthorRank> {
+  if (svAuthorRanksCache) return svAuthorRanksCache;
+  const rows = safe(
+    () => all<{
+      source: KolSource;
+      handle: string;
+      sv_score: number;
+      platform_sv: number;
+      platform_rank: number;
+      platform_population: number;
+      platform_percentile: number;
+    }>(
+      `WITH scored AS (
+         SELECT investor_id, source, handle, sv AS sv_score,
+                COALESCE(json_extract(platform_scores_json, '$.' || source), sv, 100) AS platform_sv
+           FROM sv_investor_score
+          WHERE source IN ('x','youtube','reddit','xueqiu')
+       ),
+       ranked AS (
+         SELECT *,
+                ROW_NUMBER() OVER (
+                  PARTITION BY source
+                  ORDER BY platform_sv DESC, sv_score DESC, investor_id
+                ) AS platform_rank,
+                COUNT(*) OVER (PARTITION BY source) AS platform_population
+           FROM scored
+       )
+       SELECT source, handle, sv_score, platform_sv, platform_rank, platform_population,
+              CASE WHEN platform_population <= 1 THEN 0
+                   ELSE 100.0 * (platform_rank - 1) / (platform_population - 1)
+              END AS platform_percentile
+         FROM ranked`
+    ),
+    []
+  );
+  svAuthorRanksCache = new Map();
+  for (const row of rows) {
+    const key = `${row.source}|${normalizedAuthor(row.handle)}`;
+    if (key.endsWith("|")) continue;
+    svAuthorRanksCache.set(key, {
+      svScore: Number(row.sv_score),
+      svPlatformScore: Number(row.platform_sv),
+      svPercentile: Number(row.platform_percentile),
+      svRank: Number(row.platform_rank),
+      svPopulation: Number(row.platform_population),
+    });
+  }
+  return svAuthorRanksCache;
+}
+
+function rankFor(source: KolSource, author: string): SvAuthorRank {
+  return svAuthorRanks().get(`${source}|${normalizedAuthor(author)}`) ?? {};
+}
+
+// 「整体数据 · 目标价时间线」取数：近 3 个月 kol_judgment(reddit/x/雪球/Toss/Yahoo JP) + yt_judgment(youtube)，
 // 每条判断的买入侧/卖出侧各出一个 TargetMark(日期×价位区间)；叠真实股价折线 + 现价。作者/链接 join 源表，
 // 简单依据(reason)取 kol_refined(reddit/x/雪球/Toss/Yahoo JP) 或 yt_analysis.summary(youtube)；价格按现价 band 二次剔噪。
+// 作者按平台关联当前 SV 排名，前端可组合「近 1/3/7/14/30/60/90 天 × SV 分位」过滤噪音。
 export function getKolTargetPrices(symbol: string): KolTargetData {
   return safe(
     () => {
@@ -75,6 +140,7 @@ export function getKolTargetPrices(symbol: string): KolTargetData {
             source: cfg.s, opinionId: opinionId(cfg.s, r.item_id), author: cfg.name(r.author), priceRaw: r.price_raw || undefined,
             horizon: bi(r.horizon_zh || "", r.horizon_en || ""), bucket: bk(r.horizon_bucket || ""),
             reason, date: String(r.created || "").slice(0, 10), url: r.url || "#",
+            ...rankFor(cfg.s, r.author || ""),
           };
           if (r.buy_lo != null && inBand((r.buy_lo + (r.buy_hi ?? r.buy_lo)) / 2))
             marks.push({ ...base, kind: "buy", lo: r.buy_lo, hi: r.buy_hi ?? r.buy_lo });
@@ -115,6 +181,7 @@ export function getKolTargetPrices(symbol: string): KolTargetData {
           reason: bi(r.summary_zh || "", r.summary_en || ""),
           date: String(r.day || "").slice(0, 10),
           url: r.url || "#",
+          ...rankFor("x", r.author || ""),
         });
       }
       // youtube：yt_judgment ⋈ yt_video / yt_analysis → 卖出/目标侧
@@ -122,7 +189,7 @@ export function getKolTargetPrices(symbol: string): KolTargetData {
         () => all<any>(
           `SELECT yj.target AS target, COALESCE(yj.horizon_zh,'') AS hz, COALESCE(yj.horizon_en,'') AS he,
                   yj.video_id AS video_id,
-                  v.channel AS author, v.url AS url, v.published_utc AS created,
+                  v.channel AS author, c.handle AS author_handle, v.url AS url, v.published_utc AS created,
                   COALESCE(a.summary_zh,'') AS sz, COALESCE(a.summary_en,'') AS se
              FROM yt_judgment yj JOIN yt_video v ON v.id = yj.video_id
              JOIN yt_channel c ON c.channel_id = v.channel_id
@@ -145,6 +212,7 @@ export function getKolTargetPrices(symbol: string): KolTargetData {
           source: "youtube", opinionId: opinionId("youtube", r.video_id), author: r.author || "YouTube", kind: "sell", lo: rng[0], hi: rng[1],
           priceRaw: r.target || undefined, horizon, bucket: horizon ? bucketHorizon(`${r.hz} ${r.he}`) : undefined,
           reason: bi(r.sz, r.se), date: String(r.created || "").slice(0, 10), url: r.url || "#",
+          ...rankFor("youtube", r.author_handle || r.author || ""),
         });
       }
       // 去重：同一作者同日同侧同价位（重复推文 / join 扇出）只留一条，避免图上叠成一团

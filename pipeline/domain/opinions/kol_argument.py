@@ -304,10 +304,12 @@ def synthesize(only: list[str] | None = None, force: bool = False, workers: int 
         done += len(buf)
         buf.clear()
 
-    # 全部组都走 LLM 主编（含单条：让模型有机会丢弃零散/无实质的）
+    # 单条观点无需做聚类，直接生成可追溯论点；多条观点才交给 LLM 综合。
     def _work(item):
         k, items = item
         feed = items[:MAX_FEED]
+        if len(feed) == 1:
+            return k, None, _trivial(feed)
         data = None
         for _ in range(3):
             data = llm.messages_json(llm.LOW, SYSTEM, _user(k[0], k[1], k[2], feed), max_tokens=2000)

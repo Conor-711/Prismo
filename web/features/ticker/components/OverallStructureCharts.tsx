@@ -2,15 +2,11 @@
 
 import { useMemo } from "react";
 import ReactECharts from "echarts-for-react";
-import { fmtCompact } from "@/shared/formatting/format";
 import type { DailyNet, WindowedArguments } from "@/server/queries/kolQueries";
-import type { VolStackItem } from "../overallDataConstants";
-import type { VolRow } from "../overallDataTypes";
 
 const BULL = "#57D7BA";
 const BEAR = "#FF5C6C";
 const NEUTRAL = "#8A8D91";
-const GOLD = "#F2B544";
 const GRID = "rgba(127,127,127,0.11)";
 const AXIS = "#73757a";
 const LINE = "#343A42";
@@ -110,100 +106,6 @@ export function BullBearStructureChart({ data, zh }: { data: DailyNet[]; zh: boo
 
   return (
     <Panel title={zh ? "多空结构" : "Bull / bear structure"} hint={zh ? "近 3 月 · 占比" : "3M · share"}>
-      {rows.length ? <ReactECharts option={option} style={{ height: 154, width: "100%" }} opts={{ renderer: "canvas" }} notMerge /> : <Empty zh={zh} />}
-    </Panel>
-  );
-}
-
-export function CrowdingChart({
-  newcomers,
-  volume,
-  stack,
-  zh,
-}: {
-  newcomers: VolRow[];
-  volume: VolRow[];
-  stack: VolStackItem[];
-  zh: boolean;
-}) {
-  const rows = useMemo(() => last(newcomers.filter((r) => r.total > 0)), [newcomers]);
-  const volMap = useMemo(() => new Map(volume.map((r) => [r.day, r])), [volume]);
-  const activeStack = useMemo(
-    () => stack.filter((s) => rows.some((r) => +(r[s.key] ?? 0) > 0)),
-    [rows, stack]
-  );
-  const option = useMemo(() => {
-    const days = rows.map((r) => r.day);
-    const ratio = rows.map((r) => {
-      const v = +(volMap.get(r.day)?.total ?? 0) || 0;
-      return v > 0 ? +(Math.min(2, r.total / v) * 100).toFixed(1) : 0;
-    });
-    return {
-      backgroundColor: "transparent",
-      grid: { left: 2, right: 26, top: 8, bottom: 18, containLabel: true },
-      tooltip: {
-        trigger: "axis",
-        axisPointer: { type: "shadow" },
-        ...TIP,
-        formatter: (ps: any[]) => {
-          const idx = ps?.[0]?.dataIndex ?? 0;
-          const r = rows[idx];
-          const parts = activeStack
-            .filter((s) => +(r[s.key] ?? 0) > 0)
-            .map((s) => `<span style="color:${s.color}">${zh ? s.zh : s.en} ${fmtCompact(+(r[s.key] ?? 0))}</span>`)
-            .join(" · ");
-          return `<b>${md(days[idx])}</b><br/>${zh ? "新增参与者" : "New participants"} <b>${fmtCompact(r.total)}</b><br/>${zh ? "拥挤度" : "Crowding"} <b>${ratio[idx]}%</b>${parts ? `<br/><span style="font-size:10px;color:#9aa0a6">${parts}</span>` : ""}`;
-        },
-      },
-      xAxis: {
-        type: "category",
-        data: days,
-        axisLine: { show: false },
-        axisTick: { show: false },
-        axisLabel: { color: AXIS, fontSize: 9, interval: 0, formatter: monthTick },
-      },
-      yAxis: [
-        {
-          type: "value",
-          min: 0,
-          axisLine: { show: false },
-          axisTick: { show: false },
-          axisLabel: { show: false },
-          splitLine: { lineStyle: { color: GRID } },
-        },
-        {
-          type: "value",
-          min: 0,
-          axisLine: { show: false },
-          axisTick: { show: false },
-          axisLabel: { color: AXIS, fontSize: 9, formatter: "{value}%" },
-          splitLine: { show: false },
-        },
-      ],
-      series: [
-        ...activeStack.map((s) => ({
-          name: zh ? s.zh : s.en,
-          type: "bar",
-          stack: "new",
-          data: rows.map((r) => +(r[s.key] ?? 0) || 0),
-          itemStyle: { color: s.color, opacity: 0.75, borderRadius: [2, 2, 0, 0] },
-          barMaxWidth: 10,
-        })),
-        {
-          name: zh ? "拥挤度" : "Crowding",
-          type: "line",
-          yAxisIndex: 1,
-          data: ratio,
-          smooth: 0.25,
-          symbol: "none",
-          lineStyle: { color: GOLD, width: 1.8 },
-        },
-      ],
-    };
-  }, [activeStack, rows, volMap, zh]);
-
-  return (
-    <Panel title={zh ? "新增参与者 / 拥挤度" : "New participants / crowding"} hint={zh ? "近 3 月" : "3M"}>
       {rows.length ? <ReactECharts option={option} style={{ height: 154, width: "100%" }} opts={{ renderer: "canvas" }} notMerge /> : <Empty zh={zh} />}
     </Panel>
   );

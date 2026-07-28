@@ -26,7 +26,7 @@ export function DashboardSignalPanel({
   const items = signals[active];
 
   return (
-    <section className="panel flex min-h-0 flex-col overflow-hidden rounded-lg">
+    <section className="panel flex h-full min-h-0 flex-col overflow-hidden rounded-lg">
       <div className="flex h-11 shrink-0 items-center justify-between gap-3 border-b border-line px-3">
         <div className="min-w-0">
           <h2 className="truncate font-display text-[14px] font-bold text-cream">

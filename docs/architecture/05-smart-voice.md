@@ -60,7 +60,7 @@ pipeline/domain/smart_voice/
 - Smart Voice 独立页面
 
 前端允许做轻量筛选，例如 Top 25% 区间过滤，但不能改变 SV 分数口径。
-`/smart-voice` 使用单视窗工作台，按 Nansen Smart Money 的对象关系组织为三类入口：标的发现、投资者榜和实时观点。标的发现按各来源正式合格池的 Top/Bottom 10% `platformRank` 成员聚合，只展示高 SV 作者净方向明确的集中看多/看空标的，以及高低 SV 方向相反的分歧标的；集中方向至少要求同方向 2 条 call 和 2 位独立 Top 10% 作者，榜单展示 Top 10% 多空 call、同方向作者和加权净方向，不把中段或 Bottom 作者的计数混入。服务端一次读取近 90 天轻量 call 生成 `24H/3D/7D/30D/90D × X/YouTube/Reddit/雪球任意非空组合`，再只为最终入榜的代表性证据读取摘要、原文片段和原始链接；浏览器不接收全量原始 call。投资者榜消费四个平台各自 `platformBands.ranked` 的完整正式排名，并通过 `platformBands.observed` 提供明确标注的观察池；观察池不参与正式榜单、Top/Bottom 分位或静态作者详情生成。实时观点只消费 high/medium confidence 或平台 Top 10% 作者近 60 天的结构化 actionable call，并按来源限额后合并。作者画像沿用独立详情页。Toss 没有正式评分池时不生成占位榜单。
+`/smart-voice` 使用单视窗工作台，按 Nansen Smart Money 的对象关系组织为三类入口：标的发现、投资者榜和实时观点。标的发现按各来源正式合格池的 Top/Bottom 10% `platformRank` 成员聚合，只展示高 SV 作者净方向明确的集中看多/看空标的，以及高低 SV 方向相反的分歧标的；集中方向至少要求同方向 2 条 call 和 2 位独立 Top 10% 作者，榜单展示 Top 10% 多空 call、同方向作者和加权净方向，不把中段或 Bottom 作者的计数混入。服务端一次读取近 90 天轻量 call 生成 `24H/3D/7D/30D/90D × X/YouTube/Reddit/雪球任意非空组合`，再只为最终入榜的代表性证据读取摘要、原文片段和原始链接；浏览器不接收全量原始 call。投资者榜消费四个平台各自 `platformBands.ranked` 的完整正式排名，并通过 `platformBands.observed` 提供明确标注的观察池；观察池不参与正式榜单、Top/Bottom 分位或静态作者详情生成。榜单作者预览为前后分位作者分别选择累计绝对贡献最高的主要加分/扣分 ticker，并把该 ticker 最具影响的已结算观点落到 `price_daily` 收盘价折线；行情按 ticker 去重并用紧凑 `[day, close]` 元组传给客户端。实时观点只消费 high/medium confidence 或平台 Top 10% 作者近 60 天的结构化 actionable call，并按来源限额后合并。作者画像沿用独立详情页。Toss 没有正式评分池时不生成占位榜单。
 
 标的发现同时导出一套不参与当前加权排序的作者人数指标：在当前来源组合、窗口、标的和各来源 Top 10% 池内，以 `source + investor_id` 作为平台作者身份，每位作者只保留发布时间最新的 actionable call；由此计算看多作者数、看空作者数、`作者净人数 = 多 - 空` 和 `作者共识度 = 净人数 / 总作者数`。同一作者重复发帖不增加人数；跨平台身份尚未完成实体归并时按不同平台作者计数。
 
@@ -112,7 +112,7 @@ Bottom 分组不是反向策略：其作者原始方向同样按“说多后涨�
 - **信号加速与反转**：读取同分组/周期最近 45 个交易日序列，以近 5 个交易日的净方向变化识别加速、衰减和穿越中性区间的反转。
 - **目标价与失效条件**：读取近 45 日 `sv_call`，按观点当日的历史时点百分位归入 Top/Bottom，聚合目标价中位/IQR、方向构成、已到达目标及明确触发/失效条件。目标价只保留最新日线价格 `0.2–5×` 范围，缺失条件不补 mock。
 
-`web/features/ticker/components/SmartVoiceDecisionSuite.tsx` 在同一真实 view model 上提供可删选的决策实验模块：SV 加权目标价散点分布、7 日观点生命周期变化雷达、高低 SV 预期差/拥挤/离散度/证据置信度、投资逻辑生命周期、跨平台扩散、作者能力矩阵、三标的组合叙事风险、可解释提醒，以及复用观点流标的级配置的个性化仓位匹配。权重与仓位逻辑集中在 `smartVoiceDecisionLogic.ts`，视角生命周期、扩散、组合暴露和提醒阈值集中在 `smartVoiceResearchLogic.ts`；构建期 SQL 仍只放在 `web/server/queries/smartVoiceTickerSignals.ts`。这些模块不生成新 SV、不修改离线表，也不把匹配度描述为买卖建议。
+`web/features/ticker/components/SmartVoiceDecisionSuite.tsx` 在同一真实 view model 上提供可筛选的决策实验模块：SV 加权目标价散点分布、7 日观点生命周期变化雷达、高低 SV 预期差/拥挤/离散度/证据置信度、投资逻辑生命周期、作者能力矩阵、三标的组合叙事风险、可解释提醒，以及复用观点流标的级配置的个性化仓位匹配。权重与仓位逻辑集中在 `smartVoiceDecisionLogic.ts`，视角生命周期、组合暴露和提醒阈值集中在 `smartVoiceResearchLogic.ts`；构建期 SQL 仍只放在 `web/server/queries/smartVoiceTickerSignals.ts`。详情页不展示有效广度、平台确认、`n_eff` 等低解释度内部量，但底层算法与资格门槛保持不变。这些模块不生成新 SV、不修改离线表，也不把匹配度描述为买卖建议。
 
 ## 数据要求
 
