@@ -10,6 +10,7 @@ import lzma
 import os
 import shutil
 import sqlite3
+import subprocess
 import tempfile
 from pathlib import Path
 
@@ -102,6 +103,15 @@ def _compact_database(source: Path, destination: Path) -> None:
 
 
 def _compress(source: Path, destination: Path, preset: int) -> None:
+    xz = shutil.which("xz")
+    if xz:
+        with destination.open("wb") as output_file:
+            subprocess.run(
+                [xz, "--threads=0", f"-{preset}", "--stdout", str(source)],
+                stdout=output_file,
+                check=True,
+            )
+        return
     with source.open("rb") as input_file, lzma.open(
         destination, "wb", format=lzma.FORMAT_XZ, preset=preset
     ) as output_file:

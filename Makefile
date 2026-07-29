@@ -533,5 +533,5 @@ site-cloud:
 
 # clean 只清构建缓存；**绝不删 data/dev.db**（它现在是不可再生的真源）。
 clean:
-	rm -rf web/.next web/out
-	@echo "ℹ️  已清 web/.next + web/out。（dev.db 是真源，未动；要删请手动并先 make backup-db）"
+	rm -rf web/.next-dev web/.next web/out
+	@echo "ℹ️  已清 web/.next-dev + web/.next + web/out。（dev.db 是真源，未动；要删请手动并先 make backup-db）"

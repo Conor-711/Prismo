@@ -339,12 +339,13 @@ crypto_us/
 | `make cloud-push` | 把本地源数据增量上传到云端（redditalpha 用；Prismo 一般不需要） |
 | `make cloud-pull` | ⛔ **默认拒绝**（会用「只有 Reddit 核心」的云端覆盖本地、抹掉 Prismo 独有的 gr_*/yt_*/kol_*）。确需重建：`make backup-db && FORCE=1 make cloud-pull` |
 | `make backup-db` | 用 SQLite backup API 备份 `data/dev.db` 到项目外目录；默认只保留最近一份 |
-| `make snapshot-db` | 校验并压缩本地真源，按 90MB 阈值生成单文件或 24MB 分片部署快照；不提交原始库 |
+| `make snapshot-db` | 校验并压缩本地真源（系统 `xz` 多线程优先、Python `lzma` 回退），按 90MB 阈值生成单文件或 24MB 分片部署快照；不提交原始库 |
 | `make restore-db FORCE=1` | 从仓库压缩快照还原本地 `data/dev.db` |
 | `make data-clean` | 清项目内旧备份/抽帧缓存并 checkpoint WAL，不删除主库 |
 | `make site` | 构建静态站 `web/out/`（读**本地 dev.db**；需 **Node 22**） |
 | `make cf-deploy` | Cloudflare Pages Direct Upload：先 `make site`，再把 zh/en 产物复制到 `/tmp/prismo-out-cf` 并上传到 `prismo` 的 `main` production；可用 `PROJECT=xxx` 覆盖项目名 |
 | `make site-cloud` | **现等同 `make site`**（Prismo 以本地为真源、不再 cloud-pull；保留名字防误清） |
+| `make clean` | 只清 `web/.next-dev`、`web/.next`、`web/out` 构建缓存；用于修复开发热更新或生产构建残留 chunk，不触碰 `data/dev.db` |
 | `make stats` | 打印库内统计 |
 | `make demo` | 一键离线全流程（样本+mock，无需 key） |
 
@@ -361,7 +362,7 @@ crypto_us/
 
 ## 9. 重要约定 / 易踩坑
 
-- **构建用 Node 22**（见上）。若构建报 `Cannot find module for page /_not-found`：先 `rm -rf web/.next web/out` 再构建（残留进程会锁住 .next）。
+- **构建用 Node 22**（见上）。若开发或构建报缺失 page/vendor chunk，先停止残留 Next 进程并执行 `make clean`，再重启开发服务或构建。
 - **多语字典**：`dictionaries/zh.ts` 是源（`Dictionary = typeof zh`），`en.ts`/`ja.ts`/`ko.ts` 必须镜像完全相同的 key（`npx tsc --noEmit` 会强校验）。新增 locale 只需在 `i18n.ts` 的 `locales`/`isLocale`/`DICTS` 三处登记 + 加 `LanguageSwitcher` 选项；路由/sitemap 自动随 `locales` 扩展。帖子内容只有 `*_zh` 译文，故 ja/ko 渲染时回退英文原文。
 - **密钥不入库**：`.env` / `web/.env.local` 已 gitignore；含 `QWEN_API_KEY`/`DEEPSEEK_API_KEY`/`DATABASE_URL`(含密码)/Supabase anon key 等，切勿提交或泄露。
 - **回到纯本地**：`.env` 的 `DATABASE_URL` 改回 `sqlite:///./data/dev.db` 即可。

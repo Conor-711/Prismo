@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { BASE_PATH } from "@/lib/site";
+import { staticDataUrl } from "@/lib/site";
 import { KolModule } from "./KolModule";
 import { SmartVoiceTickerModule } from "@/features/smart-voice";
 import { SmartVoiceTickerSignals } from "./SmartVoiceTickerSignals";
@@ -98,7 +98,7 @@ export function TickerOverviewPanel({
     if (dashboard !== "sv" || smartVoiceSignals || signalsRequestedFor.current === symbol) return;
     signalsRequestedFor.current = symbol;
     const controller = new AbortController();
-    fetch(`${BASE_PATH}/data/smart-voice-ticker/${encodeURIComponent(symbol.toUpperCase())}/`, {
+    fetch(staticDataUrl(`/data/smart-voice-ticker/${encodeURIComponent(symbol.toUpperCase())}`), {
       signal: controller.signal,
     })
       .then((response) => {

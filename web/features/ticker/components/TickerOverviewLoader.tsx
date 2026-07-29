@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BASE_PATH } from "@/lib/site";
+import { staticDataUrl } from "@/lib/site";
 import type { KolCandle, KolTargetData } from "@/shared/market/mockDetail";
 import type { DailyNet, DailyVol, RetailVol, WindowedArguments } from "@/server/queries/kolQueries";
 import type { OverallData } from "@/server/queries/overallData";
@@ -52,7 +52,7 @@ export function TickerOverviewLoader({
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch(`${BASE_PATH}/data/ticker-overview/${encodeURIComponent(symbol.toUpperCase())}/`, {
+    fetch(staticDataUrl(`/data/ticker-overview/${encodeURIComponent(symbol.toUpperCase())}`), {
       signal: controller.signal,
     })
       .then((response) => {
