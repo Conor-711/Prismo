@@ -232,8 +232,8 @@ export function getTickerSmartVoiceSignals(symbol: string): SvTickerSignalData |
          LEFT JOIN kol_viewpoint v
            ON v.source = c.source
           AND v.item_id = c.tweet_id
-          AND upper(v.ticker) = upper(c.ticker)
-        WHERE upper(c.ticker) = ?
+          AND v.ticker = c.ticker
+        WHERE c.ticker = ?
           AND c.is_actionable_call = 1
           AND c.direction IN ('bull','bear')
           AND upper(c.horizon_bucket) IN ('1D','5D','20D','60D','90D','180D')
@@ -311,13 +311,13 @@ export function getTickerSmartVoiceSignals(symbol: string): SvTickerSignalData |
                 / NULLIF(SUM(s.score_weight),0) AS avg_directional_excess_pct,
               SUM(COALESCE(s.contribution,0)) AS contribution,
               COALESCE((SELECT sc.investor_style FROM sv_call sc
-                         WHERE sc.investor_id=s.investor_id AND upper(sc.ticker)=?
+                         WHERE sc.investor_id=s.investor_id AND sc.ticker=?
                            AND sc.investor_style NOT IN ('','unknown')
                          GROUP BY sc.investor_style ORDER BY COUNT(*) DESC LIMIT 1),'unknown') AS dominant_style
          FROM sv_call_settlement s
          JOIN sv_call c ON c.candidate_id=s.candidate_id
          LEFT JOIN sv_investor_score i ON i.investor_id=s.investor_id
-        WHERE upper(s.ticker)=? AND s.status='settled' AND s.actual_hit IS NOT NULL
+        WHERE s.ticker=? AND s.status='settled' AND s.actual_hit IS NOT NULL
         GROUP BY s.investor_id
        HAVING COUNT(DISTINCT s.candidate_id)>=2
         ORDER BY ABS(SUM(COALESCE(s.contribution,0))) DESC, ticker_calls DESC
@@ -340,7 +340,7 @@ export function getTickerSmartVoiceSignals(symbol: string): SvTickerSignalData |
     const thesisNarratives = all<any>(
       `SELECT lens, stance, lead_zh, lead_en
          FROM kol_narrative
-        WHERE upper(ticker)=? AND window='1mo'
+        WHERE ticker=? AND window='1mo'
         ORDER BY lens, stance`,
       ticker,
     ).map((row): SvTickerThesisNarrative => ({
@@ -357,12 +357,12 @@ export function getTickerSmartVoiceSignals(symbol: string): SvTickerSignalData |
          JOIN sv_investor_score_asof a
            ON a.asof_day=substr(c.created_at,1,10) AND a.investor_id=c.investor_id
          JOIN kol_viewpoint v
-           ON v.source=c.source AND v.item_id=c.tweet_id AND upper(v.ticker)=upper(c.ticker)
+           ON v.source=c.source AND v.item_id=c.tweet_id AND v.ticker=c.ticker
          JOIN json_each(v.viewpoints) j
-        WHERE upper(c.ticker) IN ('MU','NVDA','MSTR')
+        WHERE c.ticker IN ('MU','NVDA','MSTR')
           AND c.is_actionable_call=1
           AND substr(c.created_at,1,10)>=date(?, '-' || ? || ' days')
-        GROUP BY upper(c.ticker), j.value
+        GROUP BY c.ticker, j.value
         ORDER BY ticker, weight DESC`,
       latestSignalDay,
       evidenceWindowDays - 1,
@@ -477,7 +477,7 @@ export function getTickerSmartVoiceSignals(symbol: string): SvTickerSignalData |
       stats,
       prices: all<any>(
         `SELECT day, close FROM price_daily
-          WHERE upper(ticker) = ? AND close IS NOT NULL
+          WHERE ticker = ? AND close IS NOT NULL
           ORDER BY day DESC LIMIT 370`,
         ticker,
       ).reverse().map((row) => ({ day: String(row.day), close: Number(row.close) })),

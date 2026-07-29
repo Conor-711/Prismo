@@ -61,6 +61,9 @@ function normalizeRealInvestor(value: unknown): SvInvestor | null {
     topTickers: Array.isArray(raw.topTickers) ? raw.topTickers.map(String) : [],
     topNarratives: Array.isArray(raw.topNarratives) ? raw.topNarratives.map(String) : [],
     platformScores: normalizeScoreMap(raw.platformScores) as Partial<Record<SvSource, number>>,
+    abilities: raw.abilities && typeof raw.abilities === "object"
+      ? raw.abilities as SvInvestor["abilities"]
+      : undefined,
     horizonScores: normalizeHorizonScores(raw.horizonScores),
     narrativeScores: normalizeScoreMap(raw.narrativeScores),
     tickerScores: normalizeScoreMap(raw.tickerScores),
@@ -166,6 +169,9 @@ export function getGeneratedSmartVoiceBoard(): SvBoard | null {
     currentNarratives: Array.isArray(raw.currentNarratives) && raw.currentNarratives.length ? raw.currentNarratives : FALLBACK_NARRATIVES,
     updatedAt: raw.updatedAt || new Date().toISOString().slice(0, 10),
     scoringVersion: typeof raw.scoringVersion === "string" ? raw.scoringVersion : undefined,
+    platformScoringVersions: raw.platformScoringVersions && typeof raw.platformScoringVersions === "object"
+      ? raw.platformScoringVersions as Partial<Record<SvSource, string>>
+      : undefined,
     totalInvestors: typeof raw.totalInvestors === "number" ? raw.totalInvestors : investors.length,
     exportedInvestors: typeof raw.exportedInvestors === "number" ? raw.exportedInvestors : investors.length,
     distribution: raw.distribution as SvDistribution | undefined,

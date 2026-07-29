@@ -53,10 +53,12 @@ export function SmartVoiceRepresentativeChart({
   showcase,
   prices,
   zh,
+  height = 260,
 }: {
   showcase: SmartVoiceRepresentativeShowcase;
   prices: SmartVoiceRepresentativePricePoint[];
   zh: boolean;
+  height?: number;
 }) {
   const strongest = useMemo(
     () => [...showcase.calls].sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution))[0],
@@ -234,7 +236,7 @@ export function SmartVoiceRepresentativeChart({
       {prices.length ? (
         <ReactECharts
           option={option}
-          style={{ height: 260, width: "100%" }}
+          style={{ height, width: "100%" }}
           opts={{ renderer: "canvas" }}
           onEvents={{
             click: (params: any) => {

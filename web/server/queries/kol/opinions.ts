@@ -12,7 +12,7 @@ import {
   ytChannelMap,
   ytDigestMap,
 } from "./lookups";
-import { redditOps, tossOps, xMergedOps, yahooJpOps, youtubeOps, xueqiuOps } from "./sources";
+import { redditOps, tossOps, xMergedOps, yahooJpOps, youtubeOps, xueqiuOps, ytFulltextMap } from "./sources";
 
 // OpinionExplorer is hydrated on the client, so its server payload must stay bounded.
 // The database remains the full source of truth; these limits only shape the browsable pool.
@@ -35,18 +35,20 @@ function shiftUtcDay(day: string, offset: number): string {
   return date.toISOString().slice(0, 10);
 }
 
-function hydrateOpinions(symbol: string, raw: RawOp[]): KolOpinion[] {
-  const refined = refinedMap(symbol);
-  const vpMap = viewpointMap(symbol);
+function hydrateOpinions(symbol: string, raw: RawOp[], includeContent = true): KolOpinion[] {
+  const refs = raw.map((op) => ({ source: op.source, itemId: op.refKey }));
+  const refined = refinedMap(symbol, refs, includeContent);
+  const vpMap = viewpointMap(symbol, refs);
   const avatars = avatarMap();
-  const relMap = relevanceMap(symbol);
-  const qualMap = qualityMap();
+  const relMap = relevanceMap(symbol, refs);
+  const qualMap = qualityMap(refs);
   const hasX = raw.some((op) => op.source === "x");
   const hasYoutube = raw.some((op) => op.source === "youtube");
   const repMap = hasX ? repliesByTweet(symbol) : new Map(); // 仅 X：tweet_id -> 热门评论
-  const ytChans = hasYoutube ? ytChannelMap() : new Map(); // 仅 YouTube：channel_id -> 作者基础信息
-  const ytDigests = hasYoutube ? ytDigestMap() : new Map(); // 仅 YouTube：video_id -> 投资者摘要 + 内容目录
-  const jMap = judgmentMap(symbol); // 目标价+周期（kol_judgment / yt_judgment；价格已剔噪）
+  const youtubeRows = hasYoutube ? raw.filter((op) => op.source === "youtube") : [];
+  const ytChans = hasYoutube ? ytChannelMap(youtubeRows.map((op) => op.avatarKey)) : new Map(); // 仅 YouTube：channel_id -> 作者基础信息
+  const ytDigests = hasYoutube ? ytDigestMap(youtubeRows.map((op) => op.refKey)) : new Map(); // 仅 YouTube：video_id -> 投资者摘要 + 内容目录
+  const jMap = judgmentMap(symbol, refs); // 目标价+周期（kol_judgment / yt_judgment；价格已剔噪）
   const out: KolOpinion[] = [];
   for (const r of raw) {
     if (!r.day) continue;
@@ -82,9 +84,9 @@ function hydrateOpinions(symbol: string, raw: RawOp[]): KolOpinion[] {
       // Full source/translation already live in orig/trans. Keeping text as the
       // concise thesis avoids serializing the same long body three times.
       text: displayText,
-      orig: r.orig,
-      trans,
-      quote,
+      orig: includeContent ? r.orig : undefined,
+      trans: includeContent ? trans : undefined,
+      quote: includeContent ? quote : undefined,
       reason: hasReason ? { zh: reason!.zh || reason!.en, en: reason!.en || reason!.zh } : undefined,
       points: points && (points.zh.length || points.en.length) ? points : undefined,
       url: r.url,
@@ -105,23 +107,42 @@ function hydrateOpinions(symbol: string, raw: RawOp[]): KolOpinion[] {
   return out;
 }
 
-export function getKolOpinions(symbol: string): KolOpinion[] {
+export function getKolOpinions(
+  symbol: string,
+  options: { includeContent?: boolean; preview?: boolean } = {}
+): KolOpinion[] {
   return safe(() => {
+    const measure = <T,>(label: string, load: () => T): T => {
+      const startedAt = performance.now();
+      const value = load();
+      const elapsedMs = performance.now() - startedAt;
+      if (process.env.NODE_ENV === "development" && elapsedMs >= 50) {
+        console.info(`[ticker:${symbol}] opinions:${label} ${elapsedMs.toFixed(0)}ms`);
+      }
+      return value;
+    };
+    const includeContent = options.includeContent ?? false;
+    const preview = options.preview ?? false;
     const since = new Date(Date.now() - 370 * 864e5).toISOString().slice(0, 10);
+    const previewSince = new Date(Date.now() - 31 * 864e5).toISOString().slice(0, 10);
+    const sourceSince = preview ? previewSince : since;
     const youtubeSince = new Date(Date.now() - YOUTUBE_OPINION_DAYS * 864e5).toISOString().slice(0, 10);
     const raw = [
-      ...redditOps(symbol, since, REDDIT_OPINION_LIMIT),
-      ...youtubeOps(symbol, youtubeSince, YOUTUBE_OPINION_LIMIT),
-      ...xueqiuOps(symbol, since, LOCAL_OPINION_LIMIT),
-      ...tossOps(symbol, since, LOCAL_OPINION_LIMIT),
-      ...yahooJpOps(symbol, since, LOCAL_OPINION_LIMIT),
-      ...xMergedOps(symbol, since, X_OPINION_LIMIT),
+      ...measure("reddit", () => redditOps(symbol, sourceSince, preview ? 36 : REDDIT_OPINION_LIMIT, includeContent)),
+      ...measure("youtube", () => youtubeOps(symbol, youtubeSince, preview ? 24 : YOUTUBE_OPINION_LIMIT)),
+      ...measure("xueqiu", () => xueqiuOps(symbol, sourceSince, preview ? 20 : LOCAL_OPINION_LIMIT, includeContent)),
+      ...measure("toss", () => tossOps(symbol, sourceSince, preview ? 20 : LOCAL_OPINION_LIMIT, includeContent)),
+      ...measure("yahoo", () => yahooJpOps(symbol, sourceSince, preview ? 20 : LOCAL_OPINION_LIMIT, includeContent)),
+      ...measure("x", () => xMergedOps(symbol, sourceSince, preview ? 36 : X_OPINION_LIMIT, preview)),
     ];
-    return hydrateOpinions(symbol, raw);
+    return measure("hydrate", () => hydrateOpinions(symbol, raw, includeContent));
   }, []);
 }
 
-export function getCompleteXOpinions(symbol: string): KolOpinion[] {
+export function getCompleteXOpinions(
+  symbol: string,
+  options: { includeContent?: boolean } = {}
+): KolOpinion[] {
   return safe(() => {
     const latest = all<{ day: string | null }>(
       `SELECT MAX(substr(created,1,10)) AS day FROM x_opinion WHERE ticker = ?`,
@@ -129,6 +150,33 @@ export function getCompleteXOpinions(symbol: string): KolOpinion[] {
     )[0]?.day;
     if (!latest) return [];
     const since = shiftUtcDay(latest, -(X_COMPLETE_DAYS - 1));
-    return hydrateOpinions(symbol, xMergedOps(symbol, since, null));
+    return hydrateOpinions(symbol, xMergedOps(symbol, since, null), options.includeContent ?? true);
   }, []);
+}
+
+export function getKolOpinionContent(symbol: string): Record<string, Pick<KolOpinion, "orig" | "trans" | "quote">> {
+  const content: Record<string, Pick<KolOpinion, "orig" | "trans" | "quote">> = {};
+  for (const opinion of getKolOpinions(symbol, { includeContent: true })) {
+    if (opinion.source === "youtube") continue;
+    content[opinion.id] = {
+      orig: opinion.orig,
+      trans: opinion.trans,
+      quote: opinion.quote,
+    };
+  }
+  return content;
+}
+
+export function getYoutubeOpinionContent(symbol: string): Record<string, Pick<KolOpinion, "orig" | "ytSegments">> {
+  return safe(() => {
+    const since = new Date(Date.now() - YOUTUBE_OPINION_DAYS * 864e5).toISOString().slice(0, 10);
+    const content: Record<string, Pick<KolOpinion, "orig" | "ytSegments">> = {};
+    for (const [videoId, fulltext] of ytFulltextMap(symbol, since, YOUTUBE_OPINION_LIMIT)) {
+      content[`yt-${videoId}`] = {
+        orig: fulltext.flat || undefined,
+        ytSegments: fulltext.segments.length ? fulltext.segments : undefined,
+      };
+    }
+    return content;
+  }, {});
 }

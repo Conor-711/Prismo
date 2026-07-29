@@ -7,7 +7,7 @@ Opinion 是标的详情页观点流的标准内容单元。它可以来自 X、Y
 | 字段 | 类型 | 说明 |
 |---|---|---|
 | `id` | string | Prismo 内部唯一 ID，建议为 `${source}:${source_item_id}:${ticker}` |
-| `source` | enum | 平台 key：`x`、`youtube`、`reddit`、`xueqiu`、`toss`、`yahoojp` |
+| `source` | enum | 平台 key：`x`、`youtube`、`reddit`、`xueqiu`、`toss`、`yahoojp`、`telegram` |
 | `source_item_id` | string | 平台原始内容 ID |
 | `ticker` | string | 美股标的代码 |
 | `author` | AuthorRef | 作者引用，见 `author.md` |
@@ -37,3 +37,4 @@ Opinion 是标的详情页观点流的标准内容单元。它可以来自 X、Y
 - `summary` 可以经过提炼，但必须和翻译字段分开。
 - `stance` 只表达该内容对当前 ticker 的方向，不表达作者整体偏好。
 - 如果一条内容提到多个 ticker，应该拆成多条 ticker-scoped Opinion。
+- `telegram` 首版只表示无需登录的公共频道消息。转发内容必须保留来源标记，未证明频道主明确背书时不得归因给频道主；Private SV 隔离产物不得自动进入公域 Opinion 流。

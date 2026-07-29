@@ -1,10 +1,14 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import type { KolOpinion, KolSource } from "@/shared/market/mockDetail";
 import { SOURCE } from "@/shared/market/kolPresentation";
 import type { RecommendationMeta, SortMode } from "@/features/ticker/opinionExplorerTypes";
 import { Chip } from "./controls";
 import { ListCard } from "./listCard";
+
+const INITIAL_VISIBLE = 60;
+const VISIBLE_STEP = 60;
 
 export function OpinionListPane({
   zh,
@@ -41,6 +45,22 @@ export function OpinionListPane({
   onSortChange: (sort: SortMode) => void;
   onSelectOpinion: (id: string) => void;
 }) {
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
+  useEffect(() => {
+    setVisibleCount(INITIAL_VISIBLE);
+  }, [opinions, platformFilter, sort]);
+  useEffect(() => {
+    if (!selectedId) return;
+    const selectedIndex = opinions.findIndex((opinion) => opinion.id === selectedId);
+    if (selectedIndex >= visibleCount) {
+      setVisibleCount(Math.ceil((selectedIndex + 1) / VISIBLE_STEP) * VISIBLE_STEP);
+    }
+  }, [opinions, selectedId, visibleCount]);
+  const visibleOpinions = useMemo(
+    () => opinions.slice(0, visibleCount),
+    [opinions, visibleCount]
+  );
+
   return (
     <div className={fill ? "flex min-h-0 flex-col overflow-hidden rounded-xl bg-card/45 ring-1 ring-inset ring-line lg:w-[392px] lg:shrink-0" : "lg:w-[320px] lg:shrink-0"}>
       <div className="shrink-0 border-b border-line">
@@ -81,8 +101,16 @@ export function OpinionListPane({
       {opinions.length === 0 ? (
         <p className="py-8 text-center text-sm text-neutral-600">{zh ? "没有符合筛选的观点" : "No posts match the filters"}</p>
       ) : (
-        <ul className={fill ? "min-h-0 flex-1 overflow-y-auto" : "lg:max-h-[640px] lg:overflow-y-auto"}>
-          {opinions.map((o) => (
+        <ul
+          className={fill ? "min-h-0 flex-1 overflow-y-auto" : "lg:max-h-[640px] lg:overflow-y-auto"}
+          onScroll={(event) => {
+            const list = event.currentTarget;
+            if (list.scrollHeight - list.scrollTop - list.clientHeight < 240) {
+              setVisibleCount((count) => Math.min(opinions.length, count + VISIBLE_STEP));
+            }
+          }}
+        >
+          {visibleOpinions.map((o) => (
             <ListCard
               key={o.id}
               o={o}

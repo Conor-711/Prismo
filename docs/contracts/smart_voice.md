@@ -32,12 +32,70 @@ SV 区间筛选使用 `percentile`：
 Call 抽取与作者排名分别版本化：
 
 - `callScoringVersion = v1.8-transcript-lifecycle`：结构化 Call 和完整口播证据版本；
-- `scoringVersion = v1.9-time-decay`：作者聚合、平台排名和全局排名版本。
+- `scoringVersion = v2.0-dual-benchmark-auc`：双基准积分结算、作者聚合、平台排名和全局排名版本。
 
 作者排名使用 `docs/smart_voice/GLOBAL_ALGORITHM.md` 定义的周期化半衰期，从
 `exit_day` 开始衰减。`n_effective`、平台资格、置信度和集中度均使用衰减后证据；
 `settled_calls` 仍是截至 `as_of_day` 的实际已结算 Call 去重数量。历史榜单只允许
 读取 `exit_day < as_of_day` 的结果，当日或未来结算不得参与。
+
+## Dual-Baseline Ability Contract
+
+每位作者的 `abilities` 必须同时保留两个独立能力轴：
+
+| 字段 | 含义 |
+|---|---|
+| `marketSelection` | 相对 SPY 的积分式方向超额，衡量全市场选股能力 |
+| `industrySelection` | 相对行业 ETF 的积分式方向超额，衡量行业内选股能力；无法可靠映射时为空 |
+| `industryBlendWeight` | 行业能力进入综合 `SV_Platform` 的实际权重，随有效样本增加且小于 0.5 |
+
+导出根节点的 `platformScoringVersions` 记录各平台当前已落库的评分版本。
+平台分批迁移时，产品不得把根节点 `scoringVersion` 当作所有平台都已完成重算的证据。
+
+单条 Call 从发布后的首个可交易开盘入场。每个交易日记录累计方向超额路径，
+用梯形积分得到 `A(H)`，主分数为 `70% × 平均积分分量 + 30% × 终点分量`。
+所有周期都可保存为积分前缀快照，但只有 Call 的主周期拥有非零证据权重；
+不得把同一 Call 的多个周期当成独立样本。
+
+行业 ETF 映射按 `ticker override -> narrative -> sector` 执行。无法映射时不得用
+SPY 冒充行业基准，该 Call 只进入 `marketSelection`。
+
+## Private Single-Author Calibration
+
+单个私域频道只有一位可归属作者时，不得对该作者执行平台内
+`robust_scores({single_author})`，否则会机械地产生基准分 100，也不能声称存在
+Telegram 平台排名。MVP 的 Private SE/SV 必须：
+
+- 复用公域算法的 Call 结构、主周期、下一交易日入场、SPY/行业 ETF 双基准积分、
+  生命周期、时间衰减、样本置信度和集中度上限；
+- 只把频道主本人明确发布的非转发观点计入，且每个有效 Call 必须保留可证明方向的
+  原文 `evidence_span` 与原始 URL；
+- 使用当前 `sv_investor_score` 中达到各自平台资格门槛的作者 raw-z 作为校准人群，
+  分别校准 `marketSelection` 与 `industrySelection`；
+- 在产物中保存参考人群总数、来源构成、排名版本和从高到低的位置；
+- 写入独立 Private SV 数据库和报告目录，不进入 `platformBands`、
+  `smartVoice.json` 或公域发现页。
+
+若参考人群少于 30 位，报告任务必须失败而不是输出伪精确分数。参考人群或算法版本变化后，
+旧 Private 分数只能作为历史快照，不得直接与新版本横向比较。
+
+### Private MVP Portfolio Contract
+
+单作者收益不能把存在时间重叠的 Call 收益直接连乘。MVP 使用一个可执行的跟随模型：
+
+- 每个有效 Call 从下一交易日的复权开盘入场；
+- 同一标的同时只保留一个方向，新 Call 在入场日替换旧 Call；
+- 每个交易日对全部活跃标的等权，无有效 Call 时持有现金；
+- 默认计入往返 10 bps 成本，并输出 0/10/25 bps 敏感性；
+- 同期 SPY 使用相同起止交易日和复权价格；
+- 输出 `totalReturn/annualizedReturn/annualizedExcessReturn/annualizedVolatility`、
+  `sharpe/sortino/maxDrawdown/calmar/beta/annualizedAlpha`、年度收益和逐日净值。
+
+产品必须称其为“跟随观点组合回测”，不得称为作者真实账户收益。必须展示回测区间、交易数、
+成本、SPY 对照和最大回撤，并说明不含税费、融券可得性、借券成本和市场冲击。
+
+实验页 Web 导出只包含公开、可回溯的精简 Call 字段、`[day, adjustedClose]` 价格和上述回测，
+不得导出完整原始消息正文，也不得在浏览器重新计算 SE/SV 或组合收益。
 
 ## Platform Top / Bottom Export
 
@@ -57,6 +115,8 @@ Call 抽取与作者排名分别版本化：
 | `top25Threshold` / `bottom25Threshold` | 25% 分组边界 |
 
 平台名单中的 `platformRank` 是平台内排名，`rank` 仍是全局排名；`platformScores[source]` 是 `SV_Platform`，`sv` 是置信折算后的 `SV_Global`。产品在平台标签下必须使用平台字段，不能从全平台 Top 200 二次筛选。
+
+投资者榜的能力筛选只消费导出中的 `horizonScores`、`narrativeScores` 和 `concentration.dominantInvestorType / investorTypeShare`。短线、中线、长线分别聚合 `1D+5D`、`20D+60D`、`90D+180D` 的可用子 SV，优势周期是作者三个组中均分最高的组；赛道筛选要求作者存在该赛道子 SV，风格筛选匹配主风格。平台、排名带、周期、赛道、风格和搜索使用 AND 语义。周期与赛道叠加时的“能力分”只是所选子 SV 的算术均值和页面排序值，不是新的 SV，不得写回离线表、冒充 `SV_Platform` 或改变正式排名资格。
 
 `/smart-voice` 的标的聚合按每个来源正式合格池的 `platformRank` 精确划分 Top/Bottom 10%，并使用作者对应来源的 `SV_Platform` 计算加权强度，不能使用整数 SV 阈值或 `SV_Global` 近似；跨平台组合先在各平台内分组，再合并同一标的的观点。页面必须支持 X、YouTube、Reddit、雪球的任意非空组合，以及以全库最新 actionable call 时间为锚点的 24H、3D、7D、30D、90D 精确时间窗。集中看多/看空至少需要同方向 2 条 call 和 2 位独立 Top 10% 作者；排名指标是 `highBullScore - highBearScore`，列表必须显示带符号的净强度，不能用单边总强度冒充净方向。列表多空计数和作者数只统计 Top 10%，中段与 Bottom 10% 只可用于独立的分歧模块。
 

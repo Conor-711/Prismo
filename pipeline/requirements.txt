@@ -5,6 +5,7 @@ PyYAML>=6.0
 python-dotenv>=1.0
 APScheduler>=3.10
 requests>=2.31
+beautifulsoup4>=4.12
 playwright>=1.54
 pytest>=8.0
 # 生产用 Postgres 时启用（SQLite 开发可不装，但装上也无妨）

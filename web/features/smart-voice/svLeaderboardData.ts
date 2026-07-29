@@ -28,7 +28,9 @@ export interface SmartVoiceLeaderboardInvestor {
   topTickers: string[];
   platformScores: Partial<Record<SvSource, number>>;
   horizonScores: Partial<Record<SvHorizon, number | null>>;
+  narrativeScores: Record<string, number>;
   dominantInvestorType?: string;
+  investorTypeShare: Record<string, number>;
   rationaleZh: string;
   rationaleEn: string;
 }
@@ -65,7 +67,9 @@ function compactInvestor(investor: SvInvestor): SmartVoiceLeaderboardInvestor {
     topTickers: investor.topTickers,
     platformScores: investor.platformScores,
     horizonScores: investor.horizonScores,
+    narrativeScores: investor.narrativeScores,
     dominantInvestorType: investor.concentration?.dominantInvestorType,
+    investorTypeShare: investor.concentration?.investorTypeShare ?? {},
     rationaleZh: investor.rationaleZh,
     rationaleEn: investor.rationaleEn,
   };

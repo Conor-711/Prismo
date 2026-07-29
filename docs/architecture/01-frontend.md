@@ -107,6 +107,7 @@ feature component 接收已经组装好的 view model。
 - `web/server/queries/creatorQueries.ts`：YouTube 作者详情服务端查询；`web/lib/creatorQueries.ts` 仅保留兼容导出。
 - `web/server/queries/smartVoiceQueries.ts`：Smart Voice 标的榜单服务端查询；`web/lib/smartVoiceQueries.ts` 仅保留兼容导出。
 - `web/server/queries/smartVoiceInvestorQueries.ts`：Smart Voice 作者详情证据查询，读取 `sv_call`、`sv_call_settlement`、`sv_call_candidate` 的代表性加分/扣分 call。
+- `web/server/queries/privateSmartVoiceExperiment.ts`：读取单频道 Private SV 紧凑构建产物，为实验页提供频道、标的、Call、价格和组合回测 view model。
 - `web/server/queries/smartVoiceTickerSignals.ts`：标的详情页 SV 聚集/回测查询；同时提供最近 45 个交易日信号历史和近 45 日历史时点分位证据。首批只向 `MU`、`NVDA`、`MSTR` 返回新版信号，其余标的返回空并使用旧模块。
 - `web/server/queries/globalQueries.ts`：全球散户 `gr_*` 标的、地区、行情查询；`web/lib/globalQueries.ts` 仅保留兼容导出。
 - `web/server/queries/kolQueries.ts`：兼容聚合导出；实现已拆到 `web/server/queries/kol/`，按 shared/lookups/sources/flow/opinions/targets/arguments/daily/boards 分层组织标的详情取数。`OpinionExplorer` 的可浏览池保持有界：Reddit 按近 370 天时间倒序取最近 350 条；X 只取已完成 `kol_refined` 的观点，并按质量、相关性、互动排序取前 120 条；雪球/Toss/Yahoo JP 各取 100 条。全量原始内容留在 SQLite 供离线指标使用，避免静态/开发页面序列化数万条原帖。
@@ -124,6 +125,8 @@ feature component 接收已经组装好的 view model。
 - `web/features/smart-voice/components/SmartVoicePrimitives.tsx`：Smart Voice 跨模块展示基础件（分数、作者 identity、排行行、segment bar、证据 chip）。
 - `web/features/smart-voice/svInvestorLinks.ts`：SV 作者详情页 slug/href 编码，避免平台 ID 中的特殊字符污染路由。
 - `web/features/smart-voice/components/SmartVoiceWorkspace.tsx`：Smart Voice 工作台 shell；具体市场分布、警报、时间窗口和典型投资者面板拆到 `SmartVoiceWorkspacePanels.tsx`。
+- `web/features/smart-voice/components/PrivateSmartVoiceExperiment.tsx`：`/experiments/private-smart-voice` 全视口实验工作台，组合频道评分、标的观点证据与组合回测两个视图。
+- `web/features/smart-voice/components/PrivateSmartVoicePortfolioView.tsx`：跟随观点组合的净值、SPY 对照、CAGR、年度收益、风险和成本敏感性展示。
 - `web/features/narrative/index.ts`：narrative feature public API，叙事总览和详情页从这里引入叙事图表组件。
 - `web/features/narrative/components/NarrativeRotationCharts.tsx`：叙事轮动图表组件，包含 mindshare 堆叠图、排名、占比、情绪和详情时间线。
 - `web/features/search/index.ts`：search feature public API，搜索页从这里引入搜索组件。

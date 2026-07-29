@@ -14,6 +14,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
@@ -273,6 +274,7 @@ class DailyBrief(Base):
 # 每 ticker 跨区派生（共识/分歧）入 gr_ticker，供总览/标的/区域等正式页面读取。
 class GrPost(Base):
     __tablename__ = "gr_post"
+    __table_args__ = (Index("ix_gr_post_source_ticker_created", "source", "ticker", "created_utc"),)
     id: Mapped[str] = mapped_column(String(140), primary_key=True)  # region:source:ticker:native_id
     region: Mapped[str] = mapped_column(String(8), index=True)  # jp | kr | tw（us 读现有 Reddit，不入此表）
     source: Mapped[str] = mapped_column(String(16), index=True)  # yahoo_jp | naver | ptt
@@ -342,6 +344,50 @@ class GrQuote(Base):
     currency: Mapped[str] = mapped_column(String(8), default="USD")
     asof: Mapped[str] = mapped_column(String(32), default="")  # 数据时间（交易所时区字符串）
     updated_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+
+
+# --------------------- Telegram 公开频道 Private SV MVP ---------------------
+class TelegramPublicChannel(Base):
+    """One public Telegram broadcast channel used by the Private SV MVP."""
+
+    __tablename__ = "telegram_public_channel"
+    handle: Mapped[str] = mapped_column(String(80), primary_key=True)
+    title: Mapped[str] = mapped_column(String(200), default="")
+    description: Mapped[str] = mapped_column(Text, default="")
+    public_url: Mapped[str] = mapped_column(Text, default="")
+    subscriber_count: Mapped[int] = mapped_column(Integer, default=0)
+    message_count: Mapped[int] = mapped_column(Integer, default=0)
+    first_message_at: Mapped[Optional[dt.datetime]] = mapped_column(DateTime, nullable=True)
+    last_message_at: Mapped[Optional[dt.datetime]] = mapped_column(DateTime, nullable=True)
+    fetched_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class TelegramPublicMessage(Base):
+    """Raw-preserving normalized post from a public Telegram preview page."""
+
+    __tablename__ = "telegram_public_message"
+    __table_args__ = (
+        Index(
+            "ix_telegram_public_message_channel_published",
+            "channel_handle",
+            "published_at",
+        ),
+    )
+    channel_handle: Mapped[str] = mapped_column(String(80), primary_key=True)
+    message_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    author_name: Mapped[str] = mapped_column(String(200), default="")
+    text: Mapped[str] = mapped_column(Text, default="")
+    language: Mapped[str] = mapped_column(String(8), default="en")
+    url: Mapped[str] = mapped_column(Text, default="")
+    view_count: Mapped[int] = mapped_column(Integer, default=0)
+    reaction_count: Mapped[int] = mapped_column(Integer, default=0)
+    reply_count: Mapped[int] = mapped_column(Integer, default=0)
+    is_forwarded: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    forwarded_from: Mapped[str] = mapped_column(String(200), default="")
+    published_at: Mapped[dt.datetime] = mapped_column(DateTime, index=True)
+    raw: Mapped[Optional[dict]] = mapped_column(JSONText, nullable=True)
+    first_seen_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+    last_seen_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
 
 
 # --------------------- 雪球长期采集管道（raw + job + checkpoint） ---------------------
@@ -514,6 +560,7 @@ class XueqiuAuthorCrawlJob(Base):
 # 每标的近 24h、浏览量 > 阈值的视频；混合分析（top N 原生看视频 + 其余字幕文本）。隔离表 yt_*。
 class YtVideo(Base):
     __tablename__ = "yt_video"
+    __table_args__ = (Index("ix_yt_video_ticker_published", "ticker", "published_utc"),)
     id: Mapped[str] = mapped_column(String(20), primary_key=True)  # YouTube videoId
     ticker: Mapped[str] = mapped_column(String(16), index=True)
     market: Mapped[str] = mapped_column(String(8), default="us", index=True)
@@ -633,6 +680,7 @@ class KolJudgment(Base):
     """
 
     __tablename__ = "kol_judgment"
+    __table_args__ = (Index("ix_kol_judgment_ticker_source_created", "ticker", "source", "created"),)
     source: Mapped[str] = mapped_column(String(12), primary_key=True)  # reddit | x | xueqiu
     item_id: Mapped[str] = mapped_column(String(64), primary_key=True)  # 源生 id（同 kol_refined）
     ticker: Mapped[str] = mapped_column(String(16), primary_key=True, index=True)
@@ -756,6 +804,8 @@ ALL_TABLES = [
     NarrativePost, DailyBrief,
     # 全球散户多区看板隔离表（同样进快照、不进 SOURCE_TABLES）。
     GrPost, GrTickerRegion, GrTicker, GrQuote,
+    # Telegram 公开频道 Private SV MVP 原始层（不进入公域站点导出）。
+    TelegramPublicChannel, TelegramPublicMessage,
     # 雪球长期采集管道：任务、断点、raw、作者快照和帖子-标的映射。
     XueqiuCrawlJob, XueqiuCrawlCheckpoint, XueqiuRawPost, XueqiuPostTicker, XueqiuAuthorSnapshot,
     # YouTube 观点隔离表（同样进快照、不进 SOURCE_TABLES）。

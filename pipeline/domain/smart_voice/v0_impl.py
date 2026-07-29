@@ -5,14 +5,12 @@ The pipeline separates responsibilities:
   2. LLM only structures whether a candidate is an actionable call;
   3. price settlement and investor scoring are deterministic.
 
-The current scorer is SV v1-compatible: it treats a post as the evidence
-budget, caps total weight for multi-ticker posts, prioritizes the author's
-primary horizon, shrinks ticker base rates, and adds a bounded excess-return
-component to directional accuracy. It also tracks call lifecycle: a later
-opposite actionable call by the same investor on the same ticker closes the
-older call early for horizons that have not yet naturally settled. Global SV
-also applies a concentration gate so single-ticker specialists can rank highly
-inside ticker segments without dominating the global leaderboard.
+The current scorer uses one evidence-bearing horizon per call and integrates
+the cumulative directional excess-return path against both SPY and an
+auditable industry ETF. It also tracks call lifecycle: a later opposite
+actionable call by the same investor on the same ticker closes the older call
+early. Global SV applies time decay, sample shrinkage, and a concentration gate
+before platform-relative scores are exposed.
 
 The pipeline writes local SQLite tables and exports ``web/lib/data/smartVoice.json``.
 It is incremental: rerunning extraction skips candidates already present in
@@ -50,6 +48,12 @@ from .time_decay import (
     evidence_is_available,
     parse_day,
 )
+from .integral_scoring import (
+    INTEGRAL_SCORING_VERSION,
+    industry_benchmark,
+    integrate_directional_path,
+    primary_horizon,
+)
 from .youtube_transcript_calls import (
     TranscriptDocument,
     YOUTUBE_TRANSCRIPT_CALL_VERSION,
@@ -74,12 +78,13 @@ SOURCE_LABELS = {
     "reddit": {"zh": "Reddit", "en": "Reddit"},
     "xueqiu": {"zh": "雪球", "en": "Xueqiu"},
     "toss": {"zh": "Toss", "en": "Toss"},
+    "telegram": {"zh": "Telegram", "en": "Telegram"},
 }
 HORIZONS = {"1D": 1, "5D": 5, "20D": 20, "60D": 60, "90D": 90, "180D": 180}
 # Call extraction and investor aggregation are versioned independently. Existing
 # transcript-backed calls remain valid when the ranking formula changes.
 SV_SCORING_VERSION = "v1.8-transcript-lifecycle"
-SV_RANKING_VERSION = "v1.9-time-decay"
+SV_RANKING_VERSION = "v2.0-dual-benchmark-auc"
 YOUTUBE_UPLOAD_MAPPING_VERSION = "youtube-title-v3"
 YOUTUBE_UPLOAD_MIN_MAPPING_CONFIDENCE = 0.90
 PLATFORM_QUALIFICATION = {
@@ -88,6 +93,7 @@ PLATFORM_QUALIFICATION = {
     "reddit": {"n_eff": 3.0, "settled_calls": 4},
     "xueqiu": {"n_eff": 5.0, "settled_calls": 8},
     "toss": {"n_eff": 5.0, "settled_calls": 8},
+    "telegram": {"n_eff": 5.0, "settled_calls": 8},
 }
 BASE_RATE_PRIOR = 20.0
 BASE_RATE_MIN = 0.40
@@ -218,7 +224,7 @@ SV_SYSTEM = (
     "Judge only the specified ticker, but first understand whether the post is a single-ticker call, "
     "a basket/sector thesis, a pair trade, a portfolio update, a retrospective, or merely context. "
     "Do not decide whether the call was correct. "
-    "An actionable X call must be the POST AUTHOR'S OWN forward-looking directional forecast, explicit "
+    "An actionable call must be the CONTENT AUTHOR'S OWN forward-looking directional forecast, explicit "
     "position action, or directional risk-management action for the specified ticker. "
     "News reporting, market briefs, past price-move recaps, corporate announcements, earnings-result recaps, "
     "gainer/loser lists, analyst targets, quoted third-party views, jokes, reposts, retrospective brags, "
@@ -228,7 +234,7 @@ SV_SYSTEM = (
     "If the specified ticker is only a comparison, ecosystem reference, or context mention, mark it non-actionable "
     "or set ticker_role to context/comparison/excluded. "
     "If it contains a conditional trade plan, it can be actionable if direction is clear. "
-    "For every actionable call, evidence_span must be a short VERBATIM quote from the post that itself expresses "
+    "For every actionable call, evidence_span must be a short VERBATIM quote from the content that itself expresses "
     "the author's forecast or position action. If no such exact quote exists, mark it non-actionable. "
     "Return strict JSON only with these fields: "
     "{\"is_actionable_call\":boolean,\"direction\":\"bull|bear|neutral\","
@@ -363,6 +369,8 @@ def ensure_tables(con: sqlite3.Connection) -> None:
           inserted_at TEXT
         );
         CREATE INDEX IF NOT EXISTS idx_sv_candidate_ticker ON sv_call_candidate(ticker);
+        CREATE INDEX IF NOT EXISTS idx_sv_candidate_ticker_created
+          ON sv_call_candidate(ticker, created_at);
         CREATE INDEX IF NOT EXISTS idx_sv_candidate_author ON sv_call_candidate(author_id);
         CREATE INDEX IF NOT EXISTS idx_sv_candidate_created ON sv_call_candidate(created_at);
         CREATE INDEX IF NOT EXISTS idx_sv_candidate_source_rank
@@ -420,6 +428,8 @@ def ensure_tables(con: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS idx_sv_call_investor ON sv_call(investor_id);
         CREATE INDEX IF NOT EXISTS idx_sv_call_ticker ON sv_call(ticker);
         CREATE INDEX IF NOT EXISTS idx_sv_call_source ON sv_call(source);
+        CREATE INDEX IF NOT EXISTS idx_sv_call_ticker_action_created
+          ON sv_call(ticker, is_actionable_call, direction, created_at);
 
         CREATE TABLE IF NOT EXISTS sv_call_settlement (
           candidate_id TEXT NOT NULL,
@@ -457,6 +467,8 @@ def ensure_tables(con: sqlite3.Connection) -> None:
         );
         CREATE INDEX IF NOT EXISTS idx_sv_settle_investor ON sv_call_settlement(investor_id);
         CREATE INDEX IF NOT EXISTS idx_sv_settle_ticker ON sv_call_settlement(ticker);
+        CREATE INDEX IF NOT EXISTS idx_sv_settle_ticker_status_investor
+          ON sv_call_settlement(ticker, status, investor_id, candidate_id);
 
         CREATE TABLE IF NOT EXISTS sv_investor_score (
           investor_id TEXT PRIMARY KEY,
@@ -552,6 +564,33 @@ def ensure_tables(con: sqlite3.Connection) -> None:
             con.execute(f"ALTER TABLE sv_call ADD COLUMN {name} {ddl}")
     existing_settle_cols = {r["name"] for r in con.execute("PRAGMA table_info(sv_call_settlement)").fetchall()}
     extra_settle_cols = {
+        "is_primary_horizon": "INTEGER NOT NULL DEFAULT 0",
+        "settlement_version": "TEXT DEFAULT ''",
+        "market_auc": "REAL",
+        "market_mean_auc": "REAL",
+        "market_integral_component": "REAL",
+        "market_terminal_component": "REAL",
+        "market_positive_area": "REAL",
+        "market_negative_area": "REAL",
+        "market_adverse_area_share": "REAL",
+        "industry_benchmark_ticker": "TEXT",
+        "industry_benchmark_method": "TEXT",
+        "industry_benchmark_entry_price": "REAL",
+        "industry_benchmark_exit_price": "REAL",
+        "industry_benchmark_return_pct": "REAL",
+        "industry_excess_return_pct": "REAL",
+        "industry_expected_hit": "REAL",
+        "industry_actual_hit": "INTEGER",
+        "industry_score_weight": "REAL",
+        "industry_contribution": "REAL",
+        "industry_auc": "REAL",
+        "industry_mean_auc": "REAL",
+        "industry_integral_component": "REAL",
+        "industry_terminal_component": "REAL",
+        "industry_positive_area": "REAL",
+        "industry_negative_area": "REAL",
+        "industry_adverse_area_share": "REAL",
+        "industry_status": "TEXT DEFAULT 'unavailable'",
         "max_favorable_excess": "REAL",
         "peak_day": "TEXT",
         "time_to_peak_days": "INTEGER",
@@ -570,11 +609,20 @@ def ensure_tables(con: sqlite3.Connection) -> None:
             con.execute(f"ALTER TABLE sv_call_settlement ADD COLUMN {name} {ddl}")
     existing_score_cols = {r["name"] for r in con.execute("PRAGMA table_info(sv_investor_score)").fetchall()}
     extra_score_cols = {
+        "ability_scores_json": "TEXT",
         "concentration_json": "TEXT",
     }
     for name, ddl in extra_score_cols.items():
         if name not in existing_score_cols:
             con.execute(f"ALTER TABLE sv_investor_score ADD COLUMN {name} {ddl}")
+    existing_snapshot_cols = {
+        r["name"]
+        for r in con.execute("PRAGMA table_info(sv_investor_score_snapshot)").fetchall()
+    }
+    if "ability_scores_json" not in existing_snapshot_cols:
+        con.execute(
+            "ALTER TABLE sv_investor_score_snapshot ADD COLUMN ability_scores_json TEXT"
+        )
     con.commit()
 
 
@@ -1856,7 +1904,11 @@ def normalize_call(data: Any) -> dict[str, Any]:
 
 def user_prompt(row: sqlite3.Row) -> str:
     source = str(row["source"] or "x")
-    item_label = {"reddit": "Reddit post", "youtube": "YouTube video"}.get(source, "Tweet")
+    item_label = {
+        "reddit": "Reddit post",
+        "youtube": "YouTube video",
+        "telegram": "Telegram channel post",
+    }.get(source, "Tweet")
     text_cap = 5200 if source == "youtube" else 2200
     return (
         f"Ticker to judge: {row['ticker']}\n"
@@ -2590,7 +2642,8 @@ def extract_calls(
         data, model = request_with_fallback(SV_SYSTEM, user_prompt(row), 1_200)
         norm = normalize_call(data)
         norm["ticker"] = str(row["ticker"] or "").upper()
-        norm = enforce_x_policy(norm, str(row["text"] or ""))
+        if str(row["source"] or "x") == "x":
+            norm = enforce_x_policy(norm, str(row["text"] or ""))
         norm.pop("ticker", None)
         return row, norm, model
 
@@ -2849,6 +2902,118 @@ def load_prices(con: sqlite3.Connection) -> dict[str, list[tuple[str, float]]]:
     ):
         out[str(r["ticker"]).upper()].append((str(r["day"]), float(r["px"])))
     return dict(out)
+
+
+def load_price_bars(con: sqlite3.Connection) -> dict[str, list[dict[str, Any]]]:
+    """Load adjusted opens and closes for tradable, point-in-time paths."""
+    output: dict[str, list[dict[str, Any]]] = collections.defaultdict(list)
+    for row in con.execute(
+        """SELECT ticker,day,open,close,adj_close
+             FROM price_daily
+            WHERE close IS NOT NULL
+            ORDER BY ticker,day"""
+    ):
+        close = float(row["close"] or 0.0)
+        adjusted_close = float(row["adj_close"] or close)
+        raw_open = float(row["open"] or close)
+        if close <= 0 or adjusted_close <= 0 or raw_open <= 0:
+            continue
+        adjustment = adjusted_close / close
+        output[str(row["ticker"]).upper()].append(
+            {
+                "day": str(row["day"]),
+                "open": raw_open * adjustment,
+                "close": adjusted_close,
+            }
+        )
+    return dict(output)
+
+
+def first_bar_after(bars: list[dict[str, Any]], day: str) -> int | None:
+    lo, hi = 0, len(bars)
+    while lo < hi:
+        mid = (lo + hi) // 2
+        if str(bars[mid]["day"]) <= day:
+            lo = mid + 1
+        else:
+            hi = mid
+    return lo if lo < len(bars) else None
+
+
+def integral_path_for_benchmark(
+    stock_bars: list[dict[str, Any]],
+    benchmark_bars: list[dict[str, Any]],
+    entry_index: int,
+    horizon_steps: int,
+    direction: str,
+    normalizer: float,
+    forced_exit_day: str | None = None,
+) -> dict[str, Any] | None:
+    """Build one prefix-integral snapshot against a specified benchmark."""
+    if entry_index >= len(stock_bars) or horizon_steps <= 0:
+        return None
+    benchmark_by_day = {str(bar["day"]): bar for bar in benchmark_bars}
+    entry_bar = stock_bars[entry_index]
+    benchmark_entry = benchmark_by_day.get(str(entry_bar["day"]))
+    if not benchmark_entry:
+        return None
+    stock_entry = float(entry_bar["open"])
+    benchmark_entry_price = float(benchmark_entry["open"])
+    if stock_entry <= 0 or benchmark_entry_price <= 0:
+        return None
+
+    direction_sign = 1.0 if direction == "bull" else -1.0
+    path: list[float] = []
+    path_days: list[str] = []
+    exit_day = ""
+    stock_exit = benchmark_exit = 0.0
+    exit_reason = "horizon"
+    for bar in stock_bars[entry_index:]:
+        day = str(bar["day"])
+        benchmark_bar = benchmark_by_day.get(day)
+        if not benchmark_bar:
+            continue
+        use_open = bool(forced_exit_day and day >= forced_exit_day)
+        stock_point = float(bar["open"] if use_open else bar["close"])
+        benchmark_point = float(
+            benchmark_bar["open"] if use_open else benchmark_bar["close"]
+        )
+        stock_return = stock_point / stock_entry - 1.0
+        benchmark_return = benchmark_point / benchmark_entry_price - 1.0
+        path.append(direction_sign * (stock_return - benchmark_return))
+        path_days.append(day)
+        exit_day = day
+        stock_exit = stock_point
+        benchmark_exit = benchmark_point
+        if use_open:
+            exit_reason = "superseded"
+            break
+        if len(path) >= horizon_steps:
+            break
+    if not path:
+        return None
+    result = integrate_directional_path(path, normalizer)
+    if result is None:
+        return None
+    raw_return = stock_exit / stock_entry - 1.0
+    benchmark_return = benchmark_exit / benchmark_entry_price - 1.0
+    excess_return = raw_return - benchmark_return
+    return {
+        "entry_day": str(entry_bar["day"]),
+        "exit_day": exit_day,
+        "entry_price": stock_entry,
+        "exit_price": stock_exit,
+        "benchmark_entry_price": benchmark_entry_price,
+        "benchmark_exit_price": benchmark_exit,
+        "return_pct": raw_return,
+        "benchmark_return_pct": benchmark_return,
+        "excess_return_pct": excess_return,
+        "directional_excess": result.terminal_excess,
+        "path_days": path_days,
+        "result": result,
+        "exit_reason": exit_reason,
+        "complete": exit_reason == "superseded" or len(path) >= horizon_steps,
+    }
 
 
 def first_idx_on_or_after(days: list[tuple[str, float]], day: str) -> int | None:
@@ -3360,7 +3525,7 @@ def path_score_components(
     }
 
 
-def settle_calls(con: sqlite3.Connection) -> int:
+def _settle_calls_endpoint_legacy(con: sqlite3.Connection) -> int:
     ensure_tables(con)
     prices = load_prices(con)
     rates = base_rates(prices)
@@ -3556,14 +3721,441 @@ def settle_calls(con: sqlite3.Connection) -> int:
     return len(out)
 
 
+def settle_calls(
+    con: sqlite3.Connection,
+    sources: set[str] | None = None,
+) -> int:
+    """Settle calls as prefix integrals against SPY and an industry ETF."""
+    ensure_tables(con)
+    price_bars = load_price_bars(con)
+    market_bars = price_bars.get("SPY") or []
+    if not market_bars:
+        raise SystemExit("[sv-v0] missing SPY prices; run make sv-price-history first.")
+    legacy_prices = load_prices(con)
+    sectors = {
+        str(row["ticker"]).upper(): str(row["sector"] or "")
+        for row in con.execute("SELECT ticker,sector FROM ticker_meta")
+    } if table_exists(con, "ticker_meta") else {}
+
+    evidence_filter = ""
+    query_params: list[Any] = []
+    selected_sources = sorted(sources or [])
+    if selected_sources:
+        source_slots = ",".join("?" for _ in selected_sources)
+        evidence_filter += f" AND c.source IN ({source_slots})"
+        query_params.extend(selected_sources)
+    if table_exists(con, "yt_author_pool") and table_exists(con, "yt_author_pool_run"):
+        evidence_filter += (
+            "AND (c.source <> 'youtube' OR c.investor_id IN ("
+            "SELECT 'youtube:' || lower(p.channel_id) FROM yt_author_pool p "
+            "WHERE p.pool_version=(SELECT pool_version FROM yt_author_pool_run "
+            "ORDER BY created_at DESC LIMIT 1) AND p.selected=1))"
+        )
+    evidence_filter += (
+        f" AND (c.source<>'youtube' OR {youtube_candidate_eligibility_predicate(con, 'cc')})"
+    )
+    if table_exists(con, "yt_channel_upload_ticker"):
+        evidence_filter += (
+            " AND (c.source <> 'youtube' OR COALESCE(cc.source_file, '') NOT LIKE '%mapping=%' "
+            "OR cc.source_file LIKE '%mapping=legacy:%' OR EXISTS ("
+            "SELECT 1 FROM yt_channel_upload_ticker ym "
+            "WHERE ym.video_id=c.tweet_id AND ym.ticker=c.ticker "
+            "AND ym.mapping_version=? AND ym.confidence>=?))"
+        )
+        query_params.extend(
+            [YOUTUBE_UPLOAD_MAPPING_VERSION, YOUTUBE_UPLOAD_MIN_MAPPING_CONFIDENCE]
+        )
+    if table_exists(con, "yt_fulltext"):
+        evidence_filter += (
+            " AND (c.source <> 'youtube' OR (c.scoring_version=? "
+            "AND c.transcript_version=? AND COALESCE(c.transcript_model,'')<>'' "
+            "AND c.call_owner='channel_host' "
+            "AND c.statement_mode IN ('prediction','position_action') "
+            "AND EXISTS (SELECT 1 FROM yt_fulltext yf WHERE yf.video_id=c.tweet_id "
+            "AND length(COALESCE(yf.content_en,'') || COALESCE(yf.content_zh,''))>=80)))"
+        )
+        query_params.extend([SV_SCORING_VERSION, YOUTUBE_TRANSCRIPT_CALL_VERSION])
+    else:
+        evidence_filter += " AND c.source <> 'youtube'"
+
+    calls = con.execute(
+        f"""SELECT c.*,cc.text AS text,cc.tweet_id AS source_tweet_id
+              FROM sv_call c
+              JOIN sv_call_candidate cc ON cc.candidate_id=c.candidate_id
+             WHERE c.is_actionable_call=1
+               AND c.direction IN ('bull','bear')
+               AND c.call_weight>0
+               {evidence_filter}""",
+        query_params,
+    ).fetchall()
+
+    enriched: list[dict[str, Any]] = []
+    by_post: dict[str, list[dict[str, Any]]] = collections.defaultdict(list)
+    for call in calls:
+        meta = infer_call_meta(call)
+        raw_weight = float(call["call_weight"]) * float(meta["weight_multiplier"])
+        if raw_weight <= 0:
+            continue
+        item = {
+            "call": call,
+            "meta": meta,
+            "raw_weight": raw_weight,
+            "effective_weight": raw_weight,
+        }
+        enriched.append(item)
+        by_post[f"{call['source'] or 'x'}:{call['tweet_id']}"].append(item)
+
+    for items in by_post.values():
+        cap = post_weight_cap(len(items))
+        total = sum(float(item["raw_weight"]) for item in items)
+        scale = min(1.0, cap / total) if total > 0 else 0.0
+        for item in items:
+            item["effective_weight"] = float(item["raw_weight"]) * scale
+
+    same_day = resolve_same_entry_day_calls(enriched, legacy_prices)
+    superseded = annotate_supersessions(enriched, lifecycle_events(con))
+    output: list[dict[str, Any]] = []
+    industry_mapped_calls: set[str] = set()
+    primary_settled = 0
+
+    for item in enriched:
+        call = item["call"]
+        meta = item["meta"]
+        ticker = str(call["ticker"]).upper()
+        stock_bars = price_bars.get(ticker) or []
+        if not stock_bars:
+            continue
+        created_day = str(call["created_at"] or "")[:10]
+        entry_index = first_bar_after(stock_bars, created_day)
+        if entry_index is None:
+            continue
+        scoring_horizon = primary_horizon(
+            call["horizon_bucket"],
+            call["horizon_explicit"],
+            meta.get("analysis_type"),
+            HORIZONS,
+        )
+        benchmark_ticker, benchmark_method = industry_benchmark(
+            ticker,
+            sectors.get(ticker, ""),
+            TICKER_NARRATIVE.get(ticker, ""),
+            price_bars,
+        )
+        industry_bars = price_bars.get(benchmark_ticker or "") or []
+        if benchmark_ticker and industry_bars:
+            industry_mapped_calls.add(str(call["candidate_id"]))
+
+        forced_exit_day = None
+        superseded_at = item.get("superseded_at")
+        if superseded_at:
+            forced_index = first_bar_after(
+                stock_bars,
+                str(superseded_at)[:10],
+            )
+            if forced_index is not None:
+                forced_exit_day = str(stock_bars[forced_index]["day"])
+
+        for horizon, horizon_steps in HORIZONS.items():
+            is_primary = horizon == scoring_horizon
+            market = integral_path_for_benchmark(
+                stock_bars,
+                market_bars,
+                entry_index,
+                horizon_steps,
+                str(call["direction"]),
+                RETURN_NORMALIZER[horizon],
+                forced_exit_day,
+            )
+            industry = (
+                integral_path_for_benchmark(
+                    stock_bars,
+                    industry_bars,
+                    entry_index,
+                    horizon_steps,
+                    str(call["direction"]),
+                    RETURN_NORMALIZER[horizon],
+                    forced_exit_day,
+                )
+                if industry_bars
+                else None
+            )
+            market_settled = bool(market and market["complete"])
+            industry_settled = bool(industry and industry["complete"])
+            market_weight = (
+                float(item["effective_weight"])
+                if is_primary and market_settled
+                else 0.0
+            )
+            industry_weight = (
+                float(item["effective_weight"])
+                if is_primary and industry_settled
+                else 0.0
+            )
+            market_result = market["result"] if market else None
+            industry_result = industry["result"] if industry else None
+            market_contribution = (
+                market_weight * float(market_result.score_core)
+                if market_result
+                else None
+            )
+            industry_contribution = (
+                industry_weight * float(industry_result.score_core)
+                if industry_result
+                else None
+            )
+            if is_primary and market_settled:
+                primary_settled += 1
+            peak_day = None
+            if market_result and market:
+                path_days = market["path_days"]
+                peak_index = min(len(path_days), market_result.peak_step) - 1
+                if peak_index >= 0:
+                    peak_day = path_days[peak_index]
+            status = "settled" if market_settled else "pending"
+            industry_status = (
+                "settled"
+                if industry_settled
+                else ("pending" if industry else "unavailable")
+            )
+            output.append(
+                {
+                    "candidate_id": call["candidate_id"],
+                    "horizon": horizon,
+                    "ticker": ticker,
+                    "investor_id": call["investor_id"],
+                    "created_at": call["created_at"],
+                    "entry_day": market["entry_day"] if market else None,
+                    "exit_day": market["exit_day"] if market else None,
+                    "entry_price": market["entry_price"] if market else None,
+                    "exit_price": market["exit_price"] if market else None,
+                    "benchmark_entry_price": (
+                        market["benchmark_entry_price"] if market else None
+                    ),
+                    "benchmark_exit_price": (
+                        market["benchmark_exit_price"] if market else None
+                    ),
+                    "return_pct": market["return_pct"] if market else None,
+                    "benchmark_return_pct": (
+                        market["benchmark_return_pct"] if market else None
+                    ),
+                    "excess_return_pct": (
+                        market["excess_return_pct"] if market else None
+                    ),
+                    "expected_hit": 0.5,
+                    "actual_hit": (
+                        int(market_result.terminal_excess > 0)
+                        if market_settled and market_result
+                        else None
+                    ),
+                    "score_weight": market_weight,
+                    "contribution": market_contribution,
+                    "market_auc": (
+                        market_result.cumulative_auc if market_result else None
+                    ),
+                    "market_mean_auc": (
+                        market_result.mean_auc if market_result else None
+                    ),
+                    "market_integral_component": (
+                        market_result.integral_component if market_result else None
+                    ),
+                    "market_terminal_component": (
+                        market_result.terminal_component if market_result else None
+                    ),
+                    "market_positive_area": (
+                        market_result.positive_area if market_result else None
+                    ),
+                    "market_negative_area": (
+                        market_result.negative_area if market_result else None
+                    ),
+                    "market_adverse_area_share": (
+                        market_result.adverse_area_share if market_result else None
+                    ),
+                    "industry_benchmark_ticker": benchmark_ticker,
+                    "industry_benchmark_method": benchmark_method,
+                    "industry_benchmark_entry_price": (
+                        industry["benchmark_entry_price"] if industry else None
+                    ),
+                    "industry_benchmark_exit_price": (
+                        industry["benchmark_exit_price"] if industry else None
+                    ),
+                    "industry_benchmark_return_pct": (
+                        industry["benchmark_return_pct"] if industry else None
+                    ),
+                    "industry_excess_return_pct": (
+                        industry["excess_return_pct"] if industry else None
+                    ),
+                    "industry_expected_hit": 0.5 if industry else None,
+                    "industry_actual_hit": (
+                        int(industry_result.terminal_excess > 0)
+                        if industry_settled and industry_result
+                        else None
+                    ),
+                    "industry_score_weight": industry_weight,
+                    "industry_contribution": industry_contribution,
+                    "industry_auc": (
+                        industry_result.cumulative_auc if industry_result else None
+                    ),
+                    "industry_mean_auc": (
+                        industry_result.mean_auc if industry_result else None
+                    ),
+                    "industry_integral_component": (
+                        industry_result.integral_component if industry_result else None
+                    ),
+                    "industry_terminal_component": (
+                        industry_result.terminal_component if industry_result else None
+                    ),
+                    "industry_positive_area": (
+                        industry_result.positive_area if industry_result else None
+                    ),
+                    "industry_negative_area": (
+                        industry_result.negative_area if industry_result else None
+                    ),
+                    "industry_adverse_area_share": (
+                        industry_result.adverse_area_share if industry_result else None
+                    ),
+                    "industry_status": industry_status,
+                    "max_favorable_excess": (
+                        market_result.max_favorable_excess if market_result else None
+                    ),
+                    "peak_day": peak_day,
+                    "time_to_peak_days": (
+                        market_result.peak_step if market_result else None
+                    ),
+                    "positive_day_share": (
+                        market_result.positive_day_share if market_result else None
+                    ),
+                    "avg_directional_excess": (
+                        market_result.mean_auc if market_result else None
+                    ),
+                    "retracement": (
+                        market_result.retracement if market_result else None
+                    ),
+                    "endpoint_component": (
+                        market_result.terminal_component if market_result else None
+                    ),
+                    "opportunity_component": (
+                        market_result.integral_component if market_result else None
+                    ),
+                    "persistence_component": (
+                        market_result.positive_day_share - 0.5
+                        if market_result
+                        else None
+                    ),
+                    "retracement_penalty": (
+                        min(
+                            1.0,
+                            market_result.retracement
+                            / max(RETURN_NORMALIZER[horizon], 1e-9),
+                        )
+                        if market_result
+                        else None
+                    ),
+                    "is_primary_horizon": int(is_primary),
+                    "settlement_version": INTEGRAL_SCORING_VERSION,
+                    "exit_reason": (
+                        market["exit_reason"] if market else "horizon"
+                    ),
+                    "superseded_by_candidate_id": (
+                        str(item.get("superseded_by_candidate_id") or "") or None
+                    ),
+                    "status": status,
+                }
+            )
+
+    columns = [
+        "candidate_id", "horizon", "ticker", "investor_id", "created_at",
+        "entry_day", "exit_day", "entry_price", "exit_price",
+        "benchmark_entry_price", "benchmark_exit_price", "return_pct",
+        "benchmark_return_pct", "excess_return_pct", "expected_hit",
+        "actual_hit", "score_weight", "contribution", "market_auc",
+        "market_mean_auc", "market_integral_component",
+        "market_terminal_component", "market_positive_area",
+        "market_negative_area", "market_adverse_area_share",
+        "industry_benchmark_ticker", "industry_benchmark_method",
+        "industry_benchmark_entry_price", "industry_benchmark_exit_price",
+        "industry_benchmark_return_pct", "industry_excess_return_pct",
+        "industry_expected_hit", "industry_actual_hit",
+        "industry_score_weight", "industry_contribution", "industry_auc",
+        "industry_mean_auc", "industry_integral_component",
+        "industry_terminal_component", "industry_positive_area",
+        "industry_negative_area", "industry_adverse_area_share",
+        "industry_status", "max_favorable_excess", "peak_day",
+        "time_to_peak_days", "positive_day_share", "avg_directional_excess",
+        "retracement", "endpoint_component", "opportunity_component",
+        "persistence_component", "retracement_penalty",
+        "is_primary_horizon", "settlement_version", "exit_reason",
+        "superseded_by_candidate_id", "status",
+    ]
+    placeholders = ",".join("?" for _ in columns)
+    if selected_sources:
+        source_slots = ",".join("?" for _ in selected_sources)
+        con.execute(
+            f"""DELETE FROM sv_call_settlement
+                 WHERE candidate_id IN (
+                   SELECT candidate_id FROM sv_call
+                    WHERE source IN ({source_slots})
+                 )""",
+            selected_sources,
+        )
+    else:
+        con.execute("DELETE FROM sv_call_settlement")
+    con.executemany(
+        f"""INSERT INTO sv_call_settlement ({','.join(columns)})
+            VALUES ({placeholders})""",
+        [[row.get(column) for column in columns] for row in output],
+    )
+    con.commit()
+    print(
+        f"[sv-v0] integral settlements rows={len(output)} calls={len(calls)} "
+        f"effective_calls={len(enriched)} primary_settled={primary_settled} "
+        f"industry_mapped={len(industry_mapped_calls)} superseded={superseded} "
+        f"same_day_groups={same_day['groups']} version={INTEGRAL_SCORING_VERSION}",
+        flush=True,
+    )
+    return len(output)
+
+
 def aggregate_stats(
     rows: list[sqlite3.Row],
     k: float = 30.0,
     *,
     as_of_day: str | dt.date | None = None,
     decay_config: SVTimeDecayConfig = DEFAULT_TIME_DECAY_CONFIG,
+    ability: str = "market",
 ) -> dict[str, Any] | None:
-    vals = [r for r in rows if r["status"] == "settled" and r["actual_hit"] is not None]
+    def value(row: Any, key: str, default: Any = None) -> Any:
+        try:
+            keys = row.keys()
+        except AttributeError:
+            keys = row
+        if key not in keys:
+            return default
+        result = row[key]
+        return default if result is None else result
+
+    if ability == "industry":
+        status_field = "industry_status"
+        hit_field = "industry_actual_hit"
+        contribution_field = "industry_contribution"
+        weight_field = "industry_score_weight"
+        expected_field = "industry_expected_hit"
+    else:
+        status_field = "status"
+        hit_field = "actual_hit"
+        contribution_field = "contribution"
+        weight_field = "score_weight"
+        expected_field = "expected_hit"
+    vals = [
+        row
+        for row in rows
+        if value(row, status_field, "unavailable") == "settled"
+        and value(row, hit_field) is not None
+        and float(value(row, weight_field, 0.0)) > 0
+        and (
+            not value(row, "settlement_version", "")
+            or int(value(row, "is_primary_horizon", 1)) == 1
+        )
+    ]
     scoring_day = parse_day(as_of_day)
     if scoring_day is not None:
         vals = [r for r in vals if evidence_is_available(r["exit_day"], scoring_day)]
@@ -3577,7 +4169,7 @@ def aggregate_stats(
         for r in vals
     ]
     sum_contrib = sum(
-        decay * float(r["contribution"] or 0)
+        decay * float(value(r, contribution_field, 0.0))
         for r, decay in zip(vals, decay_weights)
     )
     # Decay is fractional evidence, so both contribution and Bernoulli
@@ -3585,16 +4177,16 @@ def aggregate_stats(
     # loses significance instead of retaining the same z-score.
     variance = sum(
         decay
-        * (float(r["score_weight"] or 0) ** 2)
-        * float(r["expected_hit"] or 0.5)
-        * (1 - float(r["expected_hit"] or 0.5))
+        * (float(value(r, weight_field, 0.0)) ** 2)
+        * float(value(r, expected_field, 0.5))
+        * (1 - float(value(r, expected_field, 0.5)))
         for r, decay in zip(vals, decay_weights)
     )
     z = sum_contrib / math.sqrt(variance) if variance > 1e-9 else 0.0
     weighted_evidence = [
-        (float(r["score_weight"] or 0), decay)
+        (float(value(r, weight_field, 0.0)), decay)
         for r, decay in zip(vals, decay_weights)
-        if float(r["score_weight"] or 0) > 0
+        if float(value(r, weight_field, 0.0)) > 0
     ]
     evidence_mass = sum(weight * decay for weight, decay in weighted_evidence)
     evidence_variance_mass = sum(
@@ -3615,9 +4207,9 @@ def aggregate_stats(
     ticker_positive_contrib: collections.Counter[str] = collections.Counter()
     for r, decay in zip(vals, decay_weights):
         ticker = str(r["ticker"])
-        ticker_weights[ticker] += decay * float(r["score_weight"] or 0)
+        ticker_weights[ticker] += decay * float(value(r, weight_field, 0.0))
         ticker_positive_contrib[ticker] += decay * max(
-            0.0, float(r["contribution"] or 0)
+            0.0, float(value(r, contribution_field, 0.0))
         )
     total_ticker_weight = sum(ticker_weights.values())
     top_ticker, top_ticker_weight = ticker_weights.most_common(1)[0] if ticker_weights else ("", 0.0)
@@ -3650,6 +4242,7 @@ def aggregate_stats(
     )
     return {
         "raw_z": z_shrunk,
+        "ability": ability,
         "n_eff": n_eff,
         "lifetime_n_eff": lifetime_n_eff,
         "settled_calls": len({r["candidate_id"] for r in vals}),
@@ -3739,6 +4332,79 @@ def global_sv_from_platform(platform_sv: float, level: str) -> tuple[int, float]
     return int(round(clamp(100.0 + 100.0 * deviation, 40.0, 180.0))), deviation
 
 
+def blend_dual_ability_scores(
+    market_stats: dict[str, Any],
+    industry_stats: dict[str, Any] | None,
+    market_platform_sv: float,
+    industry_platform_sv: float | None,
+) -> dict[str, Any]:
+    """Blend market and industry selection without penalizing missing mappings."""
+    market_level = confidence(
+        float(market_stats["n_eff"]),
+        int(market_stats["settled_calls"]),
+    )
+    market_global_sv, _ = global_sv_from_platform(market_platform_sv, market_level)
+    industry_n_eff = float(industry_stats["n_eff"]) if industry_stats else 0.0
+    industry_calls = int(industry_stats["settled_calls"]) if industry_stats else 0
+    industry_level = (
+        confidence(industry_n_eff, industry_calls) if industry_stats else "unavailable"
+    )
+    industry_global_sv = (
+        global_sv_from_platform(float(industry_platform_sv), industry_level)[0]
+        if industry_stats and industry_platform_sv is not None
+        else None
+    )
+    industry_blend = (
+        0.5 * industry_n_eff / (industry_n_eff + 8.0)
+        if industry_stats and industry_platform_sv is not None
+        else 0.0
+    )
+    composite_platform_sv = (
+        (1.0 - industry_blend) * market_platform_sv
+        + industry_blend * float(industry_platform_sv or 100.0)
+    )
+    composite_raw_z = (
+        (1.0 - industry_blend) * float(market_stats["raw_z"])
+        + industry_blend * float(industry_stats["raw_z"] if industry_stats else 0.0)
+    )
+    coverage = min(
+        1.0,
+        industry_calls / max(1, int(market_stats["settled_calls"])),
+    )
+    return {
+        "compositePlatformSv": composite_platform_sv,
+        "compositeRawZ": composite_raw_z,
+        "industryBlendWeight": industry_blend,
+        "marketSelection": {
+            "benchmark": "SPY",
+            "svPlatform": int(round(market_platform_sv)),
+            "svGlobal": market_global_sv,
+            "rawZ": round(float(market_stats["raw_z"]), 4),
+            "confidence": market_level,
+            "nEff": round(float(market_stats["n_eff"]), 2),
+            "settledCalls": int(market_stats["settled_calls"]),
+        },
+        "industrySelection": {
+            "benchmark": "industry_etf",
+            "svPlatform": (
+                int(round(float(industry_platform_sv)))
+                if industry_platform_sv is not None
+                else None
+            ),
+            "svGlobal": industry_global_sv,
+            "rawZ": (
+                round(float(industry_stats["raw_z"]), 4)
+                if industry_stats
+                else None
+            ),
+            "confidence": industry_level,
+            "nEff": round(industry_n_eff, 2),
+            "settledCalls": industry_calls,
+            "coverage": round(coverage, 4),
+        },
+    }
+
+
 def reliability_cap(level: str) -> int:
     # Low-sample accounts can be promising, but they should not dominate the
     # production leaderboard until the evidence base thickens.
@@ -3776,9 +4442,17 @@ def score_investors(
     con: sqlite3.Connection,
     allow_partial_xueqiu: bool = False,
     xueqiu_pool_version: str = "",
+    sources: set[str] | None = None,
 ) -> int:
     ensure_tables(con)
     scoring_as_of = dt.datetime.now(dt.timezone.utc).date()
+    selected_sources = sorted(sources or [])
+    source_filter = ""
+    source_params: list[Any] = []
+    if selected_sources:
+        source_slots = ",".join("?" for _ in selected_sources)
+        source_filter = f" AND c.source IN ({source_slots})"
+        source_params.extend(selected_sources)
     youtube_pool_filter = ""
     score_params: list[Any] = []
     if table_exists(con, "yt_author_pool") and table_exists(con, "yt_author_pool_run"):
@@ -3850,49 +4524,102 @@ def score_investors(
              FROM sv_call_settlement s
              JOIN sv_call c ON c.candidate_id=s.candidate_id
              JOIN sv_call_candidate cc ON cc.candidate_id=s.candidate_id
-            WHERE s.status='settled' {youtube_pool_filter}""",
-        score_params,
+            WHERE s.status='settled' {source_filter} {youtube_pool_filter}""",
+        source_params + score_params,
     ).fetchall()
     by_inv: dict[str, list[sqlite3.Row]] = collections.defaultdict(list)
     for r in joined:
         if r["investor_id"]:
             by_inv[str(r["investor_id"])].append(r)
 
-    global_stats = {
+    market_stats = {
         inv: aggregate_stats(rows, 30.0, as_of_day=scoring_as_of)
         for inv, rows in by_inv.items()
     }
-    global_stats = {k: v for k, v in global_stats.items() if v}
-    primary_sources = {inv: primary_source_for_rows(rows) for inv, rows in by_inv.items() if inv in global_stats}
-    raw_by_platform: dict[str, dict[str, float]] = collections.defaultdict(dict)
-    for inv, st in global_stats.items():
-        raw_by_platform[primary_sources.get(inv, "x")][inv] = float(st["raw_z"])
+    market_stats = {key: value for key, value in market_stats.items() if value}
+    industry_stats = {
+        inv: aggregate_stats(
+            rows,
+            20.0,
+            as_of_day=scoring_as_of,
+            ability="industry",
+        )
+        for inv, rows in by_inv.items()
+        if inv in market_stats
+    }
+    industry_stats = {
+        key: value for key, value in industry_stats.items() if value
+    }
+    primary_sources = {
+        inv: primary_source_for_rows(rows)
+        for inv, rows in by_inv.items()
+        if inv in market_stats
+    }
+    market_raw_by_platform: dict[str, dict[str, float]] = collections.defaultdict(dict)
+    industry_raw_by_platform: dict[str, dict[str, float]] = collections.defaultdict(dict)
+    for inv, stats in market_stats.items():
+        source = primary_sources.get(inv, "x")
+        market_raw_by_platform[source][inv] = float(stats["raw_z"])
+        if inv in industry_stats:
+            industry_raw_by_platform[source][inv] = float(
+                industry_stats[inv]["raw_z"]
+            )
 
-    platform_sv_scores: dict[str, dict[str, int]] = {}
-    platform_fallback_scores: dict[str, dict[str, int]] = {}
+    market_platform_scores: dict[str, dict[str, int]] = {}
+    market_fallback_scores: dict[str, dict[str, int]] = {}
+    industry_platform_scores: dict[str, dict[str, int]] = {}
+    industry_fallback_scores: dict[str, dict[str, int]] = {}
     platform_pool_sizes: dict[str, dict[str, int]] = {}
-    for source, raw_map in raw_by_platform.items():
+    for source, raw_map in market_raw_by_platform.items():
         qualified = {
             inv: raw
             for inv, raw in raw_map.items()
-            if qualifies_for_platform(source, global_stats[inv])
+            if qualifies_for_platform(source, market_stats[inv])
         }
         if len(qualified) < 8:
             qualified = raw_map
-        platform_sv_scores[source] = robust_scores(qualified)
-        platform_fallback_scores[source] = robust_scores(raw_map)
+        market_platform_scores[source] = robust_scores(qualified)
+        market_fallback_scores[source] = robust_scores(raw_map)
+        industry_raw = industry_raw_by_platform.get(source, {})
+        industry_qualified = {
+            inv: raw
+            for inv, raw in industry_raw.items()
+            if float(industry_stats[inv]["n_eff"]) >= 4.0
+            and int(industry_stats[inv]["settled_calls"]) >= 5
+        }
+        if len(industry_qualified) < 8:
+            industry_qualified = industry_raw
+        industry_platform_scores[source] = robust_scores(industry_qualified)
+        industry_fallback_scores[source] = robust_scores(industry_raw)
         platform_pool_sizes[source] = {
             "qualified": len(qualified),
             "total": len(raw_map),
+            "industryQualified": len(industry_qualified),
+            "industryTotal": len(industry_raw),
         }
 
-    con.execute("DELETE FROM sv_investor_score")
-    con.execute("DELETE FROM sv_segment_score")
+    if selected_sources:
+        source_slots = ",".join("?" for _ in selected_sources)
+        con.execute(
+            f"""DELETE FROM sv_segment_score
+                 WHERE investor_id IN (
+                   SELECT investor_id FROM sv_investor_score
+                    WHERE source IN ({source_slots})
+                 )""",
+            selected_sources,
+        )
+        con.execute(
+            f"DELETE FROM sv_investor_score WHERE source IN ({source_slots})",
+            selected_sources,
+        )
+    else:
+        con.execute("DELETE FROM sv_investor_score")
+        con.execute("DELETE FROM sv_segment_score")
 
     rows_to_write = []
     segment_rows = []
     for inv, rows in by_inv.items():
-        st = global_stats.get(inv)
+        st = market_stats.get(inv)
         if not st:
             continue
         handle = next((r["author_handle"] for r in rows if r["author_handle"]), inv)
@@ -3952,13 +4679,30 @@ def score_investors(
         ticker_json = {t: segment_scores[("ticker", t)] for t in ticker_counts if ("ticker", t) in segment_scores}
         narrative_json = {n: segment_scores[("narrative", n)] for n in set(top_narratives) if ("narrative", n) in segment_scores}
         level = confidence(st["n_eff"], st["settled_calls"])
-        raw_platform_sv = platform_sv_scores.get(primary_source, {}).get(
+        market_platform_sv = market_platform_scores.get(primary_source, {}).get(
             inv,
-            platform_fallback_scores.get(primary_source, {}).get(inv, 100),
+            market_fallback_scores.get(primary_source, {}).get(inv, 100),
         )
+        industry_st = industry_stats.get(inv)
+        industry_platform_sv = (
+            industry_platform_scores.get(primary_source, {}).get(
+                inv,
+                industry_fallback_scores.get(primary_source, {}).get(inv, 100),
+            )
+            if industry_st
+            else None
+        )
+        ability_scores = blend_dual_ability_scores(
+            st,
+            industry_st,
+            market_platform_sv,
+            industry_platform_sv,
+        )
+        raw_platform_sv = float(ability_scores["compositePlatformSv"])
+        combined_raw_z = float(ability_scores["compositeRawZ"])
         rel_cap = reliability_cap(level)
         conc_cap = concentration_cap(st)
-        platform_sv = min(raw_platform_sv, rel_cap, conc_cap)
+        platform_sv = int(round(min(raw_platform_sv, rel_cap, conc_cap)))
         sv, global_deviation = global_sv_from_platform(platform_sv, level)
         concentration = dict(st.get("concentration") or {})
         concentration.update(
@@ -3975,6 +4719,12 @@ def score_investors(
                 "platformBaseline": 100,
                 "primaryPlatform": primary_source,
                 "platformPool": platform_pool_sizes.get(primary_source, {"qualified": 0, "total": 0}),
+                "dualBaseline": {
+                    "version": INTEGRAL_SCORING_VERSION,
+                    "industryBlendWeight": round(
+                        float(ability_scores["industryBlendWeight"]), 4
+                    ),
+                },
                 "dominantInvestorType": top_analysis_type,
                 "investorTypeShare": {
                     k: round(v / max(1, sum(analysis_counts.values())), 4)
@@ -3985,16 +4735,17 @@ def score_investors(
         rows_to_write.append(
             (
                 inv, primary_source, display_name, handle, top_lang if top_lang in {"zh", "en", "ko", "ja"} else "en",
-                sv, st["raw_z"], level, st["n_eff"], st["settled_calls"],
+                sv, combined_raw_z, level, st["n_eff"], st["settled_calls"],
                 st["active_days"], st["covered_tickers"], jdump(top_tickers), jdump(top_narratives),
                 jdump({
                     source: (platform_sv if source == primary_source else segment_scores.get(("platform", source), sv))
                     for source in source_counts
                 }),
                 jdump(horizon_json), jdump(narrative_json), jdump(ticker_json),
+                jdump(ability_scores),
                 jdump(concentration),
-                f"基于 {st['settled_calls']} 个已结算 {source_label['zh']} call，并按结算时间衰减；先在平台内计算 SV_Platform={platform_sv}，再按置信度折算为 SV_Global={sv}。",
-                f"Based on {st['settled_calls']} settled {source_label['en']} calls with settlement-time decay; SV_Platform={platform_sv} is normalized inside the platform and converted to SV_Global={sv} with confidence adjustment.",
+                f"基于 {st['settled_calls']} 个已结算 {source_label['zh']} call 的积分路径；分别衡量相对 SPY 的市场选股能力和相对行业 ETF 的行业内选股能力，综合得到 SV_Platform={platform_sv}，再按样本置信度折算为 SV_Global={sv}。",
+                f"Based on integral return paths from {st['settled_calls']} settled {source_label['en']} calls; market selection versus SPY and within-industry selection versus sector ETFs are blended into SV_Platform={platform_sv}, then adjusted for sample confidence to SV_Global={sv}.",
                 utc_now(),
             )
         )
@@ -4003,8 +4754,8 @@ def score_investors(
         """INSERT INTO sv_investor_score
            (investor_id,source,name,handle,language,sv,raw_z,confidence,n_eff,settled_calls,active_days,
             covered_tickers,top_tickers_json,top_narratives_json,platform_scores_json,horizon_scores_json,
-            narrative_scores_json,ticker_scores_json,concentration_json,rationale_zh,rationale_en,updated_at)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            narrative_scores_json,ticker_scores_json,ability_scores_json,concentration_json,rationale_zh,rationale_en,updated_at)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         rows_to_write,
     )
     con.executemany(
@@ -4156,12 +4907,16 @@ def export_json(con: sqlite3.Connection) -> None:
     ).fetchall()
     con.executemany(
         """INSERT OR REPLACE INTO sv_investor_score_snapshot
-           (run_id,scoring_version,created_at,investor_id,source,name,handle,language,sv,raw_z,rank_no,confidence,n_eff,settled_calls,active_days,covered_tickers,horizon_scores_json,ticker_scores_json,concentration_json)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+           (run_id,scoring_version,created_at,investor_id,source,name,handle,language,sv,raw_z,rank_no,confidence,n_eff,settled_calls,active_days,covered_tickers,horizon_scores_json,ticker_scores_json,ability_scores_json,concentration_json)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         [
             (
                 run_id,
-                SV_RANKING_VERSION,
+                (
+                    SV_RANKING_VERSION
+                    if r["ability_scores_json"]
+                    else "v1.9-time-decay"
+                ),
                 snapshot_created_at,
                 r["investor_id"],
                 r["source"],
@@ -4178,6 +4933,7 @@ def export_json(con: sqlite3.Connection) -> None:
                 r["covered_tickers"],
                 r["horizon_scores_json"],
                 r["ticker_scores_json"],
+                r["ability_scores_json"],
                 r["concentration_json"],
             )
             for r in all_rows
@@ -4287,6 +5043,7 @@ def export_json(con: sqlite3.Connection) -> None:
             "coveredTickers": int(r["covered_tickers"] or 0),
             "topTickers": json.loads(r["top_tickers_json"] or "[]"),
             "platformScores": json.loads(r["platform_scores_json"] or "{}"),
+            "abilities": json.loads(r["ability_scores_json"] or "{}"),
             "horizonScores": json.loads(r["horizon_scores_json"] or "{}"),
             "concentration": (
                 {"dominantInvestorType": concentration.get("dominantInvestorType")}
@@ -4383,6 +5140,18 @@ def export_json(con: sqlite3.Connection) -> None:
         source: list(band["top25Ids"])
         for source, band in platform_bands.items()
     }
+    platform_scoring_versions = {
+        source: (
+            SV_RANKING_VERSION
+            if source_rows
+            and all(row["ability_scores_json"] for row in source_rows)
+            else "v1.9-time-decay"
+        )
+        for source in platform_bands
+        for source_rows in [
+            [row for row in all_rows if str(row["source"] or "") == source]
+        ]
+    }
     current = [
         {"key": "semis", **NARRATIVE_LABELS["semis"], "weight": 34},
         {"key": "ai_infra", **NARRATIVE_LABELS["ai_infra"], "weight": 24},
@@ -4390,12 +5159,17 @@ def export_json(con: sqlite3.Connection) -> None:
         {"key": "crypto", **NARRATIVE_LABELS["crypto"], "weight": 10},
     ]
     payload = {
-        "version": 8,
+        "version": 9,
         "scoringVersion": SV_RANKING_VERSION,
+        "platformScoringVersions": platform_scoring_versions,
         "callScoringVersion": SV_SCORING_VERSION,
         "scoreSemantics": {
-            "sv": "SV_Global. It ranks platform-relative deviation after confidence adjustment.",
-            "platformScores": "SV_Platform. Each score is normalized inside that platform only.",
+            "sv": "SV_Global. It blends dual-baseline integral abilities and applies confidence adjustment.",
+            "platformScores": "Composite SV_Platform, normalized inside that platform only.",
+            "marketSelection": "Integral directional excess path versus SPY. It measures cross-market stock selection.",
+            "industrySelection": "Integral directional excess path versus the mapped industry ETF. It measures within-industry stock selection.",
+            "integralFormula": "70% normalized area under the cumulative directional excess-return path + 30% terminal directional excess return.",
+            "horizonRule": "Configured horizon windows are cumulative integral snapshots; only the primary horizon contributes evidence.",
             "baseline": 100,
             "globalFormula": "SV_Global = 100 + (SV_Platform - 100) * confidence_factor",
         },
@@ -4515,12 +5289,13 @@ def run(args: argparse.Namespace) -> None:
             tickers=only,
         )
     if "settle" in stages:
-        settle_calls(con)
+        settle_calls(con, sources)
     if "score" in stages:
         score_investors(
             con,
             allow_partial_xueqiu=args.xueqiu_allow_partial,
             xueqiu_pool_version=args.xueqiu_pool_version,
+            sources=sources,
         )
     if "export" in stages:
         export_json(con)

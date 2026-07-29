@@ -51,6 +51,16 @@
 
 - 高结构化平台：YouTube、X、Reddit。可以稳定拿到作者、互动、时间、正文或字幕。
 - 半结构化社区：雪球、Toss、Yahoo Finance、Naver、PTT。正文可拿，但作者、粉丝、互动、历史窗口差异很大。
+- 公开广播频道：Telegram public channel。公共预览页可提供频道作者、消息 ID、正文、时间、浏览量、反应和原帖链接；转发来源必须单独标记，不能自动归因给频道主。
 - 受限平台：需要浏览器、登录态或 WAF 绕行的平台，必须把 crawl、raw 保存、sync 分离，避免失败时污染产品表。
 
 雪球作者时间线属于受限平台流程：未登录只能抓作者首屏，翻页必须使用用户本人授权后保存的 Playwright storage state。会话文件必须 gitignore，平台层只能消费会话，不得接收或记录账号密码；raw 写入、ticker 扩展和 SV 分析保持分步执行。
+
+## Telegram Public Channel MVP
+
+`pipeline/platforms/telegram/public_channel.py` 只采集无需登录即可访问的
+`t.me/s/<handle>` 公共预览历史，不加入私密群、不绕过访问控制，也不接收用户账号或会话。
+标准化结果写入隔离数据库的 `telegram_public_channel` 和
+`telegram_public_message`；每条消息同时保留源 HTML，转发内容保留在 raw 层但不得进入频道主
+Smart Voice 证据。Call 提取、二次归属审计、行情结算和报告不属于平台层，分别落在
+`pipeline/domain/smart_voice/private_*` 与 `pipeline/jobs/smart_voice/private_telegram.py`。

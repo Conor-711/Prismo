@@ -19,6 +19,7 @@ from .workflows import (
     run_sv_v0,
     score_x_sentiment,
 )
+from .private_telegram import run_private_telegram_report
 
 __all__ = [
     "backfill_price_history",
@@ -38,4 +39,5 @@ __all__ = [
     "rollup_retail_volume",
     "run_sv_v0",
     "score_x_sentiment",
+    "run_private_telegram_report",
 ]
