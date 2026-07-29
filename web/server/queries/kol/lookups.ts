@@ -3,17 +3,21 @@ import { cache } from "react";
 import type { Bi, KolJudgment, TweetReply, YtChannel, YtDigest } from "@/shared/market/mockDetail";
 import { bucketHorizon, currentPrice, parseRange, safe, stanceOf, type Refined } from "./shared";
 
-export const refinedMap = cache(function refinedMap(symbol: string): Map<string, Refined> {
-  const rows = safe(
-    () =>
-      all<any>(
-        `SELECT source, item_id, stance, reason_zh, reason_en, points_zh, points_en, quote_zh, quote_en,
-                COALESCE(trans_zh,'') AS trans_zh, COALESCE(trans_en,'') AS trans_en
-           FROM kol_refined WHERE ticker = ?`,
-        symbol
-      ),
-    []
-  );
+export interface LookupRef {
+  source: string;
+  itemId: string;
+}
+
+function refinedSelect(includeContent: boolean): string {
+  return `SELECT source, item_id, stance, reason_zh, reason_en, points_zh, points_en,
+                 ${includeContent ? "quote_zh" : "''"} AS quote_zh,
+                 ${includeContent ? "quote_en" : "''"} AS quote_en,
+                 ${includeContent ? "COALESCE(trans_zh,'')" : "''"} AS trans_zh,
+                 ${includeContent ? "COALESCE(trans_en,'')" : "''"} AS trans_en
+            FROM kol_refined`;
+}
+
+function buildRefinedMap(rows: any[]): Map<string, Refined> {
   const m = new Map<string, Refined>();
   for (const r of rows) {
     m.set(`${r.source}:${r.item_id}`, {
@@ -25,21 +29,42 @@ export const refinedMap = cache(function refinedMap(symbol: string): Map<string,
     });
   }
   return m;
+}
+
+const allRefinedMap = cache(function allRefinedMap(symbol: string): Map<string, Refined> {
+  return buildRefinedMap(safe(() => all<any>(`${refinedSelect(true)} WHERE ticker = ?`, symbol), []));
 });
 
+export function refinedMap(symbol: string, refs?: LookupRef[], includeContent = true): Map<string, Refined> {
+  if (!refs) return allRefinedMap(symbol);
+  return buildRefinedMap(selectedSourceRows<any>(refinedSelect(includeContent), symbol, refs));
+}
+
 // kol_viewpoint（pipeline kol-viewpoint 产出）：source:item_id -> 有序视角键数组（首个为主视角）。
-export const viewpointMap = cache(function viewpointMap(symbol: string): Map<string, string[]> {
-  const rows = safe(
+const allViewpointMap = cache(function allViewpointMap(symbol: string): Map<string, string[]> {
+  return buildViewpointMap(safe(
     () => all<any>(`SELECT source, item_id, viewpoints FROM kol_viewpoint WHERE ticker = ?`, symbol),
     []
-  );
+  ));
+});
+
+function buildViewpointMap(rows: any[]): Map<string, string[]> {
   const m = new Map<string, string[]>();
   for (const r of rows) {
     const vps = parseJSON<string[]>(r.viewpoints, []);
     if (Array.isArray(vps) && vps.length) m.set(`${r.source}:${r.item_id}`, vps);
   }
   return m;
-});
+}
+
+export function viewpointMap(symbol: string, refs?: LookupRef[]): Map<string, string[]> {
+  if (!refs) return allViewpointMap(symbol);
+  return buildViewpointMap(selectedSourceRows<any>(
+    `SELECT source, item_id, viewpoints FROM kol_viewpoint`,
+    symbol,
+    refs
+  ));
+}
 
 // author_avatar（pipeline/platforms/author_assets/avatars.py 爬取）→ "source:handle" -> url
 export const avatarMap = cache(function avatarMap(): Map<string, string> {
@@ -55,10 +80,59 @@ export const avatarMap = cache(function avatarMap(): Map<string, string> {
 });
 
 // yt_channel（pipeline/platforms/youtube/channels.py 爬取）→ channel_id -> 作者基础信息（粉丝/视频/简介/@handle）
-export function ytChannelMap(): Map<string, YtChannel> {
+const IN_CHUNK_SIZE = 400;
+
+function selectedRows<T>(selectSql: string, column: string, values?: string[]): T[] {
+  if (!values) return safe(() => all<T>(selectSql), []);
+  const ids = [...new Set(values.map(String).filter(Boolean))];
+  const rows: T[] = [];
+  for (let start = 0; start < ids.length; start += IN_CHUNK_SIZE) {
+    const chunk = ids.slice(start, start + IN_CHUNK_SIZE);
+    rows.push(...safe(
+      () => all<T>(
+        `${selectSql} WHERE ${column} IN (${chunk.map(() => "?").join(",")})`,
+        ...chunk
+      ),
+      []
+    ));
+  }
+  return rows;
+}
+
+function selectedSourceRows<T>(selectSql: string, ticker: string, refs: LookupRef[]): T[] {
+  const rows: T[] = [];
+  const bySource = new Map<string, string[]>();
+  for (const ref of refs) {
+    const ids = bySource.get(ref.source) ?? [];
+    ids.push(String(ref.itemId));
+    bySource.set(ref.source, ids);
+  }
+  for (const [source, itemIds] of bySource) {
+    const ids = [...new Set(itemIds.filter(Boolean))];
+    for (let start = 0; start < ids.length; start += IN_CHUNK_SIZE) {
+      const chunk = ids.slice(start, start + IN_CHUNK_SIZE);
+      rows.push(...safe(
+        () => all<T>(
+          `${selectSql}
+            WHERE ticker = ? AND source = ?
+              AND item_id IN (${chunk.map(() => "?").join(",")})`,
+          ticker,
+          source,
+          ...chunk
+        ),
+        []
+      ));
+    }
+  }
+  return rows;
+}
+
+export function ytChannelMap(channelIds?: string[]): Map<string, YtChannel> {
   const rows = safe(
-    () => all<any>(
-      `SELECT channel_id, subscriber_count, video_count, description, handle FROM yt_channel`
+    () => selectedRows<any>(
+      `SELECT channel_id, subscriber_count, video_count, description, handle FROM yt_channel`,
+      "channel_id",
+      channelIds
     ),
     []
   );
@@ -75,9 +149,13 @@ export function ytChannelMap(): Map<string, YtChannel> {
 }
 
 // yt_digest（pipeline/domain/opinions/youtube_digest.py 产出）→ video_id -> 投资者摘要 + 内容目录(章节)
-export function ytDigestMap(): Map<string, YtDigest> {
+export function ytDigestMap(videoIds?: string[]): Map<string, YtDigest> {
   const rows = safe(
-    () => all<any>(`SELECT video_id, summary_zh, summary_en, chapters FROM yt_digest`),
+    () => selectedRows<any>(
+      `SELECT video_id, summary_zh, summary_en, chapters FROM yt_digest`,
+      "video_id",
+      videoIds
+    ),
     []
   );
   const m = new Map<string, YtDigest>();
@@ -94,23 +172,59 @@ export function ytDigestMap(): Map<string, YtDigest> {
   return m;
 }
 
-export function relevanceMap(symbol: string): Map<string, number> {
-  const rows = safe(
-    () => all<{ source: string; item_id: string; score: number }>(
-      `SELECT source, item_id, score FROM kol_relevance WHERE ticker = ?`, symbol),
-    []
-  );
+export function relevanceMap(symbol: string, refs?: LookupRef[]): Map<string, number> {
+  const rows = refs
+    ? selectedSourceRows<{ source: string; item_id: string; score: number }>(
+        `SELECT source, item_id, score FROM kol_relevance`,
+        symbol,
+        refs
+      )
+    : safe(
+        () => all<{ source: string; item_id: string; score: number }>(
+          `SELECT source, item_id, score FROM kol_relevance WHERE ticker = ?`,
+          symbol
+        ),
+        []
+      );
   const m = new Map<string, number>();
   for (const r of rows) m.set(`${r.source}:${r.item_id}`, r.score);
   return m;
 }
 
 // kol_quality（pipeline kol-quality 产出）：source:item_id -> 0-100 帖子质量分。与标的无关，故不按 ticker 过滤。
-export function qualityMap(): Map<string, number> {
-  const rows = safe(
-    () => all<{ source: string; item_id: string; score: number }>(`SELECT source, item_id, score FROM kol_quality`),
-    []
-  );
+export function qualityMap(refs?: { source: string; itemId: string }[]): Map<string, number> {
+  const rows: { source: string; item_id: string; score: number }[] = [];
+  if (!refs) {
+    rows.push(...safe(
+      () => all<{ source: string; item_id: string; score: number }>(
+        `SELECT source, item_id, score FROM kol_quality`
+      ),
+      []
+    ));
+  } else {
+    const bySource = new Map<string, string[]>();
+    for (const ref of refs) {
+      const ids = bySource.get(ref.source) ?? [];
+      ids.push(String(ref.itemId));
+      bySource.set(ref.source, ids);
+    }
+    for (const [source, itemIds] of bySource) {
+      const ids = [...new Set(itemIds.filter(Boolean))];
+      for (let start = 0; start < ids.length; start += IN_CHUNK_SIZE) {
+        const chunk = ids.slice(start, start + IN_CHUNK_SIZE);
+        rows.push(...safe(
+          () => all<{ source: string; item_id: string; score: number }>(
+            `SELECT source, item_id, score
+               FROM kol_quality
+              WHERE source = ? AND item_id IN (${chunk.map(() => "?").join(",")})`,
+            source,
+            ...chunk
+          ),
+          []
+        ));
+      }
+    }
+  }
   const m = new Map<string, number>();
   for (const r of rows) m.set(`${r.source}:${r.item_id}`, r.score);
   return m;
@@ -118,7 +232,7 @@ export function qualityMap(): Map<string, number> {
 
 // kol_judgment（pipeline kol-judgment）+ yt_judgment（youtube-judgment）：source:item_id -> 买卖价位(区间)+周期。
 // 价格以区间**中点**做现价 0.2–5× band 剔噪（penny-pump / 假设估值 / $1225 这类数量级离谱的丢弃）。供正文提炼行。
-export function judgmentMap(symbol: string): Map<string, KolJudgment> {
+export function judgmentMap(symbol: string, refs?: LookupRef[]): Map<string, KolJudgment> {
   const cur = currentPrice(symbol);
   // 一侧价位(lo,hi) → 规整 [lo,hi]；中点过 band 才保留，否则 undefined
   const side = (lo?: number, hi?: number): [number, number] | undefined => {
@@ -132,16 +246,13 @@ export function judgmentMap(symbol: string): Map<string, KolJudgment> {
   const bk = (b: string) => (["short", "mid", "long"].includes(b) ? b : undefined) as KolJudgment["bucket"];
   const m = new Map<string, KolJudgment>();
   // reddit / x / 雪球 / Toss / Yahoo JP：kol_judgment（买入/卖出 各 lo/hi + bucket 来自 LLM）
-  const rows = safe(
-    () =>
-      all<any>(
-        `SELECT source, item_id, buy_lo, buy_hi, sell_lo, sell_hi, COALESCE(price_raw,'') AS pr,
-                COALESCE(horizon_zh,'') AS hz, COALESCE(horizon_en,'') AS he, COALESCE(horizon_bucket,'') AS bk
-           FROM kol_judgment WHERE ticker = ?`,
-        symbol
-      ),
-    []
-  );
+  const judgmentSelect = `SELECT source, item_id, buy_lo, buy_hi, sell_lo, sell_hi, COALESCE(price_raw,'') AS pr,
+                                 COALESCE(horizon_zh,'') AS hz, COALESCE(horizon_en,'') AS he,
+                                 COALESCE(horizon_bucket,'') AS bk
+                            FROM kol_judgment`;
+  const rows = refs
+    ? selectedSourceRows<any>(judgmentSelect, symbol, refs.filter((ref) => ref.source !== "youtube"))
+    : safe(() => all<any>(`${judgmentSelect} WHERE ticker = ?`, symbol), []);
   for (const r of rows) {
     const b = side(r.buy_lo, r.buy_hi), s = side(r.sell_lo, r.sell_hi);
     const horizon = bi(r.hz, r.he), bucket = bk(r.bk);

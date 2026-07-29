@@ -10,13 +10,14 @@ import {
   type RawOp,
 } from "./shared";
 
-export function redditOps(symbol: string, since: string, limit = 5000): RawOp[] {
+export function redditOps(symbol: string, since: string, limit = 5000, includeContent = true): RawOp[] {
   const safeLimit = Math.max(1, Math.min(Math.floor(limit), 5000));
   const rows = safe(
     () =>
       all<any>(
         `SELECT p.id AS id, p.author_id AS author, p.title AS title, p.title_zh AS title_zh,
-                COALESCE(p.selftext,'') AS selftext, COALESCE(p.selftext_zh,'') AS selftext_zh,
+                ${includeContent ? "COALESCE(p.selftext,'')" : "''"} AS selftext,
+                ${includeContent ? "COALESCE(p.selftext_zh,'')" : "''"} AS selftext_zh,
                 p.permalink AS url, COALESCE(p.score,0) AS score, COALESCE(p.num_comments,0) AS comments,
                 p.created_utc AS created, a.stance AS stance, COALESCE(a.sentiment_score,0) AS senti,
                 COALESCE(a.quality_score,0) AS quality, COALESCE(m.confidence,0) AS relevance
@@ -59,19 +60,28 @@ export function redditOps(symbol: string, since: string, limit = 5000): RawOp[] 
 
 // yt_fulltext（pipeline youtube-fulltext 产出）：video_id -> {flat 口播全文, segments 有序口播段落(多人视频带说话人)}。
 // 单独查询并 try/catch 兜底——缺表则返回空，YouTube 观点照常工作、只是没有「完整口播」。
-interface YtFull {
+export interface YtFull {
   flat: string;
   segments: YtSeg[];
 }
-function ytFulltextMap(symbol: string, since: string): Map<string, YtFull> {
+export function ytFulltextMap(symbol: string, since: string, limit = 1000): Map<string, YtFull> {
+  const safeLimit = Math.max(1, Math.min(Math.floor(limit), 5000));
   const rows = safe(
     () => all<any>(
       `SELECT f.video_id, f.content_zh, f.segments
          FROM yt_fulltext f
          JOIN yt_video v ON v.id = f.video_id
-        WHERE f.ticker = ? AND v.published_utc >= ?`,
+         JOIN yt_channel c ON c.channel_id = v.channel_id
+        WHERE f.ticker = ? AND v.published_utc >= ?
+          AND COALESCE(v.duration_s,0) > ?
+          AND COALESCE(c.subscriber_count,-1) >= ?
+        ORDER BY v.published_utc DESC,
+                 (COALESCE(v.like_count,0) + COALESCE(v.comment_count,0)) DESC
+        LIMIT ${safeLimit}`,
       symbol,
-      since
+      since,
+      YOUTUBE_MIN_DISPLAY_DURATION_SECONDS,
+      YOUTUBE_MIN_DISPLAY_SUBSCRIBERS
     ),
     []
   );
@@ -88,7 +98,6 @@ function ytFulltextMap(symbol: string, since: string): Map<string, YtFull> {
 
 export function youtubeOps(symbol: string, since: string, limit = 20): RawOp[] {
   const safeLimit = Math.max(1, Math.min(Math.floor(limit), 5000));
-  const fulltext = ytFulltextMap(symbol, since);
   const rows = safe(
     () =>
       all<any>(
@@ -130,19 +139,17 @@ export function youtubeOps(symbol: string, since: string, limit = 20): RawOp[] {
       url: r.url || "#",
       avatarKey: r.channel_id || "", // youtube 头像按 channel_id join
       refKey: r.id,
-      orig: fulltext.get(r.id)?.flat || undefined, // 完整口播全文（兜底/搜索）；有 ytSegments 时前端用结构化渲染
-      ytSegments: fulltext.get(r.id)?.segments?.length ? fulltext.get(r.id)!.segments : undefined,
       reason,
       points: { zh: parseJSON<string[]>(r.kp_zh, []), en: parseJSON<string[]>(r.kp_en, []) },
     };
   });
 }
 
-export function xueqiuOps(symbol: string, since: string, limit = 40): RawOp[] {
+export function xueqiuOps(symbol: string, since: string, limit = 40, includeContent = true): RawOp[] {
   const rows = safe(
     () =>
       all<any>(
-        `SELECT id, author, title, body, url, COALESCE(likes,0) AS likes,
+        `SELECT id, author, title, ${includeContent ? "body" : "'' AS body"}, url, COALESCE(likes,0) AS likes,
                 COALESCE(comments,0) AS comments, COALESCE(sentiment,0) AS senti, stance, created_utc AS created
            FROM gr_post
           WHERE source = 'xueqiu' AND ticker = ? AND created_utc >= ?
@@ -175,11 +182,11 @@ export function xueqiuOps(symbol: string, since: string, limit = 40): RawOp[] {
   });
 }
 
-export function tossOps(symbol: string, since: string, limit = 40): RawOp[] {
+export function tossOps(symbol: string, since: string, limit = 40, includeContent = true): RawOp[] {
   const rows = safe(
     () =>
       all<any>(
-        `SELECT id, author, title, body, url, COALESCE(likes,0) AS likes,
+        `SELECT id, author, title, ${includeContent ? "body" : "'' AS body"}, url, COALESCE(likes,0) AS likes,
                 COALESCE(comments,0) AS comments, COALESCE(views,0) AS views,
                 COALESCE(sentiment,0) AS senti, stance, created_utc AS created
            FROM gr_post
@@ -213,11 +220,11 @@ export function tossOps(symbol: string, since: string, limit = 40): RawOp[] {
   });
 }
 
-export function yahooJpOps(symbol: string, since: string, limit = 40): RawOp[] {
+export function yahooJpOps(symbol: string, since: string, limit = 40, includeContent = true): RawOp[] {
   const rows = safe(
     () =>
       all<any>(
-        `SELECT id, author, title, body, url, COALESCE(likes,0) AS likes,
+        `SELECT id, author, title, ${includeContent ? "body" : "'' AS body"}, url, COALESCE(likes,0) AS likes,
                 COALESCE(dislikes,0) AS dislikes, COALESCE(comments,0) AS comments,
                 COALESCE(sentiment,0) AS senti, stance, created_utc AS created, label
            FROM gr_post
@@ -253,7 +260,7 @@ export function yahooJpOps(symbol: string, since: string, limit = 40): RawOp[] {
 }
 
 // X / Twitter（云端 tw_* 拉进本地 x_opinion；pipeline/platforms/x/cloud_pull.py）。无情绪标注 → 中性。
-export function xOps(symbol: string, since: string, limit: number | null = 40): RawOp[] {
+export function xOps(symbol: string, since: string, limit: number | null = 40, fast = false): RawOp[] {
   const limitSql = limit == null ? "" : `LIMIT ${Math.max(0, limit | 0)}`;
   const rows = safe(
     () =>
@@ -262,7 +269,7 @@ export function xOps(symbol: string, since: string, limit: number | null = 40): 
                 COALESCE(replies,0) AS replies, COALESCE(quotes,0) AS quotes, COALESCE(views,0) AS views,
                 COALESCE(bookmarks,0) AS bookmarks, x.created, x.url,
                 COALESCE(q.score,0) AS quality, COALESCE(rel.score,0) AS relevance
-           FROM x_opinion x
+           FROM x_opinion x ${fast ? "INDEXED BY idx_x_opinion_ticker_created" : ""}
            JOIN kol_refined kr
              ON kr.source = 'x' AND kr.item_id = x.tweet_id AND kr.ticker = x.ticker
            LEFT JOIN kol_quality q
@@ -270,8 +277,9 @@ export function xOps(symbol: string, since: string, limit: number | null = 40): 
            LEFT JOIN kol_relevance rel
              ON rel.source = 'x' AND rel.item_id = x.tweet_id AND rel.ticker = x.ticker
           WHERE x.ticker = ? AND x.created >= ? AND x.text NOT GLOB 'RT @*'
-          ORDER BY COALESCE(q.score,0) DESC, COALESCE(rel.score,0) DESC,
-                   (x.likes + x.retweets + x.replies) DESC, x.created DESC
+          ORDER BY ${fast
+            ? "x.created DESC"
+            : "COALESCE(q.score,0) DESC, COALESCE(rel.score,0) DESC, (x.likes + x.retweets + x.replies) DESC, x.created DESC"}
           ${limitSql}`,
         symbol,
         since
@@ -330,7 +338,7 @@ function svFallbackQuality(conviction: number, evidence: number, specificity: nu
 
 // SV v0 结构化池中的 X/Twitter call：它来自更长周期的历史推文结构化结果。
 // 在产品层仍按 X 展示；只作为 x_opinion 的补充，不暴露 SV 中间概念。
-export function xSvOps(symbol: string, since: string, limit: number | null = 400): RawOp[] {
+export function xSvOps(symbol: string, since: string, limit: number | null = 400, fast = false): RawOp[] {
   const limitSql = limit == null ? "" : `LIMIT ${Math.max(0, limit | 0)}`;
   const rows = safe(
     () =>
@@ -352,7 +360,7 @@ export function xSvOps(symbol: string, since: string, limit: number | null = 400
             AND cc.ticker = ? AND COALESCE(cc.created_day, substr(cc.created_at,1,10)) >= ?
             AND c.is_actionable_call = 1
             AND COALESCE(cc.text,'') NOT GLOB 'RT @*'
-          ORDER BY COALESCE(cc.interactions,0) DESC, cc.created_at DESC
+          ORDER BY ${fast ? "cc.created_at DESC" : "COALESCE(cc.interactions,0) DESC, cc.created_at DESC"}
           ${limitSql}`,
         symbol,
         since
@@ -420,6 +428,6 @@ function mergeRawOps(ops: RawOp[], limit?: number | null): RawOp[] {
   return typeof limit === "number" ? out.slice(0, limit) : out;
 }
 
-export function xMergedOps(symbol: string, since: string, limit: number | null = 500): RawOp[] {
-  return mergeRawOps([...xSvOps(symbol, since, limit), ...xOps(symbol, since, limit)], limit);
+export function xMergedOps(symbol: string, since: string, limit: number | null = 500, fast = false): RawOp[] {
+  return mergeRawOps([...xSvOps(symbol, since, limit, fast), ...xOps(symbol, since, limit, fast)], limit);
 }

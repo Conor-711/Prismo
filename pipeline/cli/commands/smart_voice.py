@@ -17,6 +17,7 @@ from ...jobs.smart_voice import (
     rollup_retail_sentiment,
     rollup_retail_volume,
     run_sv_v0,
+    run_private_telegram_report,
     score_x_sentiment,
 )
 from ._utils import csv_values
@@ -70,6 +71,26 @@ def cmd_sv_v0(args):
         xueqiu_allow_partial=args.xueqiu_allow_partial,
         force=args.force,
     )
+
+
+def cmd_private_sv_telegram(args):
+    result = run_private_telegram_report(
+        handle=args.handle,
+        private_db_path=args.private_db,
+        reference_db_path=args.reference_db,
+        output_dir=args.output_dir,
+        web_output_path=args.web_output,
+        stage=args.stage,
+        max_pages=args.max_pages,
+        crawl_sleep=args.crawl_sleep,
+        candidate_limit=args.candidate_limit,
+        min_candidate_score=args.min_candidate_score,
+        extract_limit=args.extract_limit,
+        workers=args.workers,
+        force_extract=args.force,
+        proxy=args.proxy,
+    )
+    print("[private-sv] " + " ".join(f"{key}={value}" for key, value in result.items()))
 
 
 def cmd_sv_ticker_signals(args):
@@ -242,6 +263,42 @@ def register_commands(sub, root) -> None:
     sp.add_argument("--xueqiu-allow-partial", action="store_true", help="Allow candidate recall before every selected Xueqiu author job is done; disabled by default.")
     sp.add_argument("--force", action="store_true", help="Re-extract candidates already in sv_call.")
     sp.set_defaults(func=cmd_sv_v0)
+
+    sp = sub.add_parser("private-sv-telegram")
+    sp.add_argument("--handle", default="ruiminginvest")
+    sp.add_argument(
+        "--stage",
+        choices=["crawl", "candidates", "prices", "extract", "audit", "settle", "report", "all"],
+        default="all",
+    )
+    sp.add_argument(
+        "--private-db",
+        default="",
+        help="Defaults to data/private_sv/<handle>.db.",
+    )
+    sp.add_argument(
+        "--reference-db",
+        default=str(root / "data" / "dev.db"),
+    )
+    sp.add_argument(
+        "--output-dir",
+        default="",
+        help="Defaults to data/reports/private_smart_voice/<handle>.",
+    )
+    sp.add_argument(
+        "--web-output",
+        default="",
+        help="Defaults to web/lib/data/privateSmartVoiceMvp.json.",
+    )
+    sp.add_argument("--max-pages", type=int, default=0, help="0 crawls all public history.")
+    sp.add_argument("--crawl-sleep", type=float, default=0.2)
+    sp.add_argument("--candidate-limit", type=int, default=0, help="0 keeps all ticker-message pairs.")
+    sp.add_argument("--min-candidate-score", type=float, default=0.0)
+    sp.add_argument("--extract-limit", type=int, default=0, help="0 extracts every pending candidate.")
+    sp.add_argument("--workers", type=int, default=4)
+    sp.add_argument("--proxy", default="", help="Optional HTTP(S) proxy URL.")
+    sp.add_argument("--force", action="store_true", help="Re-extract existing Telegram candidates.")
+    sp.set_defaults(func=cmd_private_sv_telegram)
 
     sp = sub.add_parser("sv-ticker-signals")
     sp.add_argument("--db", default=str(root / "data" / "dev.db"))

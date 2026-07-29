@@ -32,6 +32,10 @@ data/.snapshot-*/
 data/_ytframes_tmp/
 # 实验/管线中间产物导出（可由 make 重新生成，体积大，不入库）
 data/exports/
+# Private Smart Voice raw channel databases and generated reports are local,
+# reproducible analysis artifacts and may contain large source payloads.
+data/private_sv/
+data/reports/private_smart_voice/
 *.sqlite3
 
 # Node / Next

@@ -43,6 +43,12 @@ pipeline/domain/smart_voice/
   segment_backtest.py             # 子类排名、滚动集中信号和任务编排
   segment_backtest_outcomes.py    # 子类事件合并、收益和统计
   segment_backtest_reporting.py   # 子类统计、逐事件证据和覆盖导出
+  private_telegram.py  # Telegram 频道消息到共享 Call 候选
+  private_audit.py     # 频道主归属、真实投资意图与方向证据二次审计
+  private_portfolio.py # 单作者可执行等权组合、CAGR、风险和净值曲线
+  private_report.py    # 单作者参考人群校准和隔离报告
+  private_report_export.py # Markdown/JSON/CSV 文件导出
+  private_web_export.py # 实验页公开精简证据、价格和组合回测 JSON
   export.py            # web/lib/data/smartVoice.json
   README.md
 ```
@@ -60,7 +66,7 @@ pipeline/domain/smart_voice/
 - Smart Voice 独立页面
 
 前端允许做轻量筛选，例如 Top 25% 区间过滤，但不能改变 SV 分数口径。
-`/smart-voice` 使用单视窗工作台，按 Nansen Smart Money 的对象关系组织为三类入口：标的发现、投资者榜和实时观点。标的发现按各来源正式合格池的 Top/Bottom 10% `platformRank` 成员聚合，只展示高 SV 作者净方向明确的集中看多/看空标的，以及高低 SV 方向相反的分歧标的；集中方向至少要求同方向 2 条 call 和 2 位独立 Top 10% 作者，榜单展示 Top 10% 多空 call、同方向作者和加权净方向，不把中段或 Bottom 作者的计数混入。服务端一次读取近 90 天轻量 call 生成 `24H/3D/7D/30D/90D × X/YouTube/Reddit/雪球任意非空组合`，再只为最终入榜的代表性证据读取摘要、原文片段和原始链接；浏览器不接收全量原始 call。投资者榜消费四个平台各自 `platformBands.ranked` 的完整正式排名，并通过 `platformBands.observed` 提供明确标注的观察池；观察池不参与正式榜单、Top/Bottom 分位或静态作者详情生成。榜单作者预览为前后分位作者分别选择累计绝对贡献最高的主要加分/扣分 ticker，并把该 ticker 最具影响的已结算观点落到 `price_daily` 收盘价折线；行情按 ticker 去重并用紧凑 `[day, close]` 元组传给客户端。实时观点只消费 high/medium confidence 或平台 Top 10% 作者近 60 天的结构化 actionable call，并按来源限额后合并。作者画像沿用独立详情页。Toss 没有正式评分池时不生成占位榜单。
+`/smart-voice` 使用单视窗工作台，按 Nansen Smart Money 的对象关系组织为三类入口：标的发现、投资者榜和实时观点。标的发现按各来源正式合格池的 Top/Bottom 10% `platformRank` 成员聚合，只展示高 SV 作者净方向明确的集中看多/看空标的，以及高低 SV 方向相反的分歧标的；集中方向至少要求同方向 2 条 call 和 2 位独立 Top 10% 作者，榜单展示 Top 10% 多空 call、同方向作者和加权净方向，不把中段或 Bottom 作者的计数混入。服务端一次读取近 90 天轻量 call 生成 `24H/3D/7D/30D/90D × X/YouTube/Reddit/雪球任意非空组合`，再只为最终入榜的代表性证据读取摘要、原文片段和原始链接；浏览器不接收全量原始 call。投资者榜消费四个平台各自 `platformBands.ranked` 的完整正式排名，并通过 `platformBands.observed` 提供明确标注的观察池；观察池不参与正式榜单、Top/Bottom 分位或静态作者详情生成。榜单筛选可叠加平台、排名带、优势周期、赛道、主风格、精确周期分数和搜索；短/中/长分别映射 `1D+5D`、`20D+60D`、`90D+180D`，作者的优势周期取可用组均分最高者。选择赛道时只保留存在对应 `narrativeScores` 的作者；同时选择周期和赛道时，用两类子 SV 的均值作为页面内能力排序分，不写回 `smartVoice.json`，也不替代综合/平台 SV。榜单作者预览为前后分位作者分别选择累计绝对贡献最高的主要加分/扣分 ticker，并把该 ticker 最具影响的已结算观点落到 `price_daily` 收盘价折线；行情按 ticker 去重并用紧凑 `[day, close]` 元组传给客户端。实时观点只消费 high/medium confidence 或平台 Top 10% 作者近 60 天的结构化 actionable call，并按来源限额后合并。作者画像沿用独立详情页。Toss 没有正式评分池时不生成占位榜单。
 
 标的发现同时导出一套不参与当前加权排序的作者人数指标：在当前来源组合、窗口、标的和各来源 Top 10% 池内，以 `source + investor_id` 作为平台作者身份，每位作者只保留发布时间最新的 actionable call；由此计算看多作者数、看空作者数、`作者净人数 = 多 - 空` 和 `作者共识度 = 净人数 / 总作者数`。同一作者重复发帖不增加人数；跨平台身份尚未完成实体归并时按不同平台作者计数。
 
@@ -71,6 +77,32 @@ pipeline/domain/smart_voice/
 `web/server/queries/smartVoiceInvestorQueries.ts` 读取 `sv_call` / `sv_call_settlement` / `sv_call_candidate`
 展示代表性加分和扣分 call。前端不得在详情页重新计算 SV。
 
+## Private Smart Voice MVP
+
+`pipeline.manage private-sv-telegram` 对一个公开 Telegram 广播频道执行一次性隔离报告：
+
+1. 平台层完整分页保存公共历史和原始 HTML；
+2. 只召回频道自身发布、非转发且可映射到真实市场代码的消息；
+3. 复用当前 Smart Voice Call 结构化抽取，再用 `private-telegram-audit-v2`
+   二次拒绝课程/促销/奖励机制、第三方观点、回顾、无答案问句和方向证据不足的内容；
+4. 复用下一交易日入场、SPY 与行业 ETF 双基准积分路径、生命周期、时间衰减、样本置信度和集中度上限；
+5. 按下一交易日复权开盘入场、同标的最新 Call 覆盖、活跃标的等权和无信号持有现金，
+   生成计入往返 10 bps 成本的组合净值、CAGR、SPY 对照、波动率、Sharpe/Sortino、
+   最大回撤、年度收益及 0/10/25 bps 成本敏感性；
+6. 产物写入 `data/private_sv/<handle>.db` 和
+   `data/reports/private_smart_voice/<handle>/`，不得调用公域 `smartVoice.json` 导出；
+   实验页只消费独立 `web/lib/data/privateSmartVoiceMvp.json`。
+
+单频道只有一位作者，不能形成 Telegram 平台内相对分布。MVP 使用当前
+`sv_investor_score` 中达到各平台正式资格的公域作者 raw-z 作为固定校准人群，并在报告中
+输出参考人数、来源构成和从高到低的位置。该分数可称 Private SE/SV，但不是 Telegram
+平台排名，也不能与未使用同一参考版本的历史报告直接比较。
+
+`/[lang]/experiments/private-smart-voice` 是单频道实验工作台，不加入正式导航分位或公域信号。
+它通过 `ViewportWorkspace` 占满应用可用视口，内部滚动；观点页以复权收盘价折线和方向气泡
+展示全部 163 条已结算 Call，组合页展示跟随模型净值和风险。回测结果是规则化跟随模型，
+不是作者真实账户收益；页面必须同时展示 SPY、成本和最大回撤。
+
 ## 标的级 SV 信号
 
 `pipeline.manage sv-ticker-signals` 把作者 SV 转成可回测的标的信号：
@@ -79,7 +111,7 @@ pipeline/domain/smart_voice/
    当前榜单与历史重建均按 `exit_day` 执行同一套周期化时间衰减；历史重建必须显式传入当日 `as_of_day`。
 2. 按 `Top/Bottom 10%/25%`、观点周期和 7 个自然日窗口聚合独立作者的多空方向。
 3. 至少 3 位作者、同向占比至少 65%、有效声音数至少 2.5 才形成聚集事件。
-4. 事件从下一交易日开盘入场，按 1/5/20/60/90/180 个交易日结算，并计算相对 SPY 的方向性超额、命中、MFE、MAE 和峰值时间。
+4. 事件从下一交易日开盘入场，按 1/5/20/60/90/180 个交易日保存积分前缀；正式作者证据只采用观点主周期，并分别计算相对 SPY 的全市场选股能力与相对行业 ETF 的行业内选股能力。其他周期仅用于诊断，不能重复扩大样本。
 
 首批产品灰度只在 `MU`、`NVDA`、`MSTR` 标的详情页展示；其他标的继续使用原 SV 投资者模块。全市场历史时点评分仍可作为百分位比较基线。
 

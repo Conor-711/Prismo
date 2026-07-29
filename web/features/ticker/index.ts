@@ -4,6 +4,7 @@ export { OverlayPanel } from "./components/OverlayPanel";
 export { BullBearStructureChart, ViewpointStanceChart } from "./components/OverallStructureCharts";
 export { TickerDetailHeader } from "./components/TickerDetailHeader";
 export { TickerOverviewPanel } from "./components/TickerOverviewPanel";
+export { TickerOverviewLoader } from "./components/TickerOverviewLoader";
 export { SmartVoiceTickerSignals } from "./components/SmartVoiceTickerSignals";
 export { TargetPricePanel } from "./components/TargetPricePanel";
 export { TickerSignalBoards } from "./components/TickerSignalBoards";

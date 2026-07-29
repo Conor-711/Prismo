@@ -10,7 +10,7 @@ SV_SEGMENT_BANDS := top10,top25
 
 .PHONY: install venv db-init migrate seed seed-cn sample ingest refresh extract analyze analyze-mock \
         rollup narratives narrative-rotation brief worker daily daily-build cn-backfill demo stats test web-install web-dev clean help \
-        arch-check sv-price-history sv-v0-candidates sv-v0 sv-v0-prod sv-ticker-signals sv-indicator-backtest sv-indicator-report sv-segment-backtest sv-portfolio-backtest sv-rank-event-research reddit-sv-authors sv-v0-reddit-candidates sv-v0-reddit-prod tw-match cf-deploy \
+        arch-check sv-price-history sv-v0-candidates sv-v0 sv-v0-prod private-sv-telegram sv-ticker-signals sv-indicator-backtest sv-indicator-report sv-segment-backtest sv-portfolio-backtest sv-rank-event-research reddit-sv-authors sv-v0-reddit-candidates sv-v0-reddit-prod tw-match cf-deploy \
         backup-db snapshot-db restore-db data-clean data-status xueqiu-author-auth xueqiu-author-plan xueqiu-author-run xueqiu-author-drain xueqiu-author-status xueqiu-sv-full
 
 help:
@@ -34,6 +34,7 @@ help:
 	@echo "  make sv-price-history     补齐 SV 所需日线价格"
 	@echo "  make sv-v0                运行 Smart Voice v0：候选召回 → LLM 结构化 → 结算 → 导出"
 	@echo "  make sv-v0-prod           生产级 SV：更大候选池 + 作者均衡 LLM 抽样"
+	@echo "  make private-sv-telegram  单个公开 Telegram 频道的隔离 Private SV 报告"
 	@echo "  make sv-ticker-signals    标的 SV 分层、聚集事件与无泄漏历史回测"
 	@echo "  make sv-indicator-backtest  回测 SV 发现页指标的胜率、盈亏比和超额收益"
 	@echo "  make sv-indicator-report    导出逐事件、逐原文证据和稳健性细分数据"
@@ -414,6 +415,9 @@ sv-v0:
 # 可覆盖参数：make sv-v0-prod LIMIT=50000 EXTRACT=10000 MIN=20 MAX=80 WORKERS=4
 sv-v0-prod:
 	$(MANAGE) sv-v0 --stage all --candidate-limit $(or $(LIMIT),50000) --extract-limit $(or $(EXTRACT),10000) --extract-mode author-balanced --per-author-min $(or $(MIN),20) --per-author-max $(or $(MAX),80) --workers $(or $(WORKERS),4)
+
+private-sv-telegram:
+	$(MANAGE) private-sv-telegram --handle $(or $(HANDLE),ruiminginvest) --stage $(or $(STAGE),all) --workers $(or $(WORKERS),4) $(if $(PROXY),--proxy $(PROXY),)
 
 sv-v0-reddit-prod:
 	$(MANAGE) sv-v0 --source reddit --stage all --candidate-limit $(or $(LIMIT),50000) --extract-limit $(or $(EXTRACT),10000) --extract-mode author-balanced --per-author-min $(or $(MIN),10) --per-author-max $(or $(MAX),50) --workers $(or $(WORKERS),4) --reddit-author-limit $(or $(AUTHORS),1000) --reddit-since-days $(or $(DAYS),365) --reddit-min-author-posts $(or $(MIN_POSTS),8)

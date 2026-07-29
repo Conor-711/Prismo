@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { BASE_PATH } from "@/lib/site";
 import { KolModule } from "./KolModule";
 import { SmartVoiceTickerModule } from "@/features/smart-voice";
 import { SmartVoiceTickerSignals } from "./SmartVoiceTickerSignals";
@@ -52,6 +53,7 @@ function MaximizeIcon({ minimized = false }: { minimized?: boolean }) {
 
 type Props = {
   zh: boolean;
+  symbol: string;
   flowDays: KolCandle[];
   sentiment?: DailyNet[];
   volume?: DailyVol[];
@@ -66,6 +68,7 @@ type Props = {
 
 export function TickerOverviewPanel({
   zh,
+  symbol,
   flowDays,
   sentiment,
   volume,
@@ -80,11 +83,39 @@ export function TickerOverviewPanel({
   const [full, setFull] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [dashboard, setDashboard] = useState<"market" | "sv">("market");
+  const [loadedSignals, setLoadedSignals] = useState<SvTickerSignalData | null | undefined>(smartVoiceSignals);
+  const signalsRequestedFor = useRef("");
   const overviewHint = zh
     ? "通过上方按钮切换市场数据与 SV 数据。市场数据展示近一年净情绪、讨论度、聪明钱与散户差异、目标价和股价；SV 数据专门展示优质投资者观点转向、变化广度、目标修正、价格背离及历史表现。"
     : "Use the header control to switch between market and SV dashboards. Market covers sentiment, discussion, smart-retail differences, targets and price; SV focuses on high-SV view shifts, breadth, target revisions, price divergence and historical outcomes.";
 
   useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    setLoadedSignals(smartVoiceSignals);
+    signalsRequestedFor.current = "";
+  }, [smartVoiceSignals, symbol]);
+  useEffect(() => {
+    if (dashboard !== "sv" || smartVoiceSignals || signalsRequestedFor.current === symbol) return;
+    signalsRequestedFor.current = symbol;
+    const controller = new AbortController();
+    fetch(`${BASE_PATH}/data/smart-voice-ticker/${encodeURIComponent(symbol.toUpperCase())}/`, {
+      signal: controller.signal,
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error(`SV ticker export returned ${response.status}`);
+        return response.json();
+      })
+      .then((payload: { data?: SvTickerSignalData | null }) => {
+        setLoadedSignals(payload.data ?? null);
+      })
+      .catch((error: unknown) => {
+        if (!(error instanceof DOMException && error.name === "AbortError")) {
+          console.error("Failed to load ticker SV signals", error);
+          setLoadedSignals(null);
+        }
+      });
+    return () => controller.abort();
+  }, [dashboard, smartVoiceSignals, symbol]);
 
   useEffect(() => {
     if (!full) return;
@@ -117,8 +148,9 @@ export function TickerOverviewPanel({
       argumentsData={argumentsData}
     />
   );
-  const smartVoiceModule = smartVoiceSignals ? (
-    <SmartVoiceTickerSignals data={smartVoiceSignals} zh={zh} />
+  const resolvedSignals = smartVoiceSignals ?? loadedSignals;
+  const smartVoiceModule = resolvedSignals ? (
+    <SmartVoiceTickerSignals data={resolvedSignals} zh={zh} />
   ) : smartVoice ? (
     <SmartVoiceTickerModule board={smartVoice} zh={zh} />
   ) : null;
@@ -128,7 +160,7 @@ export function TickerOverviewPanel({
     <>
       {activeModule}
       <p className="mt-3 border-t border-line/70 pt-2 text-[10.5px] text-neutral-600">
-        {dashboard === "sv" && smartVoiceSignals
+        {dashboard === "sv" && resolvedSignals
           ? (zh
               ? "SV 转向、变化广度、目标修正、价格-SV 背离和历史验证均来自真实 Call、历史时点 SV 与价格结算；SV 数字描述观点变化，不代表预期收益。"
               : "SV shift, breadth, target revisions, price-SV divergence and historical validation use real calls, point-in-time SV and price settlements; SV values describe view changes, not expected returns.")

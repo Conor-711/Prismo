@@ -8,6 +8,7 @@ from typing import Any, Iterable
 from .ticker_signal_schema import ensure_ticker_signal_tables
 from .v0_impl import (
     aggregate_stats,
+    blend_dual_ability_scores,
     concentration_cap,
     confidence,
     global_sv_from_platform,
@@ -22,40 +23,90 @@ def _score_pool(
     rows_by_investor: dict[str, list[sqlite3.Row]],
     as_of_day: str,
 ) -> list[dict[str, Any]]:
-    stats = {
+    market_stats = {
         investor: aggregate_stats(rows, 30.0, as_of_day=as_of_day)
         for investor, rows in rows_by_investor.items()
     }
-    stats = {investor: value for investor, value in stats.items() if value}
+    market_stats = {
+        investor: value for investor, value in market_stats.items() if value
+    }
+    industry_stats = {
+        investor: aggregate_stats(
+            rows,
+            20.0,
+            as_of_day=as_of_day,
+            ability="industry",
+        )
+        for investor, rows in rows_by_investor.items()
+        if investor in market_stats
+    }
+    industry_stats = {
+        investor: value for investor, value in industry_stats.items() if value
+    }
     sources = {
         investor: primary_source_for_rows(rows_by_investor[investor])
-        for investor in stats
+        for investor in market_stats
     }
-    raw_by_platform: dict[str, dict[str, float]] = collections.defaultdict(dict)
-    for investor, value in stats.items():
-        raw_by_platform[sources[investor]][investor] = float(value["raw_z"])
+    market_raw_by_platform: dict[str, dict[str, float]] = collections.defaultdict(dict)
+    industry_raw_by_platform: dict[str, dict[str, float]] = collections.defaultdict(dict)
+    for investor, value in market_stats.items():
+        source = sources[investor]
+        market_raw_by_platform[source][investor] = float(value["raw_z"])
+        if investor in industry_stats:
+            industry_raw_by_platform[source][investor] = float(
+                industry_stats[investor]["raw_z"]
+            )
 
-    platform_scores: dict[str, dict[str, int]] = {}
-    fallback_scores: dict[str, dict[str, int]] = {}
-    for source, raw_map in raw_by_platform.items():
+    market_platform_scores: dict[str, dict[str, int]] = {}
+    market_fallback_scores: dict[str, dict[str, int]] = {}
+    industry_platform_scores: dict[str, dict[str, int]] = {}
+    industry_fallback_scores: dict[str, dict[str, int]] = {}
+    for source, raw_map in market_raw_by_platform.items():
         qualified = {
             investor: raw
             for investor, raw in raw_map.items()
-            if qualifies_for_platform(source, stats[investor])
+            if qualifies_for_platform(source, market_stats[investor])
         }
         if len(qualified) < 8:
             qualified = raw_map
-        platform_scores[source] = robust_scores(qualified)
-        fallback_scores[source] = robust_scores(raw_map)
+        market_platform_scores[source] = robust_scores(qualified)
+        market_fallback_scores[source] = robust_scores(raw_map)
+        industry_raw = industry_raw_by_platform.get(source, {})
+        industry_qualified = {
+            investor: raw
+            for investor, raw in industry_raw.items()
+            if float(industry_stats[investor]["n_eff"]) >= 4.0
+            and int(industry_stats[investor]["settled_calls"]) >= 5
+        }
+        if len(industry_qualified) < 8:
+            industry_qualified = industry_raw
+        industry_platform_scores[source] = robust_scores(industry_qualified)
+        industry_fallback_scores[source] = robust_scores(industry_raw)
 
     scored: list[dict[str, Any]] = []
-    for investor, value in stats.items():
+    for investor, value in market_stats.items():
         source = sources[investor]
         level = confidence(float(value["n_eff"]), int(value["settled_calls"]))
-        raw_platform_sv = platform_scores.get(source, {}).get(
+        market_platform_sv = market_platform_scores.get(source, {}).get(
             investor,
-            fallback_scores.get(source, {}).get(investor, 100),
+            market_fallback_scores.get(source, {}).get(investor, 100),
         )
+        industry_value = industry_stats.get(investor)
+        industry_platform_sv = (
+            industry_platform_scores.get(source, {}).get(
+                investor,
+                industry_fallback_scores.get(source, {}).get(investor, 100),
+            )
+            if industry_value
+            else None
+        )
+        abilities = blend_dual_ability_scores(
+            value,
+            industry_value,
+            market_platform_sv,
+            industry_platform_sv,
+        )
+        raw_platform_sv = float(abilities["compositePlatformSv"])
         platform_sv = min(
             raw_platform_sv,
             reliability_cap(level),
@@ -68,7 +119,7 @@ def _score_pool(
                 "source": source,
                 "sv": float(global_sv),
                 "platform_sv": float(platform_sv),
-                "raw_z": float(value["raw_z"]),
+                "raw_z": float(abilities["compositeRawZ"]),
                 "confidence": level,
                 "n_eff": float(value["n_eff"]),
                 "settled_calls": int(value["settled_calls"]),
@@ -127,13 +178,23 @@ def rebuild_point_in_time_scores(con: sqlite3.Connection, call_days: Iterable[st
         con.commit()
         return 0
 
+    settlement_columns = {
+        str(row["name"])
+        for row in con.execute("PRAGMA table_info(sv_call_settlement)").fetchall()
+    }
+    primary_horizon_filter = (
+        "AND (COALESCE(s.settlement_version, '') = '' OR s.is_primary_horizon = 1)"
+        if {"settlement_version", "is_primary_horizon"} <= settlement_columns
+        else ""
+    )
     settlement_rows = con.execute(
-        """SELECT s.*, c.source, c.author_handle, c.language, c.direction,
+        f"""SELECT s.*, c.source, c.author_handle, c.language, c.direction,
                   c.investor_style, c.call_structure
              FROM sv_call_settlement s
              JOIN sv_call c ON c.candidate_id = s.candidate_id
             WHERE s.status = 'settled'
               AND s.actual_hit IS NOT NULL
+              {primary_horizon_filter}
               AND s.exit_day IS NOT NULL
               AND s.investor_id IS NOT NULL
             ORDER BY s.exit_day, s.candidate_id, s.horizon"""

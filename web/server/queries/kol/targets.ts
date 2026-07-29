@@ -116,7 +116,8 @@ export function getKolTargetPrices(symbol: string): KolTargetData {
                  WHERE kj.source='reddit' AND kj.ticker=? AND kj.created>=?` },
         { s: "x", name: (a) => (a ? "@" + a : "@—"),
           sql: `SELECT kj.*, x.handle AS author, x.url AS url
-                  FROM kol_judgment kj JOIN x_opinion x ON x.tweet_id = kj.item_id
+                  FROM kol_judgment kj
+                  JOIN x_opinion x ON x.tweet_id = kj.item_id AND x.ticker = kj.ticker
                  WHERE kj.source='x' AND kj.ticker=? AND kj.created>=?` },
         { s: "xueqiu", name: (a) => a || "雪球",
           sql: `SELECT kj.*, g.author AS author, g.url AS url

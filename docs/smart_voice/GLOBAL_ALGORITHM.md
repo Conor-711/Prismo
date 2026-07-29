@@ -18,12 +18,55 @@ Smart Voice has two layers:
 
 ```text
 raw call performance
+-> dual-benchmark integral settlement
 -> point-in-time time decay
 -> platform-specific candidate and weight tuning
 -> SV_Platform
 -> confidence-adjusted platform deviation
 -> SV_Global
 ```
+
+## Dual-Benchmark Integral Settlement
+
+Each actionable call is evaluated on two independent ability axes:
+
+```text
+market selection = directional stock return - SPY return
+industry selection = directional stock return - mapped industry ETF return
+```
+
+The SPY axis measures whether the author can find a winning stock or industry
+across the whole market. The industry ETF axis measures whether the author can
+find a standout stock inside that industry. Industry mapping is explicit and
+auditable: ticker override, narrative ETF, then sector ETF. An unmapped ticker
+does not silently fall back to SPY and contributes only to market selection.
+
+For each tradable close after the first tradable open strictly following the
+call, calculate the cumulative directional excess-return path `E(t)`. The
+integral at a horizon is the trapezoidal area under that path:
+
+```text
+A(H) = integral from 0 to H of E(t) dt
+mean_A(H) = A(H) / H
+integral_component = clip(mean_A(H) / horizon_normalizer, -1, 1)
+terminal_component = clip(E(H) / horizon_normalizer, -1, 1)
+call_score = 0.70 * integral_component + 0.30 * terminal_component
+```
+
+Therefore an early, persistent correct judgment scores above a late jump with
+the same endpoint. `A(20D)` is the accumulated prefix of `A(5D)`, not another
+independent experiment.
+
+Only one primary horizon per call has nonzero evidence weight. An explicit
+valid horizon wins; otherwise the default is selected by analysis style
+(`technical/flow=5D`, `event/mixed/unknown=20D`, `macro=60D`,
+`fundamental=90D`). Other horizons remain diagnostic integral snapshots. This
+prevents one post from being counted as six independent observations.
+
+The two ability axes are normalized separately inside each platform. Industry
+selection receives a gradually increasing blend weight based on its effective
+sample and is capped below 50%; missing industry evidence does not lower an
+author's score.
 
 ## Time Decay
 
@@ -193,8 +236,8 @@ All platforms share:
 
 - Structured call schema.
 - US stock and ETF scope for the current phase.
-- SPY benchmark for v1 settlement.
-- Path-aware horizon scoring.
+- SPY market baseline and mapped industry ETF baseline.
+- Integral path scoring with one evidence-bearing primary horizon per call.
 - Content-level evidence budget.
 - Call lifecycle closure when an investor clearly reverses.
 - Same-entry-day reconciliation before settlement: repeated same-direction calls share a daily evidence cap; explicit reversals keep the final call; otherwise opposite evidence is netted and ambiguous days become neutral.

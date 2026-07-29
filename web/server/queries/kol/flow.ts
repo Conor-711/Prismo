@@ -3,6 +3,10 @@ import { authorRefIdFor, isNoThesis, priceDays, snapToTradingDay } from "./share
 import { avatarMap, refinedMap, viewpointMap } from "./lookups";
 import { redditOps, tossOps, xMergedOps, yahooJpOps, youtubeOps, xueqiuOps } from "./sources";
 
+export function getKolPriceDays(symbol: string) {
+  return priceDays(symbol);
+}
+
 export function getKolFlowReal(symbol: string): KolFlow | null {
   const days = priceDays(symbol);
   if (days.length < 4) return null; // 价格历史不足 → 回退 mock

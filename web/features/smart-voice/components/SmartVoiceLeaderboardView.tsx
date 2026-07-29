@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { LocaleLink } from "@/components/i18n/LocaleLink";
 import { smartVoiceInvestorHref } from "@/features/smart-voice/svInvestorLinks";
-import { SV_HORIZONS, type SvHorizon } from "@/features/smart-voice/svMock";
+import { NARRATIVE_LABELS, SV_HORIZONS, type SvHorizon } from "@/features/smart-voice/svMock";
 import type {
   SmartVoiceLeaderboardData,
   SmartVoiceLeaderboardInvestor,
@@ -17,6 +17,38 @@ import { SmartVoiceRepresentativeChart } from "./SmartVoiceRepresentativeChart";
 type Platform = "all" | "x" | "youtube" | "reddit" | "xueqiu";
 type Band = "all" | "observed" | "top" | "bottom";
 type ScoreMode = "overall" | SvHorizon;
+type HorizonLevel = "all" | "short" | "medium" | "long";
+
+interface FilterOption<T extends string> {
+  value: T;
+  label: string;
+  hint?: string;
+}
+
+const HORIZON_LEVELS: Record<Exclude<HorizonLevel, "all">, SvHorizon[]> = {
+  short: ["1D", "5D"],
+  medium: ["20D", "60D"],
+  long: ["90D", "180D"],
+};
+
+const HORIZON_LEVEL_LABELS: Record<HorizonLevel, [string, string]> = {
+  all: ["全部周期", "All horizons"],
+  short: ["短线", "Short-term"],
+  medium: ["中线", "Medium-term"],
+  long: ["长线", "Long-term"],
+};
+
+const NARRATIVE_ORDER = [
+  "semis",
+  "ai_infra",
+  "software",
+  "consumer",
+  "fintech",
+  "media",
+  "ev",
+  "crypto",
+  "other",
+];
 
 const STYLE_LABEL: Record<string, [string, string]> = {
   technical: ["技术分析", "Technical"],
@@ -28,6 +60,83 @@ const STYLE_LABEL: Record<string, [string, string]> = {
   unknown: ["未分类", "Unknown"],
 };
 
+function FilterSelect<T extends string>({
+  value,
+  options,
+  onChange,
+  ariaLabel,
+  active = false,
+  className = "",
+}: {
+  value: T;
+  options: FilterOption<T>[];
+  onChange: (value: T) => void;
+  ariaLabel: string;
+  active?: boolean;
+  className?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const selected = options.find((option) => option.value === value) ?? options[0];
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener("pointerdown", close);
+    return () => document.removeEventListener("pointerdown", close);
+  }, [open]);
+
+  return (
+    <div ref={rootRef} className={`relative ${className}`}>
+      <button
+        type="button"
+        aria-label={ariaLabel}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+        className={`flex h-8 w-full items-center justify-between gap-2 rounded-lg px-2.5 text-[11.5px] font-medium outline-none ring-1 ring-inset transition ${
+          active
+            ? "bg-reddit/10 text-reddit ring-reddit/35"
+            : "bg-transparent text-neutral-400 ring-line hover:text-cream hover:ring-neutral-600"
+        }`}
+      >
+        <span className="truncate">{selected?.label}</span>
+        <span aria-hidden className={`text-[10px] transition-transform ${open ? "rotate-180" : ""}`}>⌄</span>
+      </button>
+      {open ? (
+        <div
+          role="listbox"
+          className="absolute left-0 top-[calc(100%+6px)] z-40 min-w-full overflow-hidden rounded-lg border border-line bg-[#181a1d] p-1 shadow-2xl shadow-black/45"
+        >
+          {options.map((option) => {
+            const checked = option.value === value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                role="option"
+                aria-selected={checked}
+                onClick={() => {
+                  onChange(option.value);
+                  setOpen(false);
+                }}
+                className={`flex w-full items-center justify-between gap-4 rounded-md px-2.5 py-2 text-left text-[11.5px] transition ${
+                  checked ? "bg-reddit/10 text-reddit" : "text-neutral-400 hover:bg-white/[.04] hover:text-cream"
+                }`}
+              >
+                <span className="whitespace-nowrap">{option.label}</span>
+                {option.hint ? <span className="whitespace-nowrap font-mono text-[9.5px] text-neutral-600">{option.hint}</span> : null}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function styleLabel(inv: SmartVoiceLeaderboardInvestor, zh: boolean) {
   const key = inv.dominantInvestorType || "unknown";
   const value = STYLE_LABEL[key] ?? [key, key];
@@ -38,6 +147,47 @@ function scoreOf(inv: SmartVoiceLeaderboardInvestor, platform: Platform, scoreMo
   if (scoreMode !== "overall") return inv.horizonScores[scoreMode] ?? -Infinity;
   if (platform !== "all") return inv.platformScores[platform] ?? inv.sv;
   return inv.sv;
+}
+
+function average(values: Array<number | null | undefined>) {
+  const available = values.filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+  if (!available.length) return null;
+  return available.reduce((sum, value) => sum + value, 0) / available.length;
+}
+
+function horizonLevelScore(inv: SmartVoiceLeaderboardInvestor, level: Exclude<HorizonLevel, "all">) {
+  return average(HORIZON_LEVELS[level].map((horizon) => inv.horizonScores[horizon]));
+}
+
+function dominantHorizonLevel(inv: SmartVoiceLeaderboardInvestor): Exclude<HorizonLevel, "all"> | null {
+  const scores = (Object.keys(HORIZON_LEVELS) as Array<Exclude<HorizonLevel, "all">>)
+    .map((level) => ({ level, score: horizonLevelScore(inv, level) }))
+    .filter((item): item is { level: Exclude<HorizonLevel, "all">; score: number } => item.score !== null);
+  if (!scores.length) return null;
+  return scores.sort((a, b) => b.score - a.score)[0].level;
+}
+
+function contextualScore(
+  inv: SmartVoiceLeaderboardInvestor,
+  platform: Platform,
+  scoreMode: ScoreMode,
+  horizonLevel: HorizonLevel,
+  narrative: string,
+) {
+  if (scoreMode !== "overall") return scoreOf(inv, platform, scoreMode);
+  const abilityScores: number[] = [];
+  if (horizonLevel !== "all") {
+    const value = horizonLevelScore(inv, horizonLevel);
+    if (value !== null) abilityScores.push(value);
+  }
+  if (narrative !== "all" && typeof inv.narrativeScores[narrative] === "number") {
+    abilityScores.push(inv.narrativeScores[narrative]);
+  }
+  return average(abilityScores) ?? scoreOf(inv, platform, scoreMode);
+}
+
+function formattedScore(value: number) {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }
 
 function cleanHandle(handle: string) {
@@ -66,6 +216,9 @@ export function SmartVoiceLeaderboardView({
   const [platform, setPlatform] = useState<Platform>("all");
   const [band, setBand] = useState<Band>("all");
   const [scoreMode, setScoreMode] = useState<ScoreMode>("overall");
+  const [horizonLevel, setHorizonLevel] = useState<HorizonLevel>("all");
+  const [narrative, setNarrative] = useState("all");
+  const [investorStyle, setInvestorStyle] = useState("all");
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState("");
   const profileSet = useMemo(() => new Set(profileIds), [profileIds]);
@@ -96,19 +249,72 @@ export function SmartVoiceLeaderboardView({
     };
   }, [leaderboard, platform]);
 
+  const narrativeOptions = useMemo<FilterOption<string>[]>(() => {
+    const available = new Set(
+      Object.values(leaderboard.investors).flatMap((investor) => Object.keys(investor.narrativeScores)),
+    );
+    return [
+      { value: "all", label: zh ? "全部赛道" : "All sectors" },
+      ...[...available]
+        .sort((a, b) => {
+          const aIndex = NARRATIVE_ORDER.indexOf(a);
+          const bIndex = NARRATIVE_ORDER.indexOf(b);
+          return (aIndex < 0 ? 99 : aIndex) - (bIndex < 0 ? 99 : bIndex) || a.localeCompare(b);
+        })
+        .map((key) => ({
+          value: key,
+          label: NARRATIVE_LABELS[key]?.[zh ? "zh" : "en"] ?? (key === "other" ? (zh ? "其他赛道" : "Other sectors") : key),
+        })),
+    ];
+  }, [leaderboard.investors, zh]);
+
+  const styleOptions = useMemo<FilterOption<string>[]>(() => {
+    const available = new Set(
+      Object.values(leaderboard.investors).map((investor) => investor.dominantInvestorType || "unknown"),
+    );
+    return [
+      { value: "all", label: zh ? "全部风格" : "All styles" },
+      ...Object.keys(STYLE_LABEL)
+        .filter((key) => available.has(key))
+        .map((key) => ({ value: key, label: STYLE_LABEL[key][zh ? 0 : 1] })),
+    ];
+  }, [leaderboard.investors, zh]);
+
+  const horizonOptions = useMemo<FilterOption<HorizonLevel>[]>(() => [
+    { value: "all", label: zh ? "全部周期" : "All horizons" },
+    { value: "short", label: zh ? "擅长短线" : "Short-term strength", hint: "1D–5D" },
+    { value: "medium", label: zh ? "擅长中线" : "Medium-term strength", hint: "20D–60D" },
+    { value: "long", label: zh ? "擅长长线" : "Long-term strength", hint: "90D–180D" },
+  ], [zh]);
+
+  const scoreOptions = useMemo<FilterOption<ScoreMode>[]>(() => [
+    { value: "overall", label: zh ? "综合 SV" : "Overall SV" },
+    ...SV_HORIZONS.map((horizon) => ({ value: horizon, label: `${horizon} SV` })),
+  ], [zh]);
+
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
     return bandPools[band]
       .filter((inv) => !q || inv.name.toLowerCase().includes(q) || inv.handle.toLowerCase().includes(q) || inv.topTickers.some((ticker) => ticker.toLowerCase().includes(q)))
       .filter((inv) => scoreMode === "overall" || typeof inv.horizonScores[scoreMode] === "number")
-      .sort((a, b) => band === "bottom" ? scoreOf(a, platform, scoreMode) - scoreOf(b, platform, scoreMode) : scoreOf(b, platform, scoreMode) - scoreOf(a, platform, scoreMode));
-  }, [band, bandPools, platform, query, scoreMode]);
+      .filter((inv) => horizonLevel === "all" || dominantHorizonLevel(inv) === horizonLevel)
+      .filter((inv) => narrative === "all" || typeof inv.narrativeScores[narrative] === "number")
+      .filter((inv) => investorStyle === "all" || inv.dominantInvestorType === investorStyle)
+      .sort((a, b) => {
+        const aScore = contextualScore(a, platform, scoreMode, horizonLevel, narrative);
+        const bScore = contextualScore(b, platform, scoreMode, horizonLevel, narrative);
+        return band === "bottom" ? aScore - bScore : bScore - aScore;
+      });
+  }, [band, bandPools, horizonLevel, investorStyle, narrative, platform, query, scoreMode]);
   const selected = rows.find((inv) => inv.id === selectedId) ?? rows[0];
   const selectedEvidence = selected ? representativeEvidence.byInvestor[selected.id] : undefined;
-  const showWeakEvidence = band === "bottom" || (band !== "top" && selected ? scoreOf(selected, platform, scoreMode) < 100 : false);
+  const selectedScore = selected ? contextualScore(selected, platform, scoreMode, horizonLevel, narrative) : null;
+  const showWeakEvidence = band === "bottom" || (band !== "top" && selectedScore !== null ? selectedScore < 100 : false);
   const representativeShowcase = selectedEvidence
     ? (showWeakEvidence ? selectedEvidence.weak : selectedEvidence.best)
     : null;
+  const contextualRanking = scoreMode !== "overall" || horizonLevel !== "all" || narrative !== "all";
+  const hasExtraFilters = horizonLevel !== "all" || narrative !== "all" || investorStyle !== "all";
 
   return (
     <div className="grid h-full min-h-0 lg:grid-cols-[minmax(0,1fr)_380px] xl:grid-cols-[minmax(0,1fr)_460px] 2xl:grid-cols-[minmax(0,1fr)_540px]">
@@ -145,19 +351,65 @@ export function SmartVoiceLeaderboardView({
               </button>
             ))}
           </div>
-          <select
+          <FilterSelect
             value={scoreMode}
-            onChange={(event) => {
-              setScoreMode(event.target.value as ScoreMode);
+            options={scoreOptions}
+            onChange={(value) => {
+              setScoreMode(value);
               setSelectedId("");
             }}
-            aria-label={zh ? "选择优势周期" : "Select horizon"}
-            className="h-8 rounded-lg bg-transparent px-2.5 text-[11.5px] text-neutral-400 outline-none ring-1 ring-inset ring-line focus:ring-reddit/50"
-          >
-            <option value="overall">{zh ? "综合 SV" : "Overall SV"}</option>
-            {SV_HORIZONS.map((horizon) => <option key={horizon} value={horizon}>{horizon}</option>)}
-          </select>
-          <label className="ml-auto flex h-8 min-w-[180px] max-w-[260px] flex-1 items-center gap-2 rounded-lg px-2.5 ring-1 ring-inset ring-line focus-within:ring-reddit/50">
+            ariaLabel={zh ? "选择排序分数" : "Select ranking score"}
+            active={scoreMode !== "overall"}
+            className="w-[104px]"
+          />
+          <FilterSelect
+            value={horizonLevel}
+            options={horizonOptions}
+            onChange={(value) => {
+              setHorizonLevel(value);
+              setSelectedId("");
+            }}
+            ariaLabel={zh ? "筛选优势周期" : "Filter horizon strength"}
+            active={horizonLevel !== "all"}
+            className="w-[112px]"
+          />
+          <FilterSelect
+            value={narrative}
+            options={narrativeOptions}
+            onChange={(value) => {
+              setNarrative(value);
+              setSelectedId("");
+            }}
+            ariaLabel={zh ? "筛选擅长赛道" : "Filter sector expertise"}
+            active={narrative !== "all"}
+            className="w-[118px]"
+          />
+          <FilterSelect
+            value={investorStyle}
+            options={styleOptions}
+            onChange={(value) => {
+              setInvestorStyle(value);
+              setSelectedId("");
+            }}
+            ariaLabel={zh ? "筛选投资风格" : "Filter investment style"}
+            active={investorStyle !== "all"}
+            className="w-[118px]"
+          />
+          {hasExtraFilters ? (
+            <button
+              type="button"
+              onClick={() => {
+                setHorizonLevel("all");
+                setNarrative("all");
+                setInvestorStyle("all");
+                setSelectedId("");
+              }}
+              className="h-8 px-1.5 text-[11px] font-semibold text-reddit transition hover:text-cream"
+            >
+              {zh ? "清除筛选" : "Clear"}
+            </button>
+          ) : null}
+          <label className="ml-auto flex h-8 min-w-[150px] max-w-[230px] flex-1 items-center gap-2 rounded-lg px-2.5 ring-1 ring-inset ring-line focus-within:ring-reddit/50">
             <span aria-hidden className="text-[13px] text-neutral-600">⌕</span>
             <input
               value={query}
@@ -169,18 +421,18 @@ export function SmartVoiceLeaderboardView({
         </div>
 
         <div className="grid shrink-0 grid-cols-[48px_minmax(190px,1.3fr)_110px_86px_92px_78px] items-center gap-3 border-b border-line bg-white/[.015] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-neutral-600">
-          <span>{zh ? "排名" : "Rank"}</span>
+          <span>{contextualRanking ? (zh ? "筛选排名" : "Filtered rank") : (zh ? "排名" : "Rank")}</span>
           <span>{zh ? "投资者" : "Investor"}</span>
           <span>{zh ? "风格" : "Style"}</span>
           <span className="text-right">Calls</span>
           <span className="text-right">n_eff</span>
-          <span className="text-right">SV</span>
+          <span className="text-right">{contextualRanking ? (zh ? "能力分" : "Score") : "SV"}</span>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           {rows.map((inv, index) => {
-            const displayScore = scoreOf(inv, platform, scoreMode);
-            const rank = band === "observed" && inv.observationRank
+            const displayScore = contextualScore(inv, platform, scoreMode, horizonLevel, narrative);
+            const rank = contextualRanking ? index + 1 : band === "observed" && inv.observationRank
               ? inv.observationRank
               : platform !== "all" && inv.platformRank ? inv.platformRank : inv.rank ?? index + 1;
             const active = selected?.id === inv.id;
@@ -206,11 +458,30 @@ export function SmartVoiceLeaderboardView({
                 <span className="truncate text-[11px] text-neutral-500">{styleLabel(inv, zh)}</span>
                 <span className="text-right font-mono text-[11.5px] text-neutral-300">{inv.settledCalls}</span>
                 <span className="text-right font-mono text-[11.5px] text-neutral-300">{fmtCompact(inv.nEff)}</span>
-                <span className={`text-right font-mono text-[15px] font-bold ${svTone(displayScore)}`}>{displayScore}</span>
+                <span className={`text-right font-mono text-[15px] font-bold ${svTone(displayScore)}`}>{formattedScore(displayScore)}</span>
               </button>
             );
           })}
-          {!rows.length ? <div className="grid h-full place-items-center text-[12px] text-neutral-600">{zh ? "没有匹配的作者" : "No matching investors"}</div> : null}
+          {!rows.length ? (
+            <div className="grid h-full place-items-center px-6 text-center">
+              <div>
+                <div className="text-[12px] text-neutral-500">{zh ? "没有同时满足这些条件的作者" : "No investors match all selected filters"}</div>
+                {hasExtraFilters ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHorizonLevel("all");
+                      setNarrative("all");
+                      setInvestorStyle("all");
+                    }}
+                    className="mt-3 text-[11px] font-semibold text-reddit hover:text-cream"
+                  >
+                    {zh ? "清除能力筛选" : "Clear expertise filters"}
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
         </div>
       </section>
 
@@ -227,10 +498,18 @@ export function SmartVoiceLeaderboardView({
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-[9px] uppercase tracking-[0.14em] text-neutral-600">SV</div>
-                <div className={`mt-1 font-mono text-[24px] font-bold leading-none ${svTone(scoreOf(selected, platform, scoreMode))}`}>{scoreOf(selected, platform, scoreMode)}</div>
+                <div className="text-[9px] uppercase tracking-[0.14em] text-neutral-600">{contextualRanking ? (zh ? "能力分" : "Score") : "SV"}</div>
+                <div className={`mt-1 font-mono text-[24px] font-bold leading-none ${svTone(selectedScore ?? selected.sv)}`}>{formattedScore(selectedScore ?? selected.sv)}</div>
               </div>
             </div>
+
+            {hasExtraFilters ? (
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {horizonLevel !== "all" ? <span className="rounded-md bg-reddit/10 px-2 py-1 text-[10px] font-semibold text-reddit">{HORIZON_LEVEL_LABELS[horizonLevel][zh ? 0 : 1]}</span> : null}
+                {narrative !== "all" ? <span className="rounded-md bg-reddit/10 px-2 py-1 text-[10px] font-semibold text-reddit">{NARRATIVE_LABELS[narrative]?.[zh ? "zh" : "en"] ?? narrative}</span> : null}
+                {investorStyle !== "all" ? <span className="rounded-md bg-reddit/10 px-2 py-1 text-[10px] font-semibold text-reddit">{STYLE_LABEL[investorStyle]?.[zh ? 0 : 1] ?? investorStyle}</span> : null}
+              </div>
+            ) : null}
 
             <p className="mt-4 border-y border-line py-3 text-[11.5px] leading-relaxed text-neutral-400">{zh ? selected.rationaleZh : selected.rationaleEn}</p>
 

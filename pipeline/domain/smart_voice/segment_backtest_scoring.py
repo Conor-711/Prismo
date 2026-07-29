@@ -23,6 +23,8 @@ class _Accumulator:
 
     def add(self, row: sqlite3.Row) -> None:
         weight = max(0.0, float(row["score_weight"] or 0.0))
+        if weight <= 0:
+            return
         expected = min(1.0, max(0.0, float(row["expected_hit"] or 0.5)))
         self.contribution += float(row["contribution"] or 0.0)
         self.variance += weight * weight * expected * (1.0 - expected)
@@ -149,4 +151,3 @@ def rebuild_segment_scores_asof(
             con.commit()
     con.commit()
     return written
-

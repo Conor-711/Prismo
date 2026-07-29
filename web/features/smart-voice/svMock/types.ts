@@ -14,6 +14,25 @@ export interface SvDistribution {
   bins: { from: number; to: number; count: number }[];
 }
 
+export interface SvAbilityScore {
+  benchmark: "SPY" | "industry_etf";
+  svPlatform: number | null;
+  svGlobal: number | null;
+  rawZ: number | null;
+  confidence: SvConfidence | "unavailable";
+  nEff: number;
+  settledCalls: number;
+  coverage?: number;
+}
+
+export interface SvAbilityScores {
+  compositePlatformSv: number;
+  compositeRawZ: number;
+  industryBlendWeight: number;
+  marketSelection: SvAbilityScore;
+  industrySelection: SvAbilityScore;
+}
+
 export interface SvInvestor {
   id: string;
   rank?: number;
@@ -39,6 +58,7 @@ export interface SvInvestor {
   topTickers: string[];
   topNarratives: string[];
   platformScores: Partial<Record<SvSource, number>>;
+  abilities?: SvAbilityScores;
   horizonScores: Partial<Record<SvHorizon, number | null>>;
   narrativeScores: Record<string, number>;
   tickerScores: Record<string, number>;
@@ -96,6 +116,7 @@ export interface SvBoard {
   currentNarratives: { key: string; zh: string; en: string; weight: number }[];
   updatedAt: string;
   scoringVersion?: string;
+  platformScoringVersions?: Partial<Record<SvSource, string>>;
   totalInvestors?: number;
   exportedInvestors?: number;
   distribution?: SvDistribution;

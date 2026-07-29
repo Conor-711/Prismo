@@ -4,7 +4,7 @@
 //   顶部 = 筛选条（平台[品牌 logo] / 时间[指定起始日期 + 5 个区间模板] / 语言[简中·英·日·韩·繁中] / 质量）
 //   下方 = 主从布局：左窄列 = 帖文卡列表（头像+handle+开头），右宽栏 = 选中帖的完整正文（含原文/译文切换 + 回原帖）
 // 全部筛选在前端做；默认按「相关性」降序排（最相关的在前）。数据来自 lib/kolQueries.getKolOpinions。
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFavorites } from "@/components/favorites/FavoritesProvider";
 import { BASE_PATH } from "@/lib/site";
 import type { KolOpinion } from "@/shared/market/mockDetail";
@@ -39,11 +39,51 @@ export function OpinionExplorer({
   svBoard?: SvTickerBoard | null;
 }) {
   const [sort, setSort] = useState<SortMode>("rel"); // 排序：推荐 / 相关度 / 热度 / 最新
+  const [completeOpinions, setCompleteOpinions] = useState<{
+    symbol: string;
+    opinions: KolOpinion[];
+  } | null>(null);
   const [completeXOpinions, setCompleteXOpinions] = useState<KolOpinion[] | null>(null);
+  const completeXRequested = useRef<string | null>(null);
+  const [opinionContent, setOpinionContent] = useState<{
+    symbol: string;
+    loaded: boolean;
+    byId: Record<string, Pick<KolOpinion, "orig" | "trans" | "quote">>;
+  }>({ symbol: "", loaded: false, byId: {} });
+  const [youtubeContent, setYoutubeContent] = useState<{
+    symbol: string;
+    loaded: boolean;
+    byId: Record<string, Pick<KolOpinion, "orig" | "ytSegments">>;
+  }>({ symbol: "", loaded: false, byId: {} });
   useEffect(() => {
     if (!symbol) return;
     const controller = new AbortController();
-    fetch(`${BASE_PATH}/data/x-opinions/${encodeURIComponent(symbol.toUpperCase())}`, {
+    fetch(`${BASE_PATH}/data/ticker-opinions/${encodeURIComponent(symbol.toUpperCase())}/`, {
+      signal: controller.signal,
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error(`Ticker opinion export returned ${response.status}`);
+        return response.json();
+      })
+      .then((payload: { opinions?: KolOpinion[] }) => {
+        if (Array.isArray(payload.opinions)) {
+          setCompleteOpinions({ symbol, opinions: payload.opinions });
+        }
+      })
+      .catch((error: unknown) => {
+        if (!(error instanceof DOMException && error.name === "AbortError")) {
+          console.error("Failed to load ticker opinion pool", error);
+        }
+      });
+    return () => controller.abort();
+  }, [symbol]);
+  const loadCompleteXOpinions = useCallback(() => {
+    if (!symbol) return;
+    const normalizedSymbol = symbol.toUpperCase();
+    if (completeXRequested.current === normalizedSymbol) return;
+    completeXRequested.current = normalizedSymbol;
+    const controller = new AbortController();
+    fetch(`${BASE_PATH}/data/x-opinions/${encodeURIComponent(normalizedSymbol)}/`, {
       signal: controller.signal,
     })
       .then((response) => {
@@ -56,17 +96,32 @@ export function OpinionExplorer({
       .catch((error: unknown) => {
         if (!(error instanceof DOMException && error.name === "AbortError")) {
           console.error("Failed to load complete X opinion pool", error);
+          completeXRequested.current = null;
         }
       });
-    return () => controller.abort();
   }, [symbol]);
-
   const mergedOpinions = useMemo(() => {
-    if (!completeXOpinions) return opinions;
-    const byId = new Map(opinions.map((opinion) => [opinion.id, opinion]));
-    for (const opinion of completeXOpinions) byId.set(opinion.id, opinion);
+    const baseOpinions = completeOpinions && completeOpinions.symbol === symbol
+      ? completeOpinions.opinions
+      : opinions;
+    const byId = new Map(baseOpinions.map((opinion) => [opinion.id, opinion]));
+    if (completeXOpinions) {
+      for (const opinion of completeXOpinions) byId.set(opinion.id, opinion);
+    }
+    if (youtubeContent.symbol === symbol) {
+      for (const [id, content] of Object.entries(youtubeContent.byId)) {
+        const opinion = byId.get(id);
+        if (opinion) byId.set(id, { ...opinion, ...content });
+      }
+    }
+    if (opinionContent.symbol === symbol) {
+      for (const [id, content] of Object.entries(opinionContent.byId)) {
+        const opinion = byId.get(id);
+        if (opinion) byId.set(id, { ...opinion, ...content });
+      }
+    }
     return [...byId.values()];
-  }, [opinions, completeXOpinions]);
+  }, [completeOpinions, opinions, completeXOpinions, opinionContent, symbol, youtubeContent]);
 
   const { configured: trackingConfigured, signedIn: trackingSignedIn, isSaved } = useFavorites();
   const filters = useOpinionFilters({ opinions: mergedOpinions, svBoard, isSaved });
@@ -99,6 +154,61 @@ export function OpinionExplorer({
     setSort,
     resetFiltersForOpinion,
   });
+  useEffect(() => {
+    const selected = selection.selected;
+    if (!symbol || selected?.source !== "youtube" || selected.ytSegments?.length) return;
+    if (youtubeContent.symbol === symbol && youtubeContent.loaded) return;
+    const controller = new AbortController();
+    fetch(`${BASE_PATH}/data/youtube-content/${encodeURIComponent(symbol.toUpperCase())}/`, {
+      signal: controller.signal,
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error(`YouTube content export returned ${response.status}`);
+        return response.json();
+      })
+      .then((payload: { content?: Record<string, Pick<KolOpinion, "orig" | "ytSegments">> }) => {
+        setYoutubeContent({
+          symbol,
+          loaded: true,
+          byId: payload.content && typeof payload.content === "object" ? payload.content : {},
+        });
+      })
+      .catch((error: unknown) => {
+        if (!(error instanceof DOMException && error.name === "AbortError")) {
+          console.error("Failed to load YouTube full content", error);
+          setYoutubeContent({ symbol, loaded: true, byId: {} });
+        }
+      });
+    return () => controller.abort();
+  }, [selection.selected, symbol, youtubeContent.loaded, youtubeContent.symbol]);
+  useEffect(() => {
+    const selected = selection.selected;
+    if (!symbol || !selected || selected.source === "youtube") return;
+    if (selected.orig || selected.trans || selected.quote) return;
+    if (opinionContent.symbol === symbol && opinionContent.loaded) return;
+    const controller = new AbortController();
+    fetch(`${BASE_PATH}/data/opinion-content/${encodeURIComponent(symbol.toUpperCase())}/`, {
+      signal: controller.signal,
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error(`Opinion content export returned ${response.status}`);
+        return response.json();
+      })
+      .then((payload: { content?: Record<string, Pick<KolOpinion, "orig" | "trans" | "quote">> }) => {
+        setOpinionContent({
+          symbol,
+          loaded: true,
+          byId: payload.content && typeof payload.content === "object" ? payload.content : {},
+        });
+      })
+      .catch((error: unknown) => {
+        if (!(error instanceof DOMException && error.name === "AbortError")) {
+          console.error("Failed to load opinion content", error);
+          setOpinionContent({ symbol, loaded: true, byId: {} });
+        }
+      });
+    return () => controller.abort();
+  }, [opinionContent.loaded, opinionContent.symbol, selection.selected, symbol]);
   const hasFilter = filters.hasActiveFilters || sort !== defaultSort;
   const resetFilters = () => {
     resetOpinionFilters();
@@ -161,7 +271,11 @@ export function OpinionExplorer({
           svSortAvailable={filters.svIndex.count > 0}
           personalRank={personalRank}
           onClearPlatform={() => { filters.clearPlatformFilter(); selection.clearSelection(); }}
-          onSelectPlatform={(source) => { filters.selectPlatform(source); selection.clearSelection(); }}
+          onSelectPlatform={(source) => {
+            if (source === "x") loadCompleteXOpinions();
+            filters.selectPlatform(source);
+            selection.clearSelection();
+          }}
           onSortChange={setSort}
           onSelectOpinion={selection.selectOpinion}
         />
