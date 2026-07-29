@@ -6,7 +6,7 @@
 // 全部筛选在前端做；默认按「相关性」降序排（最相关的在前）。数据来自 lib/kolQueries.getKolOpinions。
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFavorites } from "@/components/favorites/FavoritesProvider";
-import { BASE_PATH } from "@/lib/site";
+import { staticDataUrl } from "@/lib/site";
 import type { KolOpinion } from "@/shared/market/mockDetail";
 import type { SvTickerBoard } from "@/features/smart-voice/svMock";
 import { OpinionFilterBar } from "@/features/ticker/components/OpinionExplorer/filterBar";
@@ -58,7 +58,7 @@ export function OpinionExplorer({
   useEffect(() => {
     if (!symbol) return;
     const controller = new AbortController();
-    fetch(`${BASE_PATH}/data/ticker-opinions/${encodeURIComponent(symbol.toUpperCase())}/`, {
+    fetch(staticDataUrl(`/data/ticker-opinions/${encodeURIComponent(symbol.toUpperCase())}`), {
       signal: controller.signal,
     })
       .then((response) => {
@@ -83,7 +83,7 @@ export function OpinionExplorer({
     if (completeXRequested.current === normalizedSymbol) return;
     completeXRequested.current = normalizedSymbol;
     const controller = new AbortController();
-    fetch(`${BASE_PATH}/data/x-opinions/${encodeURIComponent(normalizedSymbol)}/`, {
+    fetch(staticDataUrl(`/data/x-opinions/${encodeURIComponent(normalizedSymbol)}`), {
       signal: controller.signal,
     })
       .then((response) => {
@@ -159,7 +159,7 @@ export function OpinionExplorer({
     if (!symbol || selected?.source !== "youtube" || selected.ytSegments?.length) return;
     if (youtubeContent.symbol === symbol && youtubeContent.loaded) return;
     const controller = new AbortController();
-    fetch(`${BASE_PATH}/data/youtube-content/${encodeURIComponent(symbol.toUpperCase())}/`, {
+    fetch(staticDataUrl(`/data/youtube-content/${encodeURIComponent(symbol.toUpperCase())}`), {
       signal: controller.signal,
     })
       .then((response) => {
@@ -187,7 +187,7 @@ export function OpinionExplorer({
     if (selected.orig || selected.trans || selected.quote) return;
     if (opinionContent.symbol === symbol && opinionContent.loaded) return;
     const controller = new AbortController();
-    fetch(`${BASE_PATH}/data/opinion-content/${encodeURIComponent(symbol.toUpperCase())}/`, {
+    fetch(staticDataUrl(`/data/opinion-content/${encodeURIComponent(symbol.toUpperCase())}`), {
       signal: controller.signal,
     })
       .then((response) => {

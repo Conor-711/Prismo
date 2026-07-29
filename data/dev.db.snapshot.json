@@ -1,10 +1,10 @@
 {
-  "createdAt": "2026-07-19T12:56:41.495879+00:00",
+  "createdAt": "2026-07-29T12:59:04.051706+00:00",
   "source": "data/dev.db",
-  "sourceBytes": 5294231552,
-  "compactBytes": 5208793088,
-  "compressedBytes": 542970860,
-  "decompressedSha256": "dae90363059db3315ede8c1157081315b4a475d857a62f45046cf37125e34d6e",
+  "sourceBytes": 5906120704,
+  "compactBytes": 5809938432,
+  "compressedBytes": 605665660,
+  "decompressedSha256": "b75b1de9689c2930284ce8ff6ce05f4fca1bc3c1b9d853375ace2fbced392e2c",
   "mode": "split",
   "files": [
     "data/dev.db.xz.part-000",
@@ -28,7 +28,10 @@
     "data/dev.db.xz.part-018",
     "data/dev.db.xz.part-019",
     "data/dev.db.xz.part-020",
-    "data/dev.db.xz.part-021"
+    "data/dev.db.xz.part-021",
+    "data/dev.db.xz.part-022",
+    "data/dev.db.xz.part-023",
+    "data/dev.db.xz.part-024"
   ],
   "partBytes": 25165824
 }
