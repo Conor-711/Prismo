@@ -121,12 +121,13 @@ feature component 接收已经组装好的 view model。
 - `web/features/smart-voice/svMock.ts`：兼容聚合导出；SV 类型、fallback 常量、generated JSON 归一化和派生评分已拆到 `web/features/smart-voice/svMock/`；`web/lib/svMock.ts` 仅保留兼容导出。
 - `web/features/smart-voice/index.ts`：Smart Voice feature public API，dashboard、叙事详情、ticker 整体数据、作者榜单和 SV 作者详情从这里引入 SV 展示模块。
 - `web/features/smart-voice/components/SmartVoiceModules.tsx`：跨页面 SV 展示组件，包含排行榜、标的页 SV 投资者、作者 SV 画像和组合 SV 模块；作者页可开启前/后 10% 展开。
-- `web/features/smart-voice/components/SmartVoiceInvestorProfile.tsx`：SV 作者详情页主体，展示分数解释、投资风格/分类、时间窗口、叙事/标的强弱和代表性 call。
+- `web/features/smart-voice/components/SmartVoiceInvestorProfile.tsx`：SV 作者详情页主体，展示分数解释、投资风格/分类、时间窗口和叙事/标的强弱，并通过“观点证据 / 组合回测”双视图呈现原帖、完整已结算战绩和作者级信号跟随回测。
 - `web/features/smart-voice/components/SmartVoicePrimitives.tsx`：Smart Voice 跨模块展示基础件（分数、作者 identity、排行行、segment bar、证据 chip）。
 - `web/features/smart-voice/svInvestorLinks.ts`：SV 作者详情页 slug/href 编码，避免平台 ID 中的特殊字符污染路由。
 - `web/features/smart-voice/components/SmartVoiceWorkspace.tsx`：Smart Voice 工作台 shell；具体市场分布、警报、时间窗口和典型投资者面板拆到 `SmartVoiceWorkspacePanels.tsx`。
 - `web/features/smart-voice/components/PrivateSmartVoiceExperiment.tsx`：`/lab` 全视口实验工作台，组合频道评分、标的观点证据与组合回测两个视图；`/experiments/private-smart-voice` 作为兼容路由继续复用同一组件与查询。
-- `web/features/smart-voice/components/PrivateSmartVoicePortfolioView.tsx`：跟随观点组合的净值、SPY 对照、CAGR、年度收益、风险和成本敏感性展示。
+- `web/features/smart-voice/components/SmartVoicePortfolioView.tsx`：公域作者详情与 Private Smart Voice Lab 共用的跟随观点组合视图，展示净值、SPY 对照、CAGR、年度收益、风险和成本敏感性；旧 `PrivateSmartVoicePortfolioView.tsx` 只保留兼容导出。
+- `web/server/queries/smartVoicePortfolioQueries.ts`：用作者真实已结算 call 与复权 `price_daily` 在构建期生成下一交易日入场、同标的最新观点覆盖、活跃标的等权的作者级组合回测。
 - `web/features/narrative/index.ts`：narrative feature public API，叙事总览和详情页从这里引入叙事图表组件。
 - `web/features/narrative/components/NarrativeRotationCharts.tsx`：叙事轮动图表组件，包含 mindshare 堆叠图、排名、占比、情绪和详情时间线。
 - `web/features/search/index.ts`：search feature public API，搜索页从这里引入搜索组件。

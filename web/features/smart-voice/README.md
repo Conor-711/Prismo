@@ -16,9 +16,9 @@
 - `components/SmartVoiceLeaderboardView.tsx`：按来源、完整平台分位和观点周期浏览作者榜；右栏使用更宽但仍窄于主榜的响应式宽度，并展示前后分位作者的价格走势代表作。
 - `components/SmartVoiceRepresentativeChart.tsx`：在真实收盘价折线上以方向气泡展示作者对代表标的的已结算观点，保留 SV 贡献、方向超额和原始来源。
 - `components/PrivateSmartVoiceExperiment.tsx`：`/lab` 的单个公开 Telegram 频道全视口实验工作台，支持标的检索/排序、方向筛选和原帖核验；旧 `/experiments/private-smart-voice` 路由保留兼容。
-- `components/PrivateSmartVoicePortfolioView.tsx`：跟随观点等权组合的净值、SPY 对照、CAGR、年度收益、风险和成本敏感性。
+- `components/SmartVoicePortfolioView.tsx`：公域作者详情和私域 Lab 共用的跟随观点等权组合视图，展示净值、SPY 对照、CAGR、年度收益、风险和成本敏感性；`PrivateSmartVoicePortfolioView.tsx` 为兼容导出。
 - `components/SmartVoiceLiveView.tsx`：high/medium confidence 或平台 Top 10% 作者近 60 天的最新 actionable call，按来源限额合并。
-- `components/SmartVoiceInvestorProfile.tsx`：作者分数解释和历史证据。
+- `components/SmartVoiceInvestorProfile.tsx`：作者分数解释、历史观点证据与作者级组合回测双视图。
 - `svMock.ts`
 - `svMock/types.ts`
 - `svMock/constants.ts`
