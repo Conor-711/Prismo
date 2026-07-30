@@ -42,6 +42,7 @@ export const ja: Dictionary = {
     cnstocks: "中国・香港株",
     search: "検索",
     tracking: "ウォッチリスト",
+    lab: "ラボ",
     trending: "トレンド",
     narratives: "ナラティブ",
     leaderboard: "ランキング",

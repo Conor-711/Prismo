@@ -125,7 +125,7 @@ feature component 接收已经组装好的 view model。
 - `web/features/smart-voice/components/SmartVoicePrimitives.tsx`：Smart Voice 跨模块展示基础件（分数、作者 identity、排行行、segment bar、证据 chip）。
 - `web/features/smart-voice/svInvestorLinks.ts`：SV 作者详情页 slug/href 编码，避免平台 ID 中的特殊字符污染路由。
 - `web/features/smart-voice/components/SmartVoiceWorkspace.tsx`：Smart Voice 工作台 shell；具体市场分布、警报、时间窗口和典型投资者面板拆到 `SmartVoiceWorkspacePanels.tsx`。
-- `web/features/smart-voice/components/PrivateSmartVoiceExperiment.tsx`：`/experiments/private-smart-voice` 全视口实验工作台，组合频道评分、标的观点证据与组合回测两个视图。
+- `web/features/smart-voice/components/PrivateSmartVoiceExperiment.tsx`：`/lab` 全视口实验工作台，组合频道评分、标的观点证据与组合回测两个视图；`/experiments/private-smart-voice` 作为兼容路由继续复用同一组件与查询。
 - `web/features/smart-voice/components/PrivateSmartVoicePortfolioView.tsx`：跟随观点组合的净值、SPY 对照、CAGR、年度收益、风险和成本敏感性展示。
 - `web/features/narrative/index.ts`：narrative feature public API，叙事总览和详情页从这里引入叙事图表组件。
 - `web/features/narrative/components/NarrativeRotationCharts.tsx`：叙事轮动图表组件，包含 mindshare 堆叠图、排名、占比、情绪和详情时间线。

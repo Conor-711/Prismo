@@ -1,4 +1,4 @@
-import { IconGrid, IconTrend, IconStar, IconTrophy, IconDoc, IconPulse } from "./icons";
+import { IconGrid, IconTrend, IconStar, IconTrophy, IconDoc, IconPulse, IconFlask } from "./icons";
 import type { Dictionary } from "@/lib/i18n";
 
 export type NavItem = {
@@ -25,12 +25,15 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/narratives", key: "narratives", Icon: IconDoc },
       { href: "/investors", key: "investors", Icon: IconTrophy },
       { href: "/tracking", key: "tracking", Icon: IconStar },
+      { href: "/lab", key: "lab", Icon: IconFlask },
     ],
   },
 ];
 
-// 移动端底栏暂不扩容；叙事页先只进桌面侧栏，避免底栏过挤。
-export const NAV_MOBILE: NavItem[] = NAV_GROUPS[0].items.filter((item) => item.key !== "narratives" && item.key !== "smartVoice");
+// 移动端底栏暂不扩容；叙事、Smart Voice 和 Lab 只进桌面侧栏，避免底栏过挤。
+export const NAV_MOBILE: NavItem[] = NAV_GROUPS[0].items.filter(
+  (item) => item.key !== "narratives" && item.key !== "smartVoice" && item.key !== "lab",
+);
 
 // 高亮判定：精确/前缀匹配；首页(/) 仅在根路径高亮。
 export function navActive(rest: string, href: string): boolean {

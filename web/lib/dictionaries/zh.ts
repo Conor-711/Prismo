@@ -40,6 +40,7 @@ export const zh = {
     cnstocks: "中概·港股",
     search: "搜索",
     tracking: "追踪",
+    lab: "实验室",
     trending: "异动",
     narratives: "叙事",
     leaderboard: "作者榜",
