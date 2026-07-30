@@ -41,6 +41,7 @@ export const en: Dictionary = {
     cnstocks: "China & HK",
     search: "Search",
     tracking: "Watchlist",
+    lab: "Lab",
     trending: "Trending",
     narratives: "Narratives",
     leaderboard: "Leaderboard",

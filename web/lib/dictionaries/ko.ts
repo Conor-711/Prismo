@@ -42,6 +42,7 @@ export const ko: Dictionary = {
     cnstocks: "중국·홍콩주",
     search: "검색",
     tracking: "관심목록",
+    lab: "랩",
     trending: "트렌드",
     narratives: "내러티브",
     leaderboard: "랭킹",
