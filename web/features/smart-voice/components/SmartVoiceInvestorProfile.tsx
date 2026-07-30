@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { LocaleLink } from "@/components/i18n/LocaleLink";
 import { Panel } from "@/components/ui";
 import { fmtCompact } from "@/shared/formatting/format";
@@ -12,6 +13,7 @@ import {
   type SvInvestor,
 } from "@/features/smart-voice/svMock";
 import type { SmartVoiceInvestorEvidence } from "@/server/queries/smartVoiceInvestorQueries";
+import type { SmartVoicePortfolioBacktest } from "@/server/queries/smartVoicePortfolioQueries";
 import {
   SegmentBar,
   SmallMetric,
@@ -22,6 +24,7 @@ import {
 } from "./SmartVoicePrimitives";
 import { SmartVoiceEvidenceChart } from "./SmartVoiceEvidenceChart";
 import { SmartVoicePerformanceLedger } from "./SmartVoicePerformanceLedger";
+import { SmartVoicePortfolioView } from "./SmartVoicePortfolioView";
 
 const TYPE_LABEL: Record<string, { zh: string; en: string }> = {
   technical: { zh: "技术分析", en: "Technical" },
@@ -254,15 +257,75 @@ function PerformanceModule({ evidence, zh }: { evidence: SmartVoiceInvestorEvide
   );
 }
 
+function ReportTabs({
+  evidence,
+  portfolioBacktest,
+  zh,
+}: {
+  evidence: SmartVoiceInvestorEvidence;
+  portfolioBacktest: SmartVoicePortfolioBacktest | null;
+  zh: boolean;
+}) {
+  const [view, setView] = useState<"evidence" | "portfolio">("evidence");
+  const tabs = [
+    ["evidence", zh ? "观点证据" : "Call evidence", evidence.performance.settledCalls],
+    ["portfolio", zh ? "组合回测" : "Portfolio backtest", portfolioBacktest?.base.tradeCount ?? 0],
+  ] as const;
+
+  return (
+    <section>
+      <nav className="mb-4 flex h-11 items-end gap-1 border-b border-line">
+        {tabs.map(([key, label, count]) => {
+          const active = view === key;
+          const disabled = key === "portfolio" && !portfolioBacktest;
+          return (
+            <button
+              key={key}
+              type="button"
+              disabled={disabled}
+              onClick={() => setView(key)}
+              className={`relative flex h-10 items-center gap-2 px-4 text-[11.5px] font-semibold transition ${
+                active ? "text-cream" : disabled ? "cursor-not-allowed text-neutral-800" : "text-neutral-600 hover:text-cream"
+              }`}
+            >
+              <span>{label}</span>
+              <span className={`font-mono text-[9px] ${active ? "text-reddit" : "text-neutral-700"}`}>{count}</span>
+              {active ? <span className="absolute inset-x-3 bottom-0 h-0.5 bg-reddit" /> : null}
+            </button>
+          );
+        })}
+        <span className="ml-auto hidden pb-2.5 text-[9.5px] text-neutral-600 sm:block">
+          {view === "evidence"
+            ? (zh ? "原帖可追溯 · 真实价格路径" : "Source-linked · real price paths")
+            : (zh ? "等权跟随 · SPY 对照" : "Equal-weight follow · SPY benchmark")}
+        </span>
+      </nav>
+
+      {view === "portfolio" && portfolioBacktest ? (
+        <Panel className="overflow-hidden p-0">
+          <SmartVoicePortfolioView backtest={portfolioBacktest} zh={zh} />
+        </Panel>
+      ) : (
+        <div className="space-y-4">
+          <EvidenceModule evidence={evidence} zh={zh} />
+          <PerformanceModule evidence={evidence} zh={zh} />
+        </div>
+      )}
+    </section>
+  );
+}
+
 export function SmartVoiceInvestorProfile({
   profile,
   board,
   evidence,
+  portfolioBacktest,
   zh,
 }: {
   profile: SvInvestor;
   board: SvBoard;
   evidence: SmartVoiceInvestorEvidence;
+  portfolioBacktest: SmartVoicePortfolioBacktest | null;
   zh: boolean;
 }) {
   const band = bandOf(profile, board);
@@ -299,8 +362,7 @@ export function SmartVoiceInvestorProfile({
 
       <ExplanationModule profile={profile} board={board} zh={zh} />
       <StyleModule profile={profile} zh={zh} />
-      <EvidenceModule evidence={evidence} zh={zh} />
-      <PerformanceModule evidence={evidence} zh={zh} />
+      <ReportTabs evidence={evidence} portfolioBacktest={portfolioBacktest} zh={zh} />
     </div>
   );
 }

@@ -8,7 +8,7 @@ import type { PrivateSmartVoiceExperimentData } from "@/server/queries/privateSm
 import type { PrivateSmartVoiceTicker } from "@/server/queries/privateSmartVoiceExperiment";
 import type { SmartVoiceRepresentativeShowcase } from "@/server/queries/smartVoiceInvestorQueries";
 import { PrivateSmartVoiceCallTable } from "./PrivateSmartVoiceCallTable";
-import { PrivateSmartVoicePortfolioView } from "./PrivateSmartVoicePortfolioView";
+import { SmartVoicePortfolioView } from "./SmartVoicePortfolioView";
 import {
   PrivateSmartVoiceTickerRail,
   type PrivateTickerSort,
@@ -177,7 +177,7 @@ export function PrivateSmartVoiceExperiment({
           : "block"
       }`}>
         {view === "portfolio" ? (
-          <PrivateSmartVoicePortfolioView
+          <SmartVoicePortfolioView
             backtest={data.portfolioBacktest}
             zh={zh}
           />

@@ -3,6 +3,7 @@ import type {
   SmartVoiceRepresentativeCall,
   SmartVoiceRepresentativePricePoint,
 } from "@/server/queries/smartVoiceInvestorQueries";
+import type { SmartVoicePortfolioBacktest } from "@/server/queries/smartVoicePortfolioQueries";
 
 export interface PrivateSmartVoiceCall extends SmartVoiceRepresentativeCall {
   publishedAt: string;
@@ -31,65 +32,7 @@ export interface PrivateSmartVoiceTicker {
   prices: SmartVoiceRepresentativePricePoint[];
 }
 
-export interface PrivateSmartVoicePortfolioBacktest {
-  version: string;
-  methodology: {
-    mode: string;
-    entry: string;
-    exit: string;
-    allocation: string;
-    cashWhenInactive: boolean;
-    roundTripCostBps: number;
-    riskFreeRate: number;
-    sameTickerRule: string;
-    overlappingCallsReplaced: number;
-  };
-  base: {
-    costBps: number;
-    startDay: string;
-    endDay: string;
-    tradingDays: number;
-    activeDays: number;
-    tradeCount: number;
-    exposurePct: number;
-    averageActivePositions: number;
-    turnoverUnits: number;
-    totalReturn: number;
-    annualizedReturn: number | null;
-    annualizedExcessReturn: number | null;
-    annualizedVolatility: number | null;
-    sharpe: number | null;
-    sortino: number | null;
-    maxDrawdown: number;
-    drawdownPeakDay: string;
-    drawdownTroughDay: string;
-    calmar: number | null;
-    positiveActiveDayRate: number | null;
-    benchmarkTotalReturn: number;
-    benchmarkAnnualizedReturn: number | null;
-    benchmarkMaxDrawdown: number;
-    beta: number | null;
-    annualizedAlpha: number | null;
-    yearReturns: {
-      year: string;
-      return: number;
-      benchmarkReturn: number;
-    }[];
-    equityCurve: {
-      day: string;
-      strategy: number;
-      benchmark: number;
-      drawdown: number;
-      activePositions: number;
-    }[];
-  };
-  costSensitivity: {
-    costBps: number;
-    totalReturn: number;
-    annualizedReturn: number | null;
-    sharpe: number | null;
-  }[];
-}
+export type PrivateSmartVoicePortfolioBacktest = SmartVoicePortfolioBacktest;
 
 export interface PrivateSmartVoiceExperimentData {
   version: string;

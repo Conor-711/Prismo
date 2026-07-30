@@ -10,6 +10,7 @@ import {
 import { smartVoiceInvestorIdFromSlug, smartVoiceInvestorSlug } from "@/features/smart-voice/svInvestorLinks";
 import type { SvBoard, SvInvestor, SvPlatformBand } from "@/features/smart-voice/svMock";
 import { getSmartVoiceInvestorEvidence } from "@/server/queries/smartVoiceInvestorQueries";
+import { getSmartVoicePortfolioBacktest } from "@/server/queries/smartVoicePortfolioQueries";
 import { defaultLocale, isLocale, type Locale } from "@/lib/i18n";
 
 export const dynamicParams = false;
@@ -66,6 +67,7 @@ export default function SmartVoiceInvestorPage({ params }: { params: { lang: str
   const profile = getSmartVoiceInvestor(id, board);
   if (!profile) notFound();
   const evidence = getSmartVoiceInvestorEvidence(id);
+  const portfolioBacktest = getSmartVoicePortfolioBacktest(evidence.allCalls);
   const profileBoard = compactProfileBoard(board, profile);
 
   return (
@@ -76,7 +78,13 @@ export default function SmartVoiceInvestorPage({ params }: { params: { lang: str
         </LocaleLink>
         <span className="text-[12px] font-medium text-neutral-500">{zh ? "Smart Voice / 作者详情" : "Smart Voice / Investor detail"}</span>
       </div>
-      <SmartVoiceInvestorProfile profile={profile} board={profileBoard} evidence={evidence} zh={zh} />
+      <SmartVoiceInvestorProfile
+        profile={profile}
+        board={profileBoard}
+        evidence={evidence}
+        portfolioBacktest={portfolioBacktest}
+        zh={zh}
+      />
     </div>
   );
 }
