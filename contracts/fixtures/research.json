@@ -1,0 +1,95 @@
+[
+  {
+    "ticker": "HOOD",
+    "companyName": "Robinhood Markets",
+    "currentPrice": 69.84,
+    "dayChangePercent": -0.018,
+    "conclusion": "Social sentiment remains constructive, but high-scoring onchain wallets have not confirmed the move.",
+    "smartAccountShift": "Top-quartile views moved more positive over 24 hours, led by fintech-focused accounts.",
+    "smartMoneyCoverage": "available",
+    "smartMoneyShift": "Aggregate high-score wallet exposure declined by $940K during the same period.",
+    "opinions": [
+      {
+        "id": "00000000-0000-0000-0000-000000000301",
+        "authorName": "Fintech Compounder",
+        "platform": "YouTube",
+        "score": 84,
+        "stance": "Bullish",
+        "summary": "Transaction revenue and retirement-account adoption could support medium-term operating leverage, though valuation leaves little room for execution misses.",
+        "publishedAt": "2026-08-02T20:00:00Z"
+      }
+    ]
+  },
+  {
+    "ticker": "NVDA",
+    "companyName": "NVIDIA",
+    "currentPrice": 128.62,
+    "dayChangePercent": 0.014,
+    "conclusion": "High-ranked social views and observable onchain positioning are aligned, with valuation as the main near-term constraint.",
+    "smartAccountShift": "Three semiconductor specialists upgraded their medium-term stance within the last 18 hours.",
+    "smartMoneyCoverage": "available",
+    "smartMoneyShift": "Five high-score wallets added $1.8M of net long exposure across HIP-3 markets.",
+    "opinions": [
+      {
+        "id": "00000000-0000-0000-0000-000000000302",
+        "authorName": "SemiAnalysis Desk",
+        "platform": "X",
+        "score": 91,
+        "stance": "Bullish",
+        "summary": "Accelerator demand remains supply constrained, but the next rerating requires evidence that inference revenue can offset slower hyperscaler capex growth.",
+        "publishedAt": "2026-08-03T00:40:00Z"
+      },
+      {
+        "id": "00000000-0000-0000-0000-000000000303",
+        "authorName": "Cycle Signals",
+        "platform": "YouTube",
+        "score": 86,
+        "stance": "Neutral",
+        "summary": "The business trend remains strong while the current price embeds an aggressive margin path, making the entry point more important than the direction of the thesis.",
+        "publishedAt": "2026-08-02T17:20:00Z"
+      }
+    ]
+  },
+  {
+    "ticker": "PLTR",
+    "companyName": "Palantir Technologies",
+    "currentPrice": 146.18,
+    "dayChangePercent": 0.006,
+    "conclusion": "A new high-quality long-horizon thesis improves the evidence set, but it is not yet broadly confirmed.",
+    "smartAccountShift": "One top-decile software investor initiated coverage after a 180-day absence.",
+    "smartMoneyCoverage": "available",
+    "smartMoneyShift": "Onchain exposure is stable and does not currently confirm or contradict the new view.",
+    "opinions": [
+      {
+        "id": "00000000-0000-0000-0000-000000000304",
+        "authorName": "Durable Software",
+        "platform": "Substack",
+        "score": 87,
+        "stance": "Bullish",
+        "summary": "Commercial expansion and improving deployment economics can extend the growth runway, but the thesis requires a twelve-month horizon due to valuation sensitivity.",
+        "publishedAt": "2026-08-02T15:05:00Z"
+      }
+    ]
+  },
+  {
+    "ticker": "MSTR",
+    "companyName": "Strategy",
+    "currentPrice": 386.2,
+    "dayChangePercent": -0.012,
+    "conclusion": "A high-ranked crypto-equity author remains constructive but tightened the thesis invalidation level. Public capital data does not currently meet bSmart's coverage threshold.",
+    "smartAccountShift": "One top-quartile crypto-equity specialist revised risk conditions while maintaining a twelve-month constructive view.",
+    "smartMoneyCoverage": "unavailable",
+    "smartMoneyShift": "No capital verification: available public tokenized-equity positioning does not meet the minimum independent-account and liquidity thresholds.",
+    "opinions": [
+      {
+        "id": "00000000-0000-0000-0000-000000000305",
+        "authorName": "Digital Asset Equities",
+        "platform": "YouTube",
+        "score": 89,
+        "stance": "Bullish",
+        "summary": "The long-horizon Bitcoin treasury thesis remains intact, but a deeper discount and a tighter invalidation threshold are now required to compensate for volatility.",
+        "publishedAt": "2026-08-02T11:20:00Z"
+      }
+    ]
+  }
+]

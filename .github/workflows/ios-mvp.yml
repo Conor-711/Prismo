@@ -1,0 +1,51 @@
+name: iOS MVP
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "ios/**"
+      - "contracts/fixtures/**"
+      - "scripts/check_ios_release_bundle.py"
+      - "scripts/run_ios_tests.sh"
+      - ".github/workflows/ios-mvp.yml"
+  push:
+    branches: [main]
+    paths:
+      - "ios/**"
+      - "contracts/fixtures/**"
+      - "scripts/check_ios_release_bundle.py"
+      - "scripts/run_ios_tests.sh"
+      - ".github/workflows/ios-mvp.yml"
+
+concurrency:
+  group: ios-mvp-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ios:
+    name: Unit tests and release gates
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        run: cd ios && xcodegen generate
+      - name: Run iOS unit tests
+        env:
+          IOS_TEST_DEVICE: iPhone 16
+          IOS_TEST_ONLY: BSmartTests
+        run: scripts/run_ios_tests.sh
+      - name: Verify Mock Internal Alpha bundle
+        run: |
+          xcodebuild -project ios/bSmart.xcodeproj -scheme 'bSmart Internal Alpha' -configuration InternalAlpha -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/bsmart-ios-alpha-check CODE_SIGNING_ALLOWED=NO BSMART_ENDPOINT_URL='https://api.158-247-196-93.sslip.io' build
+          python3 scripts/check_ios_release_bundle.py --expected-data-environment production --expected-api-base-url 'https://api.158-247-196-93.sslip.io' /tmp/bsmart-ios-alpha-check/Build/Products/InternalAlpha-iphonesimulator/BSmart.app
+      - name: Verify production Release bundle
+        run: |
+          xcodebuild -project ios/bSmart.xcodeproj -scheme bSmart -configuration Release -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/bsmart-ios-release-check CODE_SIGNING_ALLOWED=NO build
+          python3 scripts/check_ios_release_bundle.py --expected-data-environment production /tmp/bsmart-ios-release-check/Build/Products/Release-iphonesimulator/BSmart.app

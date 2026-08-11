@@ -1,0 +1,30 @@
+{
+  "$schema": "https://design-tokens.github.io/community-group/format/",
+  "color": {
+    "ink": { "$type": "color", "$value": "#0A0C0E" },
+    "surface": { "$type": "color", "$value": "#121519" },
+    "elevated": { "$type": "color", "$value": "#191D22" },
+    "line": { "$type": "color", "$value": "#2A2F36" },
+    "textPrimary": { "$type": "color", "$value": "#F7F8F9" },
+    "textSecondary": { "$type": "color", "$value": "#ABB3BC" },
+    "textTertiary": { "$type": "color", "$value": "#6B747E" },
+    "brand": { "$type": "color", "$value": "#59E0BE" },
+    "sky": { "$type": "color", "$value": "#68B7FF" },
+    "bear": { "$type": "color", "$value": "#FF5C6C" },
+    "gold": { "$type": "color", "$value": "#FFCA4B" },
+    "orange": { "$type": "color", "$value": "#FF915C" }
+  },
+  "radius": {
+    "control": { "$type": "dimension", "$value": { "value": 4, "unit": "px" } },
+    "card": { "$type": "dimension", "$value": { "value": 8, "unit": "px" } }
+  },
+  "spacing": {
+    "xs": { "$type": "dimension", "$value": { "value": 4, "unit": "px" } },
+    "sm": { "$type": "dimension", "$value": { "value": 8, "unit": "px" } },
+    "md": { "$type": "dimension", "$value": { "value": 12, "unit": "px" } },
+    "lg": { "$type": "dimension", "$value": { "value": 16, "unit": "px" } },
+    "xl": { "$type": "dimension", "$value": { "value": 24, "unit": "px" } },
+    "xxl": { "$type": "dimension", "$value": { "value": 32, "unit": "px" } },
+    "xxxl": { "$type": "dimension", "$value": { "value": 40, "unit": "px" } }
+  }
+}

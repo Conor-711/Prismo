@@ -1,0 +1,1034 @@
+openapi: 3.1.0
+info:
+  title: bSmart Client API
+  version: 1.4.0
+  description: Versioned client contract shared by the native iOS client and retained web surfaces.
+servers:
+  - url: https://api.bsmart.today
+security:
+  - installationBearer: []
+paths:
+  /v1/installations:
+    post:
+      operationId: createAnonymousInstallation
+      summary: Create or refresh the anonymous installation session used before account login exists.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InstallationRegistration"
+      responses:
+        "200":
+          description: Anonymous installation session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InstallationSession"
+        "201":
+          description: Newly created anonymous installation session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InstallationSession"
+  /v1/devices:
+    put:
+      operationId: putCurrentDevice
+      summary: Register or update the current installation's APNs device token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeviceRegistrationInput"
+      responses:
+        "204":
+          description: Device registration updated
+  /v1/notification-preferences:
+    get:
+      operationId: getNotificationPreferences
+      summary: Return alert delivery preferences for the current installation.
+      responses:
+        "200":
+          description: Notification preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationPreferences"
+    put:
+      operationId: putNotificationPreferences
+      summary: Replace alert delivery preferences for the current installation.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NotificationPreferences"
+      responses:
+        "200":
+          description: Updated notification preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationPreferences"
+  /v1/daily-digest:
+    get:
+      operationId: getDailyDigest
+      summary: Return the latest immutable daily portfolio brief for the current installation.
+      responses:
+        "200":
+          description: Latest generated daily digest snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DailyDigestSnapshot"
+        "404":
+          description: No daily digest has been generated for this installation yet
+  /v1/telemetry/events:
+    post:
+      operationId: postClientTelemetryEvents
+      summary: Record a privacy-minimized batch of anonymous product interaction events.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientTelemetryBatch"
+      responses:
+        "202":
+          description: Telemetry batch accepted idempotently
+  /v1/portfolio:
+    get:
+      operationId: getPortfolio
+      summary: Return the current user's manually entered positions.
+      responses:
+        "200":
+          description: Portfolio positions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PortfolioPosition"
+  /v1/portfolio/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    put:
+      operationId: putPortfolioEntry
+      summary: Idempotently create or replace a locally identified manual position or watchlist entry.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PortfolioEntryInput"
+      responses:
+        "200":
+          description: Upserted portfolio entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortfolioPosition"
+    delete:
+      operationId: deletePortfolioEntry
+      summary: Delete a manual position or watchlist entry.
+      responses:
+        "204":
+          description: Portfolio entry deleted
+  /v1/events:
+    get:
+      operationId: getInvestmentEvents
+      deprecated: true
+      summary: Return legacy investment events while clients migrate to /v1/feed.
+      responses:
+        "200":
+          description: Investment events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InvestmentEvent"
+  /v1/feed:
+    get:
+      operationId: getPortfolioSignals
+      summary: Return decision-ready Smart Account and Smart Money signals for the current portfolio.
+      responses:
+        "200":
+          description: Portfolio signals
+          headers:
+            ETag:
+              $ref: "#/components/headers/ReadModelETag"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PortfolioSignal"
+  /v1/signals/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: getPortfolioSignal
+      summary: Return one decision-ready portfolio signal with its evidence snapshot.
+      responses:
+        "200":
+          description: Portfolio signal
+          headers:
+            ETag:
+              $ref: "#/components/headers/ReadModelETag"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortfolioSignal"
+  /v1/signals/{id}/state:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    put:
+      operationId: putPortfolioSignalState
+      summary: Replace the current user's read, saved, ignored, and feedback state for one signal.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignalUserStateInput"
+      responses:
+        "200":
+          description: Updated signal state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignalUserState"
+  /v1/smart-account-updates:
+    get:
+      operationId: getSmartAccountUpdates
+      summary: Return material view updates from ranked offchain investment creators.
+      responses:
+        "200":
+          description: Smart Account updates
+          headers:
+            ETag:
+              $ref: "#/components/headers/ReadModelETag"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SmartAccountUpdate"
+  /v1/smart-accounts/{accountId}/evidence:
+    parameters:
+      - name: accountId
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      operationId: getSmartAccountEvidence
+      summary: Return bounded historical Call evidence for one formally ranked Smart Account.
+      responses:
+        "200":
+          description: Recent, representative successful, and representative missed calls.
+          headers:
+            ETag:
+              $ref: "#/components/headers/ReadModelETag"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SmartAccountUpdate"
+  /v1/smart-money-movements:
+    get:
+      operationId: getSmartMoneyMovements
+      summary: Return material position changes from ranked public onchain accounts.
+      parameters:
+        - name: ticker
+          in: query
+          schema: { type: string }
+        - name: account_id
+          in: query
+          schema: { type: string }
+        - name: after
+          in: query
+          description: Return movements strictly newer than this timestamp.
+          schema: { type: string, format: date-time }
+        - name: before
+          in: query
+          description: Return movements strictly older than this timestamp for cursor-style history replay.
+          schema: { type: string, format: date-time }
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 250
+      responses:
+        "200":
+          description: Smart Money movements
+          headers:
+            ETag:
+              $ref: "#/components/headers/ReadModelETag"
+            X-BSmart-Result-Count:
+              schema: { type: integer }
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SmartMoneyMovement"
+  /v1/research:
+    get:
+      operationId: getResearchUniverse
+      deprecated: true
+      summary: Return legacy research summaries while clients migrate to /v1/intelligence.
+      responses:
+        "200":
+          description: Ticker research summaries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TickerResearch"
+  /v1/tickers/{symbol}/research:
+    get:
+      operationId: getTickerResearch
+      deprecated: true
+      summary: Return a legacy combined research view for one supported ticker.
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Ticker research summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TickerResearch"
+  /v1/intelligence:
+    get:
+      operationId: getTickerIntelligenceUniverse
+      summary: Return Smart Account and Smart Money intelligence for the supported MVP ticker universe.
+      responses:
+        "200":
+          description: Ticker intelligence snapshots
+          headers:
+            ETag:
+              $ref: "#/components/headers/ReadModelETag"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TickerIntelligence"
+  /v1/tickers/{symbol}/intelligence:
+    get:
+      operationId: getTickerIntelligence
+      summary: Return the current two-source intelligence snapshot for one supported ticker.
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Ticker intelligence snapshot
+          headers:
+            ETag:
+              $ref: "#/components/headers/ReadModelETag"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TickerIntelligence"
+  /v1/smart-accounts:
+    get:
+      operationId: getSmartAccounts
+      summary: Return ranked offchain investment creators.
+      responses:
+        "200":
+          description: Smart Account profiles
+          headers:
+            ETag:
+              $ref: "#/components/headers/ReadModelETag"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SmartAccountProfile"
+  /v1/smart-money:
+    get:
+      operationId: getSmartMoney
+      summary: Return public Hyperliquid tokenized-equity wallet signals.
+      responses:
+        "200":
+          description: Smart Money signals
+          headers:
+            ETag:
+              $ref: "#/components/headers/ReadModelETag"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SmartMoneySignal"
+components:
+  headers:
+    ReadModelETag:
+      description: Stable hash of the active immutable collection release.
+      schema:
+        type: string
+  securitySchemes:
+    installationBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque-installation-token
+  schemas:
+    InstallationRegistration:
+      type: object
+      required: [installationId, platform, appVersion, locale, timeZone]
+      properties:
+        installationId: { type: string, format: uuid }
+        platform:
+          type: string
+          enum: [ios]
+        appVersion: { type: string }
+        locale: { type: string }
+        timeZone: { type: string }
+    InstallationSession:
+      type: object
+      required: [installationId, accessToken, expiresAt]
+      properties:
+        installationId: { type: string, format: uuid }
+        accessToken: { type: string, minLength: 1 }
+        expiresAt: { type: string, format: date-time }
+    DeviceRegistrationInput:
+      type: object
+      required: [apnsToken, environment, appVersion, locale, timeZone]
+      properties:
+        apnsToken: { type: string, minLength: 1 }
+        environment:
+          type: string
+          enum: [development, production]
+        appVersion: { type: string }
+        locale: { type: string }
+        timeZone: { type: string }
+    ClientTelemetryBatch:
+      type: object
+      required: [events]
+      properties:
+        events:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/ClientTelemetryEvent"
+    ClientTelemetryEvent:
+      type: object
+      additionalProperties: false
+      required: [id, name, occurredAt, context]
+      properties:
+        id: { type: string, format: uuid }
+        name:
+          type: string
+          enum:
+            - notification_opened
+            - daily_digest_opened
+            - signal_opened
+            - evidence_opened
+            - signal_saved
+            - signal_ignored
+            - signal_feedback
+        occurredAt: { type: string, format: date-time }
+        signalId: { type: [string, "null"], format: uuid }
+        ticker: { type: [string, "null"], maxLength: 16 }
+        evidenceId: { type: [string, "null"], format: uuid }
+        source:
+          type: [string, "null"]
+          enum: [smart_account, smart_money, null]
+        context:
+          type: string
+          enum: [push, today, signal_detail, daily_digest, research, opportunity, smart]
+    NotificationPreferences:
+      type: object
+      required:
+        [instantAlertsEnabled, dailyDigestEnabled, dailyDigestMinutes, quietHoursEnabled, quietHoursStartMinutes, quietHoursEndMinutes, mutedTickers]
+      properties:
+        instantAlertsEnabled: { type: boolean }
+        dailyDigestEnabled: { type: boolean }
+        dailyDigestMinutes: { type: integer, minimum: 0, maximum: 1439 }
+        quietHoursEnabled: { type: boolean }
+        quietHoursStartMinutes: { type: integer, minimum: 0, maximum: 1439 }
+        quietHoursEndMinutes: { type: integer, minimum: 0, maximum: 1439 }
+        mutedTickers:
+          type: array
+          uniqueItems: true
+          items: { type: string }
+    PortfolioPosition:
+      type: object
+      required: [id, ticker, companyName, shares, averageCost, currentPrice, entryKind]
+      properties:
+        id: { type: string, format: uuid }
+        ticker: { type: string }
+        companyName: { type: string }
+        shares: { type: number }
+        averageCost: { type: number }
+        currentPrice: { type: number }
+        entryKind:
+          type: string
+          enum: [position, watchlist]
+        portfolioWeight:
+          type: [number, "null"]
+          minimum: 0
+          maximum: 1
+    PortfolioEntryInput:
+      type: object
+      required: [ticker, entryKind]
+      description: A position requires positive shares or portfolioWeight; watchlist entries ignore holding values.
+      properties:
+        ticker: { type: string }
+        companyName: { type: [string, "null"] }
+        entryKind:
+          type: string
+          enum: [position, watchlist]
+        shares:
+          type: [number, "null"]
+          minimum: 0
+        averageCost:
+          type: [number, "null"]
+          minimum: 0
+        portfolioWeight:
+          type: [number, "null"]
+          minimum: 0
+          maximum: 1
+    PriceCandle:
+      type: object
+      required: [day, open, high, low, close, volume]
+      properties:
+        day: { type: string, format: date }
+        open: { type: number }
+        high: { type: number }
+        low: { type: number }
+        close: { type: number }
+        volume: { type: integer }
+    SmartAccountPriceEvidence:
+      type: object
+      description: Real daily OHLC context around one time-stamped Smart Account view; it is audit evidence, not proof of causality.
+      required: [ticker, viewDay, viewPrice, latestDay, latestPrice, source, candles]
+      properties:
+        ticker: { type: string }
+        viewDay: { type: string, format: date }
+        viewPrice: { type: number }
+        latestDay: { type: string, format: date }
+        latestPrice: { type: number }
+        responsePercent: { type: [number, "null"] }
+        source: { type: string }
+        candles:
+          type: array
+          items:
+            $ref: "#/components/schemas/PriceCandle"
+    SmartAccountSettlementEvidence:
+      type: object
+      description: Direction-aware historical settlement against both the S&P 500 and the mapped industry ETF.
+      required: [status, horizon]
+      properties:
+        status: { type: string, enum: [pending, settled, unavailable] }
+        horizon: { type: string }
+        entryDay: { type: [string, "null"], format: date }
+        exitDay: { type: [string, "null"], format: date }
+        entryPrice: { type: [number, "null"] }
+        exitPrice: { type: [number, "null"] }
+        tickerReturnPercent: { type: [number, "null"] }
+        marketBenchmarkReturnPercent: { type: [number, "null"] }
+        marketExcessReturnPercent: { type: [number, "null"] }
+        actualHit: { type: [boolean, "null"] }
+        contribution: { type: [number, "null"] }
+        industryBenchmarkTicker: { type: [string, "null"] }
+        industryBenchmarkReturnPercent: { type: [number, "null"] }
+        industryExcessReturnPercent: { type: [number, "null"] }
+        industryActualHit: { type: [boolean, "null"] }
+        settlementVersion: { type: [string, "null"] }
+    SmartAccountUpdate:
+      type: object
+      required:
+        [id, ticker, companyName, authorId, authorName, platform, score, platformPercentile, direction, lifecycle, horizon, thesis, publishedAt]
+      properties:
+        id: { type: string, format: uuid }
+        ticker: { type: string }
+        companyName: { type: string }
+        authorId: { type: string }
+        authorName: { type: string }
+        platform: { type: string }
+        score: { type: number }
+        platformPercentile:
+          type: number
+          minimum: 0
+          maximum: 1
+        direction:
+          type: string
+          enum: [bullish, neutral, bearish, mixed]
+        lifecycle:
+          type: string
+          enum: [new, strengthened, weakened, reversed, closed, invalidated]
+        horizon: { type: string }
+        targetPrice: { type: [number, "null"] }
+        thesis: { type: string }
+        invalidation: { type: [string, "null"] }
+        publishedAt: { type: string, format: date-time }
+        sourcePostId: { type: [string, "null"] }
+        sourceURL: { type: [string, "null"], format: uri }
+        ingestedAt: { type: [string, "null"], format: date-time }
+        processedAt: { type: [string, "null"], format: date-time }
+        evidenceURL: { type: [string, "null"], format: uri }
+        authorAvatarURL: { type: [string, "null"], format: uri }
+        authorFollowersCount: { type: [integer, "null"], minimum: 0 }
+        authorVerified: { type: [boolean, "null"] }
+        originalText: { type: [string, "null"] }
+        translatedText: { type: [string, "null"] }
+        translatedTextZH: { type: [string, "null"] }
+        translatedTextEN: { type: [string, "null"] }
+        evidenceSpan: { type: [string, "null"] }
+        authorScoreAsOf: { type: [string, "null"], format: date-time }
+        callScoringVersion: { type: [string, "null"] }
+        evidenceRole:
+          type: [string, "null"]
+          enum: [latest, strongest, counterexample, null]
+        settlement:
+          anyOf:
+            - $ref: "#/components/schemas/SmartAccountSettlementEvidence"
+            - type: "null"
+        priceEvidence:
+          anyOf:
+            - $ref: "#/components/schemas/SmartAccountPriceEvidence"
+            - type: "null"
+    SmartMoneyMovement:
+      type: object
+      required:
+        [id, ticker, companyName, accountId, accountLabel, accountScore, market, action, direction, notionalBefore, notionalAfter, notionalChange, observedAt]
+      properties:
+        id: { type: string, format: uuid }
+        ticker: { type: string }
+        companyName: { type: string }
+        accountId: { type: string }
+        accountLabel: { type: string }
+        accountDisplayName: { type: string }
+        avatarVariant: { type: integer, minimum: 1, maximum: 6 }
+        accountScore: { type: number }
+        market: { type: string }
+        action:
+          type: string
+          enum: [opened, increased, reduced, closed, flipped]
+        direction:
+          type: string
+          enum: [bullish, neutral, bearish, mixed]
+        notionalBefore: { type: number }
+        notionalAfter: { type: number }
+        notionalChange: { type: number }
+        leverage: { type: [number, "null"] }
+        observedAt: { type: string, format: date-time }
+        evidenceURL: { type: [string, "null"], format: uri }
+    PortfolioSignalEvidence:
+      type: object
+      required: [id, source, referenceId, actorName, title, detail, observedAt]
+      properties:
+        id: { type: string, format: uuid }
+        source:
+          type: string
+          enum: [smart_account, smart_money]
+        referenceId: { type: string, format: uuid }
+        actorName: { type: string }
+        avatarVariant: { type: integer, minimum: 1, maximum: 6 }
+        title: { type: string }
+        detail: { type: string }
+        metric: { type: [string, "null"] }
+        observedAt: { type: string, format: date-time }
+        sourceURL: { type: [string, "null"], format: uri }
+    PortfolioSignal:
+      type: object
+      required:
+        [id, ticker, companyName, title, summary, occurredAt, dataAsOf, dataStatus, priority, kind, direction, smartMoneyCoverage, conclusion, positionImpact, nextStep, limitations, evidence]
+      properties:
+        id: { type: string, format: uuid }
+        ticker: { type: string }
+        companyName: { type: string }
+        title: { type: string }
+        summary: { type: string }
+        occurredAt: { type: string, format: date-time }
+        dataAsOf: { type: string, format: date-time }
+        dataStatus:
+          type: string
+          enum: [current, delayed]
+        priority:
+          type: string
+          enum: [critical, important, notable]
+        kind:
+          type: string
+          enum: [smart_account_new_view, smart_account_shift, smart_account_consensus, smart_money_movement, confirmation, divergence, account_leads, money_leads]
+        direction:
+          type: string
+          enum: [bullish, neutral, bearish, mixed]
+        smartMoneyCoverage:
+          type: string
+          enum: [available, unavailable]
+        conclusion: { type: string }
+        positionImpact: { type: string }
+        nextStep: { type: string }
+        limitations:
+          type: array
+          items: { type: string }
+        evidence:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/PortfolioSignalEvidence"
+    DailyDigestSnapshot:
+      type: object
+      required: [id, generatedAt, dataAsOf, periodStart, periodEnd, title, summary, signals]
+      properties:
+        id: { type: string, format: uuid }
+        generatedAt: { type: string, format: date-time }
+        dataAsOf: { type: string, format: date-time }
+        periodStart: { type: string, format: date-time }
+        periodEnd: { type: string, format: date-time }
+        title: { type: string }
+        summary: { type: string }
+        signals:
+          type: array
+          items:
+            $ref: "#/components/schemas/PortfolioSignal"
+    SignalFeedback:
+      type: string
+      enum: [useful, not_relevant, too_late, unclear]
+    SignalUserState:
+      type: object
+      required: [signalId, isRead, isSaved, isIgnored, updatedAt]
+      properties:
+        signalId: { type: string, format: uuid }
+        isRead: { type: boolean }
+        isSaved: { type: boolean }
+        isIgnored: { type: boolean }
+        feedback:
+          oneOf:
+            - $ref: "#/components/schemas/SignalFeedback"
+            - type: "null"
+        updatedAt: { type: string, format: date-time }
+    SignalUserStateInput:
+      type: object
+      required: [isRead, isSaved, isIgnored]
+      properties:
+        isRead: { type: boolean }
+        isSaved: { type: boolean }
+        isIgnored: { type: boolean }
+        feedback:
+          oneOf:
+            - $ref: "#/components/schemas/SignalFeedback"
+            - type: "null"
+    SmartAccountSnapshot:
+      type: object
+      required: [direction, headline, detail, qualifiedAuthorCount]
+      properties:
+        direction:
+          type: string
+          enum: [bullish, neutral, bearish, mixed]
+        headline: { type: string }
+        detail: { type: string }
+        qualifiedAuthorCount: { type: integer, minimum: 0 }
+        latestUpdateAt: { type: [string, "null"], format: date-time }
+    SmartMoneySnapshot:
+      type: object
+      required: [coverage, direction, headline, detail, qualifiedAccountCount]
+      properties:
+        coverage:
+          type: string
+          enum: [available, unavailable]
+        direction:
+          type: string
+          enum: [bullish, neutral, bearish, mixed]
+        headline: { type: string }
+        detail: { type: string }
+        qualifiedAccountCount: { type: integer, minimum: 0 }
+        latestMovementAt: { type: [string, "null"], format: date-time }
+    TickerIntelligence:
+      type: object
+      required:
+        [ticker, companyName, currentPrice, dayChangePercent, dataAsOf, relationship, direction, conclusion, smartAccount, smartMoney]
+      properties:
+        ticker: { type: string }
+        companyName: { type: string }
+        currentPrice: { type: number }
+        dayChangePercent: { type: number }
+        dataAsOf: { type: string, format: date-time }
+        relationship:
+          type: string
+          enum: [smart_account_new_view, smart_account_shift, smart_account_consensus, smart_money_movement, confirmation, divergence, account_leads, money_leads]
+        direction:
+          type: string
+          enum: [bullish, neutral, bearish, mixed]
+        conclusion: { type: string }
+        latestSignalId: { type: [string, "null"], format: uuid }
+        smartAccount:
+          $ref: "#/components/schemas/SmartAccountSnapshot"
+        smartMoney:
+          $ref: "#/components/schemas/SmartMoneySnapshot"
+    EventEvidence:
+      type: object
+      required: [id, source, title, detail]
+      properties:
+        id: { type: string, format: uuid }
+        source:
+          type: string
+          enum: [smart_account, smart_money, market, fundamental]
+        title: { type: string }
+        detail: { type: string }
+        metric: { type: [string, "null"] }
+        sourceURL: { type: [string, "null"], format: uri }
+    InvestmentEvent:
+      type: object
+      required:
+        [id, ticker, companyName, title, summary, occurredAt, severity, kind, smartMoneyCoverage, conclusion, positionImpact, nextStep, evidence]
+      properties:
+        id: { type: string, format: uuid }
+        ticker: { type: string }
+        companyName: { type: string }
+        title: { type: string }
+        summary: { type: string }
+        occurredAt: { type: string, format: date-time }
+        severity:
+          type: string
+          enum: [critical, important, notable]
+        kind:
+          type: string
+          enum: [confirmation, divergence, smart_account_view, smart_money_movement]
+        smartMoneyCoverage:
+          type: string
+          enum: [available, unavailable]
+        conclusion: { type: string }
+        positionImpact: { type: string }
+        nextStep: { type: string }
+        evidence:
+          type: array
+          items:
+            $ref: "#/components/schemas/EventEvidence"
+    CuratedOpinion:
+      type: object
+      required: [id, authorName, platform, score, stance, summary, publishedAt]
+      properties:
+        id: { type: string, format: uuid }
+        authorName: { type: string }
+        platform: { type: string }
+        score: { type: number }
+        stance: { type: string }
+        summary: { type: string }
+        publishedAt: { type: string, format: date-time }
+    TickerResearch:
+      type: object
+      required:
+        [ticker, companyName, currentPrice, dayChangePercent, conclusion, smartAccountShift, smartMoneyCoverage, smartMoneyShift, opinions]
+      properties:
+        ticker: { type: string }
+        companyName: { type: string }
+        currentPrice: { type: number }
+        dayChangePercent: { type: number }
+        conclusion: { type: string }
+        smartAccountShift: { type: string }
+        smartMoneyCoverage:
+          type: string
+          enum: [available, unavailable]
+        smartMoneyShift: { type: string }
+        opinions:
+          type: array
+          items:
+            $ref: "#/components/schemas/CuratedOpinion"
+    SmartAccountProfile:
+      type: object
+      required: [id, name, handle, platform, score, scoreChange, specialty, horizon]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        handle: { type: string }
+        platform: { type: string }
+        score: { type: number }
+        scoreChange: { type: number }
+        specialty: { type: string }
+        horizon: { type: string }
+        recentTicker: { type: [string, "null"] }
+        rank: { type: [integer, "null"], minimum: 1 }
+        platformRank: { type: [integer, "null"], minimum: 1 }
+        platformPercentile: { type: [number, "null"], minimum: 0, maximum: 1 }
+        confidence: { type: [string, "null"] }
+        effectiveSamples: { type: [number, "null"], minimum: 0 }
+        settledCalls: { type: [integer, "null"], minimum: 0 }
+        activeDays: { type: [integer, "null"], minimum: 0 }
+        coveredTickers: { type: [integer, "null"], minimum: 0 }
+        topTickers:
+          type: [array, "null"]
+          items: { type: string }
+        style: { type: [string, "null"] }
+        marketSelectionScore: { type: [number, "null"] }
+        industrySelectionScore: { type: [number, "null"] }
+        rationale: { type: [string, "null"] }
+        avatarURL: { type: [string, "null"], format: uri }
+        profileURL: { type: [string, "null"], format: uri }
+        followersCount: { type: [integer, "null"], minimum: 0 }
+        postsCount: { type: [integer, "null"], minimum: 0 }
+        verified: { type: [boolean, "null"] }
+        description: { type: [string, "null"] }
+    SmartMoneyMetricPoint:
+      type: object
+      required: [timestamp, value]
+      properties:
+        timestamp: { type: number }
+        value: { type: number }
+    SmartMoneyPeriodMetric:
+      type: object
+      required: [equity, pnl, volume, sharpe, maxDrawdown, maxDrawdownPercent, accountValueHistory, pnlHistory]
+      properties:
+        equity: { type: number }
+        pnl: { type: number }
+        volume: { type: number }
+        sharpe: { type: number }
+        maxDrawdown: { type: number }
+        maxDrawdownPercent: { type: number }
+        accountValueHistory:
+          type: array
+          items: { $ref: "#/components/schemas/SmartMoneyMetricPoint" }
+        pnlHistory:
+          type: array
+          items: { $ref: "#/components/schemas/SmartMoneyMetricPoint" }
+    SmartMoneyTradeDuration:
+      type: object
+      required: [completedTrades, averageHoldHours, medianHoldHours, style]
+      properties:
+        completedTrades: { type: integer }
+        averageHoldHours: { type: number }
+        medianHoldHours: { type: number }
+        style: { type: string }
+    SmartMoneyPosition:
+      type: object
+      required: [coin, symbol, category, dex, direction, size, notional, unrealizedPnl, returnOnEquity, leverage, marginUsed, fundingSinceOpen]
+      properties:
+        coin: { type: string }
+        symbol: { type: string }
+        category: { type: string }
+        dex: { type: string }
+        direction: { type: string, enum: [Long, Short] }
+        size: { type: number }
+        notional: { type: number }
+        entryPrice: { type: [number, "null"] }
+        markPrice: { type: [number, "null"] }
+        unrealizedPnl: { type: number }
+        returnOnEquity: { type: number }
+        liquidationPrice: { type: [number, "null"] }
+        liquidationDistance: { type: [number, "null"] }
+        leverage: { type: number }
+        marginUsed: { type: number }
+        fundingSinceOpen: { type: number }
+    SmartMoneyAssetPerformance:
+      type: object
+      required: [symbol, netPnl, fees, volume, trades, winRate]
+      properties:
+        symbol: { type: string }
+        netPnl: { type: number }
+        fees: { type: number }
+        volume: { type: number }
+        trades: { type: integer }
+        winRate: { type: number }
+    SmartMoneyTrade:
+      type: object
+      required: [id, symbol, coin, direction, side, price, size, notional, closedPnl, time, hash]
+      properties:
+        id: { type: string }
+        symbol: { type: string }
+        coin: { type: string }
+        direction: { type: string }
+        side: { type: string, enum: [Buy, Sell] }
+        price: { type: number }
+        size: { type: number }
+        notional: { type: number }
+        closedPnl: { type: number }
+        time: { type: string, format: date-time }
+        hash: { type: string }
+    SmartMoneyCapitalActivity:
+      type: object
+      required: [id, type, direction, amount, token, time, hash]
+      properties:
+        id: { type: string }
+        type: { type: string }
+        direction: { type: string, enum: [in, out, internal] }
+        amount: { type: number }
+        token: { type: string }
+        time: { type: string, format: date-time }
+        hash: { type: string }
+    SmartMoneyScoreComponents:
+      type: object
+      required: [performance, consistency, payoff, risk, execution]
+      properties:
+        performance: { type: number }
+        consistency: { type: number }
+        payoff: { type: number }
+        risk: { type: number }
+        execution: { type: number }
+    SmartMoneySignal:
+      type: object
+      required: [id, walletLabel, score, ticker, direction, notionalValue, changedAt]
+      properties:
+        id: { type: string }
+        walletLabel: { type: string }
+        displayName: { type: string }
+        avatarVariant: { type: integer, minimum: 1, maximum: 6 }
+        score: { type: number }
+        ticker: { type: string }
+        direction: { type: string, enum: [Long, Short] }
+        notionalValue: { type: number }
+        changedAt: { type: string, format: date-time }
+        address: { type: string }
+        rank: { type: integer }
+        tier: { type: string, enum: [Smart, Qualified] }
+        style: { type: string, enum: [Algo, Scalp, Intraday, Swing, Position, Unclassified] }
+        sizeCohort: { type: string, enum: [Kraken, Whale, Shark, Dolphin, Fish, Crab, Shrimp] }
+        pnlCohort: { type: string }
+        accountValue: { type: number }
+        totalNotional: { type: number }
+        unrealizedPnl: { type: number }
+        currentLeverage: { type: number }
+        marginUtilization: { type: number }
+        netPnl: { type: number }
+        winRate: { type: number }
+        sharpe: { type: number }
+        maxDrawdownPercent: { type: number }
+        profitFactor: { type: number }
+        fillCount: { type: integer }
+        activeDays: { type: integer }
+        longBias: { type: number }
+        tradeDuration: { $ref: "#/components/schemas/SmartMoneyTradeDuration" }
+        periodMetrics:
+          type: object
+          additionalProperties: { $ref: "#/components/schemas/SmartMoneyPeriodMetric" }
+        currentPositions:
+          type: array
+          items: { $ref: "#/components/schemas/SmartMoneyPosition" }
+        assetPerformance:
+          type: array
+          items: { $ref: "#/components/schemas/SmartMoneyAssetPerformance" }
+        recentTrades:
+          type: array
+          items: { $ref: "#/components/schemas/SmartMoneyTrade" }
+        capitalActivity:
+          type: array
+          items: { $ref: "#/components/schemas/SmartMoneyCapitalActivity" }
+        components: { $ref: "#/components/schemas/SmartMoneyScoreComponents" }
