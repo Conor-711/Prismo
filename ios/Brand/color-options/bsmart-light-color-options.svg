@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1260" viewBox="0 0 1800 1260">
+  <rect width="1800" height="1260" fill="#0A0C0E"/>
+  <text x="90" y="92" fill="#F7F8F9" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="42" font-weight="700">bSmart · Light app icon directions</text>
+  <text x="90" y="138" fill="#8F98A3" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="22">Same wordmark, six lighter consumer-facing color systems</text>
+
+  <g transform="translate(90 190)">
+    <rect width="500" height="455" rx="24" fill="#15191D" stroke="#2A3037"/>
+    <rect x="80" y="42" width="340" height="340" rx="76" fill="#EEF1F3"/>
+    <text x="250" y="238" fill="#0A7B62" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="74" font-weight="700" text-anchor="middle">bSmart</text>
+    <text x="24" y="420" fill="#F7F8F9" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="24" font-weight="700">01  Pearl</text>
+    <text x="476" y="420" fill="#8F98A3" font-family="Menlo, monospace" font-size="18" text-anchor="end">#EEF1F3 · #0A7B62</text>
+  </g>
+
+  <g transform="translate(650 190)">
+    <rect width="500" height="455" rx="24" fill="#15191D" stroke="#2A3037"/>
+    <rect x="80" y="42" width="340" height="340" rx="76" fill="#DDE2E7"/>
+    <text x="250" y="238" fill="#08735D" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="74" font-weight="700" text-anchor="middle">bSmart</text>
+    <text x="24" y="420" fill="#F7F8F9" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="24" font-weight="700">02  Cloud gray</text>
+    <text x="476" y="420" fill="#8F98A3" font-family="Menlo, monospace" font-size="18" text-anchor="end">#DDE2E7 · #08735D</text>
+  </g>
+
+  <g transform="translate(1210 190)">
+    <rect width="500" height="455" rx="24" fill="#15191D" stroke="#2A3037"/>
+    <rect x="80" y="42" width="340" height="340" rx="76" fill="#C9D0D7"/>
+    <text x="250" y="238" fill="#066C58" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="74" font-weight="700" text-anchor="middle">bSmart</text>
+    <text x="24" y="420" fill="#F7F8F9" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="24" font-weight="700">03  Soft silver</text>
+    <text x="476" y="420" fill="#8F98A3" font-family="Menlo, monospace" font-size="18" text-anchor="end">#C9D0D7 · #066C58</text>
+  </g>
+
+  <g transform="translate(90 700)">
+    <rect width="500" height="455" rx="24" fill="#15191D" stroke="#2A3037"/>
+    <rect x="80" y="42" width="340" height="340" rx="76" fill="#D7E5DF"/>
+    <text x="250" y="238" fill="#08715B" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="74" font-weight="700" text-anchor="middle">bSmart</text>
+    <text x="24" y="420" fill="#F7F8F9" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="24" font-weight="700">04  Sage mist</text>
+    <text x="476" y="420" fill="#8F98A3" font-family="Menlo, monospace" font-size="18" text-anchor="end">#D7E5DF · #08715B</text>
+  </g>
+
+  <g transform="translate(650 700)">
+    <rect width="500" height="455" rx="24" fill="#15191D" stroke="#2A3037"/>
+    <rect x="80" y="42" width="340" height="340" rx="76" fill="#D9E7EF"/>
+    <text x="250" y="238" fill="#08735D" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="74" font-weight="700" text-anchor="middle">bSmart</text>
+    <text x="24" y="420" fill="#F7F8F9" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="24" font-weight="700">05  Ice blue gray</text>
+    <text x="476" y="420" fill="#8F98A3" font-family="Menlo, monospace" font-size="18" text-anchor="end">#D9E7EF · #08735D</text>
+  </g>
+
+  <g transform="translate(1210 700)">
+    <rect width="500" height="455" rx="24" fill="#15191D" stroke="#2A3037"/>
+    <rect x="80" y="42" width="340" height="340" rx="76" fill="#E0DDE9"/>
+    <text x="250" y="238" fill="#0A745E" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="74" font-weight="700" text-anchor="middle">bSmart</text>
+    <text x="24" y="420" fill="#F7F8F9" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="24" font-weight="700">06  Lilac gray</text>
+    <text x="476" y="420" fill="#8F98A3" font-family="Menlo, monospace" font-size="18" text-anchor="end">#E0DDE9 · #0A745E</text>
+  </g>
+</svg>

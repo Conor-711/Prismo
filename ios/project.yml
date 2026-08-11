@@ -1,0 +1,137 @@
+name: bSmart
+
+options:
+  minimumXcodeGenVersion: 2.44.0
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+configs:
+  Debug: debug
+  InternalAlpha: release
+  Release: release
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+
+targets:
+  BSmart:
+    type: application
+    platform: iOS
+    info:
+      path: BSmart/Supporting/Info.plist
+      properties:
+        CFBundleDisplayName: bSmart
+        CFBundleURLTypes:
+          - CFBundleTypeRole: Editor
+            CFBundleURLName: today.bsmart.signal
+            CFBundleURLSchemes:
+              - bsmart
+        BSMART_API_BASE_URL: $(BSMART_ENDPOINT_URL)
+        BSMART_DATA_ENVIRONMENT: $(BSMART_DATA_ENVIRONMENT)
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        UILaunchScreen: {}
+        UIUserInterfaceStyle: Dark
+    sources:
+      - path: BSmart
+      - path: ../contracts/fixtures
+        buildPhase: resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: today.bsmart.ios
+        PRODUCT_NAME: BSmart
+        PRODUCT_MODULE_NAME: BSmart
+        APS_ENVIRONMENT: development
+        BSMART_ENDPOINT_URL: https://api.bsmart.today
+        BSMART_DATA_ENVIRONMENT: production
+        CODE_SIGN_ENTITLEMENTS: BSmart/Supporting/BSmart.entitlements
+        GENERATE_INFOPLIST_FILE: true
+        INFOPLIST_KEY_CFBundleDisplayName: bSmart
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: true
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: true
+        INFOPLIST_KEY_UILaunchScreen_Generation: true
+        INFOPLIST_KEY_UIUserInterfaceStyle: Dark
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: true
+        DEVELOPMENT_ASSET_PATHS: "$(SRCROOT)/../contracts/fixtures"
+      configs:
+        Debug:
+          BSMART_ENDPOINT_URL: http://127.0.0.1:8081
+          BSMART_DATA_ENVIRONMENT: production
+        InternalAlpha:
+          APS_ENVIRONMENT: development
+          EXCLUDED_SOURCE_FILE_NAMES: "*.json"
+          BSMART_ENDPOINT_URL: https://api.158-247-196-93.sslip.io
+          BSMART_DATA_ENVIRONMENT: production
+        Release:
+          APS_ENVIRONMENT: production
+          EXCLUDED_SOURCE_FILE_NAMES: "*.json"
+          BSMART_ENDPOINT_URL: https://api.bsmart.today
+          BSMART_DATA_ENVIRONMENT: production
+  BSmartTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: BSmartTests
+    dependencies:
+      - target: BSmart
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: today.bsmart.ios.tests
+        GENERATE_INFOPLIST_FILE: true
+  BSmartUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: BSmartUITests
+    dependencies:
+      - target: BSmart
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: today.bsmart.ios.ui-tests
+        GENERATE_INFOPLIST_FILE: true
+        TEST_TARGET_NAME: BSmart
+
+schemes:
+  bSmart:
+    build:
+      targets:
+        BSmart: all
+        BSmartTests: [test]
+        BSmartUITests: [test]
+    run:
+      config: Debug
+    archive:
+      config: Release
+    test:
+      config: Debug
+      targets:
+        - BSmartTests
+        - BSmartUITests
+  bSmart Internal Alpha:
+    build:
+      targets:
+        BSmart: all
+    run:
+      config: InternalAlpha
+    profile:
+      config: InternalAlpha
+    archive:
+      config: InternalAlpha
+  bSmart Local:
+    build:
+      targets:
+        BSmart: all
+    run:
+      config: Debug
+      environmentVariables:
+        BSMART_USE_LIVE_API: "1"
+        BSMART_API_BASE_URL: http://localhost:8081
+        BSMART_DATA_ENVIRONMENT: development

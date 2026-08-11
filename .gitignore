@@ -46,6 +46,14 @@ web/out/
 web/prisma/dev.db
 *.tsbuildinfo
 
+# Xcode / SwiftUI (project is generated from ios/project.yml)
+ios/DerivedData/
+ios/build/
+*.xcuserstate
+xcuserdata/
+*.xccheckout
+*.xcscmblueprint
+
 # Marketing 子项目（不参与线上 web 构建）
 marketing/node_modules/
 # remotion 渲染产物（帧序列/测试帧，可由 remotion 重新渲染，体积达 ~1GB，不入库）

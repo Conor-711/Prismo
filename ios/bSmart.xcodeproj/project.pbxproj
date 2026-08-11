@@ -1,0 +1,1025 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		07CA3C1225DC75F6A95E4D53 /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE007DB787AD08F06C9098B7 /* TodayView.swift */; };
+		0E2ACAC25A9A2BDE3D002E70 /* BSmartClientFactoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B990FB6992E0CD0AF51ECA4A /* BSmartClientFactoryTests.swift */; };
+		18946DA705AD414B95688EB2 /* ticker-intelligence.json in Resources */ = {isa = PBXBuildFile; fileRef = 865A1DF0F6434FFABC05363C /* ticker-intelligence.json */; };
+		189C7C49057C2763D030290E /* smart-account-evidence.json in Resources */ = {isa = PBXBuildFile; fileRef = 2C2B398DCCB9DA48CDE3B09B /* smart-account-evidence.json */; };
+		1926F2248110398FE9903276 /* InstallationSessionProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC57A5F96BD539CAFD5C2AF5 /* InstallationSessionProvider.swift */; };
+		1B52DEDA222A70A455CBA996 /* SignalLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E3DC25BE2F16AF774D1C466 /* SignalLibraryView.swift */; };
+		206B1DC757091A238EDD1F37 /* DomainModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F0CDA4894750CAF569DF7FD /* DomainModels.swift */; };
+		295016085BCC794BBBFC2AE0 /* smart-account-updates.json in Resources */ = {isa = PBXBuildFile; fileRef = C52F950AC4A29E20D41EA96C /* smart-account-updates.json */; };
+		29779826DAF50CA24BEEA7D6 /* RiskDisclosureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5FF5B86D133AF67959E0522 /* RiskDisclosureView.swift */; };
+		2E6FF5E55115288D4F0C7696 /* smart-money-movements.json in Resources */ = {isa = PBXBuildFile; fileRef = 4B31BCCDB1274A82F7317A74 /* smart-money-movements.json */; };
+		2E9C171797F67BCCE0A888D2 /* SmartHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D30155690C61CA5EFF1F36C7 /* SmartHubView.swift */; };
+		3500C17A1D908FDA458ED20C /* NotificationSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C515FFC000CBD780BEF92DC /* NotificationSettingsView.swift */; };
+		367F2278EF7D78BC19142141 /* AppBuildInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC17AE6B6E8E5F0CDB1F1F43 /* AppBuildInfo.swift */; };
+		3E9F4D9A1B0749E6808D3CC2 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 589B46ABF1F88588A5A6F4A5 /* PrivacyInfo.xcprivacy */; };
+		46A58EE64E211B64E26A03B2 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B612B743124EB11F4B96CA24 /* NotificationService.swift */; };
+		4F701BCC6F37FB2F26AE454A /* EventDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF730E21E15B86A29E79E10E /* EventDetailView.swift */; };
+		500B3FFE5842EDE854900BDF /* BSmartSyncCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AC471BE6AF2C846DE479A45 /* BSmartSyncCoordinator.swift */; };
+		57A8F7E009400A5CBB98BB42 /* NotificationPreferencesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE6FD1D55AD59E9D08A8B2C4 /* NotificationPreferencesStore.swift */; };
+		5D53BC38FF84A54F6A3200E5 /* AppModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C33008D703AAED05786BDD21 /* AppModelTests.swift */; };
+		65390B8E4F89F892DED4E6BD /* smart-accounts.json in Resources */ = {isa = PBXBuildFile; fileRef = 80D3B67C42FD6B8300E70A9A /* smart-accounts.json */; };
+		66E613C1E0D9301E0266E528 /* BSmartClientFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CE17EE78B6467AC6484C67D /* BSmartClientFactory.swift */; };
+		6BBB4EB2F1840E06BE260CD8 /* OpportunityRadarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57E4C20A0DC0AFD330D05DD7 /* OpportunityRadarView.swift */; };
+		6DBCC5B75F917C76F8834CD8 /* BSmartTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 351A5F647EE8898C14900E7E /* BSmartTokens.swift */; };
+		70E599D0A0AF3B5213E2E27E /* portfolio-signals.json in Resources */ = {isa = PBXBuildFile; fileRef = 166DEAEBDA41830660381E9A /* portfolio-signals.json */; };
+		717D6616E14AFA521C60CD06 /* AppRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97BB74E18E375666AE59717B /* AppRouter.swift */; };
+		748A0BB210A9B08C311AAAF0 /* portfolio.json in Resources */ = {isa = PBXBuildFile; fileRef = AC412759EEA7E25DA0673FE5 /* portfolio.json */; };
+		7B9E97054689F4D758B526FC /* events.json in Resources */ = {isa = PBXBuildFile; fileRef = 93BB623DC656DD22E92B94DC /* events.json */; };
+		8CB451CA98215FBF5109914D /* BSmartUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F0F9D7D3C2A3DA3F3548E15 /* BSmartUITests.swift */; };
+		96876AE415CCE0D8B440BF36 /* PortfolioSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 673759DE923A4CDF31AD97B8 /* PortfolioSetupView.swift */; };
+		99036C19B64513B785FF7468 /* AppSupportLinks.swift in Sources */ = {isa = PBXBuildFile; fileRef = B842A1E72025EFDF7B2C4B44 /* AppSupportLinks.swift */; };
+		9B550241F7C69BC56934BEBC /* AppSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E4F48684E4D9E17D25BF5ED /* AppSettingsView.swift */; };
+		9D56FCED7E55DF1DA96B1761 /* BSmartJSONCoding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 190546A96C5C509779E5C76A /* BSmartJSONCoding.swift */; };
+		9F6EF85F89CFF98814A1C933 /* MVPPreviewCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44447688F36B56839C226DE1 /* MVPPreviewCatalog.swift */; };
+		A30D7A010F5E4B131E56AACE /* NotificationPreferencesStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11758D55CAE97A4CDF12ED3B /* NotificationPreferencesStoreTests.swift */; };
+		A79437385D94D5F7BD779230 /* SmartMoneyPublicIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E1F22267E1789972C59B7B3 /* SmartMoneyPublicIdentity.swift */; };
+		AA0CCE4272E6F22DC5DA961D /* PortfolioSignalPersonalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21B41763199C02FAE05FE40F /* PortfolioSignalPersonalizer.swift */; };
+		AC149945CAEEC467621B0DA3 /* DebugBSmartAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7090C8FE4476A7BCB7E4510 /* DebugBSmartAPIClient.swift */; };
+		B23EDF548404CC0D1D24FF39 /* BSmartComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = E297137B9447CD9B9368B196 /* BSmartComponents.swift */; };
+		B5377848C53BB8A94B367A34 /* AddPositionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88F26806A688B425EC0A1D2C /* AddPositionView.swift */; };
+		C2013242D134F9432AAABCA5 /* ResearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5B26E14F6C075C879C9AD3C /* ResearchView.swift */; };
+		C47504CFADDDC68E333DDC4E /* BSmartLocalization.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39FB40F9DFE7AC03501D28D2 /* BSmartLocalization.swift */; };
+		C6F51F1E7C2A11C2F2DD488F /* BSmartAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F41C33948890B3C842A9C56 /* BSmartAPIClient.swift */; };
+		D248C77C2E183B97541EAD63 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 483A6F61EE60E7F0590EAFED /* AppModel.swift */; };
+		DD79D09815A28414DFC271EA /* TickerResearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14E7DA989943CF5E577BD9B8 /* TickerResearchView.swift */; };
+		E0D0D8034C6E02324C70C897 /* smart-money.json in Resources */ = {isa = PBXBuildFile; fileRef = F55DB241B335F65E477B744C /* smart-money.json */; };
+		E220D2D1ECBA8B91C78D7802 /* PortfolioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F251DD8882F848EE82C1DA0 /* PortfolioView.swift */; };
+		E5597C54D38BA65A8038C6FF /* DailyDigestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A1085145A450F6A39B6157F /* DailyDigestView.swift */; };
+		E87F7FAB6133B28E8C4D333B /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 4D1EECB31803E544C4453F75 /* Localizable.strings */; };
+		EB8BD5ABD48B84628030E8A4 /* research.json in Resources */ = {isa = PBXBuildFile; fileRef = D935A45F1ACACA7F683B3A43 /* research.json */; };
+		F0D29FB5A1437DEB5C7858F7 /* IntelligenceMethodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 498ADB8B2B51893F5D5537DE /* IntelligenceMethodView.swift */; };
+		F29E3B06A2A58BC652F096D9 /* AppRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD53D61A40794163C8FD61AC /* AppRootView.swift */; };
+		F30F20EE6D6B613B5DB929E4 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B502308FC6EA4404C186F28B /* Assets.xcassets */; };
+		F489DAF99A43FC7653BEF1D0 /* BSmartApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 046A3062F4E0ED5024DBF3C7 /* BSmartApp.swift */; };
+		F703C54CEBF70621E98E1C98 /* BSmartSyncCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F70F8023D3A0EE88922B636 /* BSmartSyncCoordinatorTests.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A3AD8212E8927D45054CD260 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1CAF55C5AAF8DE58A25111E5 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1F12CBAA370830E150D562E4;
+			remoteInfo = BSmart;
+		};
+		F8DE7438FED5E8FB176692C5 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1CAF55C5AAF8DE58A25111E5 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1F12CBAA370830E150D562E4;
+			remoteInfo = BSmart;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		046A3062F4E0ED5024DBF3C7 /* BSmartApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BSmartApp.swift; sourceTree = "<group>"; };
+		0AC471BE6AF2C846DE479A45 /* BSmartSyncCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BSmartSyncCoordinator.swift; sourceTree = "<group>"; };
+		0F70F8023D3A0EE88922B636 /* BSmartSyncCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BSmartSyncCoordinatorTests.swift; sourceTree = "<group>"; };
+		11758D55CAE97A4CDF12ED3B /* NotificationPreferencesStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationPreferencesStoreTests.swift; sourceTree = "<group>"; };
+		14E7DA989943CF5E577BD9B8 /* TickerResearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TickerResearchView.swift; sourceTree = "<group>"; };
+		166DEAEBDA41830660381E9A /* portfolio-signals.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "portfolio-signals.json"; sourceTree = "<group>"; };
+		17B7DB0533891820B142D65C /* BSmart.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = BSmart.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		190546A96C5C509779E5C76A /* BSmartJSONCoding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BSmartJSONCoding.swift; sourceTree = "<group>"; };
+		1E3DC25BE2F16AF774D1C466 /* SignalLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignalLibraryView.swift; sourceTree = "<group>"; };
+		21B41763199C02FAE05FE40F /* PortfolioSignalPersonalizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioSignalPersonalizer.swift; sourceTree = "<group>"; };
+		2C2B398DCCB9DA48CDE3B09B /* smart-account-evidence.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "smart-account-evidence.json"; sourceTree = "<group>"; };
+		2C515FFC000CBD780BEF92DC /* NotificationSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationSettingsView.swift; sourceTree = "<group>"; };
+		351A5F647EE8898C14900E7E /* BSmartTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BSmartTokens.swift; sourceTree = "<group>"; };
+		39FB40F9DFE7AC03501D28D2 /* BSmartLocalization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BSmartLocalization.swift; sourceTree = "<group>"; };
+		3F251DD8882F848EE82C1DA0 /* PortfolioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioView.swift; sourceTree = "<group>"; };
+		3F41C33948890B3C842A9C56 /* BSmartAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BSmartAPIClient.swift; sourceTree = "<group>"; };
+		44447688F36B56839C226DE1 /* MVPPreviewCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MVPPreviewCatalog.swift; sourceTree = "<group>"; };
+		483A6F61EE60E7F0590EAFED /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		498ADB8B2B51893F5D5537DE /* IntelligenceMethodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntelligenceMethodView.swift; sourceTree = "<group>"; };
+		4B31BCCDB1274A82F7317A74 /* smart-money-movements.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "smart-money-movements.json"; sourceTree = "<group>"; };
+		4D1EECB31803E544C4453F75 /* Localizable.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = Localizable.strings; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
+		57E4C20A0DC0AFD330D05DD7 /* OpportunityRadarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpportunityRadarView.swift; sourceTree = "<group>"; };
+		589B46ABF1F88588A5A6F4A5 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		5CE17EE78B6467AC6484C67D /* BSmartClientFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BSmartClientFactory.swift; sourceTree = "<group>"; };
+		673759DE923A4CDF31AD97B8 /* PortfolioSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioSetupView.swift; sourceTree = "<group>"; };
+		6E4F48684E4D9E17D25BF5ED /* AppSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettingsView.swift; sourceTree = "<group>"; };
+		6F0F9D7D3C2A3DA3F3548E15 /* BSmartUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BSmartUITests.swift; sourceTree = "<group>"; };
+		7E1F22267E1789972C59B7B3 /* SmartMoneyPublicIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartMoneyPublicIdentity.swift; sourceTree = "<group>"; };
+		7F0CDA4894750CAF569DF7FD /* DomainModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainModels.swift; sourceTree = "<group>"; };
+		80D3B67C42FD6B8300E70A9A /* smart-accounts.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "smart-accounts.json"; sourceTree = "<group>"; };
+		865A1DF0F6434FFABC05363C /* ticker-intelligence.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "ticker-intelligence.json"; sourceTree = "<group>"; };
+		88F26806A688B425EC0A1D2C /* AddPositionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddPositionView.swift; sourceTree = "<group>"; };
+		93BB623DC656DD22E92B94DC /* events.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = events.json; sourceTree = "<group>"; };
+		97BB74E18E375666AE59717B /* AppRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRouter.swift; sourceTree = "<group>"; };
+		9A1085145A450F6A39B6157F /* DailyDigestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyDigestView.swift; sourceTree = "<group>"; };
+		A7090C8FE4476A7BCB7E4510 /* DebugBSmartAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugBSmartAPIClient.swift; sourceTree = "<group>"; };
+		AC412759EEA7E25DA0673FE5 /* portfolio.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = portfolio.json; sourceTree = "<group>"; };
+		B502308FC6EA4404C186F28B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		B612B743124EB11F4B96CA24 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
+		B842A1E72025EFDF7B2C4B44 /* AppSupportLinks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSupportLinks.swift; sourceTree = "<group>"; };
+		B990FB6992E0CD0AF51ECA4A /* BSmartClientFactoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BSmartClientFactoryTests.swift; sourceTree = "<group>"; };
+		BC17AE6B6E8E5F0CDB1F1F43 /* AppBuildInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppBuildInfo.swift; sourceTree = "<group>"; };
+		BC57A5F96BD539CAFD5C2AF5 /* InstallationSessionProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstallationSessionProvider.swift; sourceTree = "<group>"; };
+		C33008D703AAED05786BDD21 /* AppModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModelTests.swift; sourceTree = "<group>"; };
+		C52F950AC4A29E20D41EA96C /* smart-account-updates.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "smart-account-updates.json"; sourceTree = "<group>"; };
+		C9D9DC68AA1A916E6F9B1A09 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		CE007DB787AD08F06C9098B7 /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
+		D2FFEB8D075D2A281B725158 /* BSmartTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = BSmartTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D30155690C61CA5EFF1F36C7 /* SmartHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartHubView.swift; sourceTree = "<group>"; };
+		D5B26E14F6C075C879C9AD3C /* ResearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResearchView.swift; sourceTree = "<group>"; };
+		D5FF5B86D133AF67959E0522 /* RiskDisclosureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RiskDisclosureView.swift; sourceTree = "<group>"; };
+		D935A45F1ACACA7F683B3A43 /* research.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = research.json; sourceTree = "<group>"; };
+		DC8DCF961D002758F9C35BAE /* BSmartUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = BSmartUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		DE6FD1D55AD59E9D08A8B2C4 /* NotificationPreferencesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationPreferencesStore.swift; sourceTree = "<group>"; };
+		E297137B9447CD9B9368B196 /* BSmartComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BSmartComponents.swift; sourceTree = "<group>"; };
+		EF730E21E15B86A29E79E10E /* EventDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventDetailView.swift; sourceTree = "<group>"; };
+		F55DB241B335F65E477B744C /* smart-money.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "smart-money.json"; sourceTree = "<group>"; };
+		FD53D61A40794163C8FD61AC /* AppRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRootView.swift; sourceTree = "<group>"; };
+		FF9168347175362B2D0F2F38 /* BSmart.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = BSmart.entitlements; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		02F1D1CD4DCCC1C448FBA03C /* Data */ = {
+			isa = PBXGroup;
+			children = (
+				483A6F61EE60E7F0590EAFED /* AppModel.swift */,
+				3F41C33948890B3C842A9C56 /* BSmartAPIClient.swift */,
+				5CE17EE78B6467AC6484C67D /* BSmartClientFactory.swift */,
+				190546A96C5C509779E5C76A /* BSmartJSONCoding.swift */,
+				0AC471BE6AF2C846DE479A45 /* BSmartSyncCoordinator.swift */,
+				A7090C8FE4476A7BCB7E4510 /* DebugBSmartAPIClient.swift */,
+				BC57A5F96BD539CAFD5C2AF5 /* InstallationSessionProvider.swift */,
+			);
+			path = Data;
+			sourceTree = "<group>";
+		};
+		08A1574F7A67DD1B00F0E652 /* fixtures */ = {
+			isa = PBXGroup;
+			children = (
+				93BB623DC656DD22E92B94DC /* events.json */,
+				166DEAEBDA41830660381E9A /* portfolio-signals.json */,
+				AC412759EEA7E25DA0673FE5 /* portfolio.json */,
+				D935A45F1ACACA7F683B3A43 /* research.json */,
+				2C2B398DCCB9DA48CDE3B09B /* smart-account-evidence.json */,
+				C52F950AC4A29E20D41EA96C /* smart-account-updates.json */,
+				80D3B67C42FD6B8300E70A9A /* smart-accounts.json */,
+				4B31BCCDB1274A82F7317A74 /* smart-money-movements.json */,
+				F55DB241B335F65E477B744C /* smart-money.json */,
+				865A1DF0F6434FFABC05363C /* ticker-intelligence.json */,
+			);
+			path = fixtures;
+			sourceTree = "<group>";
+		};
+		0B3978C3E841ABDE9FE567DF /* Research */ = {
+			isa = PBXGroup;
+			children = (
+				D5B26E14F6C075C879C9AD3C /* ResearchView.swift */,
+				14E7DA989943CF5E577BD9B8 /* TickerResearchView.swift */,
+			);
+			path = Research;
+			sourceTree = "<group>";
+		};
+		188AFE058071B11FC7B9E6B3 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				FD53D61A40794163C8FD61AC /* AppRootView.swift */,
+				97BB74E18E375666AE59717B /* AppRouter.swift */,
+				046A3062F4E0ED5024DBF3C7 /* BSmartApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		1FB3F15B0E073BDD55635934 /* BSmartTests */ = {
+			isa = PBXGroup;
+			children = (
+				C33008D703AAED05786BDD21 /* AppModelTests.swift */,
+				B990FB6992E0CD0AF51ECA4A /* BSmartClientFactoryTests.swift */,
+				0F70F8023D3A0EE88922B636 /* BSmartSyncCoordinatorTests.swift */,
+				11758D55CAE97A4CDF12ED3B /* NotificationPreferencesStoreTests.swift */,
+			);
+			path = BSmartTests;
+			sourceTree = "<group>";
+		};
+		264A7980B4EBD53AF604279E /* Supporting */ = {
+			isa = PBXGroup;
+			children = (
+				FF9168347175362B2D0F2F38 /* BSmart.entitlements */,
+				C9D9DC68AA1A916E6F9B1A09 /* Info.plist */,
+				4D1EECB31803E544C4453F75 /* Localizable.strings */,
+				44447688F36B56839C226DE1 /* MVPPreviewCatalog.swift */,
+				589B46ABF1F88588A5A6F4A5 /* PrivacyInfo.xcprivacy */,
+			);
+			path = Supporting;
+			sourceTree = "<group>";
+		};
+		2F80CF92F7B4DCFC3E6E316D /* crypto_us */ = {
+			isa = PBXGroup;
+			children = (
+				D0A3D2FAFC7E160F486A74A6 /* contracts */,
+			);
+			name = crypto_us;
+			path = ..;
+			sourceTree = "<group>";
+		};
+		450E8FA08B01C4DBA2C4A7E5 /* Smart */ = {
+			isa = PBXGroup;
+			children = (
+				D30155690C61CA5EFF1F36C7 /* SmartHubView.swift */,
+			);
+			path = Smart;
+			sourceTree = "<group>";
+		};
+		483371F602B5D2812AAA990C /* BSmart */ = {
+			isa = PBXGroup;
+			children = (
+				188AFE058071B11FC7B9E6B3 /* App */,
+				AA8249D818B76ED83D2E782A /* Core */,
+				6AA7241F20FC04E51415E7A7 /* Features */,
+				264A7980B4EBD53AF604279E /* Supporting */,
+				B502308FC6EA4404C186F28B /* Assets.xcassets */,
+			);
+			path = BSmart;
+			sourceTree = "<group>";
+		};
+		4E31593A3CC92369DC1E6BD1 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				7F0CDA4894750CAF569DF7FD /* DomainModels.swift */,
+				7E1F22267E1789972C59B7B3 /* SmartMoneyPublicIdentity.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		514168797EA13926E850F9C1 = {
+			isa = PBXGroup;
+			children = (
+				483371F602B5D2812AAA990C /* BSmart */,
+				1FB3F15B0E073BDD55635934 /* BSmartTests */,
+				E6537C2F736D79D12C087064 /* BSmartUITests */,
+				2F80CF92F7B4DCFC3E6E316D /* crypto_us */,
+				B41687790C5D4521DB073D6A /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		6AA7241F20FC04E51415E7A7 /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				926A1D0901879F6E2CA7448E /* Portfolio */,
+				0B3978C3E841ABDE9FE567DF /* Research */,
+				E67B1A1B702EA212545F0E09 /* Settings */,
+				450E8FA08B01C4DBA2C4A7E5 /* Smart */,
+				CD6E19404C258A94051BB592 /* Today */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		6ACBF91587AC60A713C5DA25 /* Notifications */ = {
+			isa = PBXGroup;
+			children = (
+				DE6FD1D55AD59E9D08A8B2C4 /* NotificationPreferencesStore.swift */,
+				B612B743124EB11F4B96CA24 /* NotificationService.swift */,
+			);
+			path = Notifications;
+			sourceTree = "<group>";
+		};
+		8AF06BC38FB5DA7D29F7D49F /* Personalization */ = {
+			isa = PBXGroup;
+			children = (
+				21B41763199C02FAE05FE40F /* PortfolioSignalPersonalizer.swift */,
+			);
+			path = Personalization;
+			sourceTree = "<group>";
+		};
+		926A1D0901879F6E2CA7448E /* Portfolio */ = {
+			isa = PBXGroup;
+			children = (
+				88F26806A688B425EC0A1D2C /* AddPositionView.swift */,
+				673759DE923A4CDF31AD97B8 /* PortfolioSetupView.swift */,
+				3F251DD8882F848EE82C1DA0 /* PortfolioView.swift */,
+			);
+			path = Portfolio;
+			sourceTree = "<group>";
+		};
+		AA8249D818B76ED83D2E782A /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				AA9AE58D47E85542DA263471 /* Configuration */,
+				02F1D1CD4DCCC1C448FBA03C /* Data */,
+				D2B552745A803CD4B2FF96CA /* DesignSystem */,
+				ED6C59FE7998A21366D5649E /* Localization */,
+				4E31593A3CC92369DC1E6BD1 /* Models */,
+				6ACBF91587AC60A713C5DA25 /* Notifications */,
+				8AF06BC38FB5DA7D29F7D49F /* Personalization */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		AA9AE58D47E85542DA263471 /* Configuration */ = {
+			isa = PBXGroup;
+			children = (
+				BC17AE6B6E8E5F0CDB1F1F43 /* AppBuildInfo.swift */,
+				B842A1E72025EFDF7B2C4B44 /* AppSupportLinks.swift */,
+			);
+			path = Configuration;
+			sourceTree = "<group>";
+		};
+		B41687790C5D4521DB073D6A /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				17B7DB0533891820B142D65C /* BSmart.app */,
+				D2FFEB8D075D2A281B725158 /* BSmartTests.xctest */,
+				DC8DCF961D002758F9C35BAE /* BSmartUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		CD6E19404C258A94051BB592 /* Today */ = {
+			isa = PBXGroup;
+			children = (
+				9A1085145A450F6A39B6157F /* DailyDigestView.swift */,
+				EF730E21E15B86A29E79E10E /* EventDetailView.swift */,
+				57E4C20A0DC0AFD330D05DD7 /* OpportunityRadarView.swift */,
+				1E3DC25BE2F16AF774D1C466 /* SignalLibraryView.swift */,
+				CE007DB787AD08F06C9098B7 /* TodayView.swift */,
+			);
+			path = Today;
+			sourceTree = "<group>";
+		};
+		D0A3D2FAFC7E160F486A74A6 /* contracts */ = {
+			isa = PBXGroup;
+			children = (
+				08A1574F7A67DD1B00F0E652 /* fixtures */,
+			);
+			path = contracts;
+			sourceTree = "<group>";
+		};
+		D2B552745A803CD4B2FF96CA /* DesignSystem */ = {
+			isa = PBXGroup;
+			children = (
+				E297137B9447CD9B9368B196 /* BSmartComponents.swift */,
+				351A5F647EE8898C14900E7E /* BSmartTokens.swift */,
+			);
+			path = DesignSystem;
+			sourceTree = "<group>";
+		};
+		E6537C2F736D79D12C087064 /* BSmartUITests */ = {
+			isa = PBXGroup;
+			children = (
+				6F0F9D7D3C2A3DA3F3548E15 /* BSmartUITests.swift */,
+			);
+			path = BSmartUITests;
+			sourceTree = "<group>";
+		};
+		E67B1A1B702EA212545F0E09 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				6E4F48684E4D9E17D25BF5ED /* AppSettingsView.swift */,
+				498ADB8B2B51893F5D5537DE /* IntelligenceMethodView.swift */,
+				2C515FFC000CBD780BEF92DC /* NotificationSettingsView.swift */,
+				D5FF5B86D133AF67959E0522 /* RiskDisclosureView.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		ED6C59FE7998A21366D5649E /* Localization */ = {
+			isa = PBXGroup;
+			children = (
+				39FB40F9DFE7AC03501D28D2 /* BSmartLocalization.swift */,
+			);
+			path = Localization;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		1F12CBAA370830E150D562E4 /* BSmart */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4354456AABC4EC42F6549E12 /* Build configuration list for PBXNativeTarget "BSmart" */;
+			buildPhases = (
+				5135F184FA353D3AB1C70124 /* Sources */,
+				A874788E8BCA37D8A2556C5C /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = BSmart;
+			packageProductDependencies = (
+			);
+			productName = BSmart;
+			productReference = 17B7DB0533891820B142D65C /* BSmart.app */;
+			productType = "com.apple.product-type.application";
+		};
+		20DBE584B34EF483F0C9A781 /* BSmartUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D371B75D7C6226DE09C3D89F /* Build configuration list for PBXNativeTarget "BSmartUITests" */;
+			buildPhases = (
+				C58547C3473603D0AA4D563F /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				E9DFB747B28568618B7FA0BB /* PBXTargetDependency */,
+			);
+			name = BSmartUITests;
+			packageProductDependencies = (
+			);
+			productName = BSmartUITests;
+			productReference = DC8DCF961D002758F9C35BAE /* BSmartUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		5902117AFDC6363D38DF5534 /* BSmartTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = ADD8EB381E15B7D4BF3FABB0 /* Build configuration list for PBXNativeTarget "BSmartTests" */;
+			buildPhases = (
+				18C0F53B904342C01AE6CFC1 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				67107869CB59E7171D6B03AE /* PBXTargetDependency */,
+			);
+			name = BSmartTests;
+			packageProductDependencies = (
+			);
+			productName = BSmartTests;
+			productReference = D2FFEB8D075D2A281B725158 /* BSmartTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		1CAF55C5AAF8DE58A25111E5 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					1F12CBAA370830E150D562E4 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+					20DBE584B34EF483F0C9A781 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+						TestTargetID = 1F12CBAA370830E150D562E4;
+					};
+					5902117AFDC6363D38DF5534 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 06EFDB8AF2FE777EB6521D38 /* Build configuration list for PBXProject "bSmart" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+				"zh-Hans",
+			);
+			mainGroup = 514168797EA13926E850F9C1;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				1F12CBAA370830E150D562E4 /* BSmart */,
+				5902117AFDC6363D38DF5534 /* BSmartTests */,
+				20DBE584B34EF483F0C9A781 /* BSmartUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A874788E8BCA37D8A2556C5C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F30F20EE6D6B613B5DB929E4 /* Assets.xcassets in Resources */,
+				E87F7FAB6133B28E8C4D333B /* Localizable.strings in Resources */,
+				3E9F4D9A1B0749E6808D3CC2 /* PrivacyInfo.xcprivacy in Resources */,
+				7B9E97054689F4D758B526FC /* events.json in Resources */,
+				70E599D0A0AF3B5213E2E27E /* portfolio-signals.json in Resources */,
+				748A0BB210A9B08C311AAAF0 /* portfolio.json in Resources */,
+				EB8BD5ABD48B84628030E8A4 /* research.json in Resources */,
+				189C7C49057C2763D030290E /* smart-account-evidence.json in Resources */,
+				295016085BCC794BBBFC2AE0 /* smart-account-updates.json in Resources */,
+				65390B8E4F89F892DED4E6BD /* smart-accounts.json in Resources */,
+				2E6FF5E55115288D4F0C7696 /* smart-money-movements.json in Resources */,
+				E0D0D8034C6E02324C70C897 /* smart-money.json in Resources */,
+				18946DA705AD414B95688EB2 /* ticker-intelligence.json in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		18C0F53B904342C01AE6CFC1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5D53BC38FF84A54F6A3200E5 /* AppModelTests.swift in Sources */,
+				0E2ACAC25A9A2BDE3D002E70 /* BSmartClientFactoryTests.swift in Sources */,
+				F703C54CEBF70621E98E1C98 /* BSmartSyncCoordinatorTests.swift in Sources */,
+				A30D7A010F5E4B131E56AACE /* NotificationPreferencesStoreTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5135F184FA353D3AB1C70124 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B5377848C53BB8A94B367A34 /* AddPositionView.swift in Sources */,
+				367F2278EF7D78BC19142141 /* AppBuildInfo.swift in Sources */,
+				D248C77C2E183B97541EAD63 /* AppModel.swift in Sources */,
+				F29E3B06A2A58BC652F096D9 /* AppRootView.swift in Sources */,
+				717D6616E14AFA521C60CD06 /* AppRouter.swift in Sources */,
+				9B550241F7C69BC56934BEBC /* AppSettingsView.swift in Sources */,
+				99036C19B64513B785FF7468 /* AppSupportLinks.swift in Sources */,
+				C6F51F1E7C2A11C2F2DD488F /* BSmartAPIClient.swift in Sources */,
+				F489DAF99A43FC7653BEF1D0 /* BSmartApp.swift in Sources */,
+				66E613C1E0D9301E0266E528 /* BSmartClientFactory.swift in Sources */,
+				B23EDF548404CC0D1D24FF39 /* BSmartComponents.swift in Sources */,
+				9D56FCED7E55DF1DA96B1761 /* BSmartJSONCoding.swift in Sources */,
+				C47504CFADDDC68E333DDC4E /* BSmartLocalization.swift in Sources */,
+				500B3FFE5842EDE854900BDF /* BSmartSyncCoordinator.swift in Sources */,
+				6DBCC5B75F917C76F8834CD8 /* BSmartTokens.swift in Sources */,
+				E5597C54D38BA65A8038C6FF /* DailyDigestView.swift in Sources */,
+				AC149945CAEEC467621B0DA3 /* DebugBSmartAPIClient.swift in Sources */,
+				206B1DC757091A238EDD1F37 /* DomainModels.swift in Sources */,
+				4F701BCC6F37FB2F26AE454A /* EventDetailView.swift in Sources */,
+				1926F2248110398FE9903276 /* InstallationSessionProvider.swift in Sources */,
+				F0D29FB5A1437DEB5C7858F7 /* IntelligenceMethodView.swift in Sources */,
+				9F6EF85F89CFF98814A1C933 /* MVPPreviewCatalog.swift in Sources */,
+				57A8F7E009400A5CBB98BB42 /* NotificationPreferencesStore.swift in Sources */,
+				46A58EE64E211B64E26A03B2 /* NotificationService.swift in Sources */,
+				3500C17A1D908FDA458ED20C /* NotificationSettingsView.swift in Sources */,
+				6BBB4EB2F1840E06BE260CD8 /* OpportunityRadarView.swift in Sources */,
+				96876AE415CCE0D8B440BF36 /* PortfolioSetupView.swift in Sources */,
+				AA0CCE4272E6F22DC5DA961D /* PortfolioSignalPersonalizer.swift in Sources */,
+				E220D2D1ECBA8B91C78D7802 /* PortfolioView.swift in Sources */,
+				C2013242D134F9432AAABCA5 /* ResearchView.swift in Sources */,
+				29779826DAF50CA24BEEA7D6 /* RiskDisclosureView.swift in Sources */,
+				1B52DEDA222A70A455CBA996 /* SignalLibraryView.swift in Sources */,
+				2E9C171797F67BCCE0A888D2 /* SmartHubView.swift in Sources */,
+				A79437385D94D5F7BD779230 /* SmartMoneyPublicIdentity.swift in Sources */,
+				DD79D09815A28414DFC271EA /* TickerResearchView.swift in Sources */,
+				07CA3C1225DC75F6A95E4D53 /* TodayView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C58547C3473603D0AA4D563F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8CB451CA98215FBF5109914D /* BSmartUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		67107869CB59E7171D6B03AE /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1F12CBAA370830E150D562E4 /* BSmart */;
+			targetProxy = A3AD8212E8927D45054CD260 /* PBXContainerItemProxy */;
+		};
+		E9DFB747B28568618B7FA0BB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1F12CBAA370830E150D562E4 /* BSmart */;
+			targetProxy = F8DE7438FED5E8FB176692C5 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		000C85446829854BD0C914C3 /* InternalAlpha */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "today.bsmart.ios.ui-tests";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = BSmart;
+			};
+			name = InternalAlpha;
+		};
+		1FEEC4627143C03BAE031421 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APS_ENVIRONMENT = production;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				BSMART_DATA_ENVIRONMENT = production;
+				BSMART_ENDPOINT_URL = "https://api.bsmart.today";
+				CODE_SIGN_ENTITLEMENTS = BSmart/Supporting/BSmart.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_ASSET_PATHS = "$(SRCROOT)/../contracts/fixtures";
+				EXCLUDED_SOURCE_FILE_NAMES = "*.json";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = BSmart/Supporting/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = bSmart;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIUserInterfaceStyle = Dark;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = today.bsmart.ios;
+				PRODUCT_MODULE_NAME = BSmart;
+				PRODUCT_NAME = BSmart;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		24C0F63A4D7CF2E8DE88EF01 /* InternalAlpha */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = InternalAlpha;
+		};
+		33C1CF0A00ADC8CB68436F13 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "today.bsmart.ios.ui-tests";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = BSmart;
+			};
+			name = Debug;
+		};
+		69674FBD6D7F1AE7486264BB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = today.bsmart.ios.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/BSmart.app/BSmart";
+			};
+			name = Debug;
+		};
+		7C3AFF6C7AED6F82D1AF2169 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		9775339849D6F114299B17D0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APS_ENVIRONMENT = development;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				BSMART_DATA_ENVIRONMENT = production;
+				BSMART_ENDPOINT_URL = "http://127.0.0.1:8081";
+				CODE_SIGN_ENTITLEMENTS = BSmart/Supporting/BSmart.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_ASSET_PATHS = "$(SRCROOT)/../contracts/fixtures";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = BSmart/Supporting/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = bSmart;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIUserInterfaceStyle = Dark;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = today.bsmart.ios;
+				PRODUCT_MODULE_NAME = BSmart;
+				PRODUCT_NAME = BSmart;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		9B2C4A9A7419C030EB6C1C60 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "today.bsmart.ios.ui-tests";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = BSmart;
+			};
+			name = Release;
+		};
+		9DE500EF93E8F45D53D7F8DD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = today.bsmart.ios.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/BSmart.app/BSmart";
+			};
+			name = Release;
+		};
+		B21FA1820A83A07D48CE3AF6 /* InternalAlpha */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APS_ENVIRONMENT = development;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				BSMART_DATA_ENVIRONMENT = production;
+				BSMART_ENDPOINT_URL = "https://api.158-247-196-93.sslip.io";
+				CODE_SIGN_ENTITLEMENTS = BSmart/Supporting/BSmart.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_ASSET_PATHS = "$(SRCROOT)/../contracts/fixtures";
+				EXCLUDED_SOURCE_FILE_NAMES = "*.json";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = BSmart/Supporting/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = bSmart;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIUserInterfaceStyle = Dark;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = today.bsmart.ios;
+				PRODUCT_MODULE_NAME = BSmart;
+				PRODUCT_NAME = BSmart;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = InternalAlpha;
+		};
+		B84864CFCCD8737533CB7CFE /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		CBB841BA3D47064525613E7E /* InternalAlpha */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = today.bsmart.ios.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/BSmart.app/BSmart";
+			};
+			name = InternalAlpha;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		06EFDB8AF2FE777EB6521D38 /* Build configuration list for PBXProject "bSmart" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7C3AFF6C7AED6F82D1AF2169 /* Debug */,
+				24C0F63A4D7CF2E8DE88EF01 /* InternalAlpha */,
+				B84864CFCCD8737533CB7CFE /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		4354456AABC4EC42F6549E12 /* Build configuration list for PBXNativeTarget "BSmart" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9775339849D6F114299B17D0 /* Debug */,
+				B21FA1820A83A07D48CE3AF6 /* InternalAlpha */,
+				1FEEC4627143C03BAE031421 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		ADD8EB381E15B7D4BF3FABB0 /* Build configuration list for PBXNativeTarget "BSmartTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				69674FBD6D7F1AE7486264BB /* Debug */,
+				CBB841BA3D47064525613E7E /* InternalAlpha */,
+				9DE500EF93E8F45D53D7F8DD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		D371B75D7C6226DE09C3D89F /* Build configuration list for PBXNativeTarget "BSmartUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				33C1CF0A00ADC8CB68436F13 /* Debug */,
+				000C85446829854BD0C914C3 /* InternalAlpha */,
+				9B2C4A9A7419C030EB6C1C60 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 1CAF55C5AAF8DE58A25111E5 /* Project object */;
+}

@@ -11,7 +11,8 @@ SV_SEGMENT_BANDS := top10,top25
 .PHONY: install venv db-init migrate seed seed-cn sample ingest refresh extract analyze analyze-mock \
         rollup narratives narrative-rotation brief worker daily daily-build cn-backfill demo stats test web-install web-dev clean help \
         arch-check sv-price-history sv-v0-candidates sv-v0 sv-v0-prod private-sv-telegram sv-ticker-signals sv-indicator-backtest sv-indicator-report sv-segment-backtest sv-portfolio-backtest sv-rank-event-research reddit-sv-authors sv-v0-reddit-candidates sv-v0-reddit-prod tw-match cf-deploy \
-        backup-db snapshot-db restore-db data-clean data-status xueqiu-author-auth xueqiu-author-plan xueqiu-author-run xueqiu-author-drain xueqiu-author-status xueqiu-sv-full
+        backup-db snapshot-db restore-db data-clean data-status xueqiu-author-auth xueqiu-author-plan xueqiu-author-run xueqiu-author-drain xueqiu-author-status xueqiu-sv-full \
+        ios-generate ios-build ios-test ios-alpha-check ios-alpha-archive ios-release-check
 
 help:
 	@echo "Reddit 版 Kaito Pro — 常用命令"
@@ -444,6 +445,33 @@ sv-portfolio-backtest:
 
 sv-rank-event-research:
 	$(MANAGE) sv-rank-event-research --report-dir $(or $(REPORT_DIR),data/reports/sv_portfolio_backtest)
+
+# ---------- iOS (primary MVP client) ----------
+IOS_PROJECT := ios/bSmart.xcodeproj
+IOS_SCHEME := bSmart
+IOS_TEST_DEVICE ?= iPhone 16
+IOS_TEST_OS ?=
+IOS_ALPHA_API_BASE_URL ?= https://api.158-247-196-93.sslip.io
+
+ios-generate:
+	cd ios && xcodegen generate
+
+ios-build: ios-generate
+	xcodebuild -project $(IOS_PROJECT) -scheme $(IOS_SCHEME) -configuration Debug -sdk iphonesimulator CODE_SIGNING_ALLOWED=NO build
+
+ios-test: ios-generate
+	IOS_TEST_DEVICE='$(IOS_TEST_DEVICE)' IOS_TEST_OS='$(IOS_TEST_OS)' scripts/run_ios_tests.sh
+
+ios-alpha-check: ios-generate
+	xcodebuild -project $(IOS_PROJECT) -scheme 'bSmart Internal Alpha' -configuration InternalAlpha -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/bsmart-ios-alpha-check CODE_SIGNING_ALLOWED=NO BSMART_ENDPOINT_URL='$(IOS_ALPHA_API_BASE_URL)' build
+	$(SYS_PY) scripts/check_ios_release_bundle.py --expected-data-environment production --expected-api-base-url '$(IOS_ALPHA_API_BASE_URL)' /tmp/bsmart-ios-alpha-check/Build/Products/InternalAlpha-iphonesimulator/BSmart.app
+
+ios-alpha-archive:
+	scripts/archive_ios_alpha.sh
+
+ios-release-check: ios-generate
+	xcodebuild -project $(IOS_PROJECT) -scheme $(IOS_SCHEME) -configuration Release -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/bsmart-ios-release-check CODE_SIGNING_ALLOWED=NO build
+	$(SYS_PY) scripts/check_ios_release_bundle.py --expected-data-environment production /tmp/bsmart-ios-release-check/Build/Products/Release-iphonesimulator/BSmart.app
 
 # ---------- Web ----------
 web-install:
