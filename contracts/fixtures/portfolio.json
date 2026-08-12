@@ -1,0 +1,42 @@
+[
+  {
+    "id": "00000000-0000-0000-0000-000000000101",
+    "ticker": "NVDA",
+    "companyName": "NVIDIA",
+    "shares": 48,
+    "averageCost": 121.4,
+    "currentPrice": 128.62,
+    "entryKind": "position",
+    "portfolioWeight": 0.29
+  },
+  {
+    "id": "00000000-0000-0000-0000-000000000102",
+    "ticker": "HOOD",
+    "companyName": "Robinhood Markets",
+    "shares": 85,
+    "averageCost": 72.1,
+    "currentPrice": 69.84,
+    "entryKind": "position",
+    "portfolioWeight": 0.28
+  },
+  {
+    "id": "00000000-0000-0000-0000-000000000103",
+    "ticker": "PLTR",
+    "companyName": "Palantir Technologies",
+    "shares": 32,
+    "averageCost": 139.2,
+    "currentPrice": 146.18,
+    "entryKind": "position",
+    "portfolioWeight": 0.22
+  },
+  {
+    "id": "00000000-0000-0000-0000-000000000104",
+    "ticker": "MSTR",
+    "companyName": "Strategy",
+    "shares": 12,
+    "averageCost": 402.5,
+    "currentPrice": 386.2,
+    "entryKind": "position",
+    "portfolioWeight": 0.21
+  }
+]

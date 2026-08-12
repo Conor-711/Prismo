@@ -1,0 +1,130 @@
+[
+  {
+    "id": "00000000-0000-0000-0000-000000000201",
+    "ticker": "NVDA",
+    "companyName": "NVIDIA",
+    "title": "High-ranked accounts turned more constructive while capital exposure increased",
+    "summary": "Three top-quartile Smart Accounts raised their medium-term view. High-scoring capital accounts also added net long exposure.",
+    "occurredAt": "2026-08-03T01:40:00Z",
+    "severity": "important",
+    "kind": "confirmation",
+    "smartMoneyCoverage": "available",
+    "conclusion": "The social view and observable capital are moving in the same direction. This is stronger than a discussion-volume spike, but price is already above your cost basis and the signal should be monitored for follow-through.",
+    "positionImpact": "Your NVDA position is 35% of this sample portfolio. Avoid treating the confirmation as an automatic add signal; watch whether net long exposure persists after the next session.",
+    "nextStep": "Compare the next two sessions of high-score account exposure with whether the three semiconductor authors maintain their upgraded view.",
+    "evidence": [
+      {
+        "id": "00000000-0000-0000-0000-000000000211",
+        "source": "smart_account",
+        "title": "Top-quartile view shift",
+        "detail": "Three ranked semiconductor specialists moved from neutral to constructive within 18 hours.",
+        "metric": "+3 authors",
+        "sourceURL": null
+      },
+      {
+        "id": "00000000-0000-0000-0000-000000000212",
+        "source": "smart_money",
+        "title": "Net long exposure increased",
+        "detail": "Five independently scored capital accounts increased aggregate NVDA long exposure.",
+        "metric": "+$1.8M",
+        "sourceURL": null
+      }
+    ]
+  },
+  {
+    "id": "00000000-0000-0000-0000-000000000202",
+    "ticker": "HOOD",
+    "companyName": "Robinhood Markets",
+    "title": "Social optimism is rising without matching capital confirmation",
+    "summary": "Positive creator commentary accelerated, while high-scoring capital accounts reduced aggregate exposure over the same window.",
+    "occurredAt": "2026-08-02T22:15:00Z",
+    "severity": "critical",
+    "kind": "divergence",
+    "smartMoneyCoverage": "available",
+    "conclusion": "The disagreement does not prove an immediate reversal, but it raises the risk that social momentum is running ahead of observable capital. A second day of outflows would make the divergence more meaningful.",
+    "positionImpact": "HOOD is below your average cost and represents 28% of this portfolio. Prioritize downside risk review before increasing exposure.",
+    "nextStep": "Review whether public long exposure continues to fall and identify which bullish assumptions would be invalidated by the next operating update.",
+    "evidence": [
+      {
+        "id": "00000000-0000-0000-0000-000000000221",
+        "source": "smart_account",
+        "title": "Constructive commentary broadened",
+        "detail": "The share of positive views among newly published top-quartile opinions rose over 24 hours.",
+        "metric": "+19 pts",
+        "sourceURL": null
+      },
+      {
+        "id": "00000000-0000-0000-0000-000000000222",
+        "source": "smart_money",
+        "title": "High-scoring accounts reduced exposure",
+        "detail": "Aggregate long notional declined despite the increase in positive social views.",
+        "metric": "-$940K",
+        "sourceURL": null
+      }
+    ]
+  },
+  {
+    "id": "00000000-0000-0000-0000-000000000203",
+    "ticker": "PLTR",
+    "companyName": "Palantir Technologies",
+    "title": "A new long-horizon thesis appeared from a high-ranked software investor",
+    "summary": "A top-decile Smart Account published its first actionable PLTR view in six months, focused on commercial operating leverage.",
+    "occurredAt": "2026-08-02T15:05:00Z",
+    "severity": "notable",
+    "kind": "smart_account_view",
+    "smartMoneyCoverage": "available",
+    "conclusion": "This is a new source of evidence rather than market-wide confirmation. Its value is the author's software track record and explicit twelve-month horizon.",
+    "positionImpact": "Your PLTR position is profitable and smaller than NVDA. Add the thesis to research, but wait for independent evidence before changing position size.",
+    "nextStep": "Track whether another independent software specialist adopts the same twelve-month thesis and whether public positioning leaves its current neutral range.",
+    "evidence": [
+      {
+        "id": "00000000-0000-0000-0000-000000000231",
+        "source": "smart_account",
+        "title": "New coverage from a specialist",
+        "detail": "The author ranks in the top decile for software calls and had not covered PLTR during the prior 180 days.",
+        "metric": "Score 87",
+        "sourceURL": null
+      },
+      {
+        "id": "00000000-0000-0000-0000-000000000232",
+        "source": "fundamental",
+        "title": "Thesis centers on operating leverage",
+        "detail": "The opinion cites commercial growth and margin expansion rather than short-term price momentum.",
+        "metric": "12M",
+        "sourceURL": null
+      }
+    ]
+  },
+  {
+    "id": "00000000-0000-0000-0000-000000000204",
+    "ticker": "MSTR",
+    "companyName": "Strategy",
+    "title": "A high-ranked account revised its MSTR risk framework",
+    "summary": "A top-quartile crypto-equity specialist kept a constructive long-horizon view but raised the price level that would invalidate the thesis.",
+    "occurredAt": "2026-08-02T11:20:00Z",
+    "severity": "important",
+    "kind": "smart_account_view",
+    "smartMoneyCoverage": "unavailable",
+    "conclusion": "The thesis remains constructive, but the tighter invalidation level indicates less tolerance for a Bitcoin-led drawdown. This is an author view change, not a capital-confirmed signal.",
+    "positionImpact": "MSTR represents a smaller position in this sample portfolio, but its volatility can make its risk contribution larger than its market-value weight suggests.",
+    "nextStep": "Read the revised invalidation conditions and compare them with MSTR's Bitcoin sensitivity before deciding whether the thesis still matches your holding horizon.",
+    "evidence": [
+      {
+        "id": "00000000-0000-0000-0000-000000000241",
+        "source": "smart_account",
+        "title": "Risk framework changed",
+        "detail": "The author remains constructive over twelve months but moved the invalidation threshold closer to the current price.",
+        "metric": "Score 89",
+        "sourceURL": null
+      },
+      {
+        "id": "00000000-0000-0000-0000-000000000242",
+        "source": "market",
+        "title": "Volatility remains elevated",
+        "detail": "Recent MSTR realized volatility remains materially above the broader software and financial sectors.",
+        "metric": "High",
+        "sourceURL": null
+      }
+    ]
+  }
+]

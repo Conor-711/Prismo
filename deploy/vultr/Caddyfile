@@ -1,0 +1,27 @@
+{
+  admin off
+}
+
+{$PUBLIC_HOST} {
+  encode zstd gzip
+
+  handle /webhooks/twitterapi-io/* {
+    reverse_proxy x-ingest-api:8083
+  }
+
+  handle /x-health {
+    rewrite * /health
+    reverse_proxy x-ingest-api:8083
+  }
+
+  handle {
+    reverse_proxy client-api:8081
+  }
+
+  header {
+    Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    X-Content-Type-Options nosniff
+    Referrer-Policy no-referrer
+    -Server
+  }
+}

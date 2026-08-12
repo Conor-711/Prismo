@@ -1,0 +1,30 @@
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    BSMART_ENV=internal-alpha \
+    BSMART_READ_MODEL_MODE=database \
+    BSMART_CLIENT_API_DATABASE_URL=sqlite:////data/client-api-state.db \
+    BSMART_READ_MODEL_DATABASE_URL=sqlite:////data/client-api-read-model.db \
+    BSMART_FIXTURE_ROOT=/app/contracts/fixtures \
+    PORT=8080
+
+WORKDIR /app
+
+COPY services/client_api/requirements.txt /tmp/client-api-requirements.txt
+RUN pip install --no-cache-dir --disable-pip-version-check -r /tmp/client-api-requirements.txt \
+    && useradd --create-home --uid 10001 bsmart \
+    && mkdir -p /data \
+    && chown bsmart:bsmart /data
+
+COPY --chown=bsmart:bsmart services /app/services
+COPY --chown=bsmart:bsmart contracts /app/contracts
+
+USER bsmart
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD python -c "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:' + os.environ['PORT'] + '/health', timeout=3)" || exit 1
+
+ENTRYPOINT ["/app/services/client_api/alpha_entrypoint.sh"]

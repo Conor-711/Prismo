@@ -1,0 +1,197 @@
+[
+  {
+    "id": "30000000-0000-0000-0000-000000000501",
+    "ticker": "HOOD",
+    "companyName": "Robinhood Markets",
+    "title": "A bullish Smart Account view followed earlier capital accumulation",
+    "summary": "A top-ranked fintech author published a bullish HOOD setup after a high-scoring capital account opened about $150K of long exposure.",
+    "occurredAt": "2026-07-27T00:50:06Z",
+    "dataAsOf": "2026-08-05T09:08:31Z",
+    "dataStatus": "current",
+    "priority": "critical",
+    "kind": "confirmation",
+    "direction": "bullish",
+    "smartMoneyCoverage": "available",
+    "conclusion": "The public long predates the creator view, so the two independent evidence streams point in the same direction without proving that the position remains unchanged.",
+    "positionImpact": "HOOD is below your cost basis and is a meaningful portfolio weight. Review downside tolerance before adding exposure.",
+    "nextStep": "Check the account's current HOOD exposure and whether the author changes the stated support and target levels.",
+    "limitations": [
+      "Capital evidence comes from one scored public derivatives account, not the entire market.",
+      "The Smart Account and Smart Money actors are independent and are not assumed to be the same person."
+    ],
+    "evidence": [
+      {
+        "id": "30000000-0000-0000-0000-000000000511",
+        "source": "smart_account",
+        "referenceId": "2f960c35-8109-5fe2-b0fb-976358a65b48",
+        "actorName": "Trade With Insight",
+        "title": "Bullish view · new",
+        "detail": "$HOOD Trade Idea: July 31st 100C 💡\n\n📈 Trigger: 93.08\n🎯 Target: 100\n🛑 Stop: 92.50\n\nHOOD closed at 94.91. It put in a double bottom at 93 on Friday after losing the 200d. We’re pinched between the 50 and 200d moving averages. If 93 support holds, a rotation trade back up to 100 is set up here. The name is usually easier to buy on dips vs breakouts which makes it appealing going into the week above 93. Earnings are W...",
+        "metric": "Score 112",
+        "observedAt": "2026-07-27T00:50:06.000Z",
+        "sourceURL": "https://twitter.com/427693716/status/2081542613426180254"
+      },
+      {
+        "id": "30000000-0000-0000-0000-000000000512",
+        "source": "smart_money",
+        "referenceId": "319b581f-e923-5058-85ba-7a8ec44b5f06",
+        "actorName": "Indigo",
+        "title": "Public HOOD long opened",
+        "detail": "A Smart-tier capital account opened approximately $150K of HOOD long exposure.",
+        "metric": "+$150K",
+        "observedAt": "2026-07-13T13:34:28Z",
+        "sourceURL": "https://app.hyperliquid.xyz/explorer/tx/0xba69cf74e7383ae3bbe3043fd87c3b02055c005a823b59b55e327ac7a63c14ce",
+        "avatarVariant": 27
+      }
+    ]
+  },
+  {
+    "id": "30000000-0000-0000-0000-000000000502",
+    "ticker": "NVDA",
+    "companyName": "NVIDIA",
+    "title": "A bullish NVDA view met a small capital-account exit",
+    "summary": "A high-ranked author stayed bullish while a Smart-tier public account later closed about $99 of NVDA long exposure.",
+    "occurredAt": "2026-07-31T12:14:45Z",
+    "dataAsOf": "2026-08-05T09:08:31Z",
+    "dataStatus": "current",
+    "priority": "important",
+    "kind": "divergence",
+    "direction": "mixed",
+    "smartMoneyCoverage": "available",
+    "conclusion": "The directions differ, but the observed account exit is too small to outweigh the creator evidence. Treat it as a weak divergence, not a bearish signal.",
+    "positionImpact": "NVDA is the largest position in your sample portfolio and trades above your cost. Avoid allowing confirmation to increase concentration without a position limit.",
+    "nextStep": "Watch for larger NVDA position changes across multiple Smart-tier capital accounts before changing concentration.",
+    "limitations": [
+      "The confirmation window contains one qualified author update and one qualified public account action.",
+      "Public positions represent only bSmart's covered derivatives market."
+    ],
+    "evidence": [
+      {
+        "id": "30000000-0000-0000-0000-000000000521",
+        "source": "smart_account",
+        "referenceId": "d44617e0-83da-540a-a5c4-b8969ba89ec7",
+        "actorName": "WallStTitan",
+        "title": "Bullish view · new",
+        "detail": "LFG $NVDA bullish af long term",
+        "metric": "Score 105",
+        "observedAt": "2026-07-27T00:36:28.000Z",
+        "sourceURL": "https://twitter.com/1080667206902411265/status/2081539182942675424"
+      },
+      {
+        "id": "30000000-0000-0000-0000-000000000522",
+        "source": "smart_money",
+        "referenceId": "b2ba9c8c-7a90-5ea7-84fe-d7a069c149a6",
+        "actorName": "Dakota",
+        "title": "Small NVDA long closed",
+        "detail": "A Smart-tier capital account closed approximately $99 of NVDA long exposure.",
+        "metric": "-$99",
+        "observedAt": "2026-07-31T12:14:45Z",
+        "sourceURL": "https://app.hyperliquid.xyz/explorer/tx/0xc720b1f273766ce7c89a044123bf9902016a00d80e798bb96ae95d45327a46d2",
+        "avatarVariant": 23
+      }
+    ]
+  },
+  {
+    "id": "30000000-0000-0000-0000-000000000503",
+    "ticker": "MSTR",
+    "companyName": "Strategy",
+    "title": "A high-ranked MSTR author tightened the thesis risk limit",
+    "summary": "The author remains constructive over twelve months but moved the invalidation level closer to the current price.",
+    "occurredAt": "2026-08-03T18:10:00Z",
+    "dataAsOf": "2026-08-03T18:12:00Z",
+    "dataStatus": "current",
+    "priority": "important",
+    "kind": "account_leads",
+    "direction": "bullish",
+    "smartMoneyCoverage": "unavailable",
+    "conclusion": "The long-term thesis remains positive, while the tighter risk limit shows less tolerance for a drawdown. No qualifying public capital evidence is available for confirmation.",
+    "positionImpact": "MSTR is a smaller holding, but its volatility can contribute more portfolio risk than its market-value weight suggests.",
+    "nextStep": "Compare the revised $350 invalidation level with your cost basis and holding horizon before changing the position.",
+    "limitations": [
+      "No public tokenized-equity capital data currently meets the liquidity and independent-account thresholds.",
+      "The conclusion is based on one qualified Smart Account update."
+    ],
+    "evidence": [
+      {
+        "id": "30000000-0000-0000-0000-000000000531",
+        "source": "smart_account",
+        "referenceId": "4194d5f8-5f4c-5f74-82aa-e4f7bdd5fe73",
+        "actorName": "True North",
+        "title": "Bullish view · new",
+        "detail": "Video title: MSTR Sells Bitcoin to Fund Dividend | True North Podcast | Ep. 73\n\nChannel: True North\n\nDescription: 🎛️ As of this recording, 7/8/26, Strategy's (MSTR) performance:\n* Open: $93.68\n* Close: $93.87\n* Volume: ~ 17.1M Shares\n* mNAV: ~ 1.04\n* Market Cap: ~ $34.9B\n* BTC: 843,775\n\n⏱️ TIMESTAMPS & INSIGHTS:\n0:00 - True North Episode 73 Loading\n2:50 - Q2 Outlook: Balance sheet, preferreds, capital markets\n4:38...",
+        "metric": "Score 102",
+        "observedAt": "2026-07-08T23:20:09.000000Z",
+        "sourceURL": "https://www.youtube.com/watch?v=X_yqpcpXZ6c"
+      }
+    ]
+  },
+  {
+    "id": "30000000-0000-0000-0000-000000000504",
+    "ticker": "PLTR",
+    "companyName": "Palantir Technologies",
+    "title": "A qualified public account opened a small PLTR position",
+    "summary": "A scored capital account opened about $196 of PLTR long exposure while no independent Smart Account update met the window.",
+    "occurredAt": "2026-08-04T16:15:08Z",
+    "dataAsOf": "2026-08-05T09:08:31Z",
+    "dataStatus": "delayed",
+    "priority": "notable",
+    "kind": "money_leads",
+    "direction": "bullish",
+    "smartMoneyCoverage": "available",
+    "conclusion": "The action is real but small and comes from a Qualified-tier rather than Smart-tier account. It is context for monitoring, not a strong capital signal.",
+    "positionImpact": "Your PLTR holding is profitable and smaller than NVDA. The new position is useful context, not sufficient evidence to add risk by itself.",
+    "nextStep": "Watch the public account for follow-through and compare any subsequent creator thesis with the account's entry window.",
+    "limitations": [
+      "Smart Account ingestion for PLTR is delayed; no current creator confirmation can be claimed.",
+      "The capital action comes from one Qualified-tier public account and its notional is small."
+    ],
+    "evidence": [
+      {
+        "id": "30000000-0000-0000-0000-000000000541",
+        "source": "smart_money",
+        "referenceId": "9c304b0c-5e08-57ea-ae74-29c3a7168390",
+        "actorName": "Naomi",
+        "title": "Small PLTR long opened",
+        "detail": "A Qualified-tier capital account opened approximately $196 of PLTR long exposure.",
+        "metric": "+$196",
+        "observedAt": "2026-08-04T16:15:08Z",
+        "sourceURL": "https://app.hyperliquid.xyz/explorer/tx/0x64d4aee4d23f3ef1664e044170a4860202d500ca6d325dc3089d5a37913318dc",
+        "avatarVariant": 48
+      }
+    ]
+  },
+  {
+    "id": "30000000-0000-0000-0000-000000000505",
+    "ticker": "AVGO",
+    "companyName": "Broadcom",
+    "title": "A new AVGO thesis has no qualifying capital confirmation yet",
+    "summary": "A top-ranked semiconductor author initiated an AVGO thesis, while no current Smart-tier capital action meets the confirmation window.",
+    "occurredAt": "2026-07-13T14:19:31Z",
+    "dataAsOf": "2026-08-05T09:08:31Z",
+    "dataStatus": "current",
+    "priority": "important",
+    "kind": "account_leads",
+    "direction": "bullish",
+    "smartMoneyCoverage": "unavailable",
+    "conclusion": "The qualified creator thesis is relevant for research, but the current capital dataset does not provide independent Smart-tier confirmation.",
+    "positionImpact": "You do not currently hold or watch AVGO. Compare its AI-infrastructure exposure with your existing NVDA concentration before adding it to your research list.",
+    "nextStep": "Wait for a qualifying public AVGO position change and check whether custom accelerator bookings support the author's thesis.",
+    "limitations": [
+      "No Smart-tier public AVGO action currently meets the event window.",
+      "The opportunity is selected from bSmart's limited covered stock universe, not the entire US equity market."
+    ],
+    "evidence": [
+      {
+        "id": "30000000-0000-0000-0000-000000000551",
+        "source": "smart_account",
+        "referenceId": "3b83ec9e-2263-52b7-b105-2e2af5be89a1",
+        "actorName": "Coach Mak | Know Your Money",
+        "title": "Bullish view · new",
+        "detail": "Bought long term shares: \n\n$AVGO\n$MRVL\n$TSM https://t.co/I7FmkWFhvk",
+        "metric": "Score 111",
+        "observedAt": "2026-07-13T14:19:31.000Z",
+        "sourceURL": "https://twitter.com/1462154901828501509/status/2076672879207559286"
+      }
+    ]
+  }
+]
