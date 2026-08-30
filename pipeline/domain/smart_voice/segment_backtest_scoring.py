@@ -1,4 +1,4 @@
-"""Point-in-time sub-SV scores for vertical signal backtests."""
+"""Point-in-time sub-Score scores for vertical signal backtests."""
 from __future__ import annotations
 
 import collections
@@ -68,7 +68,7 @@ def rebuild_segment_scores_asof(
     min_n_eff: float,
     min_settled_calls: int,
 ) -> int:
-    """Rebuild historical sub-SV ranks using only evidence settled before each day."""
+    """Rebuild historical sub-Score ranks using only evidence settled before each day."""
     wanted_segments = set(segment_types) & set(SEGMENT_TYPES)
     if not wanted_segments or not sources:
         con.execute("DELETE FROM sv_segment_score_asof")

@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prismo Smart Account Trust Preview</title>
+  <meta name="description" content="在今日动态中快速建立 Smart Account 信任的交互原型">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><rect width=%2264%22 height=%2264%22 rx=%2212%22 fill=%22%2358d9b7%22/><text x=%2232%22 y=%2244%22 text-anchor=%22middle%22 font-size=%2238%22 font-family=%22Arial%22 font-weight=%22900%22 fill=%22%2307100c%22>P</text></svg>">
+  <style>
+    :root {
+      color-scheme: dark;
+      --canvas: #080a09;
+      --phone: #0b0e0d;
+      --surface: #121615;
+      --surface-2: #171c1a;
+      --surface-3: #0e1211;
+      --line: #29312e;
+      --line-strong: #3b4742;
+      --text: #f4f7f5;
+      --secondary: #a8b1ae;
+      --tertiary: #727d79;
+      --mint: #58d9b7;
+      --lime: #d5ff3f;
+      --blue: #68b7ff;
+      --gold: #ffc95a;
+      --red: #ff6374;
+      --ease: 210ms cubic-bezier(.2,.75,.2,1);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Helvetica Neue", sans-serif;
+      font-synthesis: none;
+      letter-spacing: 0;
+    }
+
+    * { box-sizing: border-box; }
+    html { min-width: 320px; background: var(--canvas); }
+    body { min-width: 320px; min-height: 100vh; margin: 0; color: var(--text); background: var(--canvas); }
+    button { color: inherit; font: inherit; }
+    button:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
+    [hidden] { display: none !important; }
+
+    .review-bar {
+      min-height: 64px;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      border-bottom: 1px solid var(--line);
+      background: #0b0e0d;
+    }
+    .review-brand { display: flex; align-items: center; gap: 11px; }
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      color: #07100c;
+      background: var(--mint);
+      font-size: 20px;
+      font-weight: 900;
+    }
+    .review-brand strong { display: block; font-size: 14px; }
+    .review-brand span { display: block; margin-top: 3px; color: var(--tertiary); font-size: 10px; }
+    .review-state { display: flex; align-items: center; gap: 8px; }
+    .review-state button {
+      min-height: 34px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: var(--secondary);
+      background: var(--surface);
+      font-size: 10px;
+      font-weight: 750;
+      cursor: pointer;
+    }
+    .review-state button.active { color: var(--lime); border-color: rgba(213,255,63,.55); background: #151a10; }
+
+    .stage { min-height: calc(100vh - 64px); padding: 28px 24px 48px; }
+    .stage-grid {
+      width: min(1120px, 100%);
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 410px minmax(0,1fr);
+      gap: 34px;
+      align-items: start;
+    }
+
+    .phone {
+      width: 390px;
+      height: 844px;
+      position: sticky;
+      top: 22px;
+      overflow: hidden;
+      border: 1px solid #39413f;
+      border-radius: 42px;
+      background: var(--phone);
+      box-shadow: 0 28px 74px rgba(0,0,0,.42);
+    }
+    .phone::before {
+      content: "";
+      position: absolute;
+      z-index: 60;
+      top: 9px;
+      left: 50%;
+      width: 106px;
+      height: 29px;
+      transform: translateX(-50%);
+      border-radius: 18px;
+      background: #020303;
+    }
+    .status-bar {
+      height: 44px;
+      padding: 13px 22px 0;
+      position: relative;
+      z-index: 61;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 10px;
+      font-weight: 760;
+    }
+    .status-icons { display: flex; align-items: center; gap: 5px; }
+    .status-icons i { width: 13px; height: 7px; display: block; border: 1px solid currentColor; border-radius: 2px; }
+    .status-icons i:first-child { width: 12px; border: 0; background: currentColor; clip-path: polygon(0 100%,0 75%,18% 75%,18% 55%,40% 55%,40% 34%,63% 34%,63% 15%,85% 15%,85% 0,100% 0,100% 100%); }
+
+    .phone-body { height: calc(100% - 44px); display: grid; grid-template-rows: minmax(0,1fr) 68px; }
+    .app-scroll { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
+    .app-scroll::-webkit-scrollbar, .sheet-scroll::-webkit-scrollbar { display: none; }
+    .app-content { min-height: 100%; padding: 6px 15px 26px; }
+    .app-header { min-height: 48px; display: flex; align-items: center; justify-content: space-between; }
+    .app-header h1 { margin: 0; font-size: 23px; line-height: 1; }
+    .round-button {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      color: var(--secondary);
+      background: var(--surface);
+      cursor: pointer;
+    }
+    .round-button svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .freshness { display: flex; align-items: center; gap: 6px; color: var(--tertiary); font-size: 8px; }
+    .freshness i { width: 5px; height: 5px; border-radius: 50%; background: var(--mint); }
+
+    .portfolio-strip {
+      margin-top: 13px;
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+    .portfolio-strip span { color: var(--tertiary); font-size: 8px; }
+    .portfolio-strip strong { display: block; margin-top: 4px; font-size: 15px; }
+    .portfolio-strip b { color: var(--mint); font-size: 10px; }
+
+    .section-head { margin: 17px 0 9px; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+    .section-head strong { font-size: 13px; }
+    .section-head span { color: var(--tertiary); font-size: 8px; }
+    .filters { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+    .filters::-webkit-scrollbar { display: none; }
+    .filter {
+      min-height: 29px;
+      padding: 0 10px;
+      flex: 0 0 auto;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      color: var(--tertiary);
+      background: var(--surface);
+      font-size: 8px;
+      font-weight: 720;
+      cursor: pointer;
+    }
+    .filter.active { color: var(--text); border-color: rgba(213,255,63,.58); background: #161b11; }
+
+    .event-list { margin-top: 8px; border-top: 1px solid var(--line); }
+    .event { position: relative; padding: 13px 0; border-bottom: 1px solid var(--line); }
+    .event.unread::before { content: ""; position: absolute; left: -9px; top: 31px; width: 5px; height: 5px; border-radius: 50%; background: var(--lime); }
+    .event-grid { display: grid; grid-template-columns: 42px minmax(0,1fr) auto; gap: 9px; }
+    .author-trigger {
+      padding: 0;
+      border: 0;
+      background: transparent;
+      text-align: left;
+      cursor: pointer;
+    }
+    .avatar {
+      width: 42px;
+      height: 42px;
+      display: block;
+      border-radius: 50%;
+      object-fit: cover;
+      background: #202724;
+    }
+    .avatar-fallback { display: grid; place-items: center; color: #08100d; background: var(--mint); font-weight: 850; }
+    .source-line { min-width: 0; display: flex; align-items: center; gap: 5px; color: var(--tertiary); font-size: 7px; white-space: nowrap; }
+    .source-line strong { max-width: 130px; overflow: hidden; color: var(--mint); font-size: 9px; text-overflow: ellipsis; }
+    .source-line i { width: 5px; height: 5px; border-radius: 50%; background: var(--lime); }
+    .rank-trigger {
+      padding: 0;
+      border: 0;
+      color: var(--tertiary);
+      background: transparent;
+      font-size: 7px;
+      font-weight: 720;
+      cursor: pointer;
+    }
+    .event time { color: var(--tertiary); font-size: 7px; }
+    .event h2 { margin: 6px 0 0; font-size: 13px; line-height: 1.38; }
+    .event p { margin: 6px 0 0; color: var(--secondary); font-size: 9px; line-height: 1.45; }
+    .tag-row { margin-top: 8px; display: flex; gap: 5px; flex-wrap: wrap; }
+    .tag { min-height: 20px; padding: 2px 6px; display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 4px; color: var(--tertiary); font-size: 7px; font-weight: 750; }
+    .tag.bull { color: var(--mint); border-color: rgba(88,217,183,.38); }
+    .tag.blue { color: var(--blue); border-color: rgba(104,183,255,.36); }
+    .tag.red { color: var(--red); border-color: rgba(255,99,116,.36); }
+
+    .plain-event .avatar { display: grid; place-items: center; color: var(--blue); border: 1px solid rgba(104,183,255,.25); background: #14212a; font: 800 11px ui-monospace,SFMono-Regular,Menlo,monospace; }
+    .plain-event .source-line strong { color: var(--blue); }
+
+    .bottom-nav {
+      padding: 7px 10px 13px;
+      display: grid;
+      grid-template-columns: repeat(5,1fr);
+      border-top: 1px solid var(--line);
+      background: rgba(16,20,18,.98);
+    }
+    .bottom-nav button {
+      min-height: 47px;
+      display: grid;
+      place-items: center;
+      align-content: center;
+      gap: 3px;
+      border: 0;
+      color: var(--tertiary);
+      background: transparent;
+      font-size: 7px;
+      cursor: pointer;
+    }
+    .bottom-nav svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .bottom-nav .active { color: var(--lime); }
+
+    .scrim {
+      position: absolute;
+      z-index: 30;
+      inset: 44px 0 0;
+      border: 0;
+      background: rgba(0,0,0,.66);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--ease);
+    }
+    .trust-sheet {
+      position: absolute;
+      z-index: 40;
+      left: 7px;
+      right: 7px;
+      bottom: 7px;
+      height: 730px;
+      overflow: hidden;
+      border: 1px solid var(--line-strong);
+      border-radius: 18px;
+      background: var(--surface);
+      box-shadow: 0 -20px 52px rgba(0,0,0,.46);
+      transform: translateY(calc(100% + 12px));
+      transition: transform 280ms cubic-bezier(.2,.78,.2,1);
+    }
+    .phone.sheet-open .scrim { opacity: 1; pointer-events: auto; }
+    .phone.sheet-open .trust-sheet { transform: translateY(0); }
+    .sheet-handle { width: 36px; height: 4px; margin: 8px auto 3px; border-radius: 2px; background: #46504c; }
+    .sheet-scroll { height: calc(100% - 15px); padding: 8px 14px 24px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
+    .sheet-top { display: grid; grid-template-columns: 58px minmax(0,1fr) auto; gap: 11px; align-items: center; }
+    .sheet-top .avatar { width: 58px; height: 58px; }
+    .sheet-top h2 { margin: 0; font-size: 18px; line-height: 1.15; }
+    .identity-line { margin-top: 5px; display: flex; gap: 5px; flex-wrap: wrap; color: var(--tertiary); font-size: 8px; }
+    .verified { color: var(--blue); }
+    .close-sheet { width: 31px; height: 31px; }
+    .profile-actions { margin-top: 12px; display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; }
+    .primary-action, .rank-pill {
+      min-height: 34px;
+      border-radius: 6px;
+      font-size: 9px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .primary-action { border: 1px solid rgba(88,217,183,.5); color: #08110d; background: var(--mint); }
+    .rank-pill { padding: 0 11px; border: 1px solid rgba(213,255,63,.42); color: var(--lime); background: #151a10; }
+    .rank-explainer { margin-top: 8px; padding: 9px 10px; border: 1px solid rgba(213,255,63,.28); border-radius: 6px; background: #11150d; }
+    .rank-explainer strong { font-size: 8px; }
+    .rank-explainer p { margin: 5px 0 0; color: var(--secondary); font-size: 8px; line-height: 1.5; }
+
+    .metric-grid { margin-top: 13px; display: grid; grid-template-columns: repeat(3,1fr); border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
+    .metric-grid div { min-width: 0; padding: 10px 8px; border-right: 1px solid var(--line); background: var(--surface-3); }
+    .metric-grid div:last-child { border-right: 0; }
+    .metric-grid span { display: block; color: var(--tertiary); font-size: 7px; }
+    .metric-grid strong { display: block; margin-top: 5px; font: 850 14px ui-monospace,SFMono-Regular,Menlo,monospace; }
+    .metric-grid small { display: block; margin-top: 3px; color: var(--tertiary); font-size: 6px; }
+
+    .summary-block { margin-top: 13px; padding: 11px 11px 11px 13px; border-left: 3px solid var(--mint); background: var(--surface-3); }
+    .block-label { display: flex; align-items: center; gap: 5px; color: var(--mint); font-size: 8px; font-weight: 850; text-transform: uppercase; }
+    .block-label svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .summary-block p { margin: 7px 0 0; color: var(--secondary); font-size: 9px; line-height: 1.55; }
+
+    .profile-section { margin-top: 16px; }
+    .profile-section header { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+    .profile-section h3 { margin: 0; font-size: 12px; }
+    .profile-section header span { color: var(--tertiary); font-size: 7px; }
+    .strategy-copy { margin: 8px 0 0; color: var(--secondary); font-size: 9px; line-height: 1.55; }
+    .strategy-tags { margin-top: 9px; display: flex; gap: 5px; flex-wrap: wrap; }
+    .strategy-tags .tag { color: var(--text); background: var(--surface-3); }
+
+    .evidence-list { margin-top: 8px; border-top: 1px solid var(--line); }
+    .evidence-item { border-bottom: 1px solid var(--line); }
+    .evidence-button {
+      width: 100%;
+      padding: 11px 0;
+      display: grid;
+      grid-template-columns: 38px minmax(0,1fr) 90px;
+      gap: 9px;
+      align-items: center;
+      border: 0;
+      color: inherit;
+      background: transparent;
+      text-align: left;
+      cursor: pointer;
+    }
+    .ticker-box { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 7px; background: var(--surface-3); font-size: 9px; font-weight: 850; }
+    .evidence-title { font-size: 9px; font-weight: 760; line-height: 1.35; }
+    .evidence-meta { margin-top: 4px; display: flex; gap: 5px; color: var(--tertiary); font-size: 7px; }
+    .outcome { color: var(--mint); font-weight: 800; }
+    .mini-chart { width: 90px; height: 42px; overflow: visible; }
+    .mini-chart .grid { stroke: #252d2a; stroke-width: 1; }
+    .mini-chart .path { fill: none; stroke: var(--mint); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .mini-chart .marker { fill: var(--lime); stroke: #10140e; stroke-width: 2; }
+    .mini-chart .target { stroke: var(--blue); stroke-width: 1; stroke-dasharray: 3 3; }
+    .evidence-detail { margin: 0 0 11px 47px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface-3); }
+    .evidence-detail p { margin: 0; color: var(--secondary); font-size: 8px; line-height: 1.5; }
+    .evidence-detail dl { margin: 8px 0 0; display: grid; grid-template-columns: repeat(3,1fr); gap: 7px; }
+    .evidence-detail dt { color: var(--tertiary); font-size: 6px; }
+    .evidence-detail dd { margin: 3px 0 0; font-size: 8px; font-weight: 760; }
+
+    .transparency { margin-top: 13px; padding-top: 11px; border-top: 1px solid var(--line); color: var(--tertiary); font-size: 7px; line-height: 1.5; }
+    .transparency strong { color: var(--secondary); }
+
+    .rationale { padding: 5px 0; }
+    .rationale .kicker { color: var(--mint); font: 850 10px ui-monospace,SFMono-Regular,Menlo,monospace; }
+    .rationale h2 { max-width: 610px; margin: 8px 0 10px; font-size: 29px; line-height: 1.18; }
+    .rationale > p { max-width: 650px; margin: 0; color: var(--secondary); font-size: 12px; line-height: 1.7; }
+    .flow { margin-top: 24px; display: grid; gap: 8px; }
+    .flow-step { padding: 13px; display: grid; grid-template-columns: 30px minmax(0,1fr); gap: 11px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+    .flow-step b { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 6px; color: var(--lime); background: #171c11; font: 800 11px ui-monospace,SFMono-Regular,Menlo,monospace; }
+    .flow-step strong { display: block; font-size: 11px; }
+    .flow-step p { margin: 5px 0 0; color: var(--tertiary); font-size: 9px; line-height: 1.55; }
+    .data-note { margin-top: 17px; padding: 14px; border-left: 3px solid var(--blue); background: #0d1419; }
+    .data-note strong { color: var(--blue); font-size: 10px; }
+    .data-note p { margin: 7px 0 0; color: var(--secondary); font-size: 9px; line-height: 1.6; }
+
+    @media (max-width: 880px) {
+      .review-bar { padding: 11px 14px; }
+      .review-state button { padding: 0 9px; }
+      .stage { padding: 18px 10px 38px; }
+      .stage-grid { grid-template-columns: 1fr; }
+      .phone { position: relative; top: 0; width: min(100%,390px); margin: 0 auto; }
+      .rationale { width: min(100%,620px); margin: 4px auto 0; }
+    }
+    @media (max-width: 430px) {
+      .review-bar { display: none; }
+      .stage { min-height: 100vh; padding: 0; }
+      .stage-grid { display: block; }
+      .phone { width: 100%; height: 100svh; border: 0; border-radius: 0; }
+      .phone::before { top: 8px; }
+      .trust-sheet { left: 0; right: 0; bottom: 0; height: min(86svh,730px); border-right: 0; border-bottom: 0; border-left: 0; border-radius: 18px 18px 0 0; }
+      .sheet-top h2 { font-size: 20px; }
+      .identity-line { font-size: 9px; }
+      .primary-action, .rank-pill { min-height: 36px; font-size: 10px; }
+      .rank-explainer strong { font-size: 9px; }
+      .rank-explainer p { font-size: 9px; }
+      .metric-grid span { font-size: 8px; }
+      .metric-grid strong { font-size: 16px; }
+      .metric-grid small { font-size: 7px; }
+      .block-label { font-size: 9px; }
+      .summary-block p, .strategy-copy { font-size: 10px; line-height: 1.6; }
+      .profile-section h3 { font-size: 14px; }
+      .profile-section header span { font-size: 8px; }
+      .strategy-tags .tag { font-size: 8px; }
+      .evidence-title { font-size: 10px; }
+      .evidence-meta { font-size: 8px; }
+      .evidence-detail p { font-size: 9px; }
+      .evidence-detail dt { font-size: 7px; }
+      .evidence-detail dd { font-size: 9px; }
+      .transparency { font-size: 8px; }
+      .rationale { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      * { scroll-behavior: auto !important; transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <header class="review-bar">
+    <div class="review-brand">
+      <div class="brand-mark">P</div>
+      <div><strong>Smart Account 信任速览</strong><span>Today Feed 交互方案 · 真实作者与证据字段</span></div>
+    </div>
+    <div class="review-state" aria-label="原型状态">
+      <button id="showFeed">动态态</button>
+      <button id="showSheet" class="active">作者速览态</button>
+    </div>
+  </header>
+
+  <main class="stage">
+    <div class="stage-grid">
+      <section class="phone sheet-open" id="phone" aria-label="Prismo 移动端原型">
+        <div class="status-bar"><span>9:41</span><div class="status-icons"><i></i><i></i></div></div>
+        <div class="phone-body">
+          <div class="app-scroll"><div class="app-content">
+            <header class="app-header">
+              <h1>今日</h1>
+              <button class="round-button" aria-label="提醒设置">
+                <svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>
+              </button>
+            </header>
+            <div class="freshness"><i></i><span>最近更新 09:41 · Smart Activity 正常</span></div>
+
+            <section class="portfolio-strip">
+              <div><span>今日与你相关</span><strong>4 条值得查看的动态</strong></div>
+              <b>3 个标的</b>
+            </section>
+
+            <div class="section-head"><strong>全部最新动态</strong><span>按时间排序</span></div>
+            <div class="filters" role="tablist" aria-label="动态筛选">
+              <button class="filter active">全部</button>
+              <button class="filter">Smart Account</button>
+              <button class="filter">Smart Money</button>
+              <button class="filter">未读</button>
+            </div>
+
+            <div class="event-list">
+              <article class="event unread">
+                <div class="event-grid">
+                  <button class="author-trigger open-profile" aria-label="查看 Trade With Insight 速览">
+                    <img class="avatar" src="https://pbs.twimg.com/profile_images/2025494376554844161/xvL7GXVG_400x400.png" alt="Trade With Insight" onerror="this.hidden=true;this.nextElementSibling.hidden=false">
+                    <span class="avatar avatar-fallback" hidden>TW</span>
+                  </button>
+                  <div>
+                    <div class="source-line"><i></i><button class="author-trigger open-profile"><strong>Trade With Insight</strong></button><span>· X ·</span><button class="rank-trigger open-profile">综合 #7</button></div>
+                    <h2>认为 HOOD 守住 US$93 后有机会回到 US$100</h2>
+                    <p>依据双底结构与 50 日、200 日均线收敛，给出触发价 US$93.08 和止损价 US$92.50。</p>
+                    <div class="tag-row"><span class="tag bull">看多 · 5D</span><span class="tag">HOOD</span><span class="tag blue">明确目标价</span></div>
+                  </div>
+                  <time>12m</time>
+                </div>
+              </article>
+
+              <article class="event plain-event unread">
+                <div class="event-grid">
+                  <span class="avatar">M</span>
+                  <div>
+                    <div class="source-line"><i></i><strong>Micah</strong><span>· Smart Money · NVDA</span></div>
+                    <h2>新开 NVDA 多仓，总规模约 US$143,000</h2>
+                    <p>分四笔开仓，平均每笔约 US$35.7K，使用 10× 杠杆。</p>
+                    <div class="tag-row"><span class="tag blue">新开多仓</span><span class="tag">Hyperliquid</span></div>
+                  </div>
+                  <time>38m</time>
+                </div>
+              </article>
+
+              <article class="event">
+                <div class="event-grid">
+                  <span class="avatar avatar-fallback">FH</span>
+                  <div>
+                    <div class="source-line"><i></i><strong>The Finance Hydra</strong><span>· YouTube · NVDA</span></div>
+                    <h2>认为 NVDA 突破 US$212 后有机会回测 US$236</h2>
+                    <p>作者把 US$212 视为关键阻力，判断突破后上方空间重新打开。</p>
+                    <div class="tag-row"><span class="tag bull">看多 · 60D</span><span class="tag">Top 10%</span></div>
+                  </div>
+                  <time>1h</time>
+                </div>
+              </article>
+
+              <article class="event plain-event">
+                <div class="event-grid">
+                  <span class="avatar">A</span>
+                  <div>
+                    <div class="source-line"><i></i><strong>Adrian</strong><span>· Smart Money · NVDA</span></div>
+                    <h2>平掉 NVDA 多仓，减少约 US$4,211 敞口</h2>
+                    <p>该账户结束一笔 20× 多仓，记录中的 NVDA 名义敞口已降至 0。</p>
+                    <div class="tag-row"><span class="tag red">平多仓</span><span class="tag">20×</span></div>
+                  </div>
+                  <time>2h</time>
+                </div>
+              </article>
+            </div>
+          </div></div>
+
+          <nav class="bottom-nav" aria-label="主导航">
+            <button class="active"><svg viewBox="0 0 24 24"><path d="m3 11 9-8 9 8v9a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg><span>今日</span></button>
+            <button><svg viewBox="0 0 24 24"><path d="M5 16c3-7 5 0 8-6s4 1 6-4"/><path d="M4 20h16"/></svg><span>Smart</span></button>
+            <button><svg viewBox="0 0 24 24"><path d="M4 19V9m8 10V5m8 14v-7"/></svg><span>持仓</span></button>
+            <button><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><span>标的</span></button>
+            <button><svg viewBox="0 0 24 24"><path d="M12 3 9.8 8.8 4 11l5.8 2.2L12 19l2.2-5.8L20 11l-5.8-2.2z"/></svg><span>AI</span></button>
+          </nav>
+        </div>
+
+        <button class="scrim" id="scrim" aria-label="关闭作者速览"></button>
+        <aside class="trust-sheet" id="trustSheet" aria-label="Trade With Insight 作者速览" aria-modal="true" role="dialog">
+          <div class="sheet-handle"></div>
+          <div class="sheet-scroll" id="sheetScroll">
+            <header class="sheet-top">
+              <img class="avatar" src="https://pbs.twimg.com/profile_images/2025494376554844161/xvL7GXVG_400x400.png" alt="Trade With Insight" onerror="this.hidden=true;this.nextElementSibling.hidden=false">
+              <span class="avatar avatar-fallback" hidden>TW</span>
+              <div><h2>Trade With Insight</h2><div class="identity-line"><span>X · @twinsight_x</span><span class="verified">● 已认证</span><span>58.2K 关注者</span></div></div>
+              <button class="round-button close-sheet" id="closeSheet" aria-label="关闭"><svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+            </header>
+
+            <div class="profile-actions">
+              <button class="primary-action">查看完整主页</button>
+              <button class="rank-pill" id="rankButton">综合 #7 · X Top 7.3%</button>
+            </div>
+            <div class="rank-explainer" id="rankExplainer" hidden>
+              <strong>这个排名代表什么</strong>
+              <p>基于 221 个已结算 X 观点的积分式表现，再按样本置信度调整。综合排名 #7，X 平台位于前 7.3%。</p>
+            </div>
+
+            <div class="metric-grid" aria-label="作者关键指标">
+              <div><span>SV</span><strong>112</strong><small>较上期 +2</small></div>
+              <div><span>已结算观点</span><strong>221</strong><small>N_eff 38.7</small></div>
+              <div><span>覆盖标的</span><strong>62</strong><small>活跃 124 天</small></div>
+            </div>
+
+            <section class="summary-block">
+              <div class="block-label"><svg viewBox="0 0 24 24"><path d="M12 3 9.8 8.8 4 11l5.8 2.2L12 19l2.2-5.8L20 11l-5.8-2.2z"/></svg><span>AI 近况摘要</span></div>
+              <p>近期继续采用短线技术交易框架。最新对 HOOD 的判断给出了完整的触发价、目标价和止损价；其历史覆盖集中在科技与高波动成长股，而不是长期基本面持有。</p>
+            </section>
+
+            <section class="profile-section">
+              <header><h3>投资策略画像</h3><span>从公开观点归纳</span></header>
+              <p class="strategy-copy">偏好关键价位突破、动量延续与严格止损。观点通常为 5 日左右，先定义触发条件，再给出目标与失效位，适合寻找短线交易计划的用户参考。</p>
+              <div class="strategy-tags"><span class="tag">短线</span><span class="tag">技术面</span><span class="tag">半导体</span><span class="tag">明确目标价</span><span class="tag">严格止损</span></div>
+            </section>
+
+            <section class="profile-section">
+              <header><h3>代表作</h3><span>3 个不同标的 · 点击展开</span></header>
+              <div class="evidence-list">
+                <article class="evidence-item">
+                  <button class="evidence-button" data-evidence="muEvidence">
+                    <span class="ticker-box">MU</span>
+                    <span><span class="evidence-title">突破 US$300 后看向 US$329</span><span class="evidence-meta"><span>看多 · 5D</span><span class="outcome">目标当日触达</span></span></span>
+                    <svg class="mini-chart" viewBox="0 0 90 42" aria-label="MU 价格证据缩略图"><path class="grid" d="M0 34.5H90M0 20.5H90"/><path class="target" d="M0 13.5H90"/><path class="path" d="M2 34 12 32 21 35 31 29 40 27 49 19 59 22 68 12 77 8 88 4"/><circle class="marker" cx="40" cy="27" r="3"/></svg>
+                  </button>
+                  <div class="evidence-detail" id="muEvidence" hidden><p>原判断：触发价 US$315，目标价 US$329，止损价 US$309。作者认为突破 US$300 后动量有望延续。</p><dl><div><dt>观点时价格</dt><dd>US$318.28</dd></div><div><dt>5日后</dt><dd>US$345.87</dd></div><div><dt>区间表现</dt><dd class="outcome">+8.7%</dd></div></dl></div>
+                </article>
+
+                <article class="evidence-item">
+                  <button class="evidence-button" data-evidence="tslaEvidence">
+                    <span class="ticker-box">TSLA</span>
+                    <span><span class="evidence-title">突破 US$355 后看向 US$368</span><span class="evidence-meta"><span>看多 · 5D</span><span class="outcome">目标当日触达</span></span></span>
+                    <svg class="mini-chart" viewBox="0 0 90 42" aria-label="TSLA 价格证据缩略图"><path class="grid" d="M0 34.5H90M0 20.5H90"/><path class="target" d="M0 14.5H90"/><path class="path" d="M2 35 12 30 21 31 30 25 39 29 48 17 57 21 67 12 77 6 88 3"/><circle class="marker" cx="39" cy="29" r="3"/></svg>
+                  </button>
+                  <div class="evidence-detail" id="tslaEvidence" hidden><p>原判断：TSLA 从低位挤压反弹，US$355 是关键突破位，若动量延续可触及 US$363 至 US$368。</p><dl><div><dt>观点时价格</dt><dd>US$350.17</dd></div><div><dt>5日后</dt><dd>US$425.86</dd></div><div><dt>区间表现</dt><dd class="outcome">+21.6%</dd></div></dl></div>
+                </article>
+
+                <article class="evidence-item">
+                  <button class="evidence-button" data-evidence="crclEvidence">
+                    <span class="ticker-box">CRCL</span>
+                    <span><span class="evidence-title">突破 US$108 后看向 US$120</span><span class="evidence-meta"><span>看多 · 5D</span><span class="outcome">目标当日触达</span></span></span>
+                    <svg class="mini-chart" viewBox="0 0 90 42" aria-label="CRCL 价格证据缩略图"><path class="grid" d="M0 34.5H90M0 20.5H90"/><path class="target" d="M0 16.5H90"/><path class="path" d="M2 33 12 36 21 29 30 31 39 23 49 15 58 18 67 10 77 13 88 7"/><circle class="marker" cx="39" cy="23" r="3"/></svg>
+                  </button>
+                  <div class="evidence-detail" id="crclEvidence" hidden><p>原判断：触发价 US$108，目标价 US$120，止损价 US$104。作者预期突破 US$108 至 US$110 后出现挤压行情。</p><dl><div><dt>观点时价格</dt><dd>US$113.44</dd></div><div><dt>5日后</dt><dd>US$125.83</dd></div><div><dt>区间表现</dt><dd class="outcome">+10.9%</dd></div></dl></div>
+                </article>
+              </div>
+            </section>
+
+            <p class="transparency"><strong>口径说明：</strong>以上是公开观点在其声明周期内的价格表现，不代表作者真实持仓、真实账户 PnL 或未来收益。完整主页同时展示全部已结算观点，避免只看代表作。</p>
+          </div>
+        </aside>
+      </section>
+
+      <aside class="rationale">
+        <span class="kicker">TRUST IN CONTEXT</span>
+        <h2>不要让用户先离开动态，再去认识一个陌生作者</h2>
+        <p>作者速览直接附着在观点上。它不重复完整主页，而是在当前阅读场景内回答三个问题：这个人是谁、采用什么策略、过去有哪些可复盘证据。</p>
+        <div class="flow">
+          <article class="flow-step"><b>01</b><div><strong>身份与相对位置</strong><p>真实头像、平台、关注者、综合排名和平台百分位，让用户先知道作者处于哪个层级。</p></div></article>
+          <article class="flow-step"><b>02</b><div><strong>用行为描述策略</strong><p>AI 摘要不写泛化标签，而是总结周期、选股范围、触发条件、目标与止损习惯。</p></div></article>
+          <article class="flow-step"><b>03</b><div><strong>代表作必须可复盘</strong><p>最多展示三个不同标的，观点时点、期限、目标和价格结果同时出现，并允许展开原判断。</p></div></article>
+          <article class="flow-step"><b>04</b><div><strong>不把观点表现伪装成实盘收益</strong><p>速览明确区分公开判断、价格路径和真实账户 PnL。用户需要完整分布时再进入作者主页。</p></div></article>
+        </div>
+        <div class="data-note"><strong>本原型使用的真实字段</strong><p>Trade With Insight：X 综合排名 #7、平台 Top 7.3%、58,237 关注者、221 个已结算观点、覆盖 62 个标的；代表作来自项目现有 TSLA、MU、CRCL 价格证据。</p></div>
+      </aside>
+    </div>
+  </main>
+
+  <script>
+    const phone = document.getElementById('phone');
+    const showFeed = document.getElementById('showFeed');
+    const showSheet = document.getElementById('showSheet');
+    const sheetScroll = document.getElementById('sheetScroll');
+
+    function setSheet(open) {
+      phone.classList.toggle('sheet-open', open);
+      showFeed.classList.toggle('active', !open);
+      showSheet.classList.toggle('active', open);
+      if (open) sheetScroll.scrollTop = 0;
+    }
+
+    document.querySelectorAll('.open-profile').forEach((button) => button.addEventListener('click', () => setSheet(true)));
+    document.getElementById('closeSheet').addEventListener('click', () => setSheet(false));
+    document.getElementById('scrim').addEventListener('click', () => setSheet(false));
+    showFeed.addEventListener('click', () => setSheet(false));
+    showSheet.addEventListener('click', () => setSheet(true));
+    document.addEventListener('keydown', (event) => { if (event.key === 'Escape') setSheet(false); });
+
+    document.getElementById('rankButton').addEventListener('click', () => {
+      const explainer = document.getElementById('rankExplainer');
+      explainer.hidden = !explainer.hidden;
+    });
+
+    document.querySelectorAll('[data-evidence]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const detail = document.getElementById(button.dataset.evidence);
+        const nextState = detail.hidden;
+        document.querySelectorAll('.evidence-detail').forEach((item) => { item.hidden = true; });
+        detail.hidden = !nextState;
+        if (nextState) detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+    });
+
+    document.querySelectorAll('.filter').forEach((button) => {
+      button.addEventListener('click', () => {
+        document.querySelectorAll('.filter').forEach((item) => item.classList.remove('active'));
+        button.classList.add('active');
+      });
+    });
+  </script>
+</body>
+</html>

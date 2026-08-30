@@ -38,6 +38,6 @@ CLI 文件只做：
 - `commands/global_retail.py`：全球散户、Toss、雪球长期管道、报价命令适配，调用 `pipeline.jobs.global_retail`。
 - `commands/youtube.py`：YouTube 命令适配，调用 `pipeline.jobs.youtube`。
 - `commands/kol.py`：KOL 观点提炼、视角、目标价、论点、翻译、相关性和质量命令适配，调用 `pipeline.jobs.kol`。
-- `commands/smart_voice.py`：X 匹配/情绪、SV v0、SV 价格历史、KOL/散户日聚合和整体信号命令适配，调用 `pipeline.jobs.smart_voice`。
+- `commands/smart_voice.py`：X 匹配/情绪、Score v0、Score 价格历史、KOL/散户日聚合和整体信号命令适配，调用 `pipeline.jobs.smart_voice`。
 - `commands/narratives.py`：叙事轮动命令适配，调用 `pipeline.jobs.narrative_rotation`。
 - `commands/_utils.py`：CLI 参数解析辅助函数。

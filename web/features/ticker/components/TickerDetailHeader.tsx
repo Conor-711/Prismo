@@ -1,7 +1,7 @@
 import { SaveButton } from "@/components/favorites/SaveButton";
 import { PriceSparkline } from "@/shared/charts/PriceSparkline";
 import { TickerLogo } from "@/shared/market/TickerLogo";
-import { Consensus, PriceTag } from "@/shared/ui/prismoBits";
+import { Consensus, PriceTag } from "@/shared/ui/bsmartBits";
 import { StageBadge } from "@/shared/ui/detailBits";
 import { fmtCompact } from "@/shared/formatting/format";
 import type { GrQuoteRow, GrTickerRow } from "@/server/queries/globalQueries";

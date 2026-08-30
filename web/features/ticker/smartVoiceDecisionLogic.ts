@@ -261,12 +261,12 @@ export function buildPersonalDecision(
   const reasonsEn: string[] = [];
   if (snapshot) {
     const aligned = desired === 0 || signal * desired >= 0;
-    reasonsZh.push(`Top 25% SV 在 ${horizon} 周期${aligned ? "与仓位方向一致" : "与仓位方向相反"}（净值 ${signal >= 0 ? "+" : ""}${signal.toFixed(2)}）`);
-    reasonsEn.push(`Top 25% SV is ${aligned ? "aligned with" : "against"} the position on ${horizon} (net ${signal >= 0 ? "+" : ""}${signal.toFixed(2)})`);
+    reasonsZh.push(`Top 25% Score 在 ${horizon} 周期${aligned ? "与仓位方向一致" : "与仓位方向相反"}（净值 ${signal >= 0 ? "+" : ""}${signal.toFixed(2)}）`);
+    reasonsEn.push(`Top 25% Score is ${aligned ? "aligned with" : "against"} the position on ${horizon} (net ${signal >= 0 ? "+" : ""}${signal.toFixed(2)})`);
   }
   if (targets.median != null) {
-    reasonsZh.push(`SV 加权目标中位数 $${targets.median.toFixed(0)}，相对现价 ${targetMove >= 0 ? "+" : ""}${(targetMove * 100).toFixed(1)}%`);
-    reasonsEn.push(`SV-weighted median target $${targets.median.toFixed(0)}, ${targetMove >= 0 ? "+" : ""}${(targetMove * 100).toFixed(1)}% vs spot`);
+    reasonsZh.push(`Score 加权目标中位数 $${targets.median.toFixed(0)}，相对现价 ${targetMove >= 0 ? "+" : ""}${(targetMove * 100).toFixed(1)}%`);
+    reasonsEn.push(`Score-weighted median target $${targets.median.toFixed(0)}, ${targetMove >= 0 ? "+" : ""}${(targetMove * 100).toFixed(1)}% vs spot`);
   }
   if (position != null && position >= 20) {
     reasonsZh.push(`持仓占比约 ${position.toFixed(0)}%，应提高失效条件与反方观点权重`);

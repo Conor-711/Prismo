@@ -10,20 +10,28 @@ private struct PortfolioSetupDraft: Identifiable {
 struct PortfolioSetupView: View {
     @EnvironmentObject private var model: AppModel
     @State private var draft: PortfolioSetupDraft?
+    @State private var isShowingBrokerageConnections = false
+    @State private var isAddingTicker = false
+    @State private var searchText = ""
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: BSmartSpacing.xLarge) {
                     header
-                    valueStrip
+                    brokerageEntry
 
-                    BSmartSectionHeader(
-                        title: "Covered now",
-                        detail: "\(model.intelligence.count) launch tickers"
-                    )
+                    HStack {
+                        BSmartSectionHeader(
+                            title: "Stocks",
+                            detail: "\(filteredIntelligence.count)"
+                        )
+                        Spacer()
+                        Button("Add ticker".bSmartLocalized) { isAddingTicker = true }
+                            .font(.caption.weight(.bold))
+                    }
 
-                    ForEach(model.intelligence) { item in
+                    ForEach(filteredIntelligence) { item in
                         tickerRow(item)
                     }
                 }
@@ -31,6 +39,7 @@ struct PortfolioSetupView: View {
                 .padding(.bottom, 96)
             }
             .background(BSmartColor.ink)
+            .searchable(text: $searchText, prompt: "Ticker or company".bSmartLocalized)
             .safeAreaInset(edge: .bottom) {
                 continueBar
             }
@@ -43,9 +52,54 @@ struct PortfolioSetupView: View {
                 )
                 .environmentObject(model)
             }
+            .sheet(isPresented: $isShowingBrokerageConnections) {
+                BrokerageConnectionView()
+                    .environmentObject(model)
+            }
+            .sheet(isPresented: $isAddingTicker) {
+                AddPositionView()
+                    .environmentObject(model)
+            }
         }
         .accessibilityIdentifier("portfolio-setup.screen")
         .bSmartPage()
+    }
+
+    private var filteredIntelligence: [TickerIntelligence] {
+        let available = model.intelligence + Self.additionalTickerOptions.filter { option in
+            !model.intelligence.contains { $0.ticker.caseInsensitiveCompare(option.ticker) == .orderedSame }
+        }.map { Self.placeholderIntelligence($0) }
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return available }
+        return available.filter {
+            $0.ticker.localizedCaseInsensitiveContains(query)
+                || $0.companyName.localizedCaseInsensitiveContains(query)
+        }
+    }
+
+    private static let additionalTickerOptions: [(ticker: String, companyName: String)] = [
+        ("AAPL", "Apple"), ("MSFT", "Microsoft"), ("AMZN", "Amazon"),
+        ("GOOGL", "Alphabet"), ("META", "Meta Platforms"), ("TSM", "Taiwan Semiconductor"),
+        ("AMD", "Advanced Micro Devices"), ("AVGO", "Broadcom"), ("MU", "Micron Technology"),
+        ("NFLX", "Netflix"), ("TSLA", "Tesla"), ("QCOM", "Qualcomm"),
+        ("MRVL", "Marvell Technology"), ("COHR", "Coherent"), ("CRCL", "Circle"),
+        ("MSTR", "Strategy"), ("RKLB", "Rocket Lab"), ("NBIS", "Nebius")
+    ]
+
+    private static func placeholderIntelligence(_ option: (ticker: String, companyName: String)) -> TickerIntelligence {
+        TickerIntelligence(
+            ticker: option.ticker,
+            companyName: option.companyName,
+            currentPrice: 0,
+            dayChangePercent: 0,
+            dataAsOf: .now,
+            relationship: .confirmation,
+            direction: .neutral,
+            conclusion: "",
+            latestSignalId: nil,
+            smartAccount: SmartAccountSnapshot(direction: .neutral, headline: "", detail: "", qualifiedAuthorCount: 0, latestUpdateAt: nil),
+            smartMoney: SmartMoneySnapshot(coverage: .unavailable, direction: .neutral, headline: "", detail: "", qualifiedAccountCount: 0, latestMovementAt: nil)
+        )
     }
 
     private var header: some View {
@@ -54,11 +108,6 @@ struct PortfolioSetupView: View {
 
             Text("Start with your stocks")
                 .font(.system(.largeTitle, design: .rounded, weight: .bold))
-
-            Text("Add a position for portfolio-aware impact, or watch a stock before you buy.")
-                .font(.body)
-                .foregroundStyle(BSmartColor.secondaryText)
-                .fixedSize(horizontal: false, vertical: true)
 
             if let updatedAt = model.lastDataRefreshAt {
                 Label(
@@ -97,6 +146,40 @@ struct PortfolioSetupView: View {
             RoundedRectangle(cornerRadius: BSmartRadius.card, style: .continuous)
                 .stroke(BSmartColor.brand.opacity(0.24), lineWidth: 0.75)
         }
+    }
+
+    private var brokerageEntry: some View {
+        Button {
+            isShowingBrokerageConnections = true
+        } label: {
+            HStack(spacing: BSmartSpacing.medium) {
+                Image(systemName: "link.badge.plus")
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(BSmartColor.pulseInk)
+                    .frame(width: 42, height: 42)
+                    .background(BSmartColor.brand)
+                    .clipShape(RoundedRectangle(cornerRadius: BSmartRadius.card, style: .continuous))
+
+                Text("Link a brokerage".bSmartLocalized)
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(BSmartColor.primaryText)
+
+                Spacer(minLength: BSmartSpacing.small)
+
+                if model.linkedBrokerageAccounts.isEmpty {
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(BSmartColor.tertiaryText)
+                } else {
+                    Label("%d linked".bSmartLocalized(model.linkedBrokerageAccounts.count), systemImage: "checkmark.circle.fill")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(BSmartColor.brand)
+                }
+            }
+            .bSmartSurface(padding: BSmartSpacing.medium)
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("portfolio-setup.link-brokerage")
     }
 
     private func setupValue(symbol: String, title: String, detail: String) -> some View {
@@ -142,8 +225,9 @@ struct PortfolioSetupView: View {
                 Button {
                     draft = PortfolioSetupDraft(intelligence: item, kind: .position)
                 } label: {
-                    Image(systemName: "briefcase.fill")
-                        .frame(width: 38, height: 38)
+                    Text("Hold".bSmartLocalized)
+                        .font(.caption.weight(.bold))
+                        .frame(minWidth: 48, minHeight: 34)
                 }
                 .buttonStyle(.bordered)
                 .accessibilityLabel("Add %@ position".bSmartLocalized(item.ticker))
@@ -159,8 +243,9 @@ struct PortfolioSetupView: View {
                         portfolioWeight: nil
                     )
                 } label: {
-                    Image(systemName: "eye.fill")
-                        .frame(width: 38, height: 38)
+                    Text("Watch".bSmartLocalized)
+                        .font(.caption.weight(.bold))
+                        .frame(minWidth: 48, minHeight: 34)
                 }
                 .buttonStyle(.bordered)
                 .accessibilityLabel("Watch %@".bSmartLocalized(item.ticker))

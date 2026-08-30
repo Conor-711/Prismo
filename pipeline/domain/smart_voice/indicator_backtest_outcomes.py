@@ -1,4 +1,4 @@
-"""Event construction, return settlement, and statistics for SV indicator backtests."""
+"""Event construction, return settlement, and statistics for Score indicator backtests."""
 from __future__ import annotations
 
 import bisect

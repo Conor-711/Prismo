@@ -38,9 +38,6 @@ struct SignalLibraryView: View {
                     Button("Done") { dismiss() }
                 }
             }
-            .navigationDestination(for: PortfolioSignal.self) { signal in
-                EventDetailView(signal: signal)
-            }
         }
         .presentationDetents([.large])
         .bSmartPage()
@@ -88,7 +85,9 @@ struct SignalLibraryView: View {
                         .buttonStyle(.bordered)
                     }
                 } else {
-                    NavigationLink(value: signal) {
+                    BSmartDetailNavigationLink(id: "signal-library-\(signal.id)") {
+                        EventDetailView(signal: signal)
+                    } label: {
                         signalRow(signal)
                     }
                     .buttonStyle(.plain)

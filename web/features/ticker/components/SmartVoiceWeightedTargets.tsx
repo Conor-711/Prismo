@@ -42,7 +42,7 @@ export function SmartVoiceWeightedTargets({
         return [
           `${item.author} · ${item.source}`,
           `${item.direction === "bull" ? (zh ? "看多" : "Bull") : (zh ? "看空" : "Bear")} · ${money(item.target)}`,
-          `SV ${Math.round(item.sv)} · Top ${Math.max(1, Math.ceil(item.percentile))}%`,
+          `Score ${Math.round(item.sv)} · Top ${Math.max(1, Math.ceil(item.percentile))}%`,
           item.createdAt.slice(0, 10),
         ].join("<br/>");
       },
@@ -95,8 +95,8 @@ export function SmartVoiceWeightedTargets({
     <section className="min-w-0 border-b border-line lg:border-b-0 lg:border-r">
       <div className="flex items-center justify-between gap-3 border-b border-line/70 px-4 py-2.5">
         <div>
-          <h4 className="text-[10px] font-semibold text-neutral-300">{zh ? "SV 加权目标价分布" : "SV-weighted target distribution"}</h4>
-          <p className="mt-0.5 text-[8.5px] text-neutral-600">{zh ? "综合作者当时的 SV、证据质量、观点强度与发布时间" : "Combines point-in-time SV, evidence quality, conviction and recency"}</p>
+          <h4 className="text-[10px] font-semibold text-neutral-300">{zh ? "Score 加权目标价分布" : "Score-weighted target distribution"}</h4>
+          <p className="mt-0.5 text-[8.5px] text-neutral-600">{zh ? "综合作者当时的 Score、证据质量、观点强度与发布时间" : "Combines point-in-time Score, evidence quality, conviction and recency"}</p>
         </div>
         <div className="text-right">
           <div className="font-mono text-[15px] font-bold text-cream">{money(distribution.median)}</div>

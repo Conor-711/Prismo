@@ -97,6 +97,6 @@
 
 ① 多周期（5/20/60 日，分离短线 vs 波段技能）+ FDR 多重比较校正 → **可信终榜**；
 ② 把"样本外持续性"做成正式**准入门槛**（只有 r 证明能预测未来的人才贴"可信"标）；
-③ 接进 Prismo 标的页（per-ticker：这只票上最可信的几个声音现在怎么看）。
+③ 接进 bSmart 标的页（per-ticker：这只票上最可信的几个声音现在怎么看）。
 
 > 复跑：脚本在 `/tmp/`（extract_calls / mt_scope / mt_prices / mt_run / mt_dossier.py），stance 缓存 `/tmp/mt_stance.json`（30k，可断点续），报告 `/tmp/mt_report.txt`。需 `QWEN_API_KEY`。

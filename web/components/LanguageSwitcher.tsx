@@ -16,7 +16,7 @@ export function LanguageSwitcher() {
   const go = (target: PublishedLocale) => {
     if (target === lang) return;
     try {
-      localStorage.setItem("prismo:lang", target);
+      localStorage.setItem("bsmart:lang", target);
     } catch {
       /* ignore */
     }

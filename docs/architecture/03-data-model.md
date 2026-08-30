@@ -26,7 +26,7 @@
 - `*_daily`：按日聚合。
 - `*_rollup`：窗口聚合。
 - `*_snapshot`：作者、价格、状态等可重复刷新快照。
-- `kol_*`：KOL/Smart Voice 相关派生。
+- `kol_*`：KOL/Smart Account 相关派生。
 - `gr_*`：全球散户和跨社区零售数据。
 - `yt_*`：YouTube 专属数据。
 
@@ -37,7 +37,7 @@
 - `xueqiu_raw_post`：作者时间线与标的搜索共同复用的 raw 真源；进入部署快照。
 - `xueqiu_post_ticker`：从作者正文提取的多对多标的映射；可从 raw 重算。
 
-## YouTube SV 作者池表
+## YouTube Score 作者池表
 
 - `yt_author_pool_run` / `yt_author_pool`：domain 生成的版本化作者池、媒体分类、选择排名和运行规则；可从频道发现与画像重算。
 - `yt_channel_upload_checkpoint`：platform 维护的一年 uploads playlist 回填状态；属于运行状态。
@@ -45,6 +45,19 @@
 - `yt_channel_upload_relevance` / `yt_channel_upload_ticker`：domain 生成的版本化视频相关性及多 ticker 映射；可从上传元数据重算。
 - `sv_call_candidate` / `sv_call` / `sv_call_settlement`：跨平台标准化 evidence、LLM 结构化 call 和确定性价格结算。
 - `sv_investor_score` / `sv_segment_score`：可重算的当前评分结果；`sv_investor_score_snapshot` 保存跨运行比较快照。
+
+## Hyperliquid Smart Money 表
+
+- `hl_tradfi_instrument`：当前官方 TradFi HIP-3 市场目录，可从 API 重建；运行中按小时刷新。
+- `hl_trade_tape`：WebSocket 公开成交不可变事实，包含真实买卖双方；是持续索引启动后的地址发现真源，进入运行备份。
+- `hl_wallet`：地址发现累计值、fills 游标、历史上限、画像时间和错误 checkpoint；属于运行状态，不可用导出 JSON替代。
+- `hl_fill`：按地址标准化的可审计成交，用于精确 opened/increased/reduced/closed/flipped 和 Onchain Score。
+- `hl_wallet_state_snapshot` / `hl_wallet_position_snapshot`：不可变账户及仓位快照；平仓以 size=0 tombstone 保存。
+- `hl_wallet_state` / `hl_wallet_position`：当前状态投影，可从最新快照重建。
+- `hl_wallet_portfolio` / `hl_wallet_ledger`：低频表现曲线与非资金费资本活动。
+- `hl_wallet_score` / `hl_asset_signal`：可从 fills、当前仓位和快照重算的领域派生层。
+
+`fills_backfill_complete=1` 表示已完成当前官方可提供范围的补齐；`fills_truncated=1` 单独表示触及最近 10,000 条源数据上限。后者不得进入正式方向评分。
 
 ## Schema 真源
 
@@ -65,7 +78,8 @@
 - 观点流：`docs/contracts/opinion.md`
 - 作者/KOL：`docs/contracts/author.md`
 - 目标价和操作周期：`docs/contracts/judgment.md`
-- SV：`docs/contracts/smart_voice.md`
+- Score：`docs/contracts/smart_account.md`
+- Smart Money：`docs/contracts/smart_money.md`
 - 叙事：`docs/contracts/narrative.md`
 
 数据库表可以不同，但导出给前端的对象必须满足对应 contract。

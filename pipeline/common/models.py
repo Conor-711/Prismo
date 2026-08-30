@@ -49,7 +49,7 @@ class JSONText(TypeDecorator):
 
 
 def utcnow() -> dt.datetime:
-    return dt.datetime.utcnow()
+    return dt.datetime.now(dt.UTC).replace(tzinfo=None)
 
 
 # ----------------------------- 原始数据 -----------------------------
@@ -346,50 +346,6 @@ class GrQuote(Base):
     updated_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
 
 
-# --------------------- Telegram 公开频道 Private SV MVP ---------------------
-class TelegramPublicChannel(Base):
-    """One public Telegram broadcast channel used by the Private SV MVP."""
-
-    __tablename__ = "telegram_public_channel"
-    handle: Mapped[str] = mapped_column(String(80), primary_key=True)
-    title: Mapped[str] = mapped_column(String(200), default="")
-    description: Mapped[str] = mapped_column(Text, default="")
-    public_url: Mapped[str] = mapped_column(Text, default="")
-    subscriber_count: Mapped[int] = mapped_column(Integer, default=0)
-    message_count: Mapped[int] = mapped_column(Integer, default=0)
-    first_message_at: Mapped[Optional[dt.datetime]] = mapped_column(DateTime, nullable=True)
-    last_message_at: Mapped[Optional[dt.datetime]] = mapped_column(DateTime, nullable=True)
-    fetched_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
-
-
-class TelegramPublicMessage(Base):
-    """Raw-preserving normalized post from a public Telegram preview page."""
-
-    __tablename__ = "telegram_public_message"
-    __table_args__ = (
-        Index(
-            "ix_telegram_public_message_channel_published",
-            "channel_handle",
-            "published_at",
-        ),
-    )
-    channel_handle: Mapped[str] = mapped_column(String(80), primary_key=True)
-    message_id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    author_name: Mapped[str] = mapped_column(String(200), default="")
-    text: Mapped[str] = mapped_column(Text, default="")
-    language: Mapped[str] = mapped_column(String(8), default="en")
-    url: Mapped[str] = mapped_column(Text, default="")
-    view_count: Mapped[int] = mapped_column(Integer, default=0)
-    reaction_count: Mapped[int] = mapped_column(Integer, default=0)
-    reply_count: Mapped[int] = mapped_column(Integer, default=0)
-    is_forwarded: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
-    forwarded_from: Mapped[str] = mapped_column(String(200), default="")
-    published_at: Mapped[dt.datetime] = mapped_column(DateTime, index=True)
-    raw: Mapped[Optional[dict]] = mapped_column(JSONText, nullable=True)
-    first_seen_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
-    last_seen_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
-
-
 # --------------------- 雪球长期采集管道（raw + job + checkpoint） ---------------------
 class XueqiuCrawlJob(Base):
     """雪球采集任务队列。
@@ -499,7 +455,7 @@ class XueqiuAuthorSnapshot(Base):
 
 
 class XueqiuAuthorPoolCandidate(Base):
-    """Versioned Xueqiu author discovery pool used before SV qualification."""
+    """Versioned Xueqiu author discovery pool used before Score qualification."""
 
     __tablename__ = "xueqiu_author_pool"
     __table_args__ = (
@@ -798,14 +754,167 @@ class KolQuality(Base):
     scored_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
 
 
+# ----------------------------- X Smart Account 实时采集 -----------------------------
+class XRealtimeSubscription(Base):
+    """当前生效的 X Smart Account 作者池快照。"""
+
+    __tablename__ = "x_realtime_subscription"
+    author_id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    handle: Mapped[str] = mapped_column(String(64), default="", index=True)
+    display_name: Mapped[str] = mapped_column(String(160), default="")
+    author_score: Mapped[float] = mapped_column(Float, default=0.0)
+    platform_percentile: Mapped[float] = mapped_column(Float, default=1.0)
+    author_score_as_of: Mapped[Optional[dt.datetime]] = mapped_column(DateTime, nullable=True)
+    pool_version: Mapped[str] = mapped_column(String(80), index=True)
+    active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    activated_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class XRealtimeRule(Base):
+    """第三方规则的本地真源；支持先启用新规则、再退役旧规则。"""
+
+    __tablename__ = "x_realtime_rule"
+    rule_key: Mapped[str] = mapped_column(String(120), primary_key=True)
+    provider_rule_id: Mapped[Optional[str]] = mapped_column(String(160), nullable=True, unique=True)
+    tag: Mapped[str] = mapped_column(String(255), unique=True)
+    value: Mapped[str] = mapped_column(String(255))
+    handles: Mapped[Optional[list]] = mapped_column(JSONText, nullable=True)
+    pool_version: Mapped[str] = mapped_column(String(80), index=True)
+    state: Mapped[str] = mapped_column(String(24), default="pending", index=True)
+    interval_seconds: Mapped[float] = mapped_column(Float, default=60.0)
+    activated_at: Mapped[Optional[dt.datetime]] = mapped_column(DateTime, nullable=True)
+    retire_after: Mapped[Optional[dt.datetime]] = mapped_column(DateTime, nullable=True, index=True)
+    last_reconciled_at: Mapped[Optional[dt.datetime]] = mapped_column(DateTime, nullable=True)
+    last_success_at: Mapped[Optional[dt.datetime]] = mapped_column(DateTime, nullable=True)
+    last_error: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class XRealtimeTransportState(Base):
+    """Current provider transport state shared by the worker and health API."""
+
+    __tablename__ = "x_realtime_transport_state"
+    transport: Mapped[str] = mapped_column(String(24), primary_key=True)
+    connected: Mapped[bool] = mapped_column(Boolean, default=False)
+    connected_at: Mapped[Optional[dt.datetime]] = mapped_column(DateTime, nullable=True)
+    last_heartbeat_at: Mapped[Optional[dt.datetime]] = mapped_column(DateTime, nullable=True)
+    last_error: Mapped[str] = mapped_column(Text, default="")
+    updated_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class XRealtimePost(Base):
+    """Webhook 与补偿查询共享的幂等 X 原帖存储。"""
+
+    __tablename__ = "x_realtime_post"
+    post_id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    author_id: Mapped[str] = mapped_column(String(80), index=True)
+    author_handle: Mapped[str] = mapped_column(String(64), default="", index=True)
+    author_name: Mapped[str] = mapped_column(String(160), default="")
+    author_avatar_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    author_followers_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    author_verified: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
+    source_url: Mapped[str] = mapped_column(Text, default="")
+    original_text: Mapped[str] = mapped_column(Text, default="")
+    language: Mapped[str] = mapped_column(String(16), default="")
+    post_type: Mapped[str] = mapped_column(String(16), default="original")
+    is_reply: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_quote: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_retweet: Mapped[bool] = mapped_column(Boolean, default=False)
+    parent_post_id: Mapped[Optional[str]] = mapped_column(String(40), nullable=True)
+    conversation_id: Mapped[Optional[str]] = mapped_column(String(40), nullable=True)
+    like_count: Mapped[int] = mapped_column(Integer, default=0)
+    reply_count: Mapped[int] = mapped_column(Integer, default=0)
+    retweet_count: Mapped[int] = mapped_column(Integer, default=0)
+    quote_count: Mapped[int] = mapped_column(Integer, default=0)
+    view_count: Mapped[int] = mapped_column(Integer, default=0)
+    bookmark_count: Mapped[int] = mapped_column(Integer, default=0)
+    raw_payload: Mapped[Optional[dict]] = mapped_column(JSONText, nullable=True)
+    delivery_source: Mapped[str] = mapped_column(String(24), default="webhook")
+    delivery_tag: Mapped[str] = mapped_column(String(255), default="")
+    status: Mapped[str] = mapped_column(String(24), default="pending", index=True)
+    attempt_count: Mapped[int] = mapped_column(Integer, default=0)
+    next_attempt_at: Mapped[Optional[dt.datetime]] = mapped_column(DateTime, nullable=True, index=True)
+    last_error: Mapped[str] = mapped_column(Text, default="")
+    processing_version: Mapped[str] = mapped_column(String(80), default="")
+    published_at: Mapped[dt.datetime] = mapped_column(DateTime, index=True)
+    ingested_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow, index=True)
+    last_seen_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+    processed_at: Mapped[Optional[dt.datetime]] = mapped_column(DateTime, nullable=True)
+    deleted_at: Mapped[Optional[dt.datetime]] = mapped_column(DateTime, nullable=True, index=True)
+
+    __table_args__ = (
+        Index("idx_x_realtime_post_queue", "status", "next_attempt_at", "published_at"),
+    )
+
+
+class XRealtimeCall(Base):
+    """由完整原帖提取、翻译并通过证据门禁后的产品级观点。"""
+
+    __tablename__ = "x_realtime_call"
+    call_id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    idempotency_key: Mapped[str] = mapped_column(String(180), unique=True, index=True)
+    post_id: Mapped[str] = mapped_column(String(40), ForeignKey("x_realtime_post.post_id"), index=True)
+    ticker: Mapped[str] = mapped_column(String(16), index=True)
+    direction: Mapped[str] = mapped_column(String(12))
+    horizon: Mapped[str] = mapped_column(String(16), default="unknown")
+    target_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    lifecycle: Mapped[str] = mapped_column(String(32), default="open_call")
+    invalidation: Mapped[str] = mapped_column(Text, default="")
+    evidence_span: Mapped[str] = mapped_column(Text, default="")
+    original_text: Mapped[str] = mapped_column(Text)
+    translated_text_zh: Mapped[str] = mapped_column(Text)
+    translated_text_en: Mapped[str] = mapped_column(Text)
+    thesis_zh: Mapped[str] = mapped_column(Text, default="")
+    thesis_en: Mapped[str] = mapped_column(Text, default="")
+    author_score: Mapped[float] = mapped_column(Float, default=0.0)
+    author_percentile: Mapped[float] = mapped_column(Float, default=1.0)
+    author_score_as_of: Mapped[Optional[dt.datetime]] = mapped_column(DateTime, nullable=True)
+    extraction_model: Mapped[str] = mapped_column(String(120), default="")
+    translation_model: Mapped[str] = mapped_column(String(120), default="")
+    call_scoring_version: Mapped[str] = mapped_column(String(80))
+    call_policy_version: Mapped[str] = mapped_column(String(80))
+    ready_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow, index=True)
+    deleted_at: Mapped[Optional[dt.datetime]] = mapped_column(DateTime, nullable=True, index=True)
+
+
+class XRealtimeEventCandidate(Base):
+    """事件引擎的幂等输入；通知系统只消费 ready 事件。"""
+
+    __tablename__ = "x_realtime_event_candidate"
+    idempotency_key: Mapped[str] = mapped_column(String(180), primary_key=True)
+    call_id: Mapped[str] = mapped_column(String(40), ForeignKey("x_realtime_call.call_id"), index=True)
+    ticker: Mapped[str] = mapped_column(String(16), index=True)
+    event_type: Mapped[str] = mapped_column(String(48), default="smart_account_update")
+    status: Mapped[str] = mapped_column(String(24), default="ready", index=True)
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow, index=True)
+    consumed_at: Mapped[Optional[dt.datetime]] = mapped_column(DateTime, nullable=True)
+
+
+class XRealtimeRun(Base):
+    """采集、补偿、处理、发布和合规检查的可审计运行记录。"""
+
+    __tablename__ = "x_realtime_run"
+    run_id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    job: Mapped[str] = mapped_column(String(40), index=True)
+    status: Mapped[str] = mapped_column(String(24), index=True)
+    received_count: Mapped[int] = mapped_column(Integer, default=0)
+    inserted_count: Mapped[int] = mapped_column(Integer, default=0)
+    ready_count: Mapped[int] = mapped_column(Integer, default=0)
+    failed_count: Mapped[int] = mapped_column(Integer, default=0)
+    estimated_cost_usd: Mapped[float] = mapped_column(Float, default=0.0)
+    details: Mapped[Optional[dict]] = mapped_column(JSONText, nullable=True)
+    started_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow, index=True)
+    finished_at: Mapped[Optional[dt.datetime]] = mapped_column(DateTime, nullable=True)
+
+
 ALL_TABLES = [
     Subreddit, Author, Post, Comment, TickerMeta, Mention, ItemAnalysis,
     TickerRollup, MarketMood, Trending, Narrative, NarrativeTicker,
     NarrativePost, DailyBrief,
     # 全球散户多区看板隔离表（同样进快照、不进 SOURCE_TABLES）。
     GrPost, GrTickerRegion, GrTicker, GrQuote,
-    # Telegram 公开频道 Private SV MVP 原始层（不进入公域站点导出）。
-    TelegramPublicChannel, TelegramPublicMessage,
     # 雪球长期采集管道：任务、断点、raw、作者快照和帖子-标的映射。
     XueqiuCrawlJob, XueqiuCrawlCheckpoint, XueqiuRawPost, XueqiuPostTicker, XueqiuAuthorSnapshot,
     # YouTube 观点隔离表（同样进快照、不进 SOURCE_TABLES）。
@@ -824,4 +933,7 @@ ALL_TABLES = [
     KolQuality,
     # KOL 观点「目标价+操作周期」结构化抽取隔离表（同样进快照、不进 SOURCE_TABLES）。
     KolJudgment,
+    # X Smart Account 15 分钟实时链路（生产写 Postgres；本地只用于开发与测试）。
+    XRealtimeSubscription, XRealtimeRule, XRealtimeTransportState, XRealtimePost, XRealtimeCall,
+    XRealtimeEventCandidate, XRealtimeRun,
 ]

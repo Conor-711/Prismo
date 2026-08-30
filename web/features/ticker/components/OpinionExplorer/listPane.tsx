@@ -91,7 +91,7 @@ export function OpinionListPane({
           <div className="flex items-center gap-1">
             <span className="text-[11px] text-neutral-600">{zh ? "排序" : "Sort"}</span>
             {personalConfigured && <Chip active={sort === "personal"} onClick={() => onSortChange("personal")}>{zh ? "推荐" : "For You"}</Chip>}
-            {svSortAvailable && <Chip active={sort === "sv"} onClick={() => onSortChange("sv")}>SV</Chip>}
+            {svSortAvailable && <Chip active={sort === "sv"} onClick={() => onSortChange("sv")}>Score</Chip>}
             <Chip active={sort === "rel"} onClick={() => onSortChange("rel")}>{zh ? "相关度" : "Rel"}</Chip>
             <Chip active={sort === "hot"} onClick={() => onSortChange("hot")}>{zh ? "热度" : "Top"}</Chip>
             <Chip active={sort === "time"} onClick={() => onSortChange("time")}>{zh ? "最新" : "New"}</Chip>

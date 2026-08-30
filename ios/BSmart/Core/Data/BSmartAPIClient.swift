@@ -2,6 +2,7 @@ import Foundation
 
 protocol BSmartAPIClient {
     func fetchPortfolio() async throws -> [PortfolioPosition]
+    func fetchPortfolioHistory() async throws -> [PortfolioValuePoint]
     func fetchSignals() async throws -> [PortfolioSignal]
     func fetchSmartAccountUpdates() async throws -> [SmartAccountUpdate]
     func fetchSmartMoneyMovements() async throws -> [SmartMoneyMovement]
@@ -9,7 +10,9 @@ protocol BSmartAPIClient {
     func fetchSmartAccounts() async throws -> [SmartAccountProfile]
     func fetchSmartAccountEvidence(accountID: String) async throws -> [SmartAccountUpdate]
     func fetchSmartMoney() async throws -> [SmartMoneySignal]
+    func fetchSmartMoneyEvidence(accountID: String) async throws -> [SmartMoneyRepresentativeEvidence]
     func fetchDailyDigest() async throws -> DailyDigestSnapshot?
+    func queryMrCollie(_ query: MrCollieQuery) async throws -> MrCollieResponse
 }
 
 protocol BSmartDataFreshnessProviding: Sendable {
@@ -20,8 +23,16 @@ protocol BSmartDataFreshnessProviding: Sendable {
 extension BSmartAPIClient {
     func fetchDailyDigest() async throws -> DailyDigestSnapshot? { nil }
 
+    func fetchPortfolioHistory() async throws -> [PortfolioValuePoint] { [] }
+
     func fetchSmartAccountEvidence(accountID: String) async throws -> [SmartAccountUpdate] {
         try await fetchSmartAccountUpdates().filter { $0.authorId == accountID }
+    }
+
+    func fetchSmartMoneyEvidence(accountID: String) async throws -> [SmartMoneyRepresentativeEvidence] { [] }
+
+    func queryMrCollie(_ query: MrCollieQuery) async throws -> MrCollieResponse {
+        throw BSmartAPIError.mrCollieUnavailable
     }
 }
 
@@ -31,6 +42,7 @@ enum BSmartAPIError: LocalizedError {
     case httpStatus(Int)
     case secureStorage(Int32)
     case unverifiedSmartMoney(String)
+    case mrCollieUnavailable
 
     var errorDescription: String? {
         switch self {
@@ -39,6 +51,7 @@ enum BSmartAPIError: LocalizedError {
         case let .httpStatus(status): "bSmart request failed with status \(status)."
         case .secureStorage: "bSmart could not access the secure installation session."
         case let .unverifiedSmartMoney(reason): "bSmart rejected unverified Smart Money data: \(reason)"
+        case .mrCollieUnavailable: "Mr Collie is unavailable for this data source."
         }
     }
 }
@@ -75,6 +88,15 @@ final class HTTPBSmartAPIClient: BSmartAPIClient, BSmartRemoteSyncing, BSmartDat
         try await get("v1/portfolio")
     }
 
+    func fetchPortfolioHistory() async throws -> [PortfolioValuePoint] {
+        do {
+            return try await get("v1/portfolio/history")
+        } catch let error as BSmartAPIError {
+            if case .httpStatus(404) = error { return [] }
+            throw error
+        }
+    }
+
     func fetchSignals() async throws -> [PortfolioSignal] {
         try await get("v1/feed")
     }
@@ -106,6 +128,11 @@ final class HTTPBSmartAPIClient: BSmartAPIClient, BSmartRemoteSyncing, BSmartDat
         return signals
     }
 
+    func fetchSmartMoneyEvidence(accountID: String) async throws -> [SmartMoneyRepresentativeEvidence] {
+        let encoded = accountID.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? accountID
+        return try await get("v1/smart-money/\(encoded)/evidence")
+    }
+
     func fetchDailyDigest() async throws -> DailyDigestSnapshot? {
         do {
             return try await get("v1/daily-digest")
@@ -113,6 +140,16 @@ final class HTTPBSmartAPIClient: BSmartAPIClient, BSmartRemoteSyncing, BSmartDat
             if case .httpStatus(404) = error { return nil }
             throw error
         }
+    }
+
+    func queryMrCollie(_ query: MrCollieQuery) async throws -> MrCollieResponse {
+        let data = try await request(
+            "v1/mr-collie/query",
+            method: "POST",
+            body: try Self.makeEncoder().encode(query),
+            timeoutInterval: 50
+        )
+        return try decoder.decode(MrCollieResponse.self, from: data)
     }
 
     func fetchLegacyEvents() async throws -> [InvestmentEvent] {
@@ -175,11 +212,15 @@ final class HTTPBSmartAPIClient: BSmartAPIClient, BSmartRemoteSyncing, BSmartDat
     private func request(
         _ path: String,
         method: String = "GET",
-        body: Data? = nil
+        body: Data? = nil,
+        timeoutInterval: TimeInterval? = nil
     ) async throws -> Data {
         for attempt in 0..<2 {
             var request = URLRequest(url: baseURL.appending(path: path))
             request.httpMethod = method
+            if let timeoutInterval {
+                request.timeoutInterval = timeoutInterval
+            }
             request.setValue("application/json", forHTTPHeaderField: "Accept")
             if let body {
                 request.httpBody = body
@@ -224,7 +265,9 @@ final class HTTPBSmartAPIClient: BSmartAPIClient, BSmartRemoteSyncing, BSmartDat
         let source: BSmartLiveDataSource?
         if path == "v1/smart-account-updates" {
             source = .smartAccount
-        } else if path == "v1/smart-money" || path.hasPrefix("v1/smart-money-movements") {
+        } else if path == "v1/smart-money"
+                    || path.hasPrefix("v1/smart-money-movements")
+                    || path.contains("/smart-money/") {
             source = .smartMoney
         } else {
             source = nil
@@ -300,6 +343,10 @@ final class BundleBSmartAPIClient: BSmartAPIClient {
         try decode("portfolio")
     }
 
+    func fetchPortfolioHistory() async throws -> [PortfolioValuePoint] {
+        try decode("portfolio-history")
+    }
+
     func fetchSignals() async throws -> [PortfolioSignal] {
         try decode("portfolio-signals")
     }
@@ -327,6 +374,11 @@ final class BundleBSmartAPIClient: BSmartAPIClient {
 
     func fetchSmartMoney() async throws -> [SmartMoneySignal] {
         try decode("smart-money")
+    }
+
+    func fetchSmartMoneyEvidence(accountID: String) async throws -> [SmartMoneyRepresentativeEvidence] {
+        let evidence: [SmartMoneyRepresentativeEvidence] = try decode("smart-money-evidence")
+        return evidence.filter { $0.accountId == accountID }
     }
 
     private func decode<Response: Decodable>(_ name: String) throws -> Response {

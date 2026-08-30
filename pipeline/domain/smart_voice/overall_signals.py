@@ -263,7 +263,7 @@ def _divergence_payload(smart: dict[str, float], retail: dict[str, float], win: 
 
 
 def _local_sv_divergence(ticker: str, con: sqlite3.Connection, win: list[str]):
-    """使用 call 当日的历史 SV 百分位构建无前视的聪明钱情绪线。"""
+    """使用 call 当日的历史 Score 百分位构建无前视的聪明钱情绪线。"""
     smart: dict[str, float] = defaultdict(float)
     authors: set[str] = set()
     rows = con.execute(

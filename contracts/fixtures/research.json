@@ -4,10 +4,10 @@
     "companyName": "Robinhood Markets",
     "currentPrice": 69.84,
     "dayChangePercent": -0.018,
-    "conclusion": "Social sentiment remains constructive, but high-scoring onchain wallets have not confirmed the move.",
+    "conclusion": "Social sentiment remains constructive, but high-scoring capital accounts have not confirmed the move.",
     "smartAccountShift": "Top-quartile views moved more positive over 24 hours, led by fintech-focused accounts.",
     "smartMoneyCoverage": "available",
-    "smartMoneyShift": "Aggregate high-score wallet exposure declined by $940K during the same period.",
+    "smartMoneyShift": "Aggregate high-score account exposure declined by $940K during the same period.",
     "opinions": [
       {
         "id": "00000000-0000-0000-0000-000000000301",
@@ -25,10 +25,10 @@
     "companyName": "NVIDIA",
     "currentPrice": 128.62,
     "dayChangePercent": 0.014,
-    "conclusion": "High-ranked social views and observable onchain positioning are aligned, with valuation as the main near-term constraint.",
+    "conclusion": "High-ranked social views and observable capital positioning are aligned, with valuation as the main near-term constraint.",
     "smartAccountShift": "Three semiconductor specialists upgraded their medium-term stance within the last 18 hours.",
     "smartMoneyCoverage": "available",
-    "smartMoneyShift": "Five high-score wallets added $1.8M of net long exposure across HIP-3 markets.",
+    "smartMoneyShift": "Five high-score capital accounts added $1.8M of net long exposure.",
     "opinions": [
       {
         "id": "00000000-0000-0000-0000-000000000302",
@@ -58,7 +58,7 @@
     "conclusion": "A new high-quality long-horizon thesis improves the evidence set, but it is not yet broadly confirmed.",
     "smartAccountShift": "One top-decile software investor initiated coverage after a 180-day absence.",
     "smartMoneyCoverage": "available",
-    "smartMoneyShift": "Onchain exposure is stable and does not currently confirm or contradict the new view.",
+    "smartMoneyShift": "Tracked capital exposure is stable and does not currently confirm or contradict the new view.",
     "opinions": [
       {
         "id": "00000000-0000-0000-0000-000000000304",

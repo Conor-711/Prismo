@@ -7,15 +7,8 @@
 //   - Yahoo JP：gr_post(source=yahoo_jp) 按 author 聚合；主指标=赞+踩+评论。
 // 库缺失/缺表时各平台返回空数组 → 页面渲染空态（与 output:export 兼容，见 db.ts 兜底）。
 import { all } from "@/lib/db";
+import { safeQuery as safe } from "@/server/db/safeQuery";
 import type { KolSource } from "@/shared/market/mockDetail";
-
-function safe<T>(fn: () => T, fb: T): T {
-  try {
-    return fn();
-  } catch {
-    return fb;
-  }
-}
 
 export interface Investor {
   source: KolSource;

@@ -1,4 +1,4 @@
-"""CSV and Markdown exports for vertical sub-SV backtests."""
+"""CSV and Markdown exports for vertical sub-Score backtests."""
 from __future__ import annotations
 
 import csv
@@ -111,16 +111,16 @@ def write_segment_reports(con: sqlite3.Connection, report_path: Path) -> dict[st
     ).fetchall()
     summary_path = report_path.parent / "sv_segment_backtest_summary.md"
     lines = [
-        "# X 子 SV 垂直集中效果回测",
+        "# X 子 Score 垂直集中效果回测",
         "",
         "## 口径",
         "",
-        "- 作者子 SV 只使用信号日前已经到期的结算证据，禁止使用当前排名回填历史。",
+        "- 作者子 Score 只使用信号日前已经到期的结算证据，禁止使用当前排名回填历史。",
         "- 每个滚动窗口内按作者最新 Call 去重；至少 3 位作者、同向度 65%、有效声音 2.5。",
-        "- 比较子 SV Top 10% 与 Top 25%；下一交易日调整后开盘入场，相对 SPY 计算方向超额。",
-        "- 周期子 SV 的主结果使用同名后续周期；赛道和投资类型表统一展示 20D，完整周期见 CSV。",
+        "- 比较子 Score Top 10% 与 Top 25%；下一交易日调整后开盘入场，相对 SPY 计算方向超额。",
+        "- 周期子 Score 的主结果使用同名后续周期；赛道和投资类型表统一展示 20D，完整周期见 CSV。",
         "",
-        "## 子 SV 历史池覆盖",
+        "## 子 Score 历史池覆盖",
         "",
         "来源 | 子类 | key | 最大合格作者数 | 首次形成 | 最后日期",
         "---|---|---|---:|---|---",
@@ -129,11 +129,11 @@ def write_segment_reports(con: sqlite3.Connection, report_path: Path) -> dict[st
         f"{row['source']} | {row['segment_type']} | {row['segment_key']} | {row['max_population']} | {row['first_qualified_day']} | {row['last_day']}"
         for row in latest_coverage
     )
-    lines.extend(["", "## 时间周期子 SV：匹配周期", ""])
+    lines.extend(["", "## 时间周期子 Score：匹配周期", ""])
     lines.extend(_stat_table(horizon_rows, include_match=True))
-    lines.extend(["", "## 赛道子 SV：20D 后续表现", ""])
+    lines.extend(["", "## 赛道子 Score：20D 后续表现", ""])
     lines.extend(_stat_table(narrative_rows))
-    lines.extend(["", "## 投资类型子 SV：20D 后续表现", ""])
+    lines.extend(["", "## 投资类型子 Score：20D 后续表现", ""])
     lines.extend(_stat_table(style_rows))
     lines.extend(
         [

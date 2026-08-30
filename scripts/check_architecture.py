@@ -49,7 +49,19 @@ class TsImport:
     is_type_only: bool
 
 
+@dataclass(frozen=True)
+class SwiftRule:
+    root: str
+    banned_patterns: tuple[re.Pattern[str], ...]
+    reason: str
+
+
 PYTHON_RULES = (
+    PythonRule(
+        root="services/client_api",
+        banned_prefixes=("pipeline",),
+        reason="client API serves versioned read/state models and must not orchestrate ingestion or scoring jobs",
+    ),
     PythonRule(
         root="pipeline/cli",
         banned_prefixes=(
@@ -94,25 +106,25 @@ TS_RULES = (
     TsRule(
         root="web/app",
         banned_patterns=(
-            re.compile(r"^@/components/prismo(?:/|$)"),
+            re.compile(r"^@/components/bsmart(?:/|$)"),
             re.compile(r"^@/lib/.*Queries$"),
         ),
-        reason="routes should compose features/server queries, not legacy Prismo components or legacy query files",
+        reason="routes should compose features/server queries, not legacy bSmart components or legacy query files",
     ),
     TsRule(
         root="web/features",
         banned_patterns=(
             re.compile(r"^@/app(?:/|$)"),
-            re.compile(r"^@/components/prismo(?:/|$)"),
+            re.compile(r"^@/components/bsmart(?:/|$)"),
             re.compile(r"^@/lib/.*Queries$"),
         ),
-        reason="features must not depend on app routes or legacy Prismo/query modules",
+        reason="features must not depend on app routes or legacy bSmart/query modules",
     ),
     TsRule(
         root="web/shared",
         banned_patterns=(
             re.compile(r"^@/app(?:/|$)"),
-            re.compile(r"^@/components/prismo(?:/|$)"),
+            re.compile(r"^@/components/bsmart(?:/|$)"),
             re.compile(r"^@/features(?:/|$)"),
             re.compile(r"^@/server(?:/|$)"),
         ),
@@ -126,6 +138,34 @@ TS_RULES = (
             re.compile(r"^@/features(?:/|$)"),
         ),
         reason="server queries must not import UI/application layers",
+    ),
+)
+
+
+SWIFT_RULES = (
+    SwiftRule(
+        root="ios/BSmart/Features",
+        banned_patterns=(
+            re.compile(r"\bURLSession\b"),
+            re.compile(r"\bUserDefaults\b"),
+            re.compile(r"\bBundle\b"),
+            re.compile(r"\b(?:SQLite|sqlite3)\b"),
+            re.compile(r"^\s*import\s+(?:CoreData|WebKit)\s*$"),
+        ),
+        reason="iOS features may consume AppModel/Core APIs but not own networking, persistence, SQLite, or WebView",
+    ),
+    SwiftRule(
+        root="ios/BSmart/Core/Models",
+        banned_patterns=(re.compile(r"^\s*import\s+SwiftUI\s*$"),),
+        reason="iOS contract models must remain UI-framework independent",
+    ),
+    SwiftRule(
+        root="ios/bSmart",
+        banned_patterns=(
+            re.compile(r"\bWKWebView\b"),
+            re.compile(r"\bdev\.db\b"),
+        ),
+        reason="the native app must not embed the website or read the repository database",
     ),
 )
 
@@ -263,8 +303,28 @@ def check_typescript() -> list[Violation]:
     return violations
 
 
+def check_swift() -> list[Violation]:
+    violations: list[Violation] = []
+    required = (
+        ROOT / "ios/project.yml",
+        ROOT / "contracts/openapi/bsmart-v1.yaml",
+        ROOT / "design/tokens/bsmart.tokens.json",
+    )
+    for path in required:
+        if not path.exists():
+            violations.append(Violation(path, 1, "required iOS-first architecture file is missing"))
+
+    for rule in SWIFT_RULES:
+        for path in iter_files(rule.root, (".swift",)):
+            for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+                for pattern in rule.banned_patterns:
+                    if pattern.search(line):
+                        violations.append(Violation(path, line_number, rule.reason))
+    return violations
+
+
 def main() -> int:
-    violations = [*check_python(), *check_typescript()]
+    violations = [*check_python(), *check_typescript(), *check_swift()]
     if violations:
         print("Architecture boundary check failed:\n")
         for violation in violations:

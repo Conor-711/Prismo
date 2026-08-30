@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-labelledby="title desc">
+  <title id="title">bSmart Logo Concept 06 - Score Monogram</title>
+  <desc id="desc">An abstract P and check signal mark for Smart Account confidence.</desc>
+  <defs>
+    <linearGradient id="g" x1="23" y1="17" x2="77" y2="83" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#57D7BA"/>
+      <stop offset="1" stop-color="#2F6F63"/>
+    </linearGradient>
+  </defs>
+  <path d="M24 18h32c13 0 23 10 23 23S69 64 56 64H42v18H24V18z" fill="url(#g)"/>
+  <path d="M42 35h13c4 0 7 3 7 7s-3 7-7 7H42V35z" fill="#17191C"/>
+  <path d="M34 63l12 11 28-32" fill="none" stroke="#17191C" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M34 63l12 11 28-32" fill="none" stroke="#57D7BA" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

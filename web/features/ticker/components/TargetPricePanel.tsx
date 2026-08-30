@@ -6,141 +6,32 @@
 //   悬浮 tooltip 出详情：作者 / 平台·日期 / 价位(±现价%) / 操作周期(短中长+原话) / 简单依据。
 import { useMemo, useState } from "react";
 import ReactECharts from "echarts-for-react";
-import type { KolSource, KolTargetData, TargetMark } from "@/shared/market/mockDetail";
+import type { KolTargetData, TargetMark } from "@/shared/market/mockDetail";
 import { SOURCE } from "@/shared/market/kolPresentation";
+import {
+  DEFAULT_PRICE_ZOOM,
+  formatTargetDay as mmdd,
+  formatTargetPrice as fmtPrice,
+  formatTargetRange as fmtRange,
+  shiftTargetDay as shiftDay,
+  TARGET_BUCKET_EN as BUCKET_EN,
+  TARGET_BUCKET_ZH as BUCKET_ZH,
+  TARGET_BUCKETS as BUCKETS,
+  TARGET_BUY_COLOR as BUY,
+  TARGET_CHART_BACKGROUND as CHART_BG,
+  TARGET_LINE_COLOR as LINE,
+  TARGET_PLATFORM_ORDER as PLATFORM_ORDER,
+  TARGET_RECENCY_OPTIONS as RECENCY_OPTIONS,
+  TARGET_SELL_COLOR as SELL,
+  TARGET_TOOLTIP_BACKGROUND as TIP_BG,
+  targetMarkJitterMs as jitterMs,
+  type TargetBucketFilter as BucketFilter,
+  type TargetRecencyFilter as RecencyFilter,
+  type TargetScoreFilter as SvFilter,
+  type TargetSourceFilter as SourceFilter,
+} from "../targetPriceModel";
+import { TargetDistributionChart } from "./TargetDistributionChart";
 
-const BUY = "#57D7BA";
-const SELL = "#FF5C6C";
-const LINE = "#343A42";
-const TIP_BG = "#20242A";
-const CHART_BG = "#17191C";
-const fmtPrice = (n: number) => (n >= 10 ? Math.round(n).toLocaleString() : String(+n.toFixed(2)));
-const fmtRange = (lo: number, hi: number) => (hi > lo ? `$${fmtPrice(lo)}–$${fmtPrice(hi)}` : `$${fmtPrice(lo)}`);
-const BUCKET_ZH: Record<string, string> = { short: "短线", mid: "中线", long: "长线" };
-const BUCKET_EN: Record<string, string> = { short: "short", mid: "mid", long: "long" };
-const mmdd = (ds: string) => { const [, m, d] = (ds || "").split("-"); return m ? `${+m}/${+d}` : ds; };
-const DEFAULT_PRICE_ZOOM = 2;
-const BUCKETS = ["short", "mid", "long"] as const;
-const PLATFORM_ORDER: KolSource[] = ["x", "youtube", "reddit", "xueqiu", "toss", "yahoojp"];
-const RECENCY_OPTIONS = [1, 3, 7, 14, 30, 60, 90] as const;
-type BucketFilter = "all" | (typeof BUCKETS)[number];
-type SourceFilter = "all" | KolSource;
-type RecencyFilter = (typeof RECENCY_OPTIONS)[number];
-type SvFilter = "top5" | "top10" | "top25" | "top50" | "scored" | "all";
-
-const shiftDay = (day: string, delta: number) => {
-  const date = new Date(`${day}T00:00:00Z`);
-  date.setUTCDate(date.getUTCDate() + delta);
-  return date.toISOString().slice(0, 10);
-};
-
-// 同一天多条 → 稳定左右抖动（±0.15 天），按作者+侧+价位散开，避免重叠成一团。
-function jitterMs(m: TargetMark): number {
-  const k = `${m.author}${m.kind}${m.lo}`;
-  let h = 0;
-  for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) >>> 0;
-  return ((h % 1000) / 1000 - 0.5) * 0.3 * 864e5;
-}
-
-function TargetDistributionChart({ marks, current, zh }: { marks: TargetMark[]; current: number | null; zh: boolean }) {
-  const option = useMemo(() => {
-    const points = marks.map((m) => ({ mark: m, mid: (m.lo + m.hi) / 2 })).filter((p) => p.mid > 0);
-    const prices = [...points.map((p) => p.mid), ...(current ? [current] : [])];
-    if (!points.length || !prices.length) return { backgroundColor: "transparent" };
-    const rawMin = Math.min(...prices);
-    const rawMax = Math.max(...prices);
-    const span = rawMax - rawMin || rawMax * 0.2 || 1;
-    const min = Math.max(0, rawMin - span * 0.12);
-    const max = rawMax + span * 0.12;
-    const binCount = Math.max(4, Math.min(9, Math.ceil(Math.sqrt(points.length) * 1.8)));
-    const step = (max - min) / binCount || 1;
-    const labels = Array.from({ length: binCount }, (_, i) => {
-      const a = min + step * i;
-      const b = i === binCount - 1 ? max : min + step * (i + 1);
-      return `$${fmtPrice(a)}–${fmtPrice(b)}`;
-    });
-    const buy = Array(binCount).fill(0);
-    const sell = Array(binCount).fill(0);
-    for (const p of points) {
-      const idx = Math.max(0, Math.min(binCount - 1, Math.floor((p.mid - min) / step)));
-      if (p.mark.kind === "buy") buy[idx] += 1;
-      else sell[idx] += 1;
-    }
-    const currentIdx = current ? Math.max(0, Math.min(binCount - 1, Math.floor((current - min) / step))) : null;
-    return {
-      backgroundColor: "transparent",
-      grid: { left: 6, right: 12, top: 8, bottom: 28, containLabel: true },
-      tooltip: {
-        trigger: "axis",
-        axisPointer: { type: "shadow" },
-        backgroundColor: TIP_BG,
-        borderColor: LINE,
-        borderWidth: 1,
-        textStyle: { color: "#e5e5e5", fontSize: 11 },
-        extraCssText: "border-radius:8px;max-width:240px;white-space:normal",
-        formatter: (ps: any[]) => {
-          const idx = ps?.[0]?.dataIndex ?? 0;
-          return `<b>${labels[idx]}</b><br/><span style="color:${BUY}">●</span> ${zh ? "买入" : "Buy"} <b>${buy[idx]}</b><br/><span style="color:${SELL}">●</span> ${zh ? "卖出/目标" : "Sell/target"} <b>${sell[idx]}</b>${currentIdx === idx ? `<br/><span style="color:#9a9da1">${zh ? "现价所在区间" : "Current price bin"}</span>` : ""}`;
-        },
-      },
-      xAxis: {
-        type: "category",
-        data: labels,
-        axisLine: { lineStyle: { color: LINE } },
-        axisTick: { show: false },
-        axisLabel: { color: "#73757a", fontSize: 9, interval: 0, rotate: labels.length > 5 ? 18 : 0 },
-      },
-      yAxis: {
-        type: "value",
-        minInterval: 1,
-        axisLine: { show: false },
-        axisTick: { show: false },
-        axisLabel: { color: "#73757a", fontSize: 9 },
-        splitLine: { lineStyle: { color: "#1d1f21" } },
-      },
-      series: [
-        {
-          name: zh ? "买入" : "Buy",
-          type: "bar",
-          data: buy,
-          itemStyle: { color: BUY, opacity: 0.82, borderRadius: [2, 2, 0, 0] },
-          barMaxWidth: 18,
-          markLine: currentIdx != null ? {
-            silent: true,
-            symbol: "none",
-            lineStyle: { color: "#9a9da1", type: "dashed", width: 1 },
-            label: { color: "#c2c4c7", fontSize: 9, formatter: `${zh ? "现价" : "Now"} $${fmtPrice(current!)}` },
-            data: [{ xAxis: labels[currentIdx] }],
-          } : undefined,
-        },
-        {
-          name: zh ? "卖出/目标" : "Sell/target",
-          type: "bar",
-          data: sell,
-          itemStyle: { color: SELL, opacity: 0.82, borderRadius: [2, 2, 0, 0] },
-          barMaxWidth: 18,
-        },
-      ],
-    };
-  }, [marks, current, zh]);
-
-  if (!marks.length) return null;
-  return (
-    <div className="mt-3 border-t border-line/50 pt-2">
-      <div className="mb-1 flex items-center justify-between gap-3 px-1">
-        <span className="text-[11.5px] font-semibold text-neutral-400">{zh ? "目标价分布" : "Target price distribution"}</span>
-        <span className="text-[10px] text-neutral-600">{zh ? "同筛选条件 · 区间计数" : "same filters · binned"}</span>
-      </div>
-      <ReactECharts
-        option={option}
-        style={{ height: 148, width: "100%" }}
-        opts={{ renderer: "canvas" }}
-        onChartReady={(c: any) => { requestAnimationFrame(() => { try { c.resize(); } catch {} }); }}
-        notMerge
-      />
-    </div>
-  );
-}
 
 export function TargetPricePanel({ data, zh }: { data: KolTargetData; zh: boolean }) {
   const { current, priceLine, marks } = data;
@@ -233,7 +124,7 @@ export function TargetPricePanel({ data, zh }: { data: KolTargetData; zh: boolea
           html += `<div style="color:#9a9da1;margin:2px 0 4px">${plat} · ${m.date}</div>`;
           if (m.svScore != null && m.svPercentile != null) {
             const top = Math.max(1, Math.ceil(m.svPercentile));
-            html += `<div style="color:#57D7BA;margin-bottom:3px">SV <b>${Math.round(m.svScore)}</b> · ${zh ? `平台 Top ${top}%` : `Platform top ${top}%`}</div>`;
+            html += `<div style="color:#57D7BA;margin-bottom:3px">Score <b>${Math.round(m.svScore)}</b> · ${zh ? `平台 Top ${top}%` : `Platform top ${top}%`}</div>`;
           }
           html += `<div><span style="color:#73757a">${kind} </span><b style="color:${color}">${fmtRange(m.lo, m.hi)}</b><span style="color:#73757a">${dl}</span></div>`;
           if (horizon || bk) html += `<div style="color:#cfcfcf;margin-top:2px">${zh ? "周期" : "Horizon"}: ${horizon}${bk ? `（${bk}）` : ""}</div>`;
@@ -347,7 +238,7 @@ export function TargetPricePanel({ data, zh }: { data: KolTargetData; zh: boolea
       <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1 px-1">
         <span className="text-[11.5px] font-semibold text-neutral-400">{zh ? "买入 / 卖出价 时间线" : "Buy / sell price timeline"}</span>
         <span className="text-[10.5px] text-neutral-600">
-          {zh ? "默认近 1 月 SV Top 25% · 悬浮看作者/依据 · 右侧缩放价格轴" : "defaults to 1M SV top 25% · hover for evidence · right bar zooms price"}
+          {zh ? "默认近 1 月 Score Top 25% · 悬浮看作者/依据 · 右侧缩放价格轴" : "defaults to 1M Score top 25% · hover for evidence · right bar zooms price"}
         </span>
         <span className="ml-auto flex items-center gap-2.5 text-[10px] text-neutral-500">
           <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: BUY }} />{zh ? "买入" : "Buy"}</span>
@@ -375,11 +266,11 @@ export function TargetPricePanel({ data, zh }: { data: KolTargetData; zh: boolea
         </div>
         <div className="inline-flex rounded-md bg-elevated/50 p-0.5 text-[10.5px] ring-1 ring-inset ring-line">
           {([
-            ["top5", "SV Top 5%", "SV Top 5%"],
-            ["top10", "SV Top 10%", "SV Top 10%"],
-            ["top25", "SV Top 25%", "SV Top 25%"],
-            ["top50", "SV Top 50%", "SV Top 50%"],
-            ["scored", "有 SV", "Scored"],
+            ["top5", "Score Top 5%", "Score Top 5%"],
+            ["top10", "Score Top 10%", "Score Top 10%"],
+            ["top25", "Score Top 25%", "Score Top 25%"],
+            ["top50", "Score Top 50%", "Score Top 50%"],
+            ["scored", "有 Score", "Scored"],
             ["all", "全部作者", "All authors"],
           ] as const).map(([value, labelZh, labelEn]) => (
             <button
@@ -444,7 +335,7 @@ export function TargetPricePanel({ data, zh }: { data: KolTargetData; zh: boolea
             onEvents={{
               click: (p: any) => {
                 if (p?.seriesName !== "marks" || !p?.data?.opinionId) return;
-                window.dispatchEvent(new CustomEvent("prismo:open-opinion", {
+                window.dispatchEvent(new CustomEvent("bsmart:open-opinion", {
                   detail: { opinionId: p.data.opinionId, day: p.data.date },
                 }));
               },

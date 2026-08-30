@@ -336,8 +336,8 @@ function svFallbackQuality(conviction: number, evidence: number, specificity: nu
   return Math.round(Math.max(50, Math.min(95, 45 + evidence * 22 + specificity * 18 + conviction * 12)));
 }
 
-// SV v0 结构化池中的 X/Twitter call：它来自更长周期的历史推文结构化结果。
-// 在产品层仍按 X 展示；只作为 x_opinion 的补充，不暴露 SV 中间概念。
+// Score v0 结构化池中的 X/Twitter call：它来自更长周期的历史推文结构化结果。
+// 在产品层仍按 X 展示；只作为 x_opinion 的补充，不暴露 Score 中间概念。
 export function xSvOps(symbol: string, since: string, limit: number | null = 400, fast = false): RawOp[] {
   const limitSql = limit == null ? "" : `LIMIT ${Math.max(0, limit | 0)}`;
   const rows = safe(

@@ -3,7 +3,7 @@ import { LocaleLink } from "@/components/i18n/LocaleLink";
 import { CreatorProfile } from "@/features/investor";
 import { ViewportWorkspace } from "@/shared/layout/ViewportWorkspace";
 import { getYoutubeCreator, getYoutubeChannelIds } from "@/server/queries/creatorQueries";
-import { getCreatorSmartVoice } from "@/features/smart-voice/svMock";
+import { getCreatorSmartVoice } from "@/features/smart-account/svMock";
 import { isLocale, defaultLocale, type Locale } from "@/lib/i18n";
 
 // YouTube 作者页（投资者榜单的下钻）。静态导出：枚举所有有视频的频道 id；[lang] 由 layout 提供。
@@ -18,7 +18,7 @@ export function generateMetadata({ params }: { params: { lang: string; channelId
   const zh = params.lang === "zh";
   const c = getYoutubeCreator(params.channelId);
   const name = c?.profile.name || (zh ? "作者" : "Creator");
-  return { title: `${name} · YouTube · Prismo` };
+  return { title: `${name} · YouTube · bSmart` };
 }
 
 export default function YoutubeCreatorPage({ params }: { params: { lang: string; channelId: string } }) {

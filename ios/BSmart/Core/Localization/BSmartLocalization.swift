@@ -1,5 +1,59 @@
 import SwiftUI
 
+enum AppAppearance: String, CaseIterable, Identifiable {
+    case dark
+    case light
+
+    var id: String { rawValue }
+    var colorScheme: ColorScheme { self == .dark ? .dark : .light }
+
+    var displayName: String {
+        switch self {
+        case .dark: "Dark mode".bSmartLocalized
+        case .light: "Light mode".bSmartLocalized
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .dark: "Dark background for low-light viewing".bSmartLocalized
+        case .light: "Light background for daytime viewing".bSmartLocalized
+        }
+    }
+
+    var symbol: String { self == .dark ? "moon.fill" : "sun.max.fill" }
+}
+
+@MainActor
+final class AppAppearanceStore: ObservableObject {
+    private static let defaultsKey = "bsmart.app-appearance"
+
+    @Published private(set) var selection: AppAppearance
+    private let defaults: UserDefaults
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        #if DEBUG
+        let arguments = ProcessInfo.processInfo.arguments
+        if let flagIndex = arguments.firstIndex(of: "--ui-appearance"),
+           arguments.indices.contains(flagIndex + 1),
+           let override = AppAppearance(rawValue: arguments[flagIndex + 1]) {
+            selection = override
+            return
+        }
+        #endif
+        selection = defaults.string(forKey: Self.defaultsKey)
+            .flatMap(AppAppearance.init(rawValue:))
+            ?? .dark
+    }
+
+    func select(_ appearance: AppAppearance) {
+        guard appearance != selection else { return }
+        defaults.set(appearance.rawValue, forKey: Self.defaultsKey)
+        selection = appearance
+    }
+}
+
 enum AppLanguage: String, CaseIterable, Identifiable {
     case system
     case english = "en"
@@ -64,6 +118,13 @@ final class AppLanguageStore: ObservableObject {
 enum BSmartLocalization {
     private final class BundleToken {}
 
+    private static let untranslatedProductTerms: Set<String> = [
+        "Smart",
+        "Smart Account",
+        "Smart Money",
+        "Mr Collie",
+    ]
+
     private static let sourceBundle = Bundle(for: BundleToken.self)
     private static let simplifiedChineseBundle: Bundle? = {
         guard let path = sourceBundle.path(forResource: "zh-Hans", ofType: "lproj") else { return nil }
@@ -77,7 +138,9 @@ enum BSmartLocalization {
     }
 
     static func localized(_ key: String) -> String {
-        switch language {
+        guard !untranslatedProductTerms.contains(key) else { return key }
+
+        return switch language {
         case .system:
             sourceBundle.localizedString(forKey: key, value: key, table: nil)
         case .english:

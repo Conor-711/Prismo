@@ -1,0 +1,4 @@
+// Shared iOS configuration. Secrets.xcconfig is local-only and optional so CI
+// and public builds remain reproducible without an embedded provider key.
+BSMART_DEEPSEEK_API_KEY =
+#include? "Secrets.xcconfig"

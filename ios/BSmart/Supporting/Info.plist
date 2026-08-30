@@ -2,6 +2,16 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>BSMART_API_BASE_URL</key>
+	<string>$(BSMART_ENDPOINT_URL)</string>
+	<key>BSMART_DATA_ENVIRONMENT</key>
+	<string>$(BSMART_DATA_ENVIRONMENT)</string>
+	<key>BSMART_DEEPSEEK_API_KEY</key>
+	<string>$(BSMART_DEEPSEEK_API_KEY)</string>
+	<key>BSMART_DEEPSEEK_BASE_URL</key>
+	<string>$(BSMART_DEEPSEEK_BASE_URL)</string>
+	<key>BSMART_MR_COLLIE_MODEL</key>
+	<string>$(BSMART_MR_COLLIE_MODEL)</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
@@ -17,7 +27,7 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0</string>
+	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -32,16 +42,12 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>1</string>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
-	<key>BSMART_API_BASE_URL</key>
-	<string>$(BSMART_ENDPOINT_URL)</string>
-	<key>BSMART_DATA_ENVIRONMENT</key>
-	<string>$(BSMART_DATA_ENVIRONMENT)</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UIUserInterfaceStyle</key>

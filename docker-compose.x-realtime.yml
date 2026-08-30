@@ -1,0 +1,144 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: bsmart
+      POSTGRES_USER: bsmart
+      POSTGRES_PASSWORD: bsmart_local_only
+    ports:
+      - "127.0.0.1:54329:5432"
+    volumes:
+      - bsmart-x-postgres:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bsmart -d bsmart"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  x-ingest-api:
+    build:
+      context: .
+      dockerfile: services/x_ingest/Dockerfile
+    command: >-
+      python -m uvicorn services.x_ingest.main:create_app --factory
+      --host 0.0.0.0 --port 8083
+    env_file:
+      - .env
+      - .env.x-realtime.local
+    environment: &x-runtime-environment
+      BSMART_ENV: development
+      X_INGEST_ENABLED: "true"
+      BSMART_X_STREAM_ENABLED: "false"
+      BSMART_X_FREEZE_AUTHOR_POOL: "true"
+      BSMART_X_POOL_LIMIT: "0"
+      DATABASE_URL: postgresql://bsmart:bsmart_local_only@postgres:5432/bsmart
+      BSMART_X_DATABASE_URL: postgresql://bsmart:bsmart_local_only@postgres:5432/bsmart
+      BSMART_READ_MODEL_DATABASE_URL: postgresql://bsmart:bsmart_local_only@postgres:5432/bsmart
+      BSMART_CLIENT_API_DATABASE_URL: postgresql://bsmart:bsmart_local_only@postgres:5432/bsmart
+      BSMART_X_RECONCILE_INTERVAL_SECONDS: "60"
+      SV_EXTRACT_PROVIDERS: deepseek
+    ports:
+      - "127.0.0.1:8083:8083"
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8083/health', timeout=5)"
+      interval: 15s
+      timeout: 6s
+      retries: 5
+
+  x-worker:
+    build:
+      context: .
+      dockerfile: services/x_ingest/Dockerfile
+    command: python -m services.x_ingest.worker
+    env_file:
+      - .env
+      - .env.x-realtime.local
+    environment: *x-runtime-environment
+    restart: unless-stopped
+    depends_on:
+      x-ingest-api:
+        condition: service_healthy
+
+  client-api:
+    build:
+      context: .
+      dockerfile: services/client_api/Dockerfile
+    command: >-
+      python -m uvicorn services.client_api.main:create_app --factory
+      --host 0.0.0.0 --port 8081 --proxy-headers --forwarded-allow-ips '*'
+    env_file:
+      - .env
+      - .env.x-realtime.local
+    environment:
+      BSMART_ENV: development
+      BSMART_READ_MODEL_MODE: database
+      DATABASE_URL: postgresql://bsmart:bsmart_local_only@postgres:5432/bsmart
+      BSMART_CLIENT_API_DATABASE_URL: postgresql://bsmart:bsmart_local_only@postgres:5432/bsmart
+      BSMART_READ_MODEL_DATABASE_URL: postgresql://bsmart:bsmart_local_only@postgres:5432/bsmart
+    ports:
+      - "127.0.0.1:8081:8081"
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8081/health', timeout=5)"
+      interval: 15s
+      timeout: 6s
+      retries: 5
+
+  smart-money-ingest:
+    build:
+      context: .
+      dockerfile: services/smart_money_ingest/Dockerfile
+    command: >-
+      python -m uvicorn services.smart_money_ingest.main:create_app --factory
+      --host 0.0.0.0 --port 8084
+    env_file:
+      - .env
+    environment:
+      BSMART_ENV: development
+      BSMART_SMART_MONEY_ENABLED: "true"
+      BSMART_SMART_MONEY_PRIMARY_SOURCE: hyperdash
+      BSMART_SMART_MONEY_REFRESH_SECONDS: "600"
+      BSMART_SMART_MONEY_DATA_DIR: /var/lib/bsmart-smart-money
+      BSMART_SMART_MONEY_OUTPUT: /var/lib/bsmart-smart-money/hyperliquidSmartMoney.json
+      BSMART_SMART_MONEY_CLIENT_OUTPUT: /var/lib/bsmart-smart-money/client
+      BSMART_SMART_MONEY_HEALTH_OUTPUT: /var/lib/bsmart-smart-money/health.json
+      BSMART_SMART_ACCOUNT_UPDATES_PATH: ""
+      BSMART_READ_MODEL_DATABASE_URL: postgresql://bsmart:bsmart_local_only@postgres:5432/bsmart
+    ports:
+      - "127.0.0.1:8084:8084"
+    volumes:
+      - bsmart-smart-money:/var/lib/bsmart-smart-money
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8084/ready', timeout=5)"
+      interval: 30s
+      timeout: 8s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  bsmart-x-postgres:
+  bsmart-smart-money:

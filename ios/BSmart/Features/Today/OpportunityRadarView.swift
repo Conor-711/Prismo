@@ -22,7 +22,7 @@ struct OpportunityRadarView: View {
                     )
 
                     ForEach(Array(model.opportunitySignals.enumerated()), id: \.element.id) { index, signal in
-                        NavigationLink {
+                        BSmartDetailNavigationLink(id: "opportunity-\(signal.id)") {
                             EventDetailView(signal: signal)
                         } label: {
                             EventCard(

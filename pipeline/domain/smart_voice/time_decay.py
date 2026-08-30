@@ -1,4 +1,4 @@
-"""Point-in-time-safe time decay for Smart Voice evidence."""
+"""Point-in-time-safe time decay for Smart Account evidence."""
 from __future__ import annotations
 
 import datetime as dt
@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from typing import Mapping
 
 
-TIME_DECAY_VERSION = "sv-time-decay-v1"
+TIME_DECAY_VERSION = "sv-time-decay-v2-moderate"
 
 
 @dataclass(frozen=True)
@@ -16,15 +16,15 @@ class SVTimeDecayConfig:
 
     half_life_days_by_horizon: Mapping[str, float] = field(
         default_factory=lambda: {
-            "1D": 45.0,
-            "5D": 60.0,
-            "20D": 120.0,
-            "60D": 240.0,
-            "90D": 360.0,
-            "180D": 540.0,
+            "1D": 60.0,
+            "5D": 75.0,
+            "20D": 150.0,
+            "60D": 300.0,
+            "90D": 450.0,
+            "180D": 675.0,
         }
     )
-    default_half_life_days: float = 180.0
+    default_half_life_days: float = 225.0
 
     def half_life_days(self, horizon: object) -> float:
         value = self.half_life_days_by_horizon.get(str(horizon or "").upper())

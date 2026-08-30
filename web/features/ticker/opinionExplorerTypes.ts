@@ -1,5 +1,5 @@
 import type { KolSource } from "@/shared/market/mockDetail";
-import type { SvTickerBoard } from "@/features/smart-voice/svMock";
+import type { SvTickerBoard } from "@/features/smart-account/svMock";
 
 export type LensKey =
   | "valuation"

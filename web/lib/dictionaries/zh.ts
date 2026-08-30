@@ -1,8 +1,8 @@
 // 中文字典 = 结构真源。en.ts 必须满足 `Dictionary = typeof zh`。
-// 专有名词（ticker、Prismo、r/子版、人名）不放进字典，保持原样。
+// 专有名词（ticker、bSmart、r/子版、人名）不放进字典，保持原样。
 export const zh = {
   meta: {
-    title: "Prismo · Reddit 美股舆情情报",
+    title: "bSmart · Reddit 美股舆情情报",
     description:
       "以专业方式分析 Reddit 财经板块的帖子数据：声量份额、情绪、异动、热门叙事与每日简报。",
   },
@@ -34,13 +34,12 @@ export const zh = {
   nav: {
     dashboard: "看板",
     overview: "总览",
-    smartVoice: "Smart Voice",
+    smartAccount: "Smart Account",
     tickers: "标的",
     investors: "作者",
     cnstocks: "中概·港股",
     search: "搜索",
     tracking: "追踪",
-    lab: "实验室",
     trending: "异动",
     narratives: "叙事",
     leaderboard: "作者榜",
@@ -118,7 +117,7 @@ export const zh = {
     empty: "暂无数据。",
   },
   searchHero: {
-    eyebrow: "Prismo · 个股情报",
+    eyebrow: "bSmart · 个股情报",
     title: "查任意股票，看 Reddit 的多空论点",
     subPre: "把社区真实 DD（深度研究）蒸馏成 ",
     subBull: "多头",
@@ -151,11 +150,11 @@ export const zh = {
     label: "分享",
     copy: "复制链接",
     copied: "已复制 ✓",
-    tickerText: "{s} 在 Reddit 的多空论点 — Prismo",
-    postText: "{s} · Reddit 讨论 — Prismo",
+    tickerText: "{s} 在 Reddit 的多空论点 — bSmart",
+    postText: "{s} · Reddit 讨论 — bSmart",
   },
   install: {
-    title: "把 Prismo 装到手机",
+    title: "把 bSmart 装到手机",
     subtitle: "像 App 一样全屏秒开，直达看板",
     installBtn: "安装",
     howBtn: "怎么装",
@@ -200,7 +199,7 @@ export const zh = {
     statPosts: "实时帖子",
     statTickers: "追踪标的",
     statAuthors: "活跃作者",
-    enterTitle: "进入 Prismo",
+    enterTitle: "进入 bSmart",
     enterDesc: "实时追踪 Reddit 财经社区的声量、情绪与叙事。无需注册，点开即用。",
     enterCta: "进入实时看板",
     footer: "数据来自 Reddit 社区",
@@ -332,11 +331,11 @@ export const zh = {
     topBadge: "高赞",
   },
   auth: {
-    loginTitle: "登录 Prismo",
+    loginTitle: "登录 bSmart",
     loginSubtitle: "查看声量份额、情绪与每日简报",
     noAccount: "还没有账号？",
     signupLink: "注册",
-    signupTitle: "注册 Prismo",
+    signupTitle: "注册 bSmart",
     signupSubtitle: "免费创建账号，解锁个性化体验",
     haveAccount: "已有账号？",
     loginLink: "登录",
@@ -422,7 +421,7 @@ export const zh = {
   },
   tracking: {
     title: "追踪",
-    subtitle: "你追踪的标的 · 五社区平均情绪、覆盖地区与跨区分歧",
+    subtitle: "把追踪的标的、作者与叙事组织成个性化观点流",
     loading: "加载中…",
     signInTitle: "登录后查看你的追踪",
     signInDesc: "追踪你关心的标的，随时回来看它们在全球社区里的情绪变化。",
@@ -483,7 +482,7 @@ export const zh = {
     f2Title: "AI 多空提炼",
     f2Desc: "逐帖打标，提炼看多 / 看空论点与可信声音。",
     f3Title: "收藏与追踪",
-    f3Desc: "收藏帖子与评论、追踪社区与标的，沉淀你的关注。",
+    f3Desc: "收藏帖子与评论、追踪标的与作者，沉淀你的关注。",
     trust: "",
   },
   onboarding: {
@@ -494,7 +493,7 @@ export const zh = {
     stepOf: "第 {n} / {total} 步",
     selected: "已选 {n}",
     // 0 欢迎
-    welcomeTitle: "欢迎来到 Prismo 👋",
+    welcomeTitle: "欢迎来到 bSmart 👋",
     welcomeSubtitle: "花 1 分钟回答几个问题，我们会为你定制看板与关注列表。随时可跳过，也能在「设置」里修改。",
     welcomeBullet1: "追踪你持有的标的，社区怎么看一眼掌握",
     welcomeBullet2: "按你关注的方向，优先展示相关讨论",
@@ -598,7 +597,7 @@ export const zh = {
   },
   bookmark: {
     tip: "收藏本页",
-    sub: "按 {combo} 把 Prismo 加入书签，下次一键直达。",
+    sub: "按 {combo} 把 bSmart 加入书签，下次一键直达。",
     dismiss: "知道了",
     close: "关闭",
   },

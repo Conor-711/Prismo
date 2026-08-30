@@ -69,6 +69,12 @@ struct PortfolioPosition: Identifiable, Codable, Hashable {
     }
 }
 
+struct PortfolioValuePoint: Identifiable, Codable, Hashable {
+    var id: Date { timestamp }
+    let timestamp: Date
+    let value: Double
+}
+
 enum SignalFeedback: String, Codable, CaseIterable {
     case useful
     case notRelevant = "not_relevant"
@@ -277,6 +283,12 @@ struct SmartAccountUpdate: Identifiable, Codable, Hashable {
     var callScoringVersion: String? = nil
     var evidenceRole: String? = nil
     var settlement: SmartAccountSettlementEvidence? = nil
+    var representativeTickerContribution: Double? = nil
+    var representativeCallCount: Int? = nil
+    var representativeTickerRank: Int? = nil
+    var activityTitle: String? = nil
+    var activityTitleZH: String? = nil
+    var activityTitleEN: String? = nil
 }
 
 struct PriceCandle: Identifiable, Codable, Hashable {
@@ -298,6 +310,19 @@ struct SmartAccountPriceEvidence: Codable, Hashable {
     let responsePercent: Double?
     let source: String
     let candles: [PriceCandle]
+    var opinionMarkers: [SmartAccountOpinionMarker]? = nil
+}
+
+struct SmartAccountOpinionMarker: Identifiable, Codable, Hashable {
+    let id: UUID
+    let publishedAt: Date
+    let viewDay: String
+    let viewPrice: Double
+    let direction: SignalDirection
+    let contribution: Double
+    let horizon: String
+    let thesis: String
+    let evidenceURL: URL?
 }
 
 struct SmartAccountSettlementEvidence: Codable, Hashable {
@@ -336,6 +361,53 @@ struct SmartMoneyMovement: Identifiable, Codable, Hashable {
     let notionalChange: Double
     let leverage: Double?
     let observedAt: Date
+    let evidenceURL: URL?
+    var price: Double? = nil
+    var sizeBefore: Double? = nil
+    var sizeAfter: Double? = nil
+}
+
+struct SmartMoneyRepresentativeEvidence: Identifiable, Codable, Hashable {
+    let id: UUID
+    let accountId: String
+    let accountDisplayName: String
+    let avatarVariant: Int?
+    let ticker: String
+    let market: String
+    let representativeRank: Int
+    let cumulativeEntryNotional: Double
+    let entryCount: Int
+    let assetNetPnl: Double
+    let latestEntryAt: Date
+    let priceEvidence: SmartMoneyPriceEvidence
+}
+
+struct SmartMoneyPriceEvidence: Codable, Hashable {
+    let market: String
+    let interval: String
+    let source: String
+    let candles: [SmartMoneyCandle]
+    let entryMarkers: [SmartMoneyEntryMarker]
+}
+
+struct SmartMoneyCandle: Identifiable, Codable, Hashable {
+    var id: Date { timestamp }
+    let timestamp: Date
+    let open: Double
+    let high: Double
+    let low: Double
+    let close: Double
+    let volume: Double
+}
+
+struct SmartMoneyEntryMarker: Identifiable, Codable, Hashable {
+    let id: UUID
+    let observedAt: Date
+    let price: Double
+    let priceBasis: String
+    let direction: SignalDirection
+    let action: SmartMoneyAction
+    let entryNotional: Double
     let evidenceURL: URL?
 }
 
@@ -388,6 +460,47 @@ struct DailyDigestSnapshot: Identifiable, Codable, Hashable {
     let title: String
     let summary: String
     let signals: [PortfolioSignal]
+}
+
+struct MrCollieQuery: Codable, Hashable {
+    let question: String
+    let locale: String
+    let conversation: [MrCollieConversationTurn]
+}
+
+struct MrCollieConversationTurn: Codable, Hashable {
+    enum Role: String, Codable, Hashable {
+        case user
+        case assistant
+    }
+
+    let role: Role
+    let content: String
+}
+
+struct MrCollieEvidence: Identifiable, Codable, Hashable {
+    let id: String
+    let source: String
+    let sourceType: SignalEvidenceSource
+    let title: String
+    let detail: String
+    let metric: String?
+    let observedAt: Date?
+}
+
+struct MrCollieResponse: Codable, Hashable {
+    let question: String
+    let title: String
+    let summary: String
+    let context: String?
+    let nextStep: String
+    let ticker: String?
+    let signalId: UUID?
+    let evidence: [MrCollieEvidence]
+    let generatedAt: Date
+    let dataAsOf: Date
+    let contextVersion: String
+    let model: String
 }
 
 struct SmartAccountSnapshot: Codable, Hashable {

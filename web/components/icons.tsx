@@ -15,7 +15,6 @@ export const IconTrophy = (p: P) => <S {...p}><path d="M6 4h12v3a6 6 0 0 1-12 0V
 export const IconDoc = (p: P) => <S {...p}><path d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" /><path d="M14 3v5h5M9 13h6M9 17h6" /></S>;
 export const IconSearch = (p: P) => <S {...p}><circle cx="11" cy="11" r="7" /><path d="M21 21l-4-4" /></S>;
 export const IconPulse = (p: P) => <S {...p}><path d="M3 12h4l2-7 4 14 2-7h6" /></S>;
-export const IconFlask = (p: P) => <S {...p}><path d="M9 3h6" /><path d="M10 3v6.5l-5.4 8.4A2 2 0 0 0 6.3 21h11.4a2 2 0 0 0 1.7-3.1L14 9.5V3" /><path d="M8 15h8" /></S>;
 export const IconArrow = (p: P) => <S {...p}><path d="M5 12h14M13 6l6 6-6 6" /></S>;
 export const IconFlame = (p: P) => <S {...p}><path d="M12 3c1 4 4 5 4 9a4 4 0 0 1-8 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3 0-5-2-7z" /></S>;
 // 追踪/自选：星标

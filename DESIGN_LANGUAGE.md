@@ -1,4 +1,4 @@
-# DESIGN_LANGUAGE.md — Prismo 设计语言
+# DESIGN_LANGUAGE.md — bSmart 设计语言
 
 > 最近更新：2026-06-22
 > 配套实现：`web/tailwind.config.ts`（颜色/圆角/字体 token）、`web/app/globals.css`（`:root` CSS 变量，**暗色单主题**）。
@@ -82,4 +82,4 @@
 - 颜色 / 圆角 / 字体 token：`web/tailwind.config.ts`。
 - 主题 CSS 变量（`:root`，暗色单主题）、`.btn-grad`/`.panel`/`.alpha-hero`/`.rule` 等：`web/app/globals.css`。
 - 暗色单主题：无 `.light` 类、无主题切换 UI；`<html>` 由 `:root` 固定深色。
-- 多空 hex 若需改，注意有 5 处图表/条形硬编码：`lib/format.ts`、`components/asia/AsiaCharts.tsx`、`components/prismo/DetailCharts.tsx`、`components/prismo/Bits.tsx`、`app/[lang]/(app)/tickers/[symbol]/page.tsx`。
+- 多空 hex 若需改，注意有 5 处图表/条形硬编码：`lib/format.ts`、`components/asia/AsiaCharts.tsx`、`components/bsmart/DetailCharts.tsx`、`components/bsmart/Bits.tsx`、`app/[lang]/(app)/tickers/[symbol]/page.tsx`。

@@ -3,15 +3,8 @@
 // 表现 = 自「表态日」起的收益（数据仅近一个月 → 短窗）；超额 = 相对 SPY。诚实定位：近期表态兑现，非长期战绩。
 // 与 kolQueries/investorQueries 同范式：build-time 直读 dev.db（node:sqlite，见 db.ts），缺数据降级空态。
 import { all } from "@/lib/db";
+import { safeQuery as safe } from "@/server/db/safeQuery";
 import type { Stance } from "@/shared/market/mockDetail";
-
-function safe<T>(fn: () => T, fb: T): T {
-  try {
-    return fn();
-  } catch {
-    return fb;
-  }
-}
 
 const dayOf = (s: string) => (s || "").slice(0, 10);
 const ytUrl = (id: string, url?: string) => (url && url.trim()) || `https://www.youtube.com/watch?v=${id}`;

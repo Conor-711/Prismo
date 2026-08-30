@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Manage Prismo's local SQLite truth source without tracking the raw database."""
+"""Manage bSmart's local SQLite truth source without tracking the raw database."""
 from __future__ import annotations
 
 import argparse
@@ -18,7 +18,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_DB = ROOT / "data" / "dev.db"
 DEFAULT_BACKUP_DIR = Path(
-    os.environ.get("PRISMO_BACKUP_DIR", ROOT.parent / f"{ROOT.name}-backups")
+    os.environ.get("BSMART_BACKUP_DIR", ROOT.parent / f"{ROOT.name}-backups")
 ).expanduser()
 SNAPSHOT = ROOT / "data" / "dev.db.xz"
 MANIFEST = ROOT / "data" / "dev.db.xz.parts"
@@ -170,7 +170,7 @@ def create_snapshot(
     data_dir = ROOT / "data"
     data_dir.mkdir(parents=True, exist_ok=True)
 
-    with tempfile.TemporaryDirectory(prefix="prismo-snapshot-", dir=data_dir) as temp_dir:
+    with tempfile.TemporaryDirectory(prefix="bsmart-snapshot-", dir=data_dir) as temp_dir:
         compact = Path(temp_dir) / "dev.compact.db"
         compressed = Path(temp_dir) / "dev.db.xz"
         print("[data-snapshot] compacting SQLite database...", flush=True)
@@ -226,7 +226,7 @@ def restore_snapshot(destination: Path, force: bool) -> None:
     if destination.exists() and not force:
         raise RuntimeError(f"{destination} exists; pass --force to replace it")
     destination.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix="prismo-restore-", dir=destination.parent) as temp_dir:
+    with tempfile.TemporaryDirectory(prefix="bsmart-restore-", dir=destination.parent) as temp_dir:
         compressed = Path(temp_dir) / "dev.db.xz"
         restored = Path(temp_dir) / "dev.db"
         if MANIFEST.exists():

@@ -8,7 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFavorites } from "@/components/favorites/FavoritesProvider";
 import { staticDataUrl } from "@/lib/site";
 import type { KolOpinion } from "@/shared/market/mockDetail";
-import type { SvTickerBoard } from "@/features/smart-voice/svMock";
+import type { SvTickerBoard } from "@/features/smart-account/svMock";
 import { OpinionFilterBar } from "@/features/ticker/components/OpinionExplorer/filterBar";
 import { OpinionListPane } from "@/features/ticker/components/OpinionExplorer/listPane";
 import { Reader } from "@/features/ticker/components/OpinionExplorer/reader";
@@ -123,7 +123,7 @@ export function OpinionExplorer({
     return [...byId.values()];
   }, [completeOpinions, opinions, completeXOpinions, opinionContent, symbol, youtubeContent]);
 
-  const { configured: trackingConfigured, signedIn: trackingSignedIn, isSaved } = useFavorites();
+  const { configured: trackingConfigured, isSaved } = useFavorites();
   const filters = useOpinionFilters({ opinions: mergedOpinions, svBoard, isSaved });
   const { resetFilters: resetOpinionFilters, resetFiltersForOpinion } = filters;
   const {
@@ -241,7 +241,6 @@ export function OpinionExplorer({
         trackedAuthorsOnly={filters.trackedAuthorsOnly}
         onTrackedAuthorsOnlyChange={(value) => { filters.setTrackedAuthorsOnly(value); selection.clearSelection(); }}
         trackingConfigured={trackingConfigured}
-        trackingSignedIn={trackingSignedIn}
         maxDay={filters.maxDay}
         sinceEff={filters.sinceEff}
         dateInputMinDay={filters.dateInputMinDay}

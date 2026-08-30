@@ -6,6 +6,7 @@ struct AppSettingsView: View {
     @EnvironmentObject private var notifications: NotificationService
     @EnvironmentObject private var notificationPreferences: NotificationPreferencesStore
     @EnvironmentObject private var language: AppLanguageStore
+    @EnvironmentObject private var appearance: AppAppearanceStore
     @State private var isShowingAlertSettings = false
     @State private var isConfirmingReset = false
     @State private var isResetting = false
@@ -25,6 +26,17 @@ struct AppSettingsView: View {
                         }
                     }
 
+                    settingsSection("Appearance") {
+                        VStack(spacing: 0) {
+                            ForEach(Array(AppAppearance.allCases.enumerated()), id: \.element.id) { index, option in
+                                if index > 0 {
+                                    Divider().overlay(BSmartColor.line)
+                                }
+                                appearanceRow(option)
+                            }
+                        }
+                    }
+
                     settingsSection("Notifications") {
                         settingsButton(
                             title: "Alert preferences",
@@ -33,11 +45,12 @@ struct AppSettingsView: View {
                         ) {
                             isShowingAlertSettings = true
                         }
+                        .accessibilityIdentifier("settings.notifications")
                     }
 
                     settingsSection("Data & privacy") {
                         VStack(alignment: .leading, spacing: BSmartSpacing.medium) {
-                            NavigationLink {
+                            BSmartDetailNavigationLink(id: "settings-intelligence-method") {
                                 IntelligenceMethodView(isUsingDemoData: model.isUsingDemoData)
                             } label: {
                                 settingsRow(
@@ -51,7 +64,7 @@ struct AppSettingsView: View {
 
                             Divider().overlay(BSmartColor.line)
 
-                            NavigationLink {
+                            BSmartDetailNavigationLink(id: "settings-risk-disclosure") {
                                 RiskDisclosureView()
                             } label: {
                                 settingsRow(
@@ -206,6 +219,41 @@ struct AppSettingsView: View {
         .accessibilityValue(option == language.selection ? "Selected".bSmartLocalized : "")
         .accessibilityAddTraits(option == language.selection ? .isSelected : [])
         .accessibilityIdentifier("settings.language.\(option.rawValue)")
+    }
+
+    private func appearanceRow(_ option: AppAppearance) -> some View {
+        Button {
+            withAnimation(BSmartMotion.standard) {
+                appearance.select(option)
+            }
+        } label: {
+            HStack(spacing: BSmartSpacing.medium) {
+                Image(systemName: option.symbol)
+                    .foregroundStyle(option == appearance.selection ? BSmartColor.brand : BSmartColor.tertiaryText)
+                    .frame(width: 24, height: 24)
+
+                VStack(alignment: .leading, spacing: BSmartSpacing.xSmall) {
+                    Text(option.displayName)
+                        .font(.body.weight(.semibold))
+                    Text(option.detail)
+                        .font(.caption)
+                        .foregroundStyle(BSmartColor.secondaryText)
+                }
+
+                Spacer(minLength: BSmartSpacing.small)
+
+                if option == appearance.selection {
+                    Image(systemName: "checkmark")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(BSmartColor.brand)
+                }
+            }
+            .padding(.vertical, BSmartSpacing.xSmall)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(option == appearance.selection ? .isSelected : [])
+        .accessibilityIdentifier("settings.appearance.\(option.rawValue)")
     }
 
     private func settingsButton(

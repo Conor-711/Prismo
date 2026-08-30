@@ -1,4 +1,4 @@
-"""Compatibility wrapper for Smart Voice v0 scoring."""
+"""Compatibility wrapper for Smart Account v0 scoring."""
 from __future__ import annotations
 
 from ..domain.smart_voice.v0_impl import main, run

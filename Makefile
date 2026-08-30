@@ -10,9 +10,13 @@ SV_SEGMENT_BANDS := top10,top25
 
 .PHONY: install venv db-init migrate seed seed-cn sample ingest refresh extract analyze analyze-mock \
         rollup narratives narrative-rotation brief worker daily daily-build cn-backfill demo stats test web-install web-dev clean help \
-        arch-check sv-price-history sv-v0-candidates sv-v0 sv-v0-prod private-sv-telegram sv-ticker-signals sv-indicator-backtest sv-indicator-report sv-segment-backtest sv-portfolio-backtest sv-rank-event-research reddit-sv-authors sv-v0-reddit-candidates sv-v0-reddit-prod tw-match cf-deploy \
+        arch-check terminology-check sv-price-history sv-v0-candidates sv-v0 sv-v0-prod hyperliquid-smart-money hyperliquid-smart-money-live export-smart-account-read-model sv-ticker-signals sv-indicator-backtest sv-indicator-report sv-segment-backtest sv-portfolio-backtest sv-rank-event-research reddit-sv-authors sv-v0-reddit-candidates sv-v0-reddit-prod tw-match cf-deploy \
         backup-db snapshot-db restore-db data-clean data-status xueqiu-author-auth xueqiu-author-plan xueqiu-author-run xueqiu-author-drain xueqiu-author-status xueqiu-sv-full \
-        ios-generate ios-build ios-test ios-alpha-check ios-alpha-archive ios-release-check
+        ios-generate ios-build ios-test ios-live-seed ios-live-unified-seed ios-live-api ios-live-smart-money ios-local-check ios-alpha-check ios-alpha-archive ios-release-check contract-check mvp-coverage-audit congress-score \
+        client-api-install client-api-dev client-api-test client-api-seed-mock client-api-alpha-seed client-api-alpha-dev client-api-plan-notifications client-api-notification-worker \
+        client-api-alpha-image client-api-alpha-smoke client-api-alpha-plan-digests client-api-plan-digests client-api-dispatch-notifications client-api-publish-read-models client-api-publish-live-smart-money \
+        x-ingest-install x-ingest-bootstrap x-ingest-api x-ingest-worker x-ingest-test x-ingest-audit x-local-config x-local-up x-local-down x-local-status x-local-logs \
+        smart-money-ingest-install smart-money-ingest-api smart-money-ingest-test
 
 help:
 	@echo "Reddit 版 Kaito Pro — 常用命令"
@@ -32,27 +36,55 @@ help:
 	@echo "  make seed-cn       seed 中概/港股/A 股字典"
 	@echo "  make cn-backfill   回填中概·港股语料（爬30天+AI打标+双market聚合+翻译）"
 	@echo "  make worker        启动调度：每天 UTC+8 08:00 自动跑 daily-build"
-	@echo "  make sv-price-history     补齐 SV 所需日线价格"
-	@echo "  make sv-v0                运行 Smart Voice v0：候选召回 → LLM 结构化 → 结算 → 导出"
-	@echo "  make sv-v0-prod           生产级 SV：更大候选池 + 作者均衡 LLM 抽样"
-	@echo "  make private-sv-telegram  单个公开 Telegram 频道的隔离 Private SV 报告"
-	@echo "  make sv-ticker-signals    标的 SV 分层、聚集事件与无泄漏历史回测"
-	@echo "  make sv-indicator-backtest  回测 SV 发现页指标的胜率、盈亏比和超额收益"
+	@echo "  make sv-price-history     补齐 Score 所需日线价格"
+	@echo "  make sv-v0                运行 Smart Account v0：候选召回 → LLM 结构化 → 结算 → 导出"
+	@echo "  make sv-v0-prod           生产级 Score：更大候选池 + 作者均衡 LLM 抽样"
+	@echo "  make hyperliquid-smart-money  Hyperliquid TradFi 地址发现、Onchain Score 评分和页面数据导出"
+	@echo "  make hyperliquid-smart-money-live  持续订阅 HIP-3 成交并分钟级刷新聪明钱"
+	@echo "  make export-smart-account-read-model  将现有 Web 排名与 Calls 投影为 iOS Client API 集合"
+	@echo "  make congress-score      美国国会两院一年公开交易能力评分与逐笔官方证据"
+	@echo "  make sv-ticker-signals    标的 Score 分层、聚集事件与无泄漏历史回测"
+	@echo "  make sv-indicator-backtest  回测 Score 发现页指标的胜率、盈亏比和超额收益"
 	@echo "  make sv-indicator-report    导出逐事件、逐原文证据和稳健性细分数据"
-	@echo "  make sv-segment-backtest    按周期、赛道和投资类型子 SV 做垂直集中回测"
-	@echo "  make sv-portfolio-backtest  计算 X SV 集体信号及逐作者组合年化"
-	@echo "  make sv-rank-event-research 扩展 X SV 头尾事件参数并做前后半段验证"
+	@echo "  make sv-segment-backtest    按周期、赛道和投资类型子 Score 做垂直集中回测"
+	@echo "  make sv-portfolio-backtest  计算 X Score 集体信号及逐作者组合年化"
+	@echo "  make sv-rank-event-research 扩展 X Score 头尾事件参数并做前后半段验证"
 	@echo "  make xueqiu-author-plan   导入雪球候选池并创建一年作者时间线任务"
 	@echo "  make xueqiu-author-auth   由用户登录雪球并保存本地会话（不保存密码）"
 	@echo "  make xueqiu-author-run    断点运行雪球作者时间线任务"
 	@echo "  make xueqiu-author-drain  低频冷却长跑正式 300 人作者池"
-	@echo "  make xueqiu-sv-full       回填完整作者池后自动召回、抽取、结算并导出雪球 SV"
-	@echo "  make reddit-sv-authors    补 Reddit SV 作者历史和作者资料"
-	@echo "  make sv-v0-reddit-prod    运行 Reddit 帖子版 Smart Voice"
+	@echo "  make xueqiu-sv-full       回填完整作者池后自动召回、抽取、结算并导出雪球 Score"
+	@echo "  make reddit-sv-authors    补 Reddit Score 作者历史和作者资料"
+	@echo "  make sv-v0-reddit-prod    运行 Reddit 帖子版 Smart Account"
 	@echo "  --- Web ---"
 	@echo "  make web-install   安装前端依赖    make web-dev  启动 Next.js"
-	@echo "  make cf-deploy     构建并上传 web/out 到 Cloudflare Pages（PROJECT=prismo 可改项目名）"
+	@echo "  --- iOS（MVP 主客户端）---"
+	@echo "  make ios-generate  从 ios/project.yml 生成 Xcode 工程"
+	@echo "  make ios-build     构建 SwiftUI App（iOS Simulator）"
+	@echo "  make ios-test      运行 Swift 单元测试"
+	@echo "  make ios-local-check 验证本地数据库数据并构建 bSmart Local"
+	@echo "  make ios-alpha-check 构建并检查隔离 Mock API 的 Internal Alpha"
+	@echo "  make ios-alpha-archive 使用 Apple 签名生成 Internal Alpha xcarchive"
+	@echo "  make ios-release-check 构建并检查 Release 隐私清单与 Fixture 隔离"
+	@echo "  make contract-check 校验 MVP fixture 的跨对象引用与信号边界"
+	@echo "  make mvp-coverage-audit 审计首发标的 Smart Account / Smart Money 发布覆盖"
+	@echo "  make client-api-plan-notifications 规划即时 Push"
+	@echo "  make client-api-plan-digests 规划用户时区每日摘要"
+	@echo "  make client-api-dispatch-notifications 通过 APNs 发送到期通知"
+	@echo "  make client-api-publish-read-models 原子发布完整生产 Read Model（需 INPUT_DIR/SOURCE_VERSION）"
+	@echo "  make client-api-publish-live-smart-money 持续发布分钟级 Smart Money 集合"
+	@echo "  make x-ingest-api / x-ingest-worker 运行 X Smart Account webhook 与 15 分钟补偿服务"
+	@echo "  make x-ingest-bootstrap 将正式 X 排名和实时服务表发布到 PostgreSQL"
+	@echo "  make smart-money-ingest-api 运行 Hyperliquid Smart Money 常驻索引与 Read Model 发布服务"
+	@echo "  make x-ingest-audit 对账最近 24 小时供应商结果与已存帖子（会产生查询费用）"
+	@echo "  make x-local-config / x-local-up 配置并常驻运行本地 X 实时完整链路"
+	@echo "  make client-api-alpha-seed / client-api-alpha-dev 运行隔离 Mock Internal Alpha API"
+	@echo "  make client-api-alpha-smoke 对运行中的 Alpha API 执行完整数据库冒烟测试"
+	@echo "  make client-api-alpha-plan-digests 规划隔离 Alpha 用户日报"
+	@echo "  make client-api-alpha-image 构建可部署的 Mock Internal Alpha 容器"
+	@echo "  make cf-deploy     构建并上传 web/out 到 Cloudflare Pages（PROJECT=bsmart 可改项目名）"
 	@echo "  make arch-check    检查前端/管线架构边界"
+	@echo "  make terminology-check  检查 Smart Account / Score 产品术语"
 	@echo "  make backup-db     备份本地真源到项目外（默认只保留最近一份）"
 	@echo "  make snapshot-db   生成可提交的压缩部署快照（不提交原始 dev.db）"
 	@echo "  make data-status   查看主库、部署快照和外部备份大小"
@@ -174,7 +206,7 @@ gr:
 gr-quote:
 	$(MANAGE) gr-quote
 
-# 雪球 SV 作者池：候选池导入 → 一年作者时间线任务 → 断点回填。
+# 雪球 Score 作者池：候选池导入 → 一年作者时间线任务 → 断点回填。
 # 首次运行需 `make xueqiu-author-auth`，用户在弹出的 Chrome 中自行登录。
 xueqiu-author-auth:
 	DATABASE_URL='sqlite:///./data/dev.db' $(MANAGE) gr-xueqiu-author-auth
@@ -194,10 +226,25 @@ xueqiu-author-status:
 xueqiu-sv-full:
 	POOL_VERSION=$(or $(POOL_VERSION),xueqiu-sv-pool-20260710-v2) bash scripts/run_xueqiu_sv_full.sh
 
-# SV scoring price history: backfill Nasdaq daily OHLC into local price_daily.
+# Score scoring price history: backfill Nasdaq daily OHLC into local price_daily.
 # 可局部补齐：make sv-price-history ONLY=MU,NVDA
 sv-price-history:
 	$(MANAGE) sv-price-history --start $(or $(START),2025-06-01) --top-n $(or $(TOP_N),1000) --min-count $(or $(MIN_COUNT),25) --workers $(or $(WORKERS),8) --sleep $(or $(SLEEP),0.02) $(if $(ONLY),--only $(ONLY),)
+
+# Hyperliquid HIP-3 TradFi 聪明钱：动态市场发现 → 地址候选 → 近 30 天成交 → Onchain Score → Web JSON。
+hyperliquid-smart-money:
+	$(MANAGE) hyperliquid-smart-money --lookback-days $(or $(DAYS),30) --max-markets $(or $(MARKETS),32) --max-wallets $(or $(WALLETS),32) $(if $(STAGE),--stage $(STAGE),)
+
+hyperliquid-smart-money-live:
+	$(MANAGE) hyperliquid-smart-money-live --lookback-days $(or $(DAYS),30) --refresh-seconds $(or $(REFRESH_SECONDS),30) --publish-seconds $(or $(PUBLISH_SECONDS),60) --candidate-backfill $(or $(CANDIDATES),4) --max-active-wallets $(or $(WALLETS),8) --max-profile-wallets $(or $(PROFILES),8) --profile-refresh-minutes $(or $(PROFILE_REFRESH_MINUTES),5) --instrument-refresh-minutes $(or $(INSTRUMENT_REFRESH_MINUTES),60) $(if $(CYCLES),--max-cycles $(CYCLES),)
+
+# 复用 Web 端 sv_investor_score / sv_call 真源；只生成 M2 的两个暂存集合，不单独重算 Score。
+export-smart-account-read-model:
+	$(MANAGE) export-smart-account-read-model --update-days $(or $(DAYS),30) --update-limit $(or $(LIMIT),500) --profile-limit $(or $(PROFILE_LIMIT),0) $(if $(OUTPUT_DIR),--output-dir $(OUTPUT_DIR),)
+
+# 美国国会两院 STOCK Act 公开披露：一年窗口、20D/60D 相对 SPY 结算、全体覆盖和证据导出。
+congress-score:
+	$(MANAGE) congress-score $(if $(AS_OF),--as-of $(AS_OF),) --lookback-days $(or $(DAYS),365) --workers $(or $(WORKERS),20) $(if $(SOURCE_ZIP),--source-zip $(SOURCE_ZIP),) $(if $(REFRESH),--refresh-source --refresh-prices,)
 
 # Toss(토스증권) 종목 커뮤니티评论 → gr_post(source='toss', region='kr')。逆向 Web API、游标翻页 RECENT，无需登录。
 # 标的映射在 pipeline/platforms/toss/community.py 的 TOSS_STOCKS；大体量标的可调 --resume/--max-pages/--sleep/--commit-pages。
@@ -395,11 +442,16 @@ stats:
 test:
 	$(PY) -m pytest -q
 	$(SYS_PY) scripts/check_architecture.py
+	$(SYS_PY) scripts/check_product_terminology.py
 
 arch-check:
 	$(SYS_PY) scripts/check_architecture.py
+	$(SYS_PY) scripts/check_product_terminology.py
 
-# ---------- Smart Voice v0 ----------
+terminology-check:
+	$(SYS_PY) scripts/check_product_terminology.py
+
+# ---------- Smart Account v0 ----------
 # 只做规则候选召回，不调用 LLM，便于先检查覆盖范围。
 sv-v0-candidates:
 	$(MANAGE) sv-v0 --stage candidates --candidate-limit $(or $(LIMIT),50000)
@@ -407,7 +459,7 @@ sv-v0-candidates:
 sv-v0-reddit-candidates:
 	$(MANAGE) sv-v0 --source reddit --stage candidates --candidate-limit $(or $(LIMIT),50000) --reddit-author-limit $(or $(AUTHORS),1000) --reddit-since-days $(or $(DAYS),365) --reddit-min-author-posts $(or $(MIN_POSTS),8)
 
-# 混合版：规则召回 + LLM 结构化 + 价格结算 + SV 打分 + 前端 JSON 导出。
+# 混合版：规则召回 + LLM 结构化 + 价格结算 + Score 打分 + 前端 JSON 导出。
 # 可覆盖参数：make sv-v0 LIMIT=50000 EXTRACT=2000 WORKERS=4
 sv-v0:
 	$(MANAGE) sv-v0 --stage all --candidate-limit $(or $(LIMIT),50000) --extract-limit $(or $(EXTRACT),1000) --workers $(or $(WORKERS),4)
@@ -417,41 +469,37 @@ sv-v0:
 sv-v0-prod:
 	$(MANAGE) sv-v0 --stage all --candidate-limit $(or $(LIMIT),50000) --extract-limit $(or $(EXTRACT),10000) --extract-mode author-balanced --per-author-min $(or $(MIN),20) --per-author-max $(or $(MAX),80) --workers $(or $(WORKERS),4)
 
-private-sv-telegram:
-	$(MANAGE) private-sv-telegram --handle $(or $(HANDLE),ruiminginvest) --stage $(or $(STAGE),all) --workers $(or $(WORKERS),4) $(if $(PROXY),--proxy $(PROXY),)
-
 sv-v0-reddit-prod:
 	$(MANAGE) sv-v0 --source reddit --stage all --candidate-limit $(or $(LIMIT),50000) --extract-limit $(or $(EXTRACT),10000) --extract-mode author-balanced --per-author-min $(or $(MIN),10) --per-author-max $(or $(MAX),50) --workers $(or $(WORKERS),4) --reddit-author-limit $(or $(AUTHORS),1000) --reddit-since-days $(or $(DAYS),365) --reddit-min-author-posts $(or $(MIN_POSTS),8)
 
-# 标的级 SV 信号：历史时点作者百分位 → 7 天观点聚集 → 下一交易日开盘后的多周期回测。
+# 标的级 Score 信号：历史时点作者百分位 → 7 天观点聚集 → 下一交易日开盘后的多周期回测。
 # 可局部重建：make sv-ticker-signals ONLY=MU,NVDA
 sv-ticker-signals:
 	$(MANAGE) sv-ticker-signals $(if $(ONLY),--only $(ONLY),) --window-days $(or $(WINDOW),7) --min-authors $(or $(MIN_AUTHORS),3) --consensus-threshold $(or $(CONSENSUS),0.65) --effective-voices $(or $(EFFECTIVE),2.5)
 
-# SV 发现页四类指标：历史平台内 Top/Bottom 10% → 事件化 → 下一交易日开盘多周期回测。
+# Score 发现页四类指标：历史平台内 Top/Bottom 10% → 事件化 → 下一交易日开盘多周期回测。
 sv-indicator-backtest:
 	$(MANAGE) sv-indicator-backtest $(if $(ONLY),--only $(ONLY),) --windows $(or $(WINDOWS),$(SV_INDICATOR_WINDOWS)) --source-scopes $(or $(SOURCES),$(SV_INDICATOR_SOURCES)) --report $(or $(REPORT),data/reports/sv_indicator_backtest.csv)
 
 sv-indicator-report:
 	$(MANAGE) sv-indicator-report --report-dir $(or $(REPORT_DIR),data/reports)
 
-# 子 SV 垂直集中回测：历史周期/赛道/投资类型排名 → 滚动事件 → 匹配周期超额。
+# 子 Score 垂直集中回测：历史周期/赛道/投资类型排名 → 滚动事件 → 匹配周期超额。
 sv-segment-backtest:
 	$(MANAGE) sv-segment-backtest $(if $(ONLY),--only $(ONLY),) --windows $(or $(WINDOWS),$(SV_SEGMENT_WINDOWS)) --sources $(or $(SOURCES),x) --segment-types $(or $(SEGMENTS),$(SV_SEGMENT_TYPES)) --rank-bands $(or $(BANDS),$(SV_SEGMENT_BANDS)) --report $(or $(REPORT),data/reports/sv_segment_backtest/sv_segment_backtest.csv)
 
-# X-only SV portfolio CAGR: collective point-in-time signals and per-author portfolios.
+# X-only Score portfolio CAGR: collective point-in-time signals and per-author portfolios.
 sv-portfolio-backtest:
 	$(MANAGE) sv-portfolio-backtest --windows $(or $(WINDOWS),1,3,7,14,30) --holding-days $(or $(HOLDING),1,5,20,60,90,180) --position-modes $(or $(MODES),long_short,long_only,short_only) --report-dir $(or $(REPORT_DIR),data/reports/sv_portfolio_backtest)
 
 sv-rank-event-research:
 	$(MANAGE) sv-rank-event-research --report-dir $(or $(REPORT_DIR),data/reports/sv_portfolio_backtest)
 
-# ---------- iOS (primary MVP client) ----------
+# ---------- iOS（MVP 主客户端）----------
 IOS_PROJECT := ios/bSmart.xcodeproj
 IOS_SCHEME := bSmart
 IOS_TEST_DEVICE ?= iPhone 16
 IOS_TEST_OS ?=
-IOS_ALPHA_API_BASE_URL ?= https://api.158-247-196-93.sslip.io
 
 ios-generate:
 	cd ios && xcodegen generate
@@ -461,6 +509,31 @@ ios-build: ios-generate
 
 ios-test: ios-generate
 	IOS_TEST_DEVICE='$(IOS_TEST_DEVICE)' IOS_TEST_OS='$(IOS_TEST_OS)' scripts/run_ios_tests.sh
+
+IOS_ALPHA_API_BASE_URL ?= https://api.158-247-196-93.sslip.io
+IOS_LOCAL_API_BASE_URL ?= http://localhost:8081
+IOS_LIVE_STATE_URL ?= sqlite:///$(CURDIR)/data/runtime/ios-live-state.db
+IOS_LIVE_READ_MODEL_URL ?= sqlite:///$(CURDIR)/data/runtime/ios-live-read-model.db
+IOS_LIVE_STAGING_DIR ?= $(CURDIR)/data/runtime/ios-live-staging
+IOS_UNIFIED_READ_MODEL_URL ?= postgresql://bsmart:bsmart_local_only@127.0.0.1:54329/bsmart
+
+ios-live-seed:
+	mkdir -p data/runtime
+	BSMART_ENV=development BSMART_READ_MODEL_MODE=database BSMART_CLIENT_API_DATABASE_URL='$(IOS_LIVE_STATE_URL)' BSMART_READ_MODEL_DATABASE_URL='$(IOS_LIVE_READ_MODEL_URL)' $(PY) -m scripts.materialize_ios_live_read_models --staging-dir '$(IOS_LIVE_STAGING_DIR)'
+
+ios-live-unified-seed:
+	mkdir -p data/runtime
+	BSMART_ENV=development BSMART_READ_MODEL_MODE=database BSMART_CLIENT_API_DATABASE_URL='$(IOS_UNIFIED_READ_MODEL_URL)' BSMART_READ_MODEL_DATABASE_URL='$(IOS_UNIFIED_READ_MODEL_URL)' $(PY) -m scripts.materialize_ios_live_read_models --staging-dir '$(IOS_LIVE_STAGING_DIR)' --exclude-historical-updates
+
+ios-live-api:
+	BSMART_ENV=development BSMART_READ_MODEL_MODE=database BSMART_CLIENT_API_DATABASE_URL='$(IOS_LIVE_STATE_URL)' BSMART_READ_MODEL_DATABASE_URL='$(IOS_LIVE_READ_MODEL_URL)' $(CLIENT_API_PY) -m uvicorn services.client_api.main:create_app --factory --host 127.0.0.1 --port 8085
+
+ios-live-smart-money:
+	BSMART_ENV=development BSMART_SMART_MONEY_ENABLED=1 BSMART_SMART_MONEY_PRIMARY_SOURCE=hyperdash BSMART_SMART_MONEY_REFRESH_SECONDS=600 BSMART_SMART_MONEY_DATA_DIR='$(CURDIR)/data/runtime/smart-money-service' BSMART_SMART_MONEY_OUTPUT='$(CURDIR)/web/lib/data/hyperliquidSmartMoney.json' BSMART_SMART_MONEY_CLIENT_OUTPUT='$(CURDIR)/data/runtime/smart-money-service/client' BSMART_SMART_MONEY_HEALTH_OUTPUT='$(CURDIR)/data/runtime/smart-money-service/health.json' BSMART_READ_MODEL_DATABASE_URL='$(IOS_UNIFIED_READ_MODEL_URL)' $(SMART_MONEY_INGEST_PY) -m uvicorn services.smart_money_ingest.main:create_app --factory --host 127.0.0.1 --port 8084
+
+ios-local-check: ios-generate
+	$(SYS_PY) scripts/check_ios_local_data.py --base-url '$(IOS_LOCAL_API_BASE_URL)'
+	xcodebuild -project $(IOS_PROJECT) -scheme 'bSmart Local' -configuration Debug -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/bsmart-ios-local-check build
 
 ios-alpha-check: ios-generate
 	xcodebuild -project $(IOS_PROJECT) -scheme 'bSmart Internal Alpha' -configuration InternalAlpha -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/bsmart-ios-alpha-check CODE_SIGNING_ALLOWED=NO BSMART_ENDPOINT_URL='$(IOS_ALPHA_API_BASE_URL)' build
@@ -473,7 +546,125 @@ ios-release-check: ios-generate
 	xcodebuild -project $(IOS_PROJECT) -scheme $(IOS_SCHEME) -configuration Release -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/bsmart-ios-release-check CODE_SIGNING_ALLOWED=NO build
 	$(SYS_PY) scripts/check_ios_release_bundle.py --expected-data-environment production /tmp/bsmart-ios-release-check/Build/Products/Release-iphonesimulator/BSmart.app
 
-# ---------- Web ----------
+contract-check:
+	$(SYS_PY) scripts/check_mvp_contracts.py
+
+CLIENT_API_VENV := services/client_api/.venv
+CLIENT_API_PY := $(CLIENT_API_VENV)/bin/python
+
+client-api-install:
+	$(SYS_PY) -m venv $(CLIENT_API_VENV)
+	$(CLIENT_API_PY) -m pip install --disable-pip-version-check -r services/client_api/requirements.txt
+
+client-api-dev:
+	BSMART_ENV=development BSMART_READ_MODEL_MODE=fixture $(CLIENT_API_PY) -m uvicorn services.client_api.main:create_app --factory --reload --port 8081
+
+client-api-test:
+	$(CLIENT_API_PY) -m pytest services/client_api/tests
+
+client-api-seed-mock:
+	BSMART_ENV=development BSMART_READ_MODEL_MODE=database $(CLIENT_API_PY) -m services.client_api.materialize_fixtures
+
+CLIENT_API_ALPHA_STATE_URL ?= sqlite:///$(CURDIR)/data/runtime/client-api-alpha-state.db
+CLIENT_API_ALPHA_READ_MODEL_URL ?= sqlite:///$(CURDIR)/data/runtime/client-api-alpha-read-model.db
+
+client-api-alpha-seed:
+	mkdir -p data/runtime
+	BSMART_ENV=internal-alpha BSMART_READ_MODEL_MODE=database BSMART_CLIENT_API_DATABASE_URL='$(CLIENT_API_ALPHA_STATE_URL)' BSMART_READ_MODEL_DATABASE_URL='$(CLIENT_API_ALPHA_READ_MODEL_URL)' $(CLIENT_API_PY) -m services.client_api.materialize_fixtures
+
+client-api-alpha-dev:
+	BSMART_ENV=internal-alpha BSMART_READ_MODEL_MODE=database BSMART_CLIENT_API_DATABASE_URL='$(CLIENT_API_ALPHA_STATE_URL)' BSMART_READ_MODEL_DATABASE_URL='$(CLIENT_API_ALPHA_READ_MODEL_URL)' $(CLIENT_API_PY) -m uvicorn services.client_api.main:create_app --factory --reload --port 8082
+
+client-api-alpha-smoke:
+	BSMART_ENV=internal-alpha BSMART_READ_MODEL_MODE=database BSMART_CLIENT_API_DATABASE_URL='$(CLIENT_API_ALPHA_STATE_URL)' BSMART_READ_MODEL_DATABASE_URL='$(CLIENT_API_ALPHA_READ_MODEL_URL)' $(CLIENT_API_PY) -m services.client_api.smoke_internal_alpha --base-url '$(or $(BASE_URL),http://127.0.0.1:8082)'
+
+client-api-alpha-plan-digests:
+	BSMART_ENV=internal-alpha BSMART_READ_MODEL_MODE=database BSMART_CLIENT_API_DATABASE_URL='$(CLIENT_API_ALPHA_STATE_URL)' BSMART_READ_MODEL_DATABASE_URL='$(CLIENT_API_ALPHA_READ_MODEL_URL)' $(CLIENT_API_PY) -m services.client_api.plan_daily_digests $(if $(NOW),--now '$(NOW)',)
+
+client-api-alpha-image:
+	docker build -f services/client_api/Dockerfile.alpha -t bsmart-client-api-alpha .
+
+client-api-plan-notifications:
+	BSMART_ENV=development BSMART_READ_MODEL_MODE=database $(CLIENT_API_PY) -m services.client_api.plan_notifications
+
+client-api-plan-digests:
+	BSMART_ENV=development BSMART_READ_MODEL_MODE=database $(CLIENT_API_PY) -m services.client_api.plan_daily_digests
+
+client-api-dispatch-notifications:
+	BSMART_ENV=development BSMART_READ_MODEL_MODE=database $(CLIENT_API_PY) -m services.client_api.dispatch_notifications --limit $(or $(LIMIT),100)
+
+client-api-notification-worker:
+	BSMART_ENV=development BSMART_READ_MODEL_MODE=database $(CLIENT_API_PY) -m services.client_api.notification_worker
+
+client-api-publish-read-models:
+	BSMART_ENV=development BSMART_READ_MODEL_MODE=database $(CLIENT_API_PY) -m services.client_api.publish_read_models --input-dir '$(INPUT_DIR)' --source-version '$(SOURCE_VERSION)' --channel $(or $(CHANNEL),production)
+
+client-api-publish-live-smart-money:
+	BSMART_ENV=development BSMART_READ_MODEL_MODE=database $(CLIENT_API_PY) -m services.client_api.publish_realtime_smart_money --input-dir '$(or $(INPUT_DIR),data/runtime/smart-money-live)' $(if $(ONCE),--once,)
+
+X_INGEST_VENV := services/x_ingest/.venv
+X_INGEST_PY := $(X_INGEST_VENV)/bin/python
+
+x-ingest-install:
+	$(SYS_PY) -m venv $(X_INGEST_VENV)
+	$(X_INGEST_PY) -m pip install --disable-pip-version-check -r services/x_ingest/requirements.txt
+
+x-ingest-bootstrap:
+	$(X_INGEST_PY) scripts/bootstrap_x_realtime.py --pool-limit $(or $(POOL_LIMIT),10)
+
+x-ingest-api:
+	$(X_INGEST_PY) -m uvicorn services.x_ingest.main:create_app --factory --reload --port 8083
+
+x-ingest-worker:
+	$(X_INGEST_PY) -m services.x_ingest.worker
+
+x-ingest-test:
+	$(X_INGEST_PY) -m pytest pipeline/tests/test_x_realtime.py pipeline/tests/test_twitterapi_io.py services/x_ingest/tests services/client_api/tests/test_read_model_publisher.py
+
+x-ingest-audit:
+	$(X_INGEST_PY) scripts/audit_x_ingest_completeness.py --hours $(or $(HOURS),24) --minimum $(or $(MINIMUM),0.99)
+
+X_LOCAL_COMPOSE := docker compose --env-file .env --env-file .env.x-realtime.local -f docker-compose.x-realtime.yml
+X_LOCAL_DATABASE_URL := postgresql://bsmart:bsmart_local_only@127.0.0.1:54329/bsmart
+
+x-local-config:
+	$(X_INGEST_PY) scripts/configure_x_realtime_local.py --api-key-from-clipboard
+
+x-local-up:
+	@test -s .env.x-realtime.local || (echo "Run make x-local-config after copying the provider API key." && exit 1)
+	$(X_LOCAL_COMPOSE) up -d --wait postgres
+	$(X_INGEST_PY) scripts/bootstrap_x_realtime.py --target-url $(X_LOCAL_DATABASE_URL) --pool-limit $(or $(POOL_LIMIT),0)
+	$(X_LOCAL_COMPOSE) up -d --build
+
+x-local-down:
+	$(X_INGEST_PY) scripts/pause_x_realtime_local.py --database-url $(X_LOCAL_DATABASE_URL)
+	$(X_LOCAL_COMPOSE) down
+
+x-local-status:
+	$(X_LOCAL_COMPOSE) ps
+	@curl -fsS http://127.0.0.1:8083/health | jq .
+	@curl -fsS http://127.0.0.1:8081/health | jq .
+
+x-local-logs:
+	$(X_LOCAL_COMPOSE) logs --tail $(or $(LINES),200) -f
+
+SMART_MONEY_INGEST_VENV := services/smart_money_ingest/.venv
+SMART_MONEY_INGEST_PY := $(SMART_MONEY_INGEST_VENV)/bin/python
+
+smart-money-ingest-install:
+	$(SYS_PY) -m venv $(SMART_MONEY_INGEST_VENV)
+	$(SMART_MONEY_INGEST_PY) -m pip install --disable-pip-version-check -r services/smart_money_ingest/requirements-dev.txt
+
+smart-money-ingest-api:
+	$(SMART_MONEY_INGEST_PY) -m uvicorn services.smart_money_ingest.main:create_app --factory --reload --port 8084
+
+smart-money-ingest-test:
+	$(SMART_MONEY_INGEST_PY) -m pytest services/smart_money_ingest/tests pipeline/tests/test_hyperliquid_smart_money.py
+
+mvp-coverage-audit:
+	$(SYS_PY) scripts/audit_mvp_coverage.py --as-of $(or $(AS_OF),$(shell date +%F)) --tickers $(or $(TICKERS),MU MSTR NVDA) --report $(or $(REPORT),docs/product/mvp-data-coverage-audit-$(or $(AS_OF),$(shell date +%F)).md)
+
+# ---------- Web（保留兼容，不再作为 MVP 主客户端扩张）----------
 web-install:
 	cd web && npm install
 
@@ -493,12 +684,12 @@ serve:
 
 # Cloudflare Pages：本地用 Node 22 读 dev.db 构建静态产物，再用 Wrangler Direct Upload 发布。
 # 当前产品只部署 zh/en；web/out 里若有 ja/ko 历史产物，会先排除到临时目录，避免上传体积过大。
-# 首次使用前需要：npx wrangler login。项目名默认 prismo，可用 PROJECT=xxx 覆盖。
+# 首次使用前需要：npx wrangler login。项目名默认 bsmart，可用 PROJECT=xxx 覆盖。
 cf-deploy:
 	NEXT_BUILD_CPUS=$(or $(CPUS),1) $(MAKE) site
-	rm -rf /tmp/prismo-out-cf
-	rsync -a --exclude='/ja/' --exclude='/ko/' web/out/ /tmp/prismo-out-cf/
-	npx wrangler pages deploy /tmp/prismo-out-cf --project-name $(or $(PROJECT),prismo) --branch main --commit-dirty=true
+	rm -rf /tmp/bsmart-out-cf
+	rsync -a --exclude='/ja/' --exclude='/ko/' web/out/ /tmp/bsmart-out-cf/
+	npx wrangler pages deploy /tmp/bsmart-out-cf --project-name $(or $(PROJECT),bsmart) --branch main --commit-dirty=true
 
 # ---------- 云端数据库（Supabase = 数据的家）----------
 # 前提：.env 里 DATABASE_URL 已设为 Supabase 的 Postgres 连接串（见 CLOUD_DB.md）。
@@ -516,19 +707,19 @@ cloud-init:
 cloud-push:
 	$(MANAGE) cloud-push
 
-# ⚠⚠ Prismo 现以**本地 data/dev.db 为唯一真源**（含 gr_*/yt_*/kol_* 等云端没有的独有层）。
+# ⚠⚠ bSmart 现以**本地 data/dev.db 为唯一真源**（含 gr_*/yt_*/kol_* 等云端没有的独有层）。
 # 云端 Supabase 是 redditalpha.xyz 的 Reddit 核心（+ 只读 tw_* X 数据）。两站互不干扰。
-# cloud-pull 会用云端快照「全新覆盖」本地 → 抹掉 Prismo 独有层（这就是之前「数据消失」的元凶）。
+# cloud-pull 会用云端快照「全新覆盖」本地 → 抹掉 bSmart 独有层（这就是之前「数据消失」的元凶）。
 # 故**默认拒绝执行**；万一确需从云端重建，先 backup-db 再 FORCE=1。
 cloud-pull:
 	@if [ -z "$(FORCE)" ]; then \
-	  echo "⛔ cloud-pull 会用云端快照覆盖本地 dev.db、抹掉 Prismo 独有的 gr_*/yt_*/kol_*（云端没有它们）。"; \
-	  echo "   Prismo 以本地 dev.db 为真源；redditalpha.xyz 才用云端。"; \
+	  echo "⛔ cloud-pull 会用云端快照覆盖本地 dev.db、抹掉 bSmart 独有的 gr_*/yt_*/kol_*（云端没有它们）。"; \
+	  echo "   bSmart 以本地 dev.db 为真源；redditalpha.xyz 才用云端。"; \
 	  echo "   确需执行：make backup-db && FORCE=1 make cloud-pull"; \
 	  exit 1; \
 	fi
 	@$(MAKE) backup-db
-	PRISMO_ALLOW_CLOUD_PULL=1 $(MANAGE) cloud-pull
+	BSMART_ALLOW_CLOUD_PULL=1 $(MANAGE) cloud-pull
 
 # 事务一致地备份本地 dev.db 到项目外；默认只保留最近一份。
 backup-db:
@@ -554,9 +745,9 @@ data-clean:
 data-status:
 	@$(SYS_PY) scripts/data_snapshot.py status
 
-# 出站构建：Prismo = 本地真源，**不再 cloud-pull**。保留 site-cloud 名字（防 muscle-memory 误清）= 等同 make site。
+# 出站构建：bSmart = 本地真源，**不再 cloud-pull**。保留 site-cloud 名字（防 muscle-memory 误清）= 等同 make site。
 site-cloud:
-	@echo "ℹ️  Prismo 以本地 dev.db 为真源 → site-cloud 不再从云端拉取（避免抹掉本地独有层），等同 make site。"
+	@echo "ℹ️  bSmart 以本地 dev.db 为真源 → site-cloud 不再从云端拉取（避免抹掉本地独有层），等同 make site。"
 	@$(MAKE) site
 
 # clean 只清构建缓存；**绝不删 data/dev.db**（它现在是不可再生的真源）。

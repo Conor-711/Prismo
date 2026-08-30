@@ -1,14 +1,23 @@
 "use client";
 
-// 全站收藏/追踪状态。挂在 AuthProvider 之内（依赖 useAuth）。
-// 登录后一次性拉取用户的全部 (kind, ref_id) 建成 Set → 卡片 isSaved O(1)；toggle 乐观更新再落库。
+// 全站收藏/追踪状态。追踪始终读取设备缓存；登录后再合并账户收藏。
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { isAuthConfigured } from "@/lib/supabase";
 import {
   loadKeys,
+  listCollection,
   addCollection,
   removeCollection,
+  loadLocalTrackingKeys,
+  addLocalTrackingCollection,
+  removeLocalTrackingCollection,
+  mergeLocalTrackingCollections,
+  hasMigratedLocalTracking,
+  markLocalTrackingMigrated,
+  isLocalTrackingKind,
+  LOCAL_TRACKING_KINDS,
+  LOCAL_TRACKING_STORAGE_KEY,
   keyOf,
   type CollectionKind,
   type Snapshot,
@@ -16,7 +25,7 @@ import {
 
 type FavState = {
   ready: boolean; // 已完成首次加载
-  configured: boolean; // Supabase 是否已配置
+  configured: boolean; // 本地追踪能力是否可用
   signedIn: boolean;
   isSaved: (kind: CollectionKind, refId: string) => boolean;
   toggle: (kind: CollectionKind, refId: string, snapshot?: Snapshot) => Promise<void>;
@@ -26,7 +35,7 @@ type FavState = {
 
 const FavCtx = createContext<FavState>({
   ready: false,
-  configured: false,
+  configured: true,
   signedIn: false,
   isSaved: () => false,
   toggle: async () => {},
@@ -43,22 +52,52 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let active = true;
-    if (!userId || !isAuthConfigured) {
-      setKeys(new Set());
-      setReady(true);
-      return;
-    }
-    setReady(false);
-    loadKeys(userId).then((s) => {
+    setKeys(loadLocalTrackingKeys());
+    setReady(true);
+    if (!userId || !isAuthConfigured) return;
+
+    const shouldMigrateTracking = !hasMigratedLocalTracking(userId);
+    Promise.all([
+      loadKeys(userId),
+      shouldMigrateTracking
+        ? Promise.all(LOCAL_TRACKING_KINDS.map((kind) => listCollection(userId, kind)))
+        : Promise.resolve([]),
+    ]).then(([remoteKeys, remoteTracking]) => {
       if (!active) return;
-      setKeys(s);
-      setReady(true);
+      if (shouldMigrateTracking && mergeLocalTrackingCollections(remoteTracking.flat())) {
+        markLocalTrackingMigrated(userId);
+      }
+      const next = loadLocalTrackingKeys();
+      for (const key of remoteKeys) {
+        const separator = key.indexOf(":");
+        const kind = key.slice(0, separator) as CollectionKind;
+        if (!isLocalTrackingKind(kind)) next.add(key);
+      }
+      setKeys(next);
       setVersion((v) => v + 1);
     });
     return () => {
       active = false;
     };
   }, [userId]);
+
+  useEffect(() => {
+    const syncFromStorage = (event: StorageEvent) => {
+      if (event.key !== LOCAL_TRACKING_STORAGE_KEY) return;
+      setKeys((previous) => {
+        const next = loadLocalTrackingKeys();
+        for (const key of previous) {
+          const separator = key.indexOf(":");
+          const kind = key.slice(0, separator) as CollectionKind;
+          if (!isLocalTrackingKind(kind)) next.add(key);
+        }
+        return next;
+      });
+      setVersion((v) => v + 1);
+    };
+    window.addEventListener("storage", syncFromStorage);
+    return () => window.removeEventListener("storage", syncFromStorage);
+  }, []);
 
   const isSaved = useCallback(
     (kind: CollectionKind, refId: string) => keys.has(keyOf(kind, refId)),
@@ -77,7 +116,6 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
 
   const toggle = useCallback(
     async (kind: CollectionKind, refId: string, snapshot?: Snapshot) => {
-      if (!userId) return;
       const k = keyOf(kind, refId);
       const has = keys.has(k);
       // 乐观更新
@@ -88,9 +126,16 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
         return next;
       });
       setVersion((v) => v + 1);
-      const ok = has
-        ? await removeCollection(userId, kind, refId)
-        : await addCollection(userId, kind, refId, snapshot);
+      let ok = false;
+      if (isLocalTrackingKind(kind)) {
+        ok = has
+          ? removeLocalTrackingCollection(kind, refId)
+          : addLocalTrackingCollection(kind, refId, snapshot);
+      } else if (userId) {
+        ok = has
+          ? await removeCollection(userId, kind, refId)
+          : await addCollection(userId, kind, refId, snapshot);
+      }
       if (!ok) {
         // 落库失败 → 回滚
         setKeys((prev) => {
@@ -107,7 +152,7 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <FavCtx.Provider
-      value={{ ready, configured: isAuthConfigured, signedIn: !!userId, isSaved, toggle, countOf, version }}
+      value={{ ready, configured: true, signedIn: !!userId, isSaved, toggle, countOf, version }}
     >
       {children}
     </FavCtx.Provider>

@@ -1,4 +1,4 @@
-"""Event construction and forward performance for vertical sub-SV signals."""
+"""Event construction and forward performance for vertical sub-Score signals."""
 from __future__ import annotations
 
 import bisect

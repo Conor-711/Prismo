@@ -1,10 +1,17 @@
-// 账户系统的客户端数据层：用户私有「收藏 / 追踪」。
-// 照抄 analytics.ts 的范式 —— 客户端经 anon key + RLS 直接读写 Supabase，未配置时静默降级（返回空/false）。
+// 收藏与追踪的客户端数据层。
+// 帖子/评论收藏仍经 anon key + RLS 写 Supabase；标的/作者/叙事追踪保存在当前设备 localStorage。
 // 后端 schema 见 supabase/migrations/20260612000007_user_collections.sql。
 import { supabase } from "./supabase";
 import type { FeedRow, CommentRow } from "./queries";
 
 export type CollectionKind = "post" | "comment" | "subreddit" | "ticker" | "author" | "narrative";
+export type LocalTrackingKind = Extract<CollectionKind, "ticker" | "author" | "narrative">;
+
+export const LOCAL_TRACKING_STORAGE_KEY = "bsmart:tracking:v1";
+export const LOCAL_TRACKING_KINDS: LocalTrackingKind[] = ["ticker", "author", "narrative"];
+const LOCAL_TRACKING_KIND_SET = new Set<CollectionKind>(LOCAL_TRACKING_KINDS);
+const LOCAL_TRACKING_MIGRATION_PREFIX = "bsmart:tracking:migrated:v1:";
+const LOCAL_TRACKING_STORAGE_VERSION = 2;
 
 // 帖子/评论收藏时一并写入的「展示快照」（个人主页直接渲染，不回查 posts/comments，保持运行时不连库）。
 export interface PostSnapshot {
@@ -39,6 +46,139 @@ export interface CollectionRow {
 // 本地 Set 的 key（kind + ref_id），供卡片 isSaved 做 O(1) 判断。
 export function keyOf(kind: CollectionKind, refId: string): string {
   return `${kind}:${refId}`;
+}
+
+export function isLocalTrackingKind(kind: CollectionKind): kind is LocalTrackingKind {
+  return LOCAL_TRACKING_KIND_SET.has(kind);
+}
+
+function localStorageHandle(): Storage | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeLocalRows(value: unknown): CollectionRow[] {
+  const source =
+    value && typeof value === "object" && "rows" in value
+      ? (value as { rows?: unknown }).rows
+      : value;
+  if (!Array.isArray(source)) return [];
+
+  const byKey = new Map<string, CollectionRow>();
+  for (const item of source) {
+    if (!item || typeof item !== "object") continue;
+    const row = item as Partial<CollectionRow>;
+    if (!row.kind || !isLocalTrackingKind(row.kind) || typeof row.ref_id !== "string") continue;
+    const refId = row.ref_id.trim();
+    if (!refId) continue;
+    const normalized: CollectionRow = {
+      kind: row.kind,
+      ref_id: refId,
+      snapshot: row.snapshot ?? null,
+      created_at:
+        typeof row.created_at === "string" && row.created_at
+          ? row.created_at
+          : new Date(0).toISOString(),
+    };
+    const key = keyOf(normalized.kind, normalized.ref_id);
+    const current = byKey.get(key);
+    if (!current || normalized.created_at > current.created_at) byKey.set(key, normalized);
+  }
+  return [...byKey.values()].sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
+function readLocalTrackingRows(): CollectionRow[] {
+  const storage = localStorageHandle();
+  if (!storage) return [];
+  try {
+    return normalizeLocalRows(JSON.parse(storage.getItem(LOCAL_TRACKING_STORAGE_KEY) || "[]"));
+  } catch {
+    return [];
+  }
+}
+
+function writeLocalTrackingRows(rows: CollectionRow[]): boolean {
+  const storage = localStorageHandle();
+  if (!storage) return false;
+  try {
+    storage.setItem(
+      LOCAL_TRACKING_STORAGE_KEY,
+      JSON.stringify({ version: LOCAL_TRACKING_STORAGE_VERSION, rows: normalizeLocalRows(rows) }),
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function loadLocalTrackingKeys(): Set<string> {
+  return new Set(readLocalTrackingRows().map((row) => keyOf(row.kind, row.ref_id)));
+}
+
+export function listLocalTrackingCollection(kind: LocalTrackingKind): CollectionRow[] {
+  return readLocalTrackingRows().filter((row) => row.kind === kind);
+}
+
+export function addLocalTrackingCollection(
+  kind: LocalTrackingKind,
+  refId: string,
+  snapshot?: Snapshot,
+): boolean {
+  const normalizedRefId = refId.trim();
+  if (!normalizedRefId) return false;
+  const rows = readLocalTrackingRows();
+  const key = keyOf(kind, normalizedRefId);
+  if (rows.some((row) => keyOf(row.kind, row.ref_id) === key)) return true;
+  return writeLocalTrackingRows([
+    {
+      kind,
+      ref_id: normalizedRefId,
+      snapshot: snapshot ?? null,
+      created_at: new Date().toISOString(),
+    },
+    ...rows,
+  ]);
+}
+
+export function removeLocalTrackingCollection(kind: LocalTrackingKind, refId: string): boolean {
+  const key = keyOf(kind, refId);
+  return writeLocalTrackingRows(
+    readLocalTrackingRows().filter((row) => keyOf(row.kind, row.ref_id) !== key),
+  );
+}
+
+export function mergeLocalTrackingCollections(rows: CollectionRow[]): boolean {
+  const localRows = readLocalTrackingRows();
+  const merged = normalizeLocalRows([...localRows, ...rows.filter((row) => isLocalTrackingKind(row.kind))]);
+  const before = localRows.map((row) => `${keyOf(row.kind, row.ref_id)}:${row.created_at}`).join("|");
+  const after = merged.map((row) => `${keyOf(row.kind, row.ref_id)}:${row.created_at}`).join("|");
+  if (before === after) return true;
+  return writeLocalTrackingRows(merged);
+}
+
+export function hasMigratedLocalTracking(userId: string): boolean {
+  const storage = localStorageHandle();
+  if (!storage) return false;
+  try {
+    return storage.getItem(`${LOCAL_TRACKING_MIGRATION_PREFIX}${userId}`) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function markLocalTrackingMigrated(userId: string): boolean {
+  const storage = localStorageHandle();
+  if (!storage) return false;
+  try {
+    storage.setItem(`${LOCAL_TRACKING_MIGRATION_PREFIX}${userId}`, "1");
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // 拉当前用户全部 (kind, ref_id)，构建轻量 Set（不含 snapshot）。

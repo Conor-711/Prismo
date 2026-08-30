@@ -1,4 +1,4 @@
-"""SQLite schema for ticker-level Smart Voice signals and backtests."""
+"""SQLite schema for ticker-level Smart Account signals and backtests."""
 from __future__ import annotations
 
 import sqlite3

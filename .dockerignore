@@ -2,8 +2,9 @@
 **/node_modules
 web/.next
 web/out
-pipeline/.venv
+**/.venv
 **/__pycache__
+**/.pytest_cache
 data/*.db
 !data/dev.db.xz
 !data/dev.db.xz.part-*

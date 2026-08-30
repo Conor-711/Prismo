@@ -119,22 +119,22 @@ def push(local: str = LOCAL_URL, cloud: str | None = None) -> None:
 def pull(local: str = LOCAL_URL, cloud: str | None = None) -> None:
     """云端 Supabase → 本地 dev.db 全新快照。
 
-    ⚠⚠ Prismo 现以**本地 data/dev.db 为唯一真源**（含 gr_*/yt_*/kol_* 等云端**没有**的独有层）。
+    ⚠⚠ bSmart 现以**本地 data/dev.db 为唯一真源**（含 gr_*/yt_*/kol_* 等云端**没有**的独有层）。
     cloud-pull 会用「只有 Reddit 核心」的云端快照 `fresh=True` **全新覆盖**本地 → 抹掉这些独有层
-    （这就是反复『数据消失』的元凶；云端是 redditalpha.xyz 的家，不是 Prismo 的）。
+    （这就是反复『数据消失』的元凶；云端是 redditalpha.xyz 的家，不是 bSmart 的）。
     故在**代码层默认禁用**（挡住 make / `manage.py cloud-pull` / 直接 import 等一切入口）。
-    确需从云端重建（极少见）：设 `PRISMO_ALLOW_CLOUD_PULL=1`，且本函数仍会**先自动备份**本地，永不无备份覆盖。
+    确需从云端重建（极少见）：设 `BSMART_ALLOW_CLOUD_PULL=1`，且本函数仍会**先自动备份**本地，永不无备份覆盖。
     """
     import datetime as _dt
     import os as _os
     import shutil as _shutil
 
-    if _os.environ.get("PRISMO_ALLOW_CLOUD_PULL") != "1":
+    if _os.environ.get("BSMART_ALLOW_CLOUD_PULL") != "1":
         raise SystemExit(
             "⛔ cloud-pull 已被禁用：它会用「只有 Reddit 核心」的云端快照覆盖本地 dev.db、\n"
-            "   抹掉 Prismo 独有的 gr_*/yt_*/kol_*（反复『数据消失』的元凶）。\n"
-            "   Prismo 以本地 data/dev.db 为唯一真源；redditalpha.xyz 才用云端。\n"
-            "   确需从云端重建：先备份，再 `PRISMO_ALLOW_CLOUD_PULL=1 python -m pipeline.manage cloud-pull`。"
+            "   抹掉 bSmart 独有的 gr_*/yt_*/kol_*（反复『数据消失』的元凶）。\n"
+            "   bSmart 以本地 data/dev.db 为唯一真源；redditalpha.xyz 才用云端。\n"
+            "   确需从云端重建：先备份，再 `BSMART_ALLOW_CLOUD_PULL=1 python -m pipeline.manage cloud-pull`。"
         )
     # 放行也先自动备份（永不无备份覆盖）
     _db = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), "..", "data", "dev.db"))

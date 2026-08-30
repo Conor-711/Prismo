@@ -4,7 +4,7 @@ import { ViewportWorkspace } from "@/shared/layout/ViewportWorkspace";
 import { getGrTickerSymbols, getGrTickerDetail, getGrQuote } from "@/server/queries/globalQueries";
 import { getTickerMock, getKolFlow } from "@/shared/market/mockDetail";
 import { getKolOpinions, getKolPriceDays } from "@/server/queries/kolQueries";
-import { getTickerSmartVoice, getTickerSmartVoicePool } from "@/features/smart-voice/svMock";
+import { getTickerSmartVoice, getTickerSmartVoicePool } from "@/features/smart-account/svMock";
 import { TICKER_UNIVERSE } from "@/shared/market/tickerMeta";
 import { isLocale, defaultLocale, type Locale } from "@/lib/i18n";
 
@@ -26,7 +26,7 @@ export function generateStaticParams() {
 }
 export function generateMetadata({ params }: { params: { lang: string; symbol: string } }): Metadata {
   const zh = params.lang === "zh";
-  return { title: `${params.symbol} · ${zh ? "标的详情" : "Ticker"} · Prismo` };
+  return { title: `${params.symbol} · ${zh ? "标的详情" : "Ticker"} · bSmart` };
 }
 
 export default function TickerDetail({ params }: { params: { lang: string; symbol: string } }) {

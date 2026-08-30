@@ -1,4 +1,4 @@
-"""Ownership and evidence policy for X Smart Voice calls.
+"""Ownership and evidence policy for X Smart Account calls.
 
 The extraction model may recall market news correctly while still assigning the
 reported move to the post author.  This module is the deterministic gate after

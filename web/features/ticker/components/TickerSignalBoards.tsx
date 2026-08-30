@@ -4,7 +4,7 @@ import { useState } from "react";
 import { LocaleLink } from "@/components/i18n/LocaleLink";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { TickerLogo } from "@/shared/market/TickerLogo";
-import { StanceBar } from "@/shared/ui/prismoBits";
+import { StanceBar } from "@/shared/ui/bsmartBits";
 import { fmtCompact } from "@/shared/formatting/format";
 import type { KolRank, KolSwing } from "@/server/queries/kolQueries";
 import type { SmartVoiceTickerRank } from "@/server/queries/smartVoiceQueries";
@@ -48,11 +48,11 @@ function SvRow({ r, rank, zh, metric }: { r: SmartVoiceTickerRank; rank: number;
   const main = metric === "bull" ? r.bullScore : metric === "bear" ? r.bearScore : r.contrastScore;
   const color = metric === "bull" ? GREEN : metric === "bear" ? RED : AMBER;
   const signalLabel: Record<SmartVoiceTickerRank["signal"], string> = {
-    high_bull_low_bear: zh ? "高 SV 看多 · 低 SV 看空" : "High-SV bull · low-SV bear",
-    high_bear_low_bull: zh ? "高 SV 看空 · 低 SV 看多" : "High-SV bear · low-SV bull",
-    sv_consensus_bull: zh ? "高 SV 共识偏多" : "High-SV bullish consensus",
-    sv_consensus_bear: zh ? "高 SV 共识偏空" : "High-SV bearish consensus",
-    mixed: zh ? "高低 SV 分歧" : "SV divergence",
+    high_bull_low_bear: zh ? "高 Score 看多 · 低 Score 看空" : "High-Score bull · low-Score bear",
+    high_bear_low_bull: zh ? "高 Score 看空 · 低 Score 看多" : "High-Score bear · low-Score bull",
+    sv_consensus_bull: zh ? "高 Score 共识偏多" : "High-Score bullish consensus",
+    sv_consensus_bear: zh ? "高 Score 共识偏空" : "High-Score bearish consensus",
+    mixed: zh ? "高低 Score 分歧" : "Score divergence",
   };
   return (
     <li>
@@ -80,7 +80,7 @@ function SvRow({ r, rank, zh, metric }: { r: SmartVoiceTickerRank; rank: number;
           <span className="font-mono text-[14px] font-bold tabular" style={{ color }}>
             {metric === "contrast" ? "Δ" : ""}{main.toFixed(1)}
           </span>
-          <span className="block text-[10px] text-neutral-600">SV</span>
+          <span className="block text-[10px] text-neutral-600">Score</span>
         </span>
       </LocaleLink>
     </li>
@@ -172,7 +172,7 @@ export function TickerSignalBoards({
         <div className="inline-flex rounded-lg bg-white/[.035] p-1 ring-1 ring-inset ring-line">
           {[
             ["kol", zh ? "KOL 观点" : "KOL views"],
-            ["sv", "Smart Voice"],
+            ["sv", "Smart Account"],
           ].map(([key, label]) => (
             <button
               key={key}
@@ -202,13 +202,13 @@ export function TickerSignalBoards({
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Shell title={zh ? "SV 看多最多" : "Most bullish (SV)"} hint={zh ? "高质量作者加权" : "weighted by author SV"} icon="▲" color={GREEN}>
+          <Shell title={zh ? "Score 看多最多" : "Most bullish (Score)"} hint={zh ? "高质量作者加权" : "weighted by author Score"} icon="▲" color={GREEN}>
             {svBullish.length ? <ol className="-mx-2">{svBullish.map((r, i) => <SvRow key={r.ticker} r={r} rank={i + 1} zh={zh} metric="bull" />)}</ol> : <Empty zh={zh} />}
           </Shell>
-          <Shell title={zh ? "SV 看空最多" : "Most bearish (SV)"} hint={zh ? "高质量作者加权" : "weighted by author SV"} icon="▼" color={RED}>
+          <Shell title={zh ? "Score 看空最多" : "Most bearish (Score)"} hint={zh ? "高质量作者加权" : "weighted by author Score"} icon="▼" color={RED}>
             {svBearish.length ? <ol className="-mx-2">{svBearish.map((r, i) => <SvRow key={r.ticker} r={r} rank={i + 1} zh={zh} metric="bear" />)}</ol> : <Empty zh={zh} />}
           </Shell>
-          <Shell title={zh ? "SV 反差最大" : "Largest SV contrast"} hint={zh ? "高低 SV 方向差" : "high vs low SV split"} icon="◇" color={AMBER}>
+          <Shell title={zh ? "Score 反差最大" : "Largest Score contrast"} hint={zh ? "高低 Score 方向差" : "high vs low Score split"} icon="◇" color={AMBER}>
             {svContrast.length ? <ol className="-mx-2">{svContrast.map((r, i) => <SvRow key={r.ticker} r={r} rank={i + 1} zh={zh} metric="contrast" />)}</ol> : <Empty zh={zh} />}
           </Shell>
         </div>

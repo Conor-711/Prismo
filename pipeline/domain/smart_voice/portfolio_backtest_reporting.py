@@ -1,4 +1,4 @@
-"""CSV and Markdown reports for Smart Voice portfolio backtests."""
+"""CSV and Markdown reports for Smart Account portfolio backtests."""
 from __future__ import annotations
 
 import csv
@@ -61,7 +61,7 @@ def _collective_table(rows: list[dict[str, Any]]) -> list[str]:
 
 def _author_table(rows: list[dict[str, Any]]) -> list[str]:
     lines = [
-        "|作者|当前SV|交易数|净年化(10bps)|夏普|最大回撤|命中率|",
+        "|作者|当前Score|交易数|净年化(10bps)|夏普|最大回撤|命中率|",
         "|---|---:|---:|---:|---:|---:|---:|",
     ]
     for row in rows:
@@ -215,23 +215,23 @@ def write_portfolio_backtest_reports(
     bottom_authors = list(reversed(ranked_authors[-10:]))
 
     lines = [
-        "# X Smart Voice 年化回测",
+        "# X Smart Account 年化回测",
         "",
         "## 数据范围",
         "",
         f"- X actionable Call：{profile['actionable_calls']:,} 条，{profile['call_authors']:,} 位作者。",
         f"- X 已结算周期结果：{profile['settled_rows']:,} 条。",
-        f"- 历史时点正式 SV 作者：{profile['asof_authors']:,} 位。",
+        f"- 历史时点正式 Score 作者：{profile['asof_authors']:,} 位。",
         f"- 价格：{profile['price_min_day']} 至 {profile['price_max_day']}，"
         f"{profile['price_tickers']:,} 个标的。",
         "",
         "## 计算口径",
         "",
-        "- 集体策略只使用 X，并使用观点发布当日的历史时点平台 SV 排名，不回填当前排名。",
+        "- 集体策略只使用 X，并使用观点发布当日的历史时点平台 Score 排名，不回填当前排名。",
         "- 信号后的下一交易日调整开盘入场；同一策略同一标的不重叠加仓；活跃标的等权；无信号时持有现金。",
         "- 分别计算多空、只做多、只做空，以及 1/5/20/60/90/180 个交易日持有期。",
         "- 年化以 252 个交易日计算；10bps 和 25bps 是每笔完整往返成本。",
-        "- 作者的 `all_actionable` 是描述性历史；`point_in_time_qualified` 只跟随作者当时已进入正式 SV 池后的帖子，属于可执行口径。",
+        "- 作者的 `all_actionable` 是描述性历史；`point_in_time_qualified` 只跟随作者当时已进入正式 Score 池后的帖子，属于可执行口径。",
         "- 每位作者的代表年化按帖子自己的 `horizon_bucket` 持有；未说明周期的帖子统一按 20 个交易日。",
         "- 作者排名要求当前满足 X 正式池门槛、至少 10 笔非重叠交易且回测跨度不少于 126 个交易日。",
         "",
@@ -262,7 +262,7 @@ def write_portfolio_backtest_reports(
             "- 当前只有约一年 X 历史；CAGR 对短样本和极端行情敏感。",
             "- 集体策略是历史时点无泄漏；作者全帖子口径仍是对同一批历史观点的描述，不是独立样本外验证。",
             "- 未计入滑点、借券可用性、融资利息、税费和盘中成交差异。",
-            "- 该报告用于研究 SV 信号，不构成投资建议。",
+            "- 该报告用于研究 Score 信号，不构成投资建议。",
         ]
     )
     (report_dir / "x_sv_annualized_report.md").write_text(
@@ -303,7 +303,7 @@ def write_portfolio_backtest_reports(
         )
         best_by_strategy.extend(candidates[:1])
     rank_lines = [
-        "# X SV 头部、底部与背离事件年化",
+        "# X Score 头部、底部与背离事件年化",
         "",
         "三类事件均使用观点发布当日的平台内历史排名：",
         "",

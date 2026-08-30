@@ -1,7 +1,7 @@
 # 走查样板：K 线观点气泡图（「个体观点·KOL」）
 
 > 把 `content-field-decomposition` 用到一个**真实图表模块**的完整走查。
-> 模块：标的详情页象限①「个体观点·KOL」的常驻图 `web/components/prismo/KolOpinionFlow.tsx`
+> 模块：标的详情页象限①「个体观点·KOL」的常驻图 `web/components/bsmart/KolOpinionFlow.tsx`
 > （上方价格折线 + 每日 KOL 观点头像气泡）。可作为「怎么写一份模块字段拆解」的范本。
 
 ## 0. 锁定内容单元与用户

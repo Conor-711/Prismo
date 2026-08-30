@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 
-const KEY = "prismo:sidebar";
+const KEY = "bsmart:sidebar";
 
 type SidebarToggleAction = "toggle" | "collapse" | "expand";
 

@@ -1,4 +1,4 @@
-"""Pure helpers for the dual-benchmark integral Smart Voice scorer."""
+"""Pure helpers for the dual-benchmark integral Smart Account scorer."""
 from __future__ import annotations
 
 from dataclasses import dataclass

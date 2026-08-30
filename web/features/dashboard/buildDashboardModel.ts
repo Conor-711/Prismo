@@ -1,6 +1,6 @@
 import { REGION_ORDER } from "@/shared/market/regions";
 import type { GrMeta, GrQuoteRow, GrRegionCell, GrTickerRow } from "@/server/queries/globalQueries";
-import type { SvBoard } from "@/features/smart-voice";
+import type { SvBoard } from "@/features/smart-account";
 import type {
   DashboardBuzzItem,
   DashboardModel,

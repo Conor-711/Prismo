@@ -2,6 +2,122 @@ import XCTest
 @testable import BSmart
 
 final class BSmartClientFactoryTests: XCTestCase {
+    func testDirectDeepSeekConfigurationUsesInternalKey() {
+        let configuration = DirectDeepSeekConfiguration.resolve(
+            environment: [:],
+            configuredAPIKey: "internal-test-key",
+            configuredBaseURL: "https://api.deepseek.com",
+            configuredModel: "deepseek-v4-flash"
+        )
+
+        XCTAssertEqual(configuration?.apiKey, "internal-test-key")
+        XCTAssertEqual(configuration?.baseURL.absoluteString, "https://api.deepseek.com")
+        XCTAssertEqual(configuration?.model, "deepseek-v4-flash")
+    }
+
+    func testDirectDeepSeekConfigurationRejectsMissingOrPlaceholderKey() {
+        XCTAssertNil(DirectDeepSeekConfiguration.resolve(
+            environment: [:],
+            configuredAPIKey: "$(BSMART_DEEPSEEK_API_KEY)",
+            configuredBaseURL: nil,
+            configuredModel: nil
+        ))
+        XCTAssertNil(DirectDeepSeekConfiguration.resolve(
+            environment: ["BSMART_DISABLE_DIRECT_AI": "1", "DEEPSEEK_API_KEY": "test-key"],
+            configuredAPIKey: nil,
+            configuredBaseURL: nil,
+            configuredModel: nil
+        ))
+    }
+
+    func testDirectDeepSeekRequestUsesIndependentSourceContext() async throws {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [BSmartStubURLProtocol.self]
+        let session = URLSession(configuration: configuration)
+        BSmartStubURLProtocol.handler = { request in
+            let body = try JSONSerialization.jsonObject(with: try XCTUnwrap(request.bodyData))
+            let payload = try XCTUnwrap(body as? [String: Any])
+            let messages = try XCTUnwrap(payload["messages"] as? [[String: Any]])
+            let systemPrompt = try XCTUnwrap(messages.first?["content"] as? String)
+            XCTAssertTrue(systemPrompt.contains("independent, parallel evidence streams"))
+            XCTAssertTrue(systemPrompt.contains("Never compare the streams"))
+            XCTAssertTrue(systemPrompt.contains("Do not explain or disclaim this policy"))
+
+            let userPrompt = try XCTUnwrap(messages.last?["content"] as? String)
+            let promptData = try XCTUnwrap(userPrompt.data(using: .utf8))
+            let prompt = try XCTUnwrap(
+                JSONSerialization.jsonObject(with: promptData) as? [String: Any]
+            )
+            let context = try XCTUnwrap(prompt["context"] as? [String: Any])
+            XCTAssertNil(context["signals"])
+
+            let eventReferences = try XCTUnwrap(
+                context["event_references"] as? [[String: Any]]
+            )
+            XCTAssertFalse(eventReferences.isEmpty)
+            let rejectedEventKeys = Set([
+                "kind", "direction", "conclusion", "position_impact", "next_step", "limitations",
+            ])
+            XCTAssertTrue(eventReferences.allSatisfy {
+                rejectedEventKeys.isDisjoint(with: Set($0.keys))
+            })
+
+            let intelligence = try XCTUnwrap(
+                context["ticker_intelligence"] as? [[String: Any]]
+            )
+            let rejectedIntelligenceKeys = Set(["relationship", "direction", "conclusion"])
+            XCTAssertTrue(intelligence.allSatisfy {
+                rejectedIntelligenceKeys.isDisjoint(with: Set($0.keys))
+            })
+
+            let catalog = try XCTUnwrap(context["evidence_catalog"] as? [[String: Any]])
+            let citationID = try XCTUnwrap(catalog.first?["id"] as? String)
+            let signalID = try XCTUnwrap(eventReferences.first?["id"] as? String)
+            let ticker = try XCTUnwrap(eventReferences.first?["ticker"] as? String)
+            let resultData = try JSONSerialization.data(withJSONObject: [
+                "title": "Independent source review",
+                "summary": "Each source is described on its own timestamp and horizon.",
+                "context": NSNull(),
+                "next_step": "Open the cited source.",
+                "ticker": ticker,
+                "signal_id": signalID,
+                "citation_ids": [citationID],
+            ])
+            let result = try XCTUnwrap(String(data: resultData, encoding: .utf8))
+            let response = try JSONSerialization.data(withJSONObject: [
+                "choices": [["message": ["role": "assistant", "content": result]]],
+            ])
+            return (200, response)
+        }
+        defer { BSmartStubURLProtocol.handler = nil }
+
+        let fixtureClient = BundleBSmartAPIClient()
+        async let portfolio = fixtureClient.fetchPortfolio()
+        async let signals = fixtureClient.fetchSignals()
+        async let updates = fixtureClient.fetchSmartAccountUpdates()
+        async let movements = fixtureClient.fetchSmartMoneyMovements()
+        async let intelligence = fixtureClient.fetchTickerIntelligence()
+        let client = DirectDeepSeekMrCollieClient(
+            configuration: DirectDeepSeekConfiguration(
+                apiKey: "test-key",
+                baseURL: try XCTUnwrap(URL(string: "https://deepseek.test")),
+                model: "deepseek-test"
+            ),
+            session: session
+        )
+        let response = try await client.answer(
+            query: MrCollieQuery(question: "What changed?", locale: "en", conversation: []),
+            portfolio: try await portfolio,
+            signals: try await signals,
+            smartAccountUpdates: try await updates,
+            smartMoneyMovements: try await movements,
+            intelligence: try await intelligence
+        )
+
+        XCTAssertEqual(response.title, "Independent source review")
+        XCTAssertEqual(response.evidence.count, 1)
+    }
+
     func testDebugDefaultsToFixturesAndRequiresAnExplicitLiveOptIn() throws {
         let configuredURL = "https://staging.bsmart.test"
 

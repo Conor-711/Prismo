@@ -1,12 +1,12 @@
-# Prismo 当前 AI 打标与数据分析系统规范
+# bSmart 当前 AI 打标与数据分析系统规范
 
 更新时间：2026-07-06  
-适用项目：`crypto_us` / Prismo  
+适用项目：`crypto_us` / bSmart
 口径：只记录当前仍在产品中使用或仍应继续维护的 AI 系统、数据管道、标签表、Prompt、输入输出格式与主键规范。历史单站功能、旧页面、旧 Reddit-only 分析、旧叙事表、非当前产品依赖的高档逐帖分析，以及源码中仍保留但不服务当前核心体验的兼容逻辑，不纳入本文。
 
 ## 1. 当前有效架构概览
 
-Prismo 当前的数据智能层可以理解为 5 个活跃系统：
+bSmart 当前的数据智能层可以理解为 5 个活跃系统：
 
 1. **观点流 AI 标签系统**
    - 面向标的详情页的观点流、筛选、排序、正文阅读、目标价时间线。
@@ -16,8 +16,8 @@ Prismo 当前的数据智能层可以理解为 5 个活跃系统：
    - 面向 YouTube 观点、完整口播、投资者摘要、内容目录、作者详情页。
    - 核心表：`yt_video`, `yt_analysis`, `yt_fulltext`, `yt_digest`, `yt_judgment`, `yt_creator_view`, `yt_channel`。
 
-3. **X / Smart Voice 系统**
-   - 面向 Smart Voice 投资者评分、X 可行动观点、目标价点阵、SV 筛选。
+3. **X / Smart Account 系统**
+   - 面向 Smart Account 投资者评分、X 可行动观点、目标价点阵、Score 筛选。
    - 核心表：`x_opinion`, `x_reply`, `sv_call_candidate`, `sv_call`, `sv_call_settlement`, `sv_investor_score`, `sv_segment_score`。
 
 4. **全球散户社区系统**
@@ -33,7 +33,7 @@ Prismo 当前的数据智能层可以理解为 5 个活跃系统：
 - 所有观点级标签都应尽量落在 `(source, item_id, ticker)` 粒度。
 - 所有可点击内容必须保留原始源 ID，例如 `tweet_id`, `video_id`, `gr_post.id`。
 - YouTube 是独立强管道，不走 `kol_refined`，而是由 `yt_analysis` / `yt_digest` / `yt_judgment` 直接供前端使用。
-- X 的可行动观点由 SV 系统补充；普通 X 观点由 `x_opinion` + `kol_*` 表补标签。
+- X 的可行动观点由 Score 系统补充；普通 X 观点由 `x_opinion` + `kol_*` 表补标签。
 - `gr_post` 只负责原始全球社区数据和轻量情绪；如果要进入观点流，需要进入 `kol_refined` / `kol_relevance` / `kol_quality` / `kol_viewpoint` / `kol_judgment`。
 
 ## 2. 当前模型路由
@@ -73,9 +73,9 @@ Prismo 当前的数据智能层可以理解为 5 个活跃系统：
 | `yt_judgment` | 1,464 | YouTube 目标价/周期/关键位 |
 | `yt_creator_view` | 894 | YouTube 作者×标的综合观点 |
 | `yt_channel` | 725 | YouTube 频道粉丝数、简介等作者信息 |
-| `sv_call_candidate` | 49,430 | Smart Voice 候选 X call |
-| `sv_call` | 49,430 | Smart Voice 结构化 call |
-| `sv_investor_score` | 1,157 | 投资者 SV 分数 |
+| `sv_call_candidate` | 49,430 | Smart Account 候选 X call |
+| `sv_call` | 49,430 | Smart Account 结构化 call |
+| `sv_investor_score` | 1,157 | 投资者 Score 分数 |
 | `kol_sentiment_daily` | 1,208 | KOL 每日净情绪 |
 | `kol_volume_daily` | 5,625 | KOL 每日讨论度 |
 | `retail_sentiment_daily` | 1,697 | 散户每日净情绪 |
@@ -92,7 +92,7 @@ Prismo 当前的数据智能层可以理解为 5 个活跃系统：
 | 来源 | 原始表 | 原始 ID | AI 标签 join key | 说明 |
 | --- | --- | --- | --- | --- |
 | X | `x_opinion` | `tweet_id` | `source='x', item_id=tweet_id, ticker` | 普通观点、互动数、热门回复 |
-| X Smart Voice | `sv_call_candidate`, `sv_call` | `tweet_id`, `candidate_id` | `candidate_id = tweet_id:ticker` | 一个 tweet 可产生多个 ticker call |
+| X Smart Account | `sv_call_candidate`, `sv_call` | `tweet_id`, `candidate_id` | `candidate_id = tweet_id:ticker` | 一个 tweet 可产生多个 ticker call |
 | YouTube | `yt_video` | `id` / `video_id` | `source='youtube', item_id=video_id, ticker` | 视频、摘要、正文、目标价均用 `video_id` |
 | Toss | `gr_post` | `id` | `source='toss', item_id=gr_post.id, ticker` | 韩国 Toss 社区 |
 | 雪球 | `gr_post` | `id` | `source='xueqiu', item_id=gr_post.id, ticker` | 中国社区 |
@@ -627,7 +627,7 @@ make yt-channels
 
 - 作者详情页每个标的只显示综合判断，而不是铺开每条视频。
 
-## 7. X / Smart Voice 系统
+## 7. X / Smart Account 系统
 
 ### 7.1 X 数据同步
 
@@ -651,7 +651,7 @@ make yt-channels
 - `views`
 - `bookmarks`
 
-### 7.2 Smart Voice Call 抽取
+### 7.2 Smart Account Call 抽取
 
 实现：`pipeline/domain/smart_voice/v0.py` / `pipeline/domain/smart_voice/v0_impl.py`（由 `pipeline/jobs/smart_voice/workflows.py` 编排）
 命令：
@@ -680,7 +680,7 @@ candidate_id = {tweet_id}:{ticker}
 当前 Prompt：
 
 ```text
-You structure public equity-market posts into tradable calls for Smart Voice scoring.
+You structure public equity-market posts into tradable calls for Smart Account scoring.
 Judge only the specified ticker, but first understand whether the post is a single-ticker call,
 a basket/sector thesis, a pair trade, a portfolio update, a retrospective, or merely context.
 Do not decide whether the call was correct.
@@ -735,7 +735,7 @@ Return strict JSON only with these fields:
 }
 ```
 
-SV 后处理：
+Score 后处理：
 
 - 按 `1D/5D/20D/60D` 结算。
 - 与 SPY 比较超额收益。
@@ -976,7 +976,7 @@ make retail-newcomers
 | 目标价/周期 | `kol_judgment`, `yt_judgment`, `sv_call.target_price` | 部分已有 |
 | YouTube 完整正文 | `yt_fulltext`, `yt_digest` | 已有 |
 | YouTube 作者画像 | `yt_channel`, `yt_creator_view` | 已有 |
-| X Smart Voice | `sv_call`, `sv_investor_score` | 已有 |
+| X Smart Account | `sv_call`, `sv_investor_score` | 已有 |
 | 散户情绪 | `gr_post.sentiment`, `retail_sentiment_daily` | 已有 |
 | KOL/散户时间序列 | `kol_*_daily`, `retail_*_daily` | 已有 |
 
@@ -984,12 +984,12 @@ make retail-newcomers
 
 | 缺口 | 建议新增 | 原因 |
 | --- | --- | --- |
-| 统一观点标签层 | `opinion_label` | 当前前端需要跨多张表合并，后续个性化与 SV 筛选会越来越复杂 |
-| 全来源可行动性 | `opinion_actionability` | 现在 SV 只覆盖 X，其它来源缺少统一 `action_type` |
+| 统一观点标签层 | `opinion_label` | 当前前端需要跨多张表合并，后续个性化与 Score 筛选会越来越复杂 |
+| 全来源可行动性 | `opinion_actionability` | 现在 Score 只覆盖 X，其它来源缺少统一 `action_type` |
 | 目标价更高召回 | `price_reference` | 当前 `kol_judgment` 很严格，适合高置信点，不适合承载所有目标价表达 |
 | 作者画像统一 | `author_profile` | YouTube 有 `yt_channel`，X/雪球/Toss/YahooJP 作者画像还不统一 |
 | 个性化排序解释 | `personalized_opinion_score` 或前端派生 | 用户成本价、仓位、周期偏好需要解释型排序 |
-| SV 百分位缓存 | `sv_percentile` | 前端按 Top 25% / 中部区间筛选需要快速读取 |
+| Score 百分位缓存 | `sv_percentile` | 前端按 Top 25% / 中部区间筛选需要快速读取 |
 
 ## 11. 建议新增统一表：opinion_label
 
@@ -1157,7 +1157,7 @@ CREATE TABLE IF NOT EXISTS opinion_actionability (
 - 仓位方向：做多 / 做空 / 观望
 - 持仓占比：精确值或区间
 - 操作习惯：短线 / 中线 / 长线 / 目标价偏好
-- SV 偏好：Top X% / 中部 / 尾部区间
+- Score 偏好：Top X% / 中部 / 尾部区间
 
 推荐使用 deterministic score：
 
@@ -1213,7 +1213,7 @@ make kol-judgment
 make kol-translate
 make kol-argument
 
-# 5. X / SV
+# 5. X / Score
 make tw-sentiment
 make sv-v0
 
@@ -1243,7 +1243,7 @@ make site
 | 投资者摘要 | `yt_digest`, `yt_judgment`, `yt_analysis` |
 | 目标价时间线 | `kol_judgment`, `yt_judgment`, `sv_call.target_price` |
 | 高质量开关 | `kol_quality` |
-| SV 筛选 | `sv_investor_score`, `sv_call`, `sv_segment_score` |
+| Score 筛选 | `sv_investor_score`, `sv_call`, `sv_segment_score` |
 | 整体数据图表 | `kol_sentiment_daily`, `kol_volume_daily`, `retail_sentiment_daily`, `retail_volume_daily`, `price_daily`, `overallData.json` |
 | 作者榜单 | `web/lib/investorQueries.ts`, `x_opinion`, `yt_video`, `gr_post`, `yt_channel` |
 | YouTube 作者详情 | `web/lib/creatorQueries.ts`, `yt_video`, `yt_analysis`, `yt_judgment`, `yt_creator_view`, `yt_channel` |

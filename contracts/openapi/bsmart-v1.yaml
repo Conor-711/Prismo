@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: bSmart Client API
-  version: 1.4.0
+  version: 1.6.0
   description: Versioned client contract shared by the native iOS client and retained web surfaces.
 servers:
   - url: https://api.bsmart.today
@@ -85,6 +85,34 @@ paths:
                 $ref: "#/components/schemas/DailyDigestSnapshot"
         "404":
           description: No daily digest has been generated for this installation yet
+  /v1/mr-collie/query:
+    post:
+      operationId: queryMrCollie
+      summary: Ask Mr Collie to explain the current portfolio and ticker evidence using DeepSeek.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MrCollieQuery"
+      responses:
+        "200":
+          description: Evidence-grounded answer with server-validated citations.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: Always `no-store` because the response is installation-specific.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MrCollieResponse"
+        "429":
+          description: Installation request limit reached.
+        "502":
+          description: DeepSeek returned an unusable response.
+        "503":
+          description: DeepSeek is not configured or temporarily unavailable.
   /v1/telemetry/events:
     post:
       operationId: postClientTelemetryEvents
@@ -111,6 +139,19 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/PortfolioPosition"
+  /v1/portfolio/history:
+    get:
+      operationId: getPortfolioHistory
+      summary: Return timestamped total portfolio valuation snapshots when brokerage history is available.
+      responses:
+        "200":
+          description: Chronological portfolio valuation snapshots; an empty array means history is unavailable.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PortfolioValuePoint"
   /v1/portfolio/{id}:
     parameters:
       - name: id
@@ -287,6 +328,27 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/SmartMoneyMovement"
+  /v1/smart-money/{accountId}/evidence:
+    parameters:
+      - name: accountId
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      operationId: getSmartMoneyEvidence
+      summary: Return up to three representative observed entry markets for one public capital account.
+      responses:
+        "200":
+          description: Representative entry timing with exact-contract Hyperliquid price evidence.
+          headers:
+            ETag:
+              $ref: "#/components/headers/ReadModelETag"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SmartMoneyRepresentativeEvidence"
   /v1/research:
     get:
       operationId: getResearchUniverse
@@ -496,6 +558,12 @@ components:
           type: [number, "null"]
           minimum: 0
           maximum: 1
+    PortfolioValuePoint:
+      type: object
+      required: [timestamp, value]
+      properties:
+        timestamp: { type: string, format: date-time }
+        value: { type: number, minimum: 0 }
     PortfolioEntryInput:
       type: object
       required: [ticker, entryKind]
@@ -542,6 +610,28 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/PriceCandle"
+        opinionMarkers:
+          type: array
+          description: Score-positive author views for the representative ticker, ordered by contribution.
+          items:
+            $ref: "#/components/schemas/SmartAccountOpinionMarker"
+    SmartAccountOpinionMarker:
+      type: object
+      required: [id, publishedAt, viewDay, viewPrice, direction, contribution, horizon, thesis]
+      properties:
+        id: { type: string, format: uuid }
+        publishedAt: { type: string, format: date-time }
+        viewDay: { type: string, format: date }
+        viewPrice: { type: number }
+        direction:
+          type: string
+          enum: [bullish, neutral, bearish, mixed]
+        contribution:
+          type: number
+          exclusiveMinimum: 0
+        horizon: { type: string }
+        thesis: { type: string }
+        evidenceURL: { type: [string, "null"], format: uri }
     SmartAccountSettlementEvidence:
       type: object
       description: Direction-aware historical settlement against both the S&P 500 and the mapped industry ETF.
@@ -605,9 +695,15 @@ components:
         evidenceSpan: { type: [string, "null"] }
         authorScoreAsOf: { type: [string, "null"], format: date-time }
         callScoringVersion: { type: [string, "null"] }
+        activityTitle: { type: [string, "null"] }
+        activityTitleZH: { type: [string, "null"] }
+        activityTitleEN: { type: [string, "null"] }
         evidenceRole:
           type: [string, "null"]
-          enum: [latest, strongest, counterexample, null]
+          enum: [latest, strongest, counterexample, representative, null]
+        representativeTickerContribution: { type: [number, "null"] }
+        representativeCallCount: { type: [integer, "null"], minimum: 1 }
+        representativeTickerRank: { type: [integer, "null"], minimum: 1, maximum: 3 }
         settlement:
           anyOf:
             - $ref: "#/components/schemas/SmartAccountSettlementEvidence"
@@ -627,7 +723,7 @@ components:
         accountId: { type: string }
         accountLabel: { type: string }
         accountDisplayName: { type: string }
-        avatarVariant: { type: integer, minimum: 1, maximum: 6 }
+        avatarVariant: { type: integer, minimum: 1, maximum: 54 }
         accountScore: { type: number }
         market: { type: string }
         action:
@@ -642,6 +738,71 @@ components:
         leverage: { type: [number, "null"] }
         observedAt: { type: string, format: date-time }
         evidenceURL: { type: [string, "null"], format: uri }
+        price: { type: [number, "null"] }
+        sizeBefore: { type: [number, "null"] }
+        sizeAfter: { type: [number, "null"] }
+    SmartMoneyRepresentativeEvidence:
+      type: object
+      required: [id, accountId, accountDisplayName, ticker, market, representativeRank, cumulativeEntryNotional, entryCount, assetNetPnl, latestEntryAt, priceEvidence]
+      properties:
+        id: { type: string, format: uuid }
+        accountId: { type: string }
+        accountDisplayName: { type: string }
+        avatarVariant: { type: [integer, "null"], minimum: 1, maximum: 54 }
+        ticker: { type: string }
+        market: { type: string }
+        representativeRank: { type: integer, minimum: 1, maximum: 3 }
+        cumulativeEntryNotional: { type: number, minimum: 0 }
+        entryCount: { type: integer, minimum: 1 }
+        assetNetPnl: { type: number }
+        latestEntryAt: { type: string, format: date-time }
+        priceEvidence:
+          $ref: "#/components/schemas/SmartMoneyPriceEvidence"
+    SmartMoneyPriceEvidence:
+      type: object
+      required: [market, interval, source, candles, entryMarkers]
+      properties:
+        market: { type: string }
+        interval: { type: string, enum: [4h] }
+        source: { type: string }
+        candles:
+          type: array
+          items:
+            $ref: "#/components/schemas/SmartMoneyCandle"
+        entryMarkers:
+          type: array
+          minItems: 1
+          maxItems: 10
+          items:
+            $ref: "#/components/schemas/SmartMoneyEntryMarker"
+    SmartMoneyCandle:
+      type: object
+      required: [timestamp, open, high, low, close, volume]
+      properties:
+        timestamp: { type: string, format: date-time }
+        open: { type: number }
+        high: { type: number }
+        low: { type: number }
+        close: { type: number }
+        volume: { type: number }
+    SmartMoneyEntryMarker:
+      type: object
+      required: [id, observedAt, price, priceBasis, direction, action, entryNotional]
+      properties:
+        id: { type: string, format: uuid }
+        observedAt: { type: string, format: date-time }
+        price: { type: number, exclusiveMinimum: 0 }
+        priceBasis:
+          type: string
+          enum: [reported, nearest_4h_close]
+        direction:
+          type: string
+          enum: [bullish, neutral, bearish, mixed]
+        action:
+          type: string
+          enum: [opened, increased, flipped]
+        entryNotional: { type: number, minimum: 0 }
+        evidenceURL: { type: [string, "null"], format: uri }
     PortfolioSignalEvidence:
       type: object
       required: [id, source, referenceId, actorName, title, detail, observedAt]
@@ -652,7 +813,7 @@ components:
           enum: [smart_account, smart_money]
         referenceId: { type: string, format: uuid }
         actorName: { type: string }
-        avatarVariant: { type: integer, minimum: 1, maximum: 6 }
+        avatarVariant: { type: integer, minimum: 1, maximum: 54 }
         title: { type: string }
         detail: { type: string }
         metric: { type: [string, "null"] }
@@ -711,6 +872,66 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/PortfolioSignal"
+    MrCollieQuery:
+      type: object
+      additionalProperties: false
+      required: [question]
+      properties:
+        question: { type: string, minLength: 1, maxLength: 1500 }
+        locale: { type: string, minLength: 2, maxLength: 32, default: en }
+        conversation:
+          type: array
+          maxItems: 8
+          default: []
+          items:
+            $ref: "#/components/schemas/MrCollieConversationTurn"
+    MrCollieConversationTurn:
+      type: object
+      additionalProperties: false
+      required: [role, content]
+      properties:
+        role:
+          type: string
+          enum: [user, assistant]
+        content: { type: string, minLength: 1, maxLength: 2400 }
+    MrCollieEvidence:
+      type: object
+      additionalProperties: false
+      required: [id, source, sourceType, title, detail]
+      properties:
+        id: { type: string }
+        source:
+          type: string
+          enum: [Smart Account, Smart Money]
+        sourceType:
+          type: string
+          enum: [smart_account, smart_money]
+        title: { type: string }
+        detail: { type: string }
+        metric: { type: [string, "null"] }
+        observedAt: { type: [string, "null"], format: date-time }
+    MrCollieResponse:
+      type: object
+      additionalProperties: false
+      required:
+        [question, title, summary, nextStep, evidence, generatedAt, dataAsOf, contextVersion, model]
+      properties:
+        question: { type: string }
+        title: { type: string }
+        summary: { type: string }
+        context: { type: [string, "null"] }
+        nextStep: { type: string }
+        ticker: { type: [string, "null"] }
+        signalId: { type: [string, "null"], format: uuid }
+        evidence:
+          type: array
+          maxItems: 6
+          items:
+            $ref: "#/components/schemas/MrCollieEvidence"
+        generatedAt: { type: string, format: date-time }
+        dataAsOf: { type: string, format: date-time }
+        contextVersion: { type: string }
+        model: { type: string }
     SignalFeedback:
       type: string
       enum: [useful, not_relevant, too_late, unclear]
@@ -990,7 +1211,7 @@ components:
         id: { type: string }
         walletLabel: { type: string }
         displayName: { type: string }
-        avatarVariant: { type: integer, minimum: 1, maximum: 6 }
+        avatarVariant: { type: integer, minimum: 1, maximum: 54 }
         score: { type: number }
         ticker: { type: string }
         direction: { type: string, enum: [Long, Short] }

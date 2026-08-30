@@ -1,4 +1,4 @@
-"""Leakage-free vertical backtests using historical sub-SV ranks."""
+"""Leakage-free vertical backtests using historical sub-Score ranks."""
 from __future__ import annotations
 
 import bisect

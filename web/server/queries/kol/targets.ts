@@ -87,7 +87,7 @@ function rankFor(source: KolSource, author: string): SvAuthorRank {
 // 「整体数据 · 目标价时间线」取数：近 3 个月 kol_judgment(reddit/x/雪球/Toss/Yahoo JP) + yt_judgment(youtube)，
 // 每条判断的买入侧/卖出侧各出一个 TargetMark(日期×价位区间)；叠真实股价折线 + 现价。作者/链接 join 源表，
 // 简单依据(reason)取 kol_refined(reddit/x/雪球/Toss/Yahoo JP) 或 yt_analysis.summary(youtube)；价格按现价 band 二次剔噪。
-// 作者按平台关联当前 SV 排名，前端可组合「近 1/3/7/14/30/60/90 天 × SV 分位」过滤噪音。
+// 作者按平台关联当前 Score 排名，前端可组合「近 1/3/7/14/30/60/90 天 × Score 分位」过滤噪音。
 export function getKolTargetPrices(symbol: string): KolTargetData {
   return safe(
     () => {
@@ -149,7 +149,7 @@ export function getKolTargetPrices(symbol: string): KolTargetData {
             marks.push({ ...base, kind: "sell", lo: r.sell_lo, hi: r.sell_hi ?? r.sell_lo });
         }
       }
-      // SV X call：直接使用结构化出的 target_price / horizon_bucket，补齐 x_opinion 未覆盖的推特目标价点。
+      // Score X call：直接使用结构化出的 target_price / horizon_bucket，补齐 x_opinion 未覆盖的推特目标价点。
       const svTargets = safe(
         () => all<any>(
           `SELECT cc.tweet_id AS tweet_id, cc.author_handle AS author, cc.url AS url,

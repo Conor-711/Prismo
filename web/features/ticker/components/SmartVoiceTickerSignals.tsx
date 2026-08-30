@@ -136,7 +136,7 @@ function Summary({
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-reddit/[.035] px-4 py-3">
       <div className="min-w-0">
         <div className={`font-display text-[14px] font-bold ${shiftTone}`}>
-          {zh ? `优质投资者：${shiftLabel}` : `High-SV investors: ${shiftLabel}`}
+          {zh ? `优质投资者：${shiftLabel}` : `High-Score investors: ${shiftLabel}`}
         </div>
         <p className="mt-1 text-[9.5px] text-neutral-500">
           {breadthLabel} · {targetLabel} · {divergenceLabel}
@@ -168,7 +168,7 @@ function HistoryValidation({
     <section className="min-w-0">
       <div className="flex items-center justify-between gap-3 border-b border-line/70 px-4 py-2.5">
         <div>
-          <h4 className="text-[10px] font-semibold text-neutral-300">{zh ? "类似 SV 信号的历史表现" : "Historical performance of similar SV signals"}</h4>
+          <h4 className="text-[10px] font-semibold text-neutral-300">{zh ? "类似 Score 信号的历史表现" : "Historical performance of similar Score signals"}</h4>
           <p className="mt-0.5 text-[8.5px] text-neutral-600">{zh ? "下一交易日入场，相对 SPY 计算方向性超额" : "Next-session entry; directional excess versus SPY"}</p>
         </div>
         <span className={`text-[8.5px] ${enough ? "text-neutral-500" : "text-gold"}`}>
@@ -246,9 +246,9 @@ export function SmartVoiceTickerSignals({
     <section className="overflow-hidden rounded-lg bg-ink/25 ring-1 ring-inset ring-line">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3">
         <div>
-          <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-reddit">Smart Voice · Overview</div>
+          <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-reddit">Smart Account · Overview</div>
           <h3 className="mt-1 font-display text-[14px] font-bold text-cream">
-            {zh ? `${data.ticker} 优质投资者观点变化` : `${data.ticker} high-SV investor changes`}
+            {zh ? `${data.ticker} 优质投资者观点变化` : `${data.ticker} high-Score investor changes`}
           </h3>
           <p className="mt-1 text-[9px] text-neutral-600">
             {zh ? "核心数字展示变化幅度，并同时给出起止值、作者样本和历史位置。" : "Core values show the size of change with start/end levels, author samples and historical context."}
@@ -292,7 +292,7 @@ export function SmartVoiceTickerSignals({
 
       <div className="grid divide-y divide-line border-b border-line sm:grid-cols-2 sm:divide-x sm:divide-y-0 xl:grid-cols-4">
         <MetricCell
-          title={zh ? "SV 转向" : "SV shift"}
+          title={zh ? "Score 转向" : "Score shift"}
           value={signed(metrics.shift.score)}
           status={shiftStatus}
           tone={shiftTone}
@@ -316,7 +316,7 @@ export function SmartVoiceTickerSignals({
             : `${metrics.breadth.total} effective authors · ${metrics.breadth.newAuthors} new`}
         />
         <MetricCell
-          title={zh ? "SV 目标修正" : "SV target revision"}
+          title={zh ? "Score 目标修正" : "Score target revision"}
           value={percent(metrics.targetRevision.changePct)}
           status={targetStatus}
           tone={targetTone}
@@ -326,13 +326,13 @@ export function SmartVoiceTickerSignals({
             : `${metrics.targetRevision.count} targets · middle range ${money(metrics.targetRevision.low)}–${money(metrics.targetRevision.high)}`}
         />
         <MetricCell
-          title={zh ? "价格-SV 背离" : "Price-SV divergence"}
+          title={zh ? "价格-Score 背离" : "Price-Score divergence"}
           value={metrics.priceDivergence.sigma == null ? "—" : signed(metrics.priceDivergence.sigma, 1, "σ")}
           status={divergenceStatus}
           tone={divergenceTone}
           detail={zh
-            ? `20日股价 ${percent(metrics.priceDivergence.priceReturnPct)} · SV转向 ${signed(metrics.priceDivergence.shiftScore)}`
-            : `20D price ${percent(metrics.priceDivergence.priceReturnPct)} · SV shift ${signed(metrics.priceDivergence.shiftScore)}`}
+            ? `20日股价 ${percent(metrics.priceDivergence.priceReturnPct)} · Score转向 ${signed(metrics.priceDivergence.shiftScore)}`
+            : `20D price ${percent(metrics.priceDivergence.priceReturnPct)} · Score shift ${signed(metrics.priceDivergence.shiftScore)}`}
           foot={zh
             ? `${historyLabel}有 ${metrics.priceDivergence.similarHistoryCount} 个交易日达到同级别`
             : `${metrics.priceDivergence.similarHistoryCount} sessions reached this scale in ${historyLabel}`}
@@ -343,7 +343,7 @@ export function SmartVoiceTickerSignals({
         <div className="min-w-0 border-b border-line xl:border-b-0 xl:border-r">
           <div className="flex items-center justify-between gap-3 border-b border-line/70 px-4 py-2.5">
             <div>
-              <h4 className="text-[10px] font-semibold text-neutral-300">{zh ? "股价与 SV 转向" : "Price and SV shift"}</h4>
+              <h4 className="text-[10px] font-semibold text-neutral-300">{zh ? "股价与 Score 转向" : "Price and Score shift"}</h4>
               <p className="mt-0.5 text-[8.5px] text-neutral-600">{zh ? "柱状图为滚动 7 日观点变化，折线为同期股价" : "Bars show rolling 7D view changes; line shows price"}</p>
             </div>
             <span className="font-mono text-[8.5px] text-neutral-600">{metrics.asOfDay}</span>

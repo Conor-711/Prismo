@@ -1,0 +1,24 @@
+{
+  "database": "/Users/windz7z/Desktop/crypto_us/data/dev.db",
+  "scope": "qualified",
+  "candidates": 137,
+  "skippedFresh": 0,
+  "fetched": 134,
+  "failed": [
+    {
+      "handle": "YeahDrDave",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "handle": "bennybigbull",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "handle": "anytimeFXmetal",
+      "error": "HTTP Error 404: Not Found"
+    }
+  ],
+  "profileCoverage": 134,
+  "startedAt": "2026-08-04T18:46:21.433412+00:00",
+  "finishedAt": "2026-08-04T18:46:31.199902+00:00"
+}

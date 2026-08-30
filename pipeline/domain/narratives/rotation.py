@@ -1,6 +1,6 @@
 """Cross-community fixed narrative rotation.
 
-Builds ``web/lib/data/narrativeRotation.json`` for the Prismo Narratives page.
+Builds ``web/lib/data/narrativeRotation.json`` for the bSmart Narratives page.
 This intentionally does not read or write the legacy ``narratives`` tables:
 those are Reddit-only clustering artifacts. The new page is fixed-taxonomy,
 cross-community, and static-build friendly.

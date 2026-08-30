@@ -17,7 +17,9 @@ from ...jobs.smart_voice import (
     rollup_retail_sentiment,
     rollup_retail_volume,
     run_sv_v0,
-    run_private_telegram_report,
+    run_hyperliquid_live,
+    run_hyperliquid_smart_money,
+    export_smart_account_client_read_model,
     score_x_sentiment,
 )
 from ._utils import csv_values
@@ -73,24 +75,49 @@ def cmd_sv_v0(args):
     )
 
 
-def cmd_private_sv_telegram(args):
-    result = run_private_telegram_report(
-        handle=args.handle,
-        private_db_path=args.private_db,
-        reference_db_path=args.reference_db,
-        output_dir=args.output_dir,
-        web_output_path=args.web_output,
+def cmd_hyperliquid_smart_money(args):
+    result = run_hyperliquid_smart_money(
+        db_path=args.db,
+        output_path=args.output,
         stage=args.stage,
-        max_pages=args.max_pages,
-        crawl_sleep=args.crawl_sleep,
-        candidate_limit=args.candidate_limit,
-        min_candidate_score=args.min_candidate_score,
-        extract_limit=args.extract_limit,
-        workers=args.workers,
-        force_extract=args.force,
-        proxy=args.proxy,
+        lookback_days=args.lookback_days,
+        max_markets=args.max_markets,
+        max_wallets=args.max_wallets,
+        api_pause=not args.no_api_pause,
+        client_output_dir=args.client_output_dir,
     )
-    print("[private-sv] " + " ".join(f"{key}={value}" for key, value in result.items()))
+    print("[hyperliquid-smart-money] " + " ".join(f"{key}={value}" for key, value in result.items()))
+
+
+def cmd_hyperliquid_smart_money_live(args):
+    result = run_hyperliquid_live(
+        db_path=args.db,
+        output_path=args.output,
+        client_output_dir=args.client_output_dir,
+        health_output_path=args.health_output,
+        lookback_days=args.lookback_days,
+        refresh_seconds=args.refresh_seconds,
+        publish_seconds=args.publish_seconds,
+        candidate_backfill_per_cycle=args.candidate_backfill,
+        max_active_wallets=args.max_active_wallets,
+        max_profile_wallets=args.max_profile_wallets,
+        profile_refresh_minutes=args.profile_refresh_minutes,
+        instrument_refresh_minutes=args.instrument_refresh_minutes,
+        max_cycles=args.max_cycles,
+        api_pause=not args.no_api_pause,
+    )
+    print("[hyperliquid-smart-money-live] " + " ".join(f"{key}={value}" for key, value in result.items()))
+
+
+def cmd_export_smart_account_read_model(args):
+    result = export_smart_account_client_read_model(
+        db_path=args.db,
+        output_dir=args.output_dir,
+        update_days=args.update_days,
+        update_limit=args.update_limit,
+        profile_limit=args.profile_limit,
+    )
+    print("[smart-account-read-model] " + " ".join(f"{key}={value}" for key, value in result.items()))
 
 
 def cmd_sv_ticker_signals(args):
@@ -256,7 +283,7 @@ def register_commands(sub, root) -> None:
     sp.add_argument("--reddit-author-limit", type=int, default=1_000, help="Top Reddit author pool size for candidate recall; 0 means all authors.")
     sp.add_argument("--reddit-since-days", type=int, default=365, help="Reddit candidate lookback window.")
     sp.add_argument("--reddit-min-author-posts", type=int, default=8, help="Minimum ticker-mentioned Reddit posts for Reddit author-pool eligibility.")
-    sp.add_argument("--youtube-min-subs", type=int, default=2_000, help="Minimum public YouTube subscribers for SV eligibility (shared product threshold).")
+    sp.add_argument("--youtube-min-subs", type=int, default=2_000, help="Minimum public YouTube subscribers for Score eligibility (shared product threshold).")
     sp.add_argument("--youtube-since-days", type=int, default=365, help="YouTube candidate lookback window.")
     sp.add_argument("--xueqiu-pool-version", default="", help="Versioned selected Xueqiu author pool; empty uses the latest pool.")
     sp.add_argument("--xueqiu-since-days", type=int, default=365, help="Xueqiu candidate lookback window.")
@@ -264,41 +291,46 @@ def register_commands(sub, root) -> None:
     sp.add_argument("--force", action="store_true", help="Re-extract candidates already in sv_call.")
     sp.set_defaults(func=cmd_sv_v0)
 
-    sp = sub.add_parser("private-sv-telegram")
-    sp.add_argument("--handle", default="ruiminginvest")
+    sp = sub.add_parser("hyperliquid-smart-money")
+    sp.add_argument("--db", default=str(root / "data" / "dev.db"))
+    sp.add_argument("--output", default=str(root / "web" / "lib" / "data" / "hyperliquidSmartMoney.json"))
+    sp.add_argument("--stage", choices=["markets", "wallets", "profiles", "score", "all"], default="all")
+    sp.add_argument("--lookback-days", type=int, default=30)
+    sp.add_argument("--max-markets", type=int, default=32, help="Highest-volume TradFi HIP-3 markets used for wallet discovery.")
+    sp.add_argument("--max-wallets", type=int, default=32, help="Candidate wallets enriched per run, including public account analytics.")
+    sp.add_argument("--no-api-pause", action="store_true", help="Disable conservative API pacing for local tests only.")
+    sp.add_argument("--client-output-dir", default="", help="Optional contract-fixture/read-model directory for the enriched wallet collections.")
+    sp.set_defaults(func=cmd_hyperliquid_smart_money)
+
+    sp = sub.add_parser("hyperliquid-smart-money-live")
+    sp.add_argument("--db", default=str(root / "data" / "dev.db"))
+    sp.add_argument("--output", default=str(root / "web" / "lib" / "data" / "hyperliquidSmartMoney.json"))
+    sp.add_argument("--client-output-dir", default=str(root / "data" / "runtime" / "smart-money-live"))
+    sp.add_argument("--health-output", default="", help="Atomic worker health JSON; defaults beside live client collections.")
+    sp.add_argument("--lookback-days", type=int, default=30)
+    sp.add_argument("--refresh-seconds", type=int, default=30)
+    sp.add_argument("--publish-seconds", type=int, default=60)
     sp.add_argument(
-        "--stage",
-        choices=["crawl", "candidates", "prices", "extract", "audit", "settle", "report", "all"],
-        default="all",
+        "--candidate-backfill",
+        type=int,
+        default=4,
+        help="Highest-activity historical candidate wallets synchronized per catch-up batch.",
     )
-    sp.add_argument(
-        "--private-db",
-        default="",
-        help="Defaults to data/private_sv/<handle>.db.",
-    )
-    sp.add_argument(
-        "--reference-db",
-        default=str(root / "data" / "dev.db"),
-    )
-    sp.add_argument(
-        "--output-dir",
-        default="",
-        help="Defaults to data/reports/private_smart_voice/<handle>.",
-    )
-    sp.add_argument(
-        "--web-output",
-        default="",
-        help="Defaults to web/lib/data/privateSmartVoiceMvp.json.",
-    )
-    sp.add_argument("--max-pages", type=int, default=0, help="0 crawls all public history.")
-    sp.add_argument("--crawl-sleep", type=float, default=0.2)
-    sp.add_argument("--candidate-limit", type=int, default=0, help="0 keeps all ticker-message pairs.")
-    sp.add_argument("--min-candidate-score", type=float, default=0.0)
-    sp.add_argument("--extract-limit", type=int, default=0, help="0 extracts every pending candidate.")
-    sp.add_argument("--workers", type=int, default=4)
-    sp.add_argument("--proxy", default="", help="Optional HTTP(S) proxy URL.")
-    sp.add_argument("--force", action="store_true", help="Re-extract existing Telegram candidates.")
-    sp.set_defaults(func=cmd_private_sv_telegram)
+    sp.add_argument("--max-active-wallets", type=int, default=8, help="Maximum live wallets per low-latency fill batch.")
+    sp.add_argument("--max-profile-wallets", type=int, default=8, help="Oldest qualified profiles refreshed per cycle; 0 refreshes all.")
+    sp.add_argument("--profile-refresh-minutes", type=int, default=5, help="Minimum age before a wallet state profile is refreshed again.")
+    sp.add_argument("--instrument-refresh-minutes", type=int, default=60, help="Refresh HIP-3 market metadata and live subscriptions without restarting.")
+    sp.add_argument("--max-cycles", type=int, default=0, help="0 runs until interrupted.")
+    sp.add_argument("--no-api-pause", action="store_true", help="Disable conservative HTTP pacing for local tests only.")
+    sp.set_defaults(func=cmd_hyperliquid_smart_money_live)
+
+    sp = sub.add_parser("export-smart-account-read-model")
+    sp.add_argument("--db", default=str(root / "data" / "dev.db"))
+    sp.add_argument("--output-dir", default=str(root / "data" / "runtime" / "read-model-staging"))
+    sp.add_argument("--update-days", type=int, default=30)
+    sp.add_argument("--update-limit", type=int, default=500)
+    sp.add_argument("--profile-limit", type=int, default=0, help="0 exports every qualified ranked author.")
+    sp.set_defaults(func=cmd_export_smart_account_read_model)
 
     sp = sub.add_parser("sv-ticker-signals")
     sp.add_argument("--db", default=str(root / "data" / "dev.db"))

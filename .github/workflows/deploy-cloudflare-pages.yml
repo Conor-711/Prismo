@@ -18,7 +18,7 @@ jobs:
     timeout-minutes: 90
     env:
       NEXT_BUILD_CPUS: "1"
-      NEXT_PUBLIC_SITE_URL: https://prismo.today
+      NEXT_PUBLIC_SITE_URL: https://bsmart.today
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
       NEXT_PUBLIC_ADMIN_EMAIL: ${{ secrets.NEXT_PUBLIC_ADMIN_EMAIL }}
@@ -51,4 +51,4 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: e4acb581e319df8ec62a74f349202782
-          command: pages deploy web/out --project-name=prismo --branch=main
+          command: pages deploy web/out --project-name=bsmart --branch=main

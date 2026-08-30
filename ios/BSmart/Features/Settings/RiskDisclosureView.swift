@@ -13,7 +13,7 @@ struct RiskDisclosureView: View {
                 disclosure(
                     title: "Incomplete coverage",
                     symbol: "circle.dotted",
-                    body: "Social and on-chain sources can be delayed, unavailable or incomplete. A missing observation does not prove that an account or wallet took no action."
+                    body: "Social and public capital sources can be delayed, unavailable or incomplete. A missing observation does not prove that an account took no action."
                 )
 
                 disclosure(

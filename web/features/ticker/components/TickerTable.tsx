@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { LocaleLink } from "@/components/i18n/LocaleLink";
 import { SaveButton } from "@/components/favorites/SaveButton";
 import { TickerLogo } from "@/shared/market/TickerLogo";
-import { Consensus, SentScore } from "@/shared/ui/prismoBits";
+import { Consensus, SentScore } from "@/shared/ui/bsmartBits";
 import { fmtCompact } from "@/shared/formatting/format";
 import type { Locale } from "@/lib/i18n";
 import type { GrTickerRow } from "@/server/queries/globalQueries";

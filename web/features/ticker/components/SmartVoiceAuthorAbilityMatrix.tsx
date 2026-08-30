@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { LocaleLink } from "@/components/i18n/LocaleLink";
-import { smartVoiceInvestorHref } from "@/features/smart-voice";
+import { smartVoiceInvestorHref } from "@/features/smart-account";
 import type { SvTickerAuthorAbility } from "@/server/queries/smartVoiceTickerSignals";
 
 type Sort = "contribution" | "hit" | "sv";
@@ -16,14 +16,14 @@ export function SmartVoiceAuthorAbilityMatrix({ authors, ticker, zh }: { authors
       <div className="flex items-center justify-between gap-3 border-b border-line/70 px-4 py-2.5">
         <div>
           <h4 className="text-[10px] font-semibold text-neutral-300">{zh ? `${ticker} 作者能力矩阵` : `${ticker} author ability matrix`}</h4>
-          <p className="mt-0.5 text-[8.5px] text-neutral-600">{zh ? "总 SV 与该标的真实结算表现分开展示" : "Global SV and ticker-specific settled performance are shown separately"}</p>
+          <p className="mt-0.5 text-[8.5px] text-neutral-600">{zh ? "总 Score 与该标的真实结算表现分开展示" : "Global Score and ticker-specific settled performance are shown separately"}</p>
         </div>
         <div className="flex rounded p-0.5 ring-1 ring-inset ring-line">
-          {(["contribution", "hit", "sv"] as Sort[]).map((value) => <button key={value} type="button" onClick={() => setSort(value)} className={`rounded px-2 py-1 text-[8.5px] ${sort === value ? "bg-reddit/12 text-reddit" : "text-neutral-600"}`}>{value === "contribution" ? (zh ? "贡献" : "Contribution") : value === "hit" ? (zh ? "命中" : "Hit") : "SV"}</button>)}
+          {(["contribution", "hit", "sv"] as Sort[]).map((value) => <button key={value} type="button" onClick={() => setSort(value)} className={`rounded px-2 py-1 text-[8.5px] ${sort === value ? "bg-reddit/12 text-reddit" : "text-neutral-600"}`}>{value === "contribution" ? (zh ? "贡献" : "Contribution") : value === "hit" ? (zh ? "命中" : "Hit") : "Score"}</button>)}
         </div>
       </div>
       <div className="grid grid-cols-[minmax(130px,1.4fr)_48px_54px_58px_64px_70px] gap-2 border-b border-line/70 px-4 py-2 text-[8px] uppercase text-neutral-700">
-        <span>{zh ? "作者" : "Author"}</span><span>SV</span><span>{zh ? "样本" : "Calls"}</span><span>{zh ? "命中" : "Hit"}</span><span>{zh ? "方向超额" : "Dir. excess"}</span><span>{zh ? "风格" : "Style"}</span>
+        <span>{zh ? "作者" : "Author"}</span><span>Score</span><span>{zh ? "样本" : "Calls"}</span><span>{zh ? "命中" : "Hit"}</span><span>{zh ? "方向超额" : "Dir. excess"}</span><span>{zh ? "风格" : "Style"}</span>
       </div>
       <div className="max-h-[230px] divide-y divide-line/60 overflow-y-auto">
         {rows.map((author) => (

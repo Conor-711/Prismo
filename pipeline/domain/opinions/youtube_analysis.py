@@ -14,6 +14,7 @@ import re
 import shutil
 import sqlite3
 import subprocess
+import sys
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -22,7 +23,7 @@ from types import SimpleNamespace
 import requests
 from sqlalchemy import delete, select, text, update
 
-from ...common import gemini, llm
+from ...common import gemini, llm, qwen
 from ...common.config import ROOT, settings
 from ...common.db import engine, session_scope
 from ...common.deepseek import extract_json
@@ -64,28 +65,95 @@ def _mood(net: float) -> str:
     return "看多" if net > 0.15 else "看空" if net < -0.15 else "中性"
 
 
+def _json3_transcript(payload: dict) -> str | None:
+    parts: list[str] = []
+    for event in payload.get("events") or []:
+        text_part = "".join(
+            str(segment.get("utf8") or "")
+            for segment in (event.get("segs") or [])
+            if isinstance(segment, dict)
+        ).replace("\n", " ").strip()
+        if text_part and (not parts or parts[-1] != text_part):
+            parts.append(text_part)
+    return re.sub(r"\s+", " ", " ".join(parts)).strip() or None
+
+
+def _fetch_transcript_with_ytdlp(video_id: str) -> str | None:
+    """Use yt-dlp's structured metadata when the watch page omits captionTracks."""
+    executable = shutil.which(
+        "yt-dlp",
+        path=os.pathsep.join((str(Path(sys.executable).parent), _tool_env()["PATH"])),
+    )
+    if not executable:
+        return None
+    try:
+        result = subprocess.run(
+            [
+                executable,
+                "--dump-single-json",
+                "--skip-download",
+                "--quiet",
+                "--no-warnings",
+                f"https://www.youtube.com/watch?v={video_id}",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=60,
+            env=_tool_env(),
+        )
+        metadata = json.loads(result.stdout)
+        tracks = metadata.get("subtitles") or {}
+        automatic = metadata.get("automatic_captions") or {}
+        language_order = ("en-orig", "en", "zh-Hans", "zh-Hant", "ko", "ja")
+        candidates: list[dict] = []
+        for language in language_order:
+            candidates.extend(tracks.get(language) or [])
+            candidates.extend(automatic.get(language) or [])
+        if not candidates:
+            for language_tracks in tracks.values():
+                candidates.extend(language_tracks or [])
+            for language_tracks in automatic.values():
+                candidates.extend(language_tracks or [])
+        selected = next(
+            (track for track in candidates if track.get("ext") == "json3" and track.get("url")),
+            None,
+        )
+        if not selected:
+            return None
+        response = requests.get(selected["url"], timeout=30)
+        response.raise_for_status()
+        return _json3_transcript(response.json())
+    except Exception:  # noqa: BLE001 - transcript availability is best effort
+        return None
+
+
 def fetch_transcript(video_id: str, max_chars: int | None = 8000) -> str | None:
-    """尽力从 watch 页解析字幕轨 → 取文本（拿不到返回 None；生产环境 IP 通常可用）。"""
+    """Fetch captions from the watch page, with yt-dlp metadata as a fallback."""
+    text_value: str | None = None
     try:
         r = requests.get(f"https://www.youtube.com/watch?v={video_id}", timeout=20,
                          headers={"User-Agent": "Mozilla/5.0", "Accept-Language": "en"})
         m = re.search(r'"captionTracks":(\[.*?\])\s*,\s*"audioTracks"', r.text)
         if not m:
             m = re.search(r'"captionTracks":(\[.*?\])', r.text)
-        if not m:
-            return None
-        tracks = json.loads(m.group(1))
-        url = (tracks[0].get("baseUrl") if tracks else None)
-        if not url:
-            return None
-        xml = requests.get(url, timeout=20).text
-        txt = re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", xml))).strip()
-        low = txt.lower()
-        if "your computer or network may be sending automated queries" in low or low.startswith("sorry..."):
-            return None
-        return (txt[:max_chars] if max_chars else txt) or None
+        if m:
+            tracks = json.loads(m.group(1))
+            url = (tracks[0].get("baseUrl") if tracks else None)
+            if url:
+                xml = requests.get(url, timeout=20).text
+                parsed = re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", xml))).strip()
+                low = parsed.lower()
+                if not (
+                    "your computer or network may be sending automated queries" in low
+                    or low.startswith("sorry...")
+                ):
+                    text_value = parsed or None
     except Exception:  # noqa: BLE001
-        return None
+        pass
+    if not text_value:
+        text_value = _fetch_transcript_with_ytdlp(video_id)
+    return (text_value[:max_chars] if text_value and max_chars else text_value) or None
 
 
 def _normalize(data: dict) -> dict | None:
@@ -620,7 +688,56 @@ def _split_transcript_chunks(text: str, max_chars: int = 22000) -> list[str]:
     return [c for c in chunks if c]
 
 
-def _fulltext_from_transcript(v: YtVideo) -> list[dict] | None:
+def _transcript_provider_names() -> list[str]:
+    configured = os.environ.get("YOUTUBE_TRANSCRIPT_TEXT_PROVIDERS", "qwen,gemini")
+    available = {
+        "qwen": settings.has_qwen,
+        "gemini": settings.has_gemini,
+    }
+    return [
+        name
+        for name in dict.fromkeys(part.strip().lower() for part in configured.split(","))
+        if name in available and available[name]
+    ]
+
+
+def _transcript_chunk_segments(prompt: str) -> tuple[list[dict], str]:
+    errors: list[str] = []
+    for provider in _transcript_provider_names():
+        try:
+            if provider == "qwen":
+                raw = qwen.chat(
+                    SYSTEM_FULLTEXT_TRANSCRIPT,
+                    prompt,
+                    model=settings.qwen_model_low,
+                    max_tokens=8000,
+                    retries=3,
+                    timeout=180,
+                )
+                model = f"qwen:{settings.qwen_model_low}"
+            else:
+                raw = gemini.chat(
+                    SYSTEM_FULLTEXT_TRANSCRIPT,
+                    prompt,
+                    model=settings.gemini_model,
+                    max_tokens=8000,
+                    retries=2,
+                    timeout=180,
+                )
+                model = f"gemini:{settings.gemini_model}"
+            data = extract_json(raw)
+            segments = (data or {}).get("segments") if isinstance(data, dict) else None
+            if isinstance(segments, list) and segments:
+                return segments, model
+            errors.append(f"{provider}:invalid_segments")
+        except Exception as exc:  # noqa: BLE001 - use the next configured text provider
+            errors.append(f"{provider}:{str(exc)[:160]}")
+    raise RuntimeError(
+        "transcript text processing failed: " + ("; ".join(errors) or "no provider configured")
+    )
+
+
+def _fulltext_from_transcript(v: YtVideo) -> tuple[list[dict], str] | None:
     tx = fetch_transcript(v.id, max_chars=None)
     if not tx or len(tx) < 200:
         return None
@@ -628,18 +745,15 @@ def _fulltext_from_transcript(v: YtVideo) -> list[dict] | None:
     if not chunks:
         return None
     final: list[dict] = []
+    models: list[str] = []
     for idx, chunk in enumerate(chunks, 1):
         prompt = (
             f"标的 {v.ticker}。频道《{v.channel}》。标题：{v.title}\n"
             f"下面是该视频字幕的第 {idx}/{len(chunks)} 段。请只整理这一段，不要总结其它段落。\n\n"
             f"字幕：\n{chunk}"
         )
-        raw = gemini.chat(SYSTEM_FULLTEXT_TRANSCRIPT, prompt, model=settings.gemini_model,
-                          max_tokens=8000, retries=2, timeout=180)
-        data = extract_json(raw)
-        segs = (data or {}).get("segments") if isinstance(data, dict) else None
-        if not isinstance(segs, list):
-            continue
+        segs, model = _transcript_chunk_segments(prompt)
+        models.append(model)
         for sg in segs:
             if not isinstance(sg, dict):
                 continue
@@ -652,7 +766,9 @@ def _fulltext_from_transcript(v: YtVideo) -> list[dict] | None:
                 if spk:
                     seg["speaker"] = spk
                 final.append(seg)
-    return final or None
+    if not final:
+        return None
+    return final, "+".join(dict.fromkeys(models))
 
 
 def _tool_env() -> dict:
@@ -929,20 +1045,23 @@ def gen_fulltext(only: set[str] | None = None, per_ticker: int = 10, workers: in
         plan = plan[:limit]
 
     total = len(plan)
-    print(f"[yt-full] 计划 {total} 视频 / {len(grouped)} 标的（结构化+真帧, model={settings.gemini_model}, force={force}, limit={limit or 'all'}, daily_minutes={max_total_minutes or 'unlimited'}, fail_after={fail_after}, rate_waits={max_rate_waits}）", flush=True)
+    input_mode = "字幕优先" if prefer_transcript else "原生视频优先"
+    frame_mode = "含关键帧" if frames else "仅口播"
+    print(f"[yt-full] 计划 {total} 视频 / {len(grouped)} 标的（{input_mode}+{frame_mode}, model={settings.gemini_model}, force={force}, limit={limit or 'all'}, daily_minutes={max_total_minutes or 'unlimited'}, fail_after={fail_after}, rate_waits={max_rate_waits}）", flush=True)
     if not total:
         return 0
 
-    def _process(v: YtVideo) -> tuple[YtVideo, str, list[dict], int] | None:
+    def _process(v: YtVideo) -> tuple[YtVideo, str, list[dict], int, str] | None:
         prompt = f"标的 {v.ticker}。频道《{v.channel}》。按系统要求结构化还原该视频。"
         if prefer_transcript:
-            caption_segments = _fulltext_from_transcript(v)
-            if caption_segments:
+            caption_result = _fulltext_from_transcript(v)
+            if caption_result:
+                caption_segments, caption_model = caption_result
                 flat_caption = "\n\n".join(
                     (f"{s['speaker']}：{_strip_md(s['text'])}" if s.get("speaker") else _strip_md(s["text"]))
                     for s in caption_segments if s["type"] == "speech"
                 )
-                return v, flat_caption, caption_segments, 0
+                return v, flat_caption, caption_segments, 0, caption_model
             if (v.duration_s or 0) > cap_s:
                 raise RuntimeError(
                     f"transcript unavailable and duration {v.duration_s}s exceeds "
@@ -952,23 +1071,25 @@ def gen_fulltext(only: set[str] | None = None, per_ticker: int = 10, workers: in
             data = gemini.video_json(v.url, prompt, system=SYSTEM_FULLTEXT, low_res=low_res,
                                      max_tokens=8000, timeout=180, retries=2, max_rate_waits=max_rate_waits)
         except Exception:
-            fallback = _fulltext_from_transcript(v)
-            if fallback:
+            fallback_result = _fulltext_from_transcript(v)
+            if fallback_result:
+                fallback, fallback_model = fallback_result
                 flat_fb = "\n\n".join(
                     (f"{s['speaker']}：{_strip_md(s['text'])}" if s.get("speaker") else _strip_md(s["text"]))
                     for s in fallback if s["type"] == "speech"
                 )
-                return v, flat_fb, fallback, 0
+                return v, flat_fb, fallback, 0, fallback_model
             raise
         segs = (data or {}).get("segments") if isinstance(data, dict) else None
         if not isinstance(segs, list) or not segs:
-            fallback = _fulltext_from_transcript(v)
-            if fallback:
+            fallback_result = _fulltext_from_transcript(v)
+            if fallback_result:
+                fallback, fallback_model = fallback_result
                 flat_fb = "\n\n".join(
                     (f"{s['speaker']}：{_strip_md(s['text'])}" if s.get("speaker") else _strip_md(s["text"]))
                     for s in fallback if s["type"] == "speech"
                 )
-                return v, flat_fb, fallback, 0
+                return v, flat_fb, fallback, 0, fallback_model
             return None
         norm: list[dict] = []
         visuals: list[dict] = []
@@ -1013,7 +1134,7 @@ def gen_fulltext(only: set[str] | None = None, per_ticker: int = 10, workers: in
             s.pop("_drop", None)
             s.pop("sec", None)
         nframes = sum(1 for s in final if s.get("type") == "visual")
-        return v, flat, final, nframes
+        return v, flat, final, nframes, f"gemini:{settings.gemini_model}"
 
     def _record_failure(v: YtVideo, reason: str) -> None:
         if not local_db:
@@ -1039,7 +1160,7 @@ def gen_fulltext(only: set[str] | None = None, per_ticker: int = 10, workers: in
         with sqlite3.connect(local_db) as con:
             con.execute("DELETE FROM yt_fulltext_fail WHERE video_id=?", (video_id,))
 
-    def _save(v: YtVideo, flat: str, final: list[dict]) -> None:
+    def _save(v: YtVideo, flat: str, final: list[dict], model: str) -> None:
         if local_db:
             with sqlite3.connect(local_db) as con:
                 con.execute(
@@ -1055,7 +1176,7 @@ def gen_fulltext(only: set[str] | None = None, per_ticker: int = 10, workers: in
                         v.ticker,
                         flat,
                         "",
-                        f"gemini:{settings.gemini_model}",
+                        model,
                         dt.datetime.utcnow().isoformat(),
                         json.dumps(final, ensure_ascii=False),
                     ),
@@ -1063,7 +1184,7 @@ def gen_fulltext(only: set[str] | None = None, per_ticker: int = 10, workers: in
             return
         with session_scope() as s:
             s.merge(YtFulltext(video_id=v.id, ticker=v.ticker, content_zh=flat, content_en="",
-                               segments=final, model=f"gemini:{settings.gemini_model}",
+                               segments=final, model=model,
                                created_at=dt.datetime.utcnow()))
 
     done = fail = skip = 0
@@ -1084,8 +1205,8 @@ def gen_fulltext(only: set[str] | None = None, per_ticker: int = 10, workers: in
                     _record_failure(v, "no_segments")
                     print(f"  [yt-full] – {v.ticker} {v.id} 无段落", flush=True)
                     continue
-                vv, flat, final, nframes = out
-                _save(vv, flat, final)
+                vv, flat, final, nframes, model = out
+                _save(vv, flat, final, model)
                 _clear_failure(vv.id)
                 done += 1
                 print(f"  [yt-full] ✓ {vv.ticker} {vv.id} 段{len(final)}/帧{nframes} [{done}/{total}] skip={skip} fail={fail}", flush=True)
@@ -1098,8 +1219,8 @@ def gen_fulltext(only: set[str] | None = None, per_ticker: int = 10, workers: in
                     _record_failure(v, "no_segments")
                     print(f"  [yt-full] – {v.ticker} {v.id} 无段落", flush=True)
                     continue
-                vv, flat, final, nframes = out
-                _save(vv, flat, final)
+                vv, flat, final, nframes, model = out
+                _save(vv, flat, final, model)
                 _clear_failure(vv.id)
                 done += 1
                 print(f"  [yt-full] ✓ {vv.ticker} {vv.id} 段{len(final)}/帧{nframes} [{done}/{total}] skip={skip} fail={fail}", flush=True)

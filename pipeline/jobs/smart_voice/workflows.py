@@ -1,4 +1,4 @@
-"""Smart Voice job-level workflows."""
+"""Smart Account job-level workflows."""
 from __future__ import annotations
 
 from ...domain.smart_voice import signals
@@ -20,7 +20,7 @@ def score_x_sentiment(
     only_new: bool,
     limit: int | None,
 ) -> int:
-    """Score X tweet sentiment for Smart Voice rollups."""
+    """Score X tweet sentiment for Smart Account rollups."""
     return signals.score_x_sentiment(
         batch_size=batch_size,
         workers=workers,
@@ -76,7 +76,7 @@ def build_overall_signals(
     recent_days: int,
     prior_days: int,
 ) -> None:
-    """Build ticker detail derived Smart Voice signals."""
+    """Build ticker detail derived Smart Account signals."""
     signals.build_overall_signals(
         ticker=ticker,
         kol_file=kol_file,
@@ -103,7 +103,7 @@ def backfill_price_history(
     workers: int,
     limit: int,
 ) -> None:
-    """Backfill daily market prices required by Smart Voice settlement."""
+    """Backfill daily market prices required by Smart Account settlement."""
     backfill_price_history_platform(
         db=db,
         start=start,
@@ -141,7 +141,7 @@ def run_sv_v0(
     xueqiu_allow_partial: bool,
     force: bool,
 ) -> None:
-    """Run Smart Voice v0 scoring through the job boundary."""
+    """Run Smart Account v0 scoring through the job boundary."""
     run_sv_v0_domain(
         stage=stage,
         source=source,
@@ -175,7 +175,7 @@ def build_ticker_sv_signals(
     consensus_threshold: float,
     effective_voice_threshold: float,
 ) -> dict[str, int]:
-    """Build point-in-time ticker SV clusters and their forward backtests."""
+    """Build point-in-time ticker Score clusters and their forward backtests."""
     return build_ticker_sv_signals_domain(
         db_path=db_path,
         only=only,
@@ -194,7 +194,7 @@ def build_sv_indicator_backtest(
     windows: tuple[int, ...],
     source_scopes: tuple[str, ...],
 ) -> dict[str, int]:
-    """Backtest Smart Voice discovery indicators through the job boundary."""
+    """Backtest Smart Account discovery indicators through the job boundary."""
     return build_sv_indicator_backtest_domain(
         db_path=db_path,
         report_path=report_path,
@@ -228,7 +228,7 @@ def build_sv_segment_backtest(
     segment_min_n_eff: float,
     segment_min_settled_calls: int,
 ) -> dict[str, int]:
-    """Backtest vertical concentration using historical sub-SV ranks."""
+    """Backtest vertical concentration using historical sub-Score ranks."""
     return build_sv_segment_backtest_domain(
         db_path=db_path,
         report_path=report_path,
@@ -253,7 +253,7 @@ def build_x_sv_portfolio_backtest(
     holding_days: tuple[int, ...],
     position_modes: tuple[str, ...],
 ) -> dict[str, int]:
-    """Build annualized X-only SV signal and author portfolios."""
+    """Build annualized X-only Score signal and author portfolios."""
     return build_x_sv_portfolio_backtest_domain(
         db_path=db_path,
         report_dir=report_dir,
@@ -268,7 +268,7 @@ def build_x_rank_event_research(
     db_path: str,
     report_dir: str,
 ) -> dict[str, int]:
-    """Search and split-test X SV rank-event strategy parameters."""
+    """Search and split-test X Score rank-event strategy parameters."""
     return build_x_rank_event_research_domain(
         db_path=db_path,
         report_dir=report_dir,

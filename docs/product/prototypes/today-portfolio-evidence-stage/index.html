@@ -1,0 +1,723 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>bSmart · 持仓价格证据舞台</title>
+  <meta name="description" content="bSmart 首页持仓价格与观点证据图表设计原型">
+  <link rel="icon" href="../../../../ios/BSmart/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png">
+  <style>
+    :root {
+      color-scheme: dark;
+      --page: #080a0a;
+      --ink: #090c0b;
+      --surface: #101413;
+      --elevated: #171c1a;
+      --chart: #101d1c;
+      --line: #29312f;
+      --line-soft: rgba(255,255,255,.08);
+      --text: #f4f7f6;
+      --secondary: #a7b0ad;
+      --tertiary: #68736f;
+      --brand: #59dfbd;
+      --bear: #ff6478;
+      --gold: #f2c55a;
+      --blue: #69b8ff;
+      --ease: 260ms cubic-bezier(.2,.78,.2,1);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Helvetica Neue", sans-serif;
+      font-synthesis: none;
+      letter-spacing: 0;
+    }
+
+    * { box-sizing: border-box; }
+    html { background: var(--page); }
+    body { min-width: 320px; min-height: 100vh; margin: 0; color: var(--text); background: var(--page); }
+    button { border: 0; color: inherit; background: none; font: inherit; cursor: pointer; }
+    button:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+
+    .review-bar {
+      min-height: 70px;
+      padding: 14px 26px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      border-bottom: 1px solid var(--line);
+      background: #0b0e0d;
+    }
+    .review-brand { display: flex; align-items: center; gap: 11px; }
+    .review-mark { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 8px; color: #07110e; background: var(--brand); font-size: 20px; font-weight: 950; }
+    .review-brand strong { display: block; font-size: 14px; }
+    .review-brand span { display: block; margin-top: 3px; color: var(--tertiary); font-size: 10px; }
+    .review-status { padding: 7px 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--secondary); font-size: 10px; }
+
+    .review-layout {
+      width: min(1180px, 100%);
+      margin: 0 auto;
+      padding: 34px 28px 56px;
+      display: grid;
+      grid-template-columns: 430px minmax(0, 1fr);
+      gap: 48px;
+      align-items: start;
+    }
+
+    .concept-switcher { margin-bottom: 27px; }
+    .concept-switcher > span { display: block; margin-bottom: 10px; color: var(--tertiary); font: 800 9px ui-monospace, SFMono-Regular, Menlo, monospace; text-transform: uppercase; }
+    .concept-options { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+    .concept-option { min-height: 63px; padding: 11px 12px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); text-align: left; transition: border-color var(--ease), background var(--ease), transform var(--ease); }
+    .concept-option:hover { transform: translateY(-1px); border-color: #43504c; }
+    .concept-option.active { border-color: var(--brand); background: rgba(89,223,189,.08); }
+    .concept-option b { display: block; color: var(--text); font-size: 11px; }
+    .concept-option small { display: block; margin-top: 5px; color: var(--tertiary); font-size: 8px; line-height: 1.35; }
+
+    .phone {
+      width: 430px;
+      height: 932px;
+      position: sticky;
+      top: 22px;
+      overflow: hidden;
+      border: 1px solid #38423f;
+      border-radius: 48px;
+      background: var(--ink);
+      box-shadow: 0 32px 80px rgba(0,0,0,.46);
+    }
+    .phone::before {
+      content: "";
+      width: 118px;
+      height: 32px;
+      position: absolute;
+      z-index: 30;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-radius: 20px;
+      background: #020303;
+    }
+    .status-bar {
+      height: 52px;
+      padding: 16px 26px 0;
+      position: relative;
+      z-index: 31;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .status-icons { display: flex; align-items: center; gap: 6px; }
+    .signal { width: 17px; height: 9px; background: currentColor; clip-path: polygon(0 100%,0 78%,18% 78%,18% 56%,40% 56%,40% 34%,62% 34%,62% 13%,84% 13%,84% 0,100% 0,100% 100%); }
+    .wifi { width: 15px; height: 10px; border-top: 2px solid; border-radius: 50%; position: relative; }
+    .wifi::after { content: ""; width: 4px; height: 4px; position: absolute; left: 5px; top: 3px; border-radius: 50%; background: currentColor; }
+    .battery { width: 22px; height: 11px; padding: 2px; border: 1px solid; border-radius: 3px; }
+    .battery::after { content: ""; width: 70%; height: 100%; display: block; background: currentColor; }
+
+    .screen { height: calc(100% - 52px); display: grid; grid-template-rows: minmax(0,1fr) 72px; }
+    .scroll { overflow-y: auto; scrollbar-width: none; }
+    .scroll::-webkit-scrollbar { display: none; }
+    .content { padding: 8px 20px 40px; }
+    .app-head { height: 64px; display: flex; align-items: center; justify-content: space-between; }
+    .app-head span { color: var(--brand); font-size: 9px; font-weight: 900; letter-spacing: .7px; }
+    .app-head h1 { margin: 4px 0 0; font-size: 27px; line-height: 1; }
+    .bell { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); font-size: 15px; }
+    .live-row { margin-bottom: 20px; display: flex; align-items: center; gap: 7px; color: var(--secondary); font-size: 10px; }
+    .live-row i { width: 6px; height: 6px; border-radius: 50%; background: var(--brand); }
+
+    .portfolio-stage { position: relative; }
+    .asset-head { min-height: 58px; display: grid; grid-template-columns: 46px minmax(0,1fr) auto; gap: 11px; align-items: center; }
+    .asset-logo { width: 44px; height: 44px; object-fit: contain; border-radius: 9px; background: #0f1412; }
+    .asset-name strong { display: block; font-size: 20px; font-weight: 900; }
+    .asset-name span { display: block; margin-top: 3px; color: var(--tertiary); font-size: 10px; font-weight: 650; }
+    .asset-price { text-align: right; }
+    .asset-price strong { display: block; font: 850 18px ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .asset-price span { display: block; margin-top: 3px; color: var(--brand); font: 750 10px ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .asset-price span.down { color: var(--bear); }
+
+    .chart-stage {
+      height: 444px;
+      margin: 14px -20px 0;
+      position: relative;
+      overflow: hidden;
+      border-block: 1px solid rgba(89,223,189,.16);
+      background: var(--chart);
+      transition: background var(--ease);
+    }
+    .chart-toolbar {
+      height: 52px;
+      padding: 0 20px;
+      position: relative;
+      z-index: 8;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line-soft);
+    }
+    .periods, .styles { display: flex; align-items: center; gap: 3px; }
+    .periods { padding: 3px; border: 1px solid var(--line-soft); border-radius: 7px; background: rgba(6,10,9,.42); }
+    .periods button { width: 42px; height: 29px; border-radius: 5px; color: var(--tertiary); font-size: 9px; font-weight: 850; }
+    .periods button.active { color: #07110d; background: var(--brand); }
+    .styles { padding: 3px; border: 1px solid var(--line-soft); border-radius: 7px; }
+    .styles button { width: 31px; height: 29px; display: grid; place-items: center; border-radius: 5px; color: var(--tertiary); font-size: 10px; font-weight: 900; }
+    .styles button.active { color: var(--text); background: var(--elevated); }
+    .chart-legend { display: flex; align-items: center; gap: 12px; color: var(--tertiary); font-size: 8px; font-weight: 750; }
+    .chart-legend span { display: inline-flex; align-items: center; gap: 5px; }
+    .chart-legend i { width: 6px; height: 6px; border-radius: 50%; background: var(--brand); }
+    .chart-legend span:last-child i { background: var(--blue); }
+
+    .plot { height: 330px; position: relative; }
+    #priceChart { width: 100%; height: 100%; display: block; }
+    .plot-overlay { position: absolute; inset: 0 35px 0 14px; z-index: 5; }
+    .marker {
+      --tone: var(--brand);
+      width: 48px;
+      position: absolute;
+      transform: translate(-50%, -50%);
+      display: grid;
+      justify-items: center;
+      gap: 3px;
+      transition: left var(--ease), top var(--ease), transform var(--ease), opacity var(--ease);
+    }
+    .marker.bear { --tone: var(--bear); }
+    .marker.money { --tone: var(--blue); }
+    .marker img { width: 36px; height: 36px; display: block; object-fit: cover; border: 2px solid var(--tone); border-radius: 50%; background: #17201d; box-shadow: 0 4px 13px rgba(0,0,0,.48); transition: width var(--ease), height var(--ease), box-shadow var(--ease); }
+    .marker.rank-1 img { width: 43px; height: 43px; }
+    .marker .source-dot { width: 13px; height: 13px; position: absolute; top: 25px; right: 2px; display: grid; place-items: center; border: 2px solid var(--chart); border-radius: 50%; color: #07110d; background: var(--tone); font-size: 6px; font-weight: 950; }
+    .marker.rank-1 .source-dot { top: 31px; }
+    .rank-label { height: 15px; padding: 0 6px; display: grid; place-items: center; border: 1px solid color-mix(in srgb, var(--tone) 56%, transparent); border-radius: 999px; color: var(--text); background: rgba(10,17,15,.94); font: 850 7px ui-monospace, SFMono-Regular, Menlo, monospace; white-space: nowrap; }
+    .marker:hover, .marker.active { z-index: 10; transform: translate(-50%, -50%) scale(1.08); }
+    .marker.active img { box-shadow: 0 0 0 5px color-mix(in srgb, var(--tone) 16%, transparent), 0 7px 18px rgba(0,0,0,.55); }
+
+    .concept-badge {
+      min-width: 20px;
+      height: 18px;
+      padding: 0 6px;
+      display: grid;
+      place-items: center;
+      position: absolute;
+      z-index: 7;
+      top: 9px;
+      left: 12px;
+      border: 1px solid rgba(89,223,189,.32);
+      border-radius: 999px;
+      color: var(--brand);
+      background: rgba(7,13,11,.88);
+      font: 850 7px ui-monospace, SFMono-Regular, Menlo, monospace;
+      pointer-events: none;
+    }
+    .evidence-ribbon, .signal-lanes, .focus-card { display: none; }
+
+    .phone[data-concept="ribbon"] .chart-stage { background: #111a19; }
+    .phone[data-concept="ribbon"] .evidence-ribbon {
+      height: 74px;
+      position: absolute;
+      z-index: 3;
+      left: 14px;
+      right: 35px;
+      bottom: 0;
+      display: block;
+      border-top: 1px solid rgba(255,255,255,.09);
+      background: linear-gradient(180deg, rgba(14,27,24,.35), rgba(8,14,12,.88));
+      pointer-events: none;
+    }
+    .phone[data-concept="ribbon"] .evidence-ribbon::before { content: "EVIDENCE TIMELINE"; position: absolute; top: 8px; left: 0; color: var(--tertiary); font: 800 7px ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .phone[data-concept="ribbon"] .marker { gap: 0; }
+    .phone[data-concept="ribbon"] .marker img { width: 31px; height: 31px; }
+    .phone[data-concept="ribbon"] .marker.rank-1 img { width: 38px; height: 38px; }
+    .phone[data-concept="ribbon"] .marker .source-dot { top: 22px; }
+    .phone[data-concept="ribbon"] .marker.rank-1 .source-dot { top: 28px; }
+    .phone[data-concept="ribbon"] .rank-label { transform: translateY(2px); }
+
+    .phone[data-concept="focus"] .chart-stage { background: #101817; }
+    .phone[data-concept="focus"] .focus-card {
+      min-height: 74px;
+      padding: 11px 13px;
+      position: absolute;
+      z-index: 6;
+      left: 14px;
+      right: 35px;
+      bottom: 10px;
+      display: grid;
+      grid-template-columns: 34px minmax(0,1fr) auto;
+      gap: 9px;
+      align-items: center;
+      border: 1px solid rgba(89,223,189,.27);
+      border-radius: 7px;
+      background: rgba(8,14,12,.94);
+      box-shadow: 0 12px 24px rgba(0,0,0,.32);
+      pointer-events: none;
+    }
+    .focus-card img { width: 34px; height: 34px; object-fit: cover; border: 2px solid var(--brand); border-radius: 50%; }
+    .focus-card strong { display: block; overflow: hidden; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+    .focus-card span { display: block; margin-top: 4px; overflow: hidden; color: var(--secondary); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+    .focus-card b { color: var(--brand); font: 850 8px ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .phone[data-concept="focus"] .marker:not(.active) { opacity: .62; }
+    .phone[data-concept="focus"] .marker:not(.active) img { width: 27px; height: 27px; border-width: 1px; }
+    .phone[data-concept="focus"] .marker:not(.active) .rank-label, .phone[data-concept="focus"] .marker:not(.active) .source-dot { display: none; }
+    .phone[data-concept="focus"] .marker.active img { width: 45px; height: 45px; }
+
+    .phone[data-concept="lanes"] .chart-stage { background: #0e1817; }
+    .phone[data-concept="lanes"] .signal-lanes {
+      height: 102px;
+      position: absolute;
+      z-index: 3;
+      left: 14px;
+      right: 35px;
+      bottom: 0;
+      display: grid;
+      grid-template-rows: repeat(2,1fr);
+      border-block: 1px solid rgba(255,255,255,.09);
+      background: rgba(7,13,11,.8);
+      pointer-events: none;
+    }
+    .signal-lanes span { display: flex; align-items: center; color: var(--tertiary); font: 800 7px ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .signal-lanes span + span { border-top: 1px solid rgba(255,255,255,.07); }
+    .phone[data-concept="lanes"] .marker { width: 36px; gap: 0; }
+    .phone[data-concept="lanes"] .marker img, .phone[data-concept="lanes"] .marker.rank-1 img { width: 29px; height: 29px; }
+    .phone[data-concept="lanes"] .marker .source-dot { display: none; }
+    .phone[data-concept="lanes"] .rank-label { height: 13px; padding-inline: 4px; font-size: 6px; }
+
+    .chart-footer {
+      height: 61px;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid var(--line-soft);
+    }
+    .evidence-counts { display: flex; align-items: center; gap: 14px; }
+    .evidence-counts span { color: var(--tertiary); font-size: 8px; font-weight: 750; }
+    .evidence-counts b { margin-left: 4px; color: var(--text); font: 850 9px ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .chart-footer strong { color: var(--brand); font-size: 8px; }
+
+    .ticker-rail { margin: 13px -20px 0; padding: 0 20px 15px; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+    .ticker-rail::-webkit-scrollbar { display: none; }
+    .ticker-item { min-width: 105px; height: 56px; padding: 0 10px; display: grid; grid-template-columns: 28px 1fr; gap: 8px; align-items: center; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); text-align: left; }
+    .ticker-item.active { border-color: var(--brand); background: rgba(89,223,189,.08); }
+    .ticker-item img { width: 28px; height: 28px; object-fit: contain; border-radius: 6px; }
+    .ticker-item strong { display: block; font-size: 11px; }
+    .ticker-item span { display: block; margin-top: 3px; color: var(--tertiary); font: 700 8px ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .ticker-item .watch { color: var(--gold); }
+
+    .next-section { padding-top: 19px; border-top: 1px solid var(--line); }
+    .next-section header { display: flex; align-items: center; justify-content: space-between; }
+    .next-section h2 { margin: 0; font-size: 20px; }
+    .next-section span { color: var(--tertiary); font-size: 9px; }
+    .consensus-preview { height: 120px; margin-top: 12px; overflow: hidden; border-radius: 8px; background: #2d2a48; }
+
+    .tab-bar { margin: 5px 12px 12px; padding: 5px; display: grid; grid-template-columns: repeat(4,1fr); border: 1px solid var(--line); border-radius: 28px; background: rgba(20,24,23,.96); box-shadow: 0 12px 30px rgba(0,0,0,.4); }
+    .tab-bar button { height: 51px; display: grid; place-items: center; align-content: center; gap: 3px; border-radius: 23px; color: var(--tertiary); font-size: 8px; }
+    .tab-bar button.active { color: #101409; background: #d1fb44; }
+    .tab-bar b { font-size: 17px; line-height: 1; }
+
+    .detail-page {
+      position: absolute;
+      z-index: 50;
+      inset: 0;
+      transform: translateY(104%);
+      visibility: hidden;
+      background: #0a0d0c;
+      transition: transform 380ms cubic-bezier(.22,.78,.2,1), visibility 0s linear 380ms;
+    }
+    .detail-page.open { transform: translateY(0); visibility: visible; transition-delay: 0s; }
+    .detail-head { height: 112px; padding: 58px 20px 0; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--line); }
+    .detail-back { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); font-size: 21px; }
+    .detail-head strong { flex: 1; text-align: center; font-size: 16px; }
+    .detail-head::after { content: ""; width: 38px; }
+    .detail-content { height: calc(100% - 112px); padding: 24px 20px 40px; overflow-y: auto; }
+    .detail-identity { display: grid; grid-template-columns: 62px minmax(0,1fr) auto; gap: 13px; align-items: center; }
+    .detail-identity img { width: 62px; height: 62px; object-fit: cover; border: 2px solid var(--brand); border-radius: 50%; }
+    .detail-identity strong { display: block; font-size: 17px; }
+    .detail-identity span { display: block; margin-top: 4px; color: var(--tertiary); font-size: 10px; }
+    .detail-rank { padding: 6px 8px; border: 1px solid rgba(89,223,189,.38); border-radius: 5px; color: var(--brand); font-size: 9px; font-weight: 850; }
+    .detail-content h2 { margin: 25px 0 10px; font-size: 25px; line-height: 1.24; }
+    .detail-content p { margin: 0; color: var(--secondary); font-size: 14px; line-height: 1.65; }
+    .detail-tags { margin-top: 18px; display: flex; gap: 7px; }
+    .detail-tags span { padding: 6px 8px; border: 1px solid var(--line); border-radius: 5px; color: var(--secondary); font-size: 9px; font-weight: 750; }
+    .detail-tags span:first-child { color: var(--brand); border-color: rgba(89,223,189,.4); }
+    .source-link { width: 100%; height: 48px; margin-top: 28px; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--line); color: var(--brand); font-size: 11px; font-weight: 800; }
+
+    .notes { padding-top: 28px; }
+    .notes-kicker { color: var(--brand); font: 850 10px ui-monospace, SFMono-Regular, Menlo, monospace; text-transform: uppercase; }
+    .notes h2 { max-width: 580px; margin: 11px 0 10px; font-size: clamp(27px, 4vw, 46px); line-height: 1.08; }
+    .notes > p { max-width: 620px; margin: 0; color: var(--secondary); font-size: 14px; line-height: 1.7; }
+    .principles { margin-top: 34px; border-top: 1px solid var(--line); }
+    .principle { min-height: 94px; padding: 19px 0; display: grid; grid-template-columns: 46px minmax(0,1fr); gap: 14px; border-bottom: 1px solid var(--line); }
+    .principle b { width: 36px; height: 36px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%; color: var(--brand); font: 850 10px ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .principle strong { display: block; font-size: 14px; }
+    .principle p { max-width: 540px; margin: 7px 0 0; color: var(--tertiary); font-size: 11px; line-height: 1.55; }
+    .interaction-key { margin-top: 28px; padding: 18px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+    .interaction-key strong { display: block; font-size: 13px; }
+    .interaction-key div { margin-top: 14px; display: flex; gap: 8px; flex-wrap: wrap; }
+    .interaction-key span { padding: 6px 8px; border: 1px solid var(--line); border-radius: 5px; color: var(--secondary); font-size: 9px; }
+
+    @media (max-width: 880px) {
+      .review-bar { padding-inline: 16px; }
+      .review-layout { padding: 22px 14px 46px; grid-template-columns: 1fr; gap: 18px; }
+      .phone { width: min(430px, 100%); position: relative; top: 0; justify-self: center; }
+      .notes { width: min(620px, 100%); justify-self: center; }
+    }
+    @media (max-width: 455px) {
+      .review-bar { display: none; }
+      .review-layout { padding: 0; }
+      .phone { width: 100%; height: 100svh; border: 0; border-radius: 0; }
+      .phone::before { top: 8px; }
+      .notes { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="review-bar">
+    <div class="review-brand">
+      <div class="review-mark">b</div>
+      <div><strong>持仓价格证据舞台</strong><span>Today · 视觉重构评审原型</span></div>
+    </div>
+    <div class="review-status">功能与数据逻辑保持不变</div>
+  </header>
+
+  <main class="review-layout">
+    <section class="phone" id="prototypePhone" data-concept="stage" aria-label="bSmart iPhone prototype">
+      <div class="status-bar"><span>16:48</span><div class="status-icons"><i class="signal"></i><i class="wifi"></i><i class="battery"></i></div></div>
+      <div class="screen">
+        <div class="scroll">
+          <div class="content">
+            <header class="app-head"><div><span>SMART ACTIVITY</span><h1>今日</h1></div><button class="bell" title="通知" aria-label="通知">●</button></header>
+            <div class="live-row"><i></i><span>实时 · 更新于 16:45</span></div>
+
+            <section class="portfolio-stage" aria-label="持仓现在">
+              <header class="asset-head">
+                <img class="asset-logo" id="assetLogo" alt="">
+                <div class="asset-name"><strong id="assetTicker">NVDA</strong><span id="assetCompany">NVIDIA</span></div>
+                <div class="asset-price"><strong id="assetPrice">US$223.48</strong><span id="assetChange">+2.84%</span></div>
+              </header>
+
+              <div class="chart-stage">
+                <div class="chart-toolbar">
+                  <div class="periods" aria-label="时间周期">
+                    <button data-period="7">7D</button><button class="active" data-period="30">1M</button><button data-period="90">3M</button>
+                  </div>
+                  <div class="chart-legend"><span><i></i>Account</span><span><i></i>Money</span></div>
+                  <div class="styles" aria-label="图表样式">
+                    <button class="active" data-style="candles" title="K线">K</button><button data-style="line" title="折线">⌁</button>
+                  </div>
+                </div>
+
+                <div class="plot">
+                  <span class="concept-badge" id="conceptBadge">STAGE</span>
+                  <svg id="priceChart" role="img" aria-label="价格与观点证据图"></svg>
+                  <div class="evidence-ribbon" aria-hidden="true"></div>
+                  <div class="signal-lanes" aria-hidden="true"><span>SMART ACCOUNT</span><span>SMART MONEY</span></div>
+                  <div class="plot-overlay" id="plotOverlay"></div>
+                  <div class="focus-card" id="focusCard" aria-hidden="true"><img id="focusAvatar" alt=""><div><strong id="focusActor"></strong><span id="focusTitle"></span></div><b id="focusRank"></b></div>
+                </div>
+
+                <footer class="chart-footer">
+                  <div class="evidence-counts"><span>Smart Account <b id="accountCount">3</b></span><span>Smart Money <b id="moneyCount">2</b></span></div>
+                  <strong aria-label="查看证据">EVIDENCE ↗</strong>
+                </footer>
+              </div>
+
+              <div class="ticker-rail" id="tickerRail"></div>
+            </section>
+
+            <section class="next-section"><header><h2>聪明共识</h2><span>10 条</span></header><div class="consensus-preview"></div></section>
+          </div>
+        </div>
+
+        <nav class="tab-bar" aria-label="主导航">
+          <button class="active"><b>⌂</b>今日</button><button><b>◒</b>持仓</button><button><b>⌁</b>Smart</button><button><b>✦</b>Mr Collie</button>
+        </nav>
+      </div>
+
+      <article class="detail-page" id="detailPage" aria-hidden="true">
+        <header class="detail-head"><button class="detail-back" id="detailBack" aria-label="返回">‹</button><strong id="detailTicker">NVDA</strong></header>
+        <div class="detail-content">
+          <div class="detail-identity"><img id="detailAvatar" alt=""><div><strong id="detailActor"></strong><span id="detailMeta"></span></div><div class="detail-rank" id="detailRank"></div></div>
+          <h2 id="detailTitle"></h2><p id="detailSummary"></p>
+          <div class="detail-tags"><span id="detailDirection"></span><span id="detailHorizon"></span><span id="detailSource"></span></div>
+          <button class="source-link"><span>打开原始证据</span><span>↗</span></button>
+        </div>
+      </article>
+    </section>
+
+    <aside class="notes">
+      <div class="concept-switcher">
+        <span>选择设计方向</span>
+        <div class="concept-options">
+          <button class="concept-option active" data-concept="stage"><b>01 · 价格证据舞台</b><small>价格为主，关键主体直接落点</small></button>
+          <button class="concept-option" data-concept="ribbon"><b>02 · 事件证据轨道</b><small>价格与事件分层，阅读最稳定</small></button>
+          <button class="concept-option" data-concept="focus"><b>03 · 焦点证据镜头</b><small>一次突出一个最重要判断</small></button>
+          <button class="concept-option" data-concept="lanes"><b>04 · 双层信号带</b><small>账户观点与资金动作并行扫描</small></button>
+        </div>
+      </div>
+      <div class="notes-kicker" id="notesKicker">Design direction 01</div>
+      <h2 id="notesTitle">让价格成为舞台，让主体成为证据。</h2>
+      <p id="notesBody">保留现有操作和数据口径，只调整视觉层级。价格走势成为第一视觉对象，Smart Account 与 Smart Money 按排名和重要性组织为可操作证据节点。</p>
+      <div class="principles" id="principles"></div>
+      <div class="interaction-key"><strong>可操作区域</strong><div><span>7D / 1M / 3M</span><span>K 线 / 折线</span><span>证据头像</span><span>标的横向选择</span></div></div>
+    </aside>
+  </main>
+
+  <script>
+    const base = "../../../../ios/BSmart/Assets.xcassets/";
+    const avatars = {
+      hydra: "https://pbs.twimg.com/profile_images/2025494376554844161/xvL7GXVG_400x400.png",
+      wall: "https://pbs.twimg.com/profile_images/1356963429530152961/nQG0kjzp_400x400.jpg",
+      north: "https://pbs.twimg.com/profile_images/1996176688414367744/LXfA_lIx_400x400.jpg",
+      jtrader: "https://pbs.twimg.com/profile_images/1592676082011865088/XRvJLqRc_400x400.jpg",
+      money: base + "SmartMoneyBorderCollie.imageset/SmartMoneyBorderCollie.png",
+      moneyBrown: base + "SmartMoneyBorderCollieBrown.imageset/SmartMoneyBorderCollieBrown.png"
+    };
+
+    const assets = {
+      NVDA: { company:"NVIDIA", logo:base+"Ticker_NVDA.imageset/NVDA.png", price:223.48, change:2.84, start:186, trend:38, watch:false },
+      HOOD: { company:"Robinhood", logo:base+"Ticker_HOOD.imageset/HOOD.png", price:70.26, change:1.13, start:57, trend:14, watch:false },
+      PLTR: { company:"Palantir", logo:base+"Ticker_PLTR.imageset/PLTR.png", price:146.19, change:-1.42, start:132, trend:13, watch:false },
+      MSTR: { company:"Strategy", logo:base+"Ticker_MSTR.imageset/MSTR.png", price:386.70, change:3.21, start:316, trend:72, watch:true }
+    };
+
+    const eventTemplates = [
+      { age:4, source:"money", tone:"bull", actor:"Micah", rank:"#1", score:99, avatar:avatars.money, horizon:"短线资金", title:"新开 NVDA 多仓，总规模约 US$143,000", summary:"该地址分四笔建立 10× 多仓，平均每笔约 US$35.7K。公开成交只说明资金动作，不推测其操作理由。" },
+      { age:7, source:"account", tone:"bull", actor:"The Finance Hydra", rank:"Top 10%", score:94, avatar:avatars.hydra, horizon:"60D", title:"突破关键阻力后，价格可能打开新的上行空间", summary:"作者把当前平台上沿视为关键阻力，认为放量突破后，中期价格结构会进入新的区间。" },
+      { age:13, source:"account", tone:"neutral", actor:"JTrader", rank:"Top 19%", score:84, avatar:avatars.jtrader, horizon:"30D", title:"趋势仍强，但等待价格确认后再行动", summary:"作者认可中期趋势，同时把突破与成交量确认作为新的入场条件。" },
+      { age:20, source:"account", tone:"bull", actor:"True North", rank:"Top 7%", score:96, avatar:avatars.north, horizon:"180D", title:"长期判断不变，估值风险成为第一观察项", summary:"作者维持长期看多，同时新增条件：未来两个季度的盈利质量必须维持在当前区间。" },
+      { age:27, source:"money", tone:"bear", actor:"Adrian", rank:"#2", score:87, avatar:avatars.moneyBrown, horizon:"短线资金", title:"平掉部分多仓，主动降低名义敞口", summary:"该地址结束一笔杠杆多仓，名义敞口明显下降。这里只呈现已发生的资金行为。" },
+      { age:39, source:"account", tone:"bull", actor:"WallStTitan", rank:"Top 17%", score:86, avatar:avatars.wall, horizon:"90D", title:"供应改善继续支撑下一轮增长", summary:"作者继续看多，认为供应链协作与新产品产能准备会支持下一轮增长。" },
+      { age:58, source:"account", tone:"bear", actor:"Market Signal", rank:"Top 23%", score:78, avatar:avatars.wall, horizon:"20D", title:"短期价格已提前反映较高预期", summary:"作者认为当前价格对未来增长计入较多，短期应先观察预期是否继续上修。" }
+    ];
+
+    let selectedTicker = "NVDA";
+    let selectedPeriod = 30;
+    let selectedStyle = "candles";
+    let selectedConcept = "stage";
+    let focusedEvent = null;
+
+    const concepts = {
+      stage: {
+        badge:"STAGE", kicker:"Design direction 01", title:"让价格成为舞台，让主体成为证据。",
+        body:"借鉴 Robinhood 的移动行情层级：价格保持第一视觉对象，Smart Account 与 Smart Money 按重要性直接落在对应价格位置。",
+        principles:[
+          ["价格优先","行情占据主体空间，头像只出现在有意义的时点。"],
+          ["节点分级","高排名主体头像更大，方向、来源与排名各用单一视觉变量表达。"],
+          ["克制行情","保留必要价格网格，取消贯穿图表的事件虚线。"],
+          ["直接进入证据","头像是唯一证据入口，点击后整页展开。"]
+        ]
+      },
+      ribbon: {
+        badge:"RIBBON", kicker:"Design direction 02", title:"把观点变成一条可扫描的事件轨道。",
+        body:"借鉴 TradingView 的事件圆点与拥挤抑制机制：价格走势保持纯净，关键观点与资金动作在底部时间轨道中按发生时间排列。",
+        principles:[
+          ["图层分离","价格回答发生了什么，证据轨道回答谁在何时行动。"],
+          ["时间对齐","头像仍对应真实时间位置，不失去价格背景。"],
+          ["拥挤抑制","周期越短显示越少，低优先级节点自动退出。"],
+          ["快速扫读","所有主体基线一致，连续事件不会挤压价格线。"]
+        ]
+      },
+      focus: {
+        badge:"FOCUS", kicker:"Design direction 03", title:"一次只讲清一个最重要的证据。",
+        body:"吸收 Particle 先聚合、再聚焦的内容组织方式：图上保留所有关键节点，但仅把当前最高优先级判断展开成一条紧凑证据摘要。",
+        principles:[
+          ["单一焦点","默认选择综合优先级最高的主体，降低第一眼认知负担。"],
+          ["上下文不断裂","焦点摘要仍停留在价格图内，不跳出标的语境。"],
+          ["其余降噪","非焦点头像缩小并降低对比度，点击即可切换焦点。"],
+          ["逐层深入","先读一句判断，再进入完整证据，信息密度可控。"]
+        ]
+      },
+      lanes: {
+        badge:"LANES", kicker:"Design direction 04", title:"用双层信号带区分观点与真实资金。",
+        body:"借鉴专业资金流产品的信号流：上层排列 Smart Account，下层排列 Smart Money，同一时间轴上保持两类主体平行而不混淆。",
+        principles:[
+          ["来源明确","账户判断与链上行为从位置上永久区分。"],
+          ["横向扫描","用户可以沿时间轴快速识别连续提及或连续建仓。"],
+          ["价格留白","行情压缩到上半区，证据不会盖住关键 K 线。"],
+          ["平行关系","不制造同向或背离结论，只呈现两组独立证据。"]
+        ]
+      }
+    };
+
+    function seededCandles(asset) {
+      const rows = [];
+      let close = asset.start;
+      for (let i=0; i<90; i++) {
+        const wave = Math.sin(i*.39)*2.1 + Math.cos(i*.17)*1.4;
+        const drift = asset.trend/90;
+        const open = close + Math.sin(i*.73)*1.2;
+        close = Math.max(4, close + drift + wave*.19 + Math.sin(i*1.9)*.52);
+        const spread = 1.4 + Math.abs(Math.cos(i*.57))*2.5;
+        rows.push({ open, close, high:Math.max(open,close)+spread, low:Math.min(open,close)-spread, index:i });
+      }
+      const scale = asset.price / rows.at(-1).close;
+      return rows.map(row => ({...row, open:row.open*scale, close:row.close*scale, high:row.high*scale, low:row.low*scale}));
+    }
+
+    function svgNode(name, attrs={}) {
+      const node = document.createElementNS("http://www.w3.org/2000/svg", name);
+      Object.entries(attrs).forEach(([key,value]) => node.setAttribute(key,value));
+      return node;
+    }
+
+    function drawChart() {
+      const svg = document.getElementById("priceChart");
+      svg.replaceChildren();
+      const full = seededCandles(assets[selectedTicker]);
+      const data = full.slice(-selectedPeriod);
+      const width = 430, height = 330, left = 14, right = 42, top = 17;
+      const bottom = selectedConcept === "lanes" ? 124 : selectedConcept === "ribbon" ? 92 : selectedConcept === "focus" ? 104 : 24;
+      svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+      const min = Math.min(...data.map(d=>d.low));
+      const max = Math.max(...data.map(d=>d.high));
+      const pad = (max-min)*.14;
+      const lo=min-pad, hi=max+pad;
+      const x = i => left + (i/(Math.max(1,data.length-1)))*(width-left-right);
+      const y = value => top + (1-(value-lo)/(hi-lo))*(height-top-bottom);
+
+      for (let i=0;i<4;i++) {
+        const yy=top+(i/3)*(height-top-bottom);
+        svg.appendChild(svgNode("line",{x1:left,y1:yy,x2:width-right+5,y2:yy,stroke:"rgba(255,255,255,.085)","stroke-width":.7}));
+        const label=svgNode("text",{x:width-6,y:yy+3,"text-anchor":"end",fill:"rgba(255,255,255,.42)","font-size":8,"font-family":"ui-monospace,monospace"});
+        label.textContent=(hi-(i/3)*(hi-lo)).toFixed(0);
+        svg.appendChild(label);
+      }
+
+      if (selectedStyle === "candles") {
+        const bodyWidth=Math.max(2.2,Math.min(6,(width-left-right)/data.length*.54));
+        data.forEach((d,i)=>{
+          const tone=d.close>=d.open?"#59dfbd":"#ff6478";
+          svg.appendChild(svgNode("line",{x1:x(i),y1:y(d.high),x2:x(i),y2:y(d.low),stroke:tone,"stroke-width":1,opacity:.76}));
+          svg.appendChild(svgNode("rect",{x:x(i)-bodyWidth/2,y:Math.min(y(d.open),y(d.close)),width:bodyWidth,height:Math.max(2,Math.abs(y(d.open)-y(d.close))),rx:.7,fill:tone}));
+        });
+      } else {
+        const points=data.map((d,i)=>`${x(i)},${y(d.close)}`).join(" ");
+        const area=`${left},${height-bottom} ${points} ${x(data.length-1)},${height-bottom}`;
+        svg.appendChild(svgNode("polygon",{points:area,fill:"rgba(89,223,189,.105)"}));
+        svg.appendChild(svgNode("polyline",{points,fill:"none",stroke:"#59dfbd","stroke-width":2.4,"stroke-linejoin":"round","stroke-linecap":"round"}));
+      }
+
+      renderMarkers(data, full, {left,right,top,bottom,width,height,lo,hi});
+    }
+
+    function renderMarkers(data, full, frame) {
+      const overlay=document.getElementById("plotOverlay");
+      overlay.replaceChildren();
+      const policy = selectedPeriod===7 ? {max:3} : selectedPeriod===90 ? {max:7} : {max:5};
+      const firstIndex=90-selectedPeriod;
+      const visible=eventTemplates.filter(event => 89-event.age>=firstIndex).sort((a,b)=>b.score-a.score).slice(0,policy.max);
+      if (!focusedEvent || !visible.includes(focusedEvent)) focusedEvent=visible[0] || null;
+      visible.forEach((event,index)=>{
+        const absoluteIndex=89-event.age;
+        const localIndex=Math.max(0,absoluteIndex-firstIndex);
+        const candle=data[localIndex] || data.at(-1);
+        const left=(localIndex/Math.max(1,data.length-1))*100;
+        const ratio=(candle.close-frame.lo)/(frame.hi-frame.lo);
+        let top=(1-ratio)*78+8 + (event.tone==="bear"?10:-8);
+        if (selectedConcept === "ribbon") top=83 + (index%2)*7;
+        if (selectedConcept === "lanes") top=event.source==="account" ? 74 : 90;
+        const button=document.createElement("button");
+        button.className=`marker ${event.source} ${event.tone==="bear"?"bear":""} ${index===0?"rank-1":""} ${selectedConcept==="focus"&&event===focusedEvent?"active":""}`;
+        button.style.left=`${Math.min(96,Math.max(4,left))}%`;
+        button.style.top=`${Math.min(88,Math.max(12,top))}%`;
+        button.setAttribute("aria-label",`${event.actor} ${event.rank}`);
+        button.innerHTML=`<img src="${event.avatar}" alt=""><span class="source-dot">${event.source==="money"?"$":"A"}</span><span class="rank-label">${event.rank}</span>`;
+        button.addEventListener("click",()=>{
+          if (selectedConcept === "focus" && event !== focusedEvent) {
+            focusedEvent=event;
+            renderMarkers(data,full,frame);
+            return;
+          }
+          openDetail(event,button);
+        });
+        overlay.appendChild(button);
+      });
+      renderFocusCard(focusedEvent);
+      document.getElementById("accountCount").textContent=visible.filter(e=>e.source==="account").length;
+      document.getElementById("moneyCount").textContent=visible.filter(e=>e.source==="money").length;
+    }
+
+    function renderFocusCard(event) {
+      const card=document.getElementById("focusCard");
+      if (!event) return;
+      document.getElementById("focusAvatar").src=event.avatar;
+      document.getElementById("focusActor").textContent=event.actor;
+      document.getElementById("focusTitle").textContent=event.title.replace("NVDA",selectedTicker);
+      document.getElementById("focusRank").textContent=event.rank;
+      card.setAttribute("aria-hidden",selectedConcept==="focus"?"false":"true");
+    }
+
+    function renderConcept() {
+      const definition=concepts[selectedConcept];
+      document.getElementById("prototypePhone").dataset.concept=selectedConcept;
+      document.getElementById("conceptBadge").textContent=definition.badge;
+      document.getElementById("notesKicker").textContent=definition.kicker;
+      document.getElementById("notesTitle").textContent=definition.title;
+      document.getElementById("notesBody").textContent=definition.body;
+      document.getElementById("principles").innerHTML=definition.principles.map((item,index)=>`<div class="principle"><b>0${index+1}</b><div><strong>${item[0]}</strong><p>${item[1]}</p></div></div>`).join("");
+      document.querySelectorAll("[data-concept]").forEach(button=>{
+        if (button.classList.contains("concept-option")) button.classList.toggle("active",button.dataset.concept===selectedConcept);
+      });
+      drawChart();
+    }
+
+    function renderAsset() {
+      const asset=assets[selectedTicker];
+      document.getElementById("assetLogo").src=asset.logo;
+      document.getElementById("assetLogo").alt=selectedTicker;
+      document.getElementById("assetTicker").textContent=selectedTicker;
+      document.getElementById("assetCompany").textContent=asset.company;
+      document.getElementById("assetPrice").textContent=`US$${asset.price.toFixed(2)}`;
+      const change=document.getElementById("assetChange");
+      change.textContent=`${asset.change>=0?"+":""}${asset.change.toFixed(2)}%`;
+      change.classList.toggle("down",asset.change<0);
+      drawChart();
+    }
+
+    function renderTickerRail() {
+      const rail=document.getElementById("tickerRail");
+      rail.innerHTML=Object.entries(assets).map(([ticker,asset])=>`<button class="ticker-item ${ticker===selectedTicker?"active":""}" data-ticker="${ticker}"><img src="${asset.logo}" alt="${ticker}"><span><strong>${ticker}</strong><span class="${asset.watch?"watch":""}">${asset.watch?"关注":"US$"+asset.price.toFixed(0)}</span></span></button>`).join("");
+      rail.querySelectorAll("button").forEach(button=>button.addEventListener("click",()=>{
+        selectedTicker=button.dataset.ticker;
+        renderTickerRail(); renderAsset();
+      }));
+    }
+
+    function openDetail(event,button) {
+      document.querySelectorAll(".marker").forEach(node=>node.classList.remove("active"));
+      button.classList.add("active");
+      document.getElementById("detailTicker").textContent=selectedTicker;
+      document.getElementById("detailAvatar").src=event.avatar;
+      document.getElementById("detailActor").textContent=event.actor;
+      document.getElementById("detailMeta").textContent=event.source==="money"?"Smart Money · Hyperliquid":"Smart Account · X / YouTube";
+      document.getElementById("detailRank").textContent=event.rank;
+      document.getElementById("detailTitle").textContent=event.title.replace("NVDA",selectedTicker);
+      document.getElementById("detailSummary").textContent=event.summary;
+      document.getElementById("detailDirection").textContent=event.tone==="bear"?"看空":event.tone==="neutral"?"中性":"看多";
+      document.getElementById("detailHorizon").textContent=event.horizon;
+      document.getElementById("detailSource").textContent=event.source==="money"?"Hyperliquid":"X / YouTube";
+      const page=document.getElementById("detailPage");
+      page.classList.add("open"); page.setAttribute("aria-hidden","false");
+    }
+
+    document.getElementById("detailBack").addEventListener("click",()=>{
+      const page=document.getElementById("detailPage");
+      page.classList.remove("open"); page.setAttribute("aria-hidden","true");
+      document.querySelectorAll(".marker").forEach(node=>node.classList.remove("active"));
+    });
+    document.querySelectorAll("[data-period]").forEach(button=>button.addEventListener("click",()=>{
+      selectedPeriod=Number(button.dataset.period);
+      document.querySelectorAll("[data-period]").forEach(node=>node.classList.toggle("active",node===button));
+      drawChart();
+    }));
+    document.querySelectorAll("[data-style]").forEach(button=>button.addEventListener("click",()=>{
+      selectedStyle=button.dataset.style;
+      document.querySelectorAll("[data-style]").forEach(node=>node.classList.toggle("active",node===button));
+      drawChart();
+    }));
+    document.querySelectorAll(".concept-option").forEach(button=>button.addEventListener("click",()=>{
+      selectedConcept=button.dataset.concept;
+      focusedEvent=null;
+      renderConcept();
+    }));
+
+    renderTickerRail();
+    renderAsset();
+    renderConcept();
+  </script>
+</body>
+</html>

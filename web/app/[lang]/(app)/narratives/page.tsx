@@ -17,7 +17,7 @@ import { defaultLocale, isLocale, type Locale } from "@/lib/i18n";
 export function generateMetadata({ params }: { params: { lang: string } }): Metadata {
   const zh = params.lang === "zh";
   return {
-    title: zh ? "叙事轮动 · Prismo" : "Narrative rotation · Prismo",
+    title: zh ? "叙事轮动 · bSmart" : "Narrative rotation · bSmart",
     description: zh
       ? "跨社区固定板块叙事的热度排名、讨论占比与情绪变化。"
       : "Cross-community fixed sector narratives by rank, discussion share and sentiment rotation.",
@@ -147,7 +147,7 @@ export default function NarrativesPage({ params }: { params: { lang: string } })
       <div className="flex min-h-0 flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b border-line pb-3">
         <div className="min-w-0">
           <div className="text-[11px] font-semibold uppercase tracking-wider text-reddit">
-            {zh ? "PRISMO · 叙事" : "PRISMO · Narratives"}
+            {zh ? "bSmart · 叙事" : "bSmart · Narratives"}
           </div>
           <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5">
             <h1 className="font-display text-[22px] font-extrabold leading-none tracking-tight text-cream">Narrative Mindshare</h1>

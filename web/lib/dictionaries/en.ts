@@ -1,9 +1,9 @@
 import type { Dictionary } from "./zh";
 
-// English mirror of zh.ts. Proper nouns (tickers, Prismo, r/subreddits, people) stay verbatim.
+// English mirror of zh.ts. Proper nouns (tickers, bSmart, r/subreddits, people) stay verbatim.
 export const en: Dictionary = {
   meta: {
-    title: "Prismo · Reddit US-stock sentiment intelligence",
+    title: "bSmart · Reddit US-stock sentiment intelligence",
     description:
       "Professional analysis of Reddit's finance communities: mindshare, sentiment, momentum spikes, narrative clusters and a daily brief.",
   },
@@ -35,13 +35,12 @@ export const en: Dictionary = {
   nav: {
     dashboard: "Dashboard",
     overview: "Overview",
-    smartVoice: "Smart Voice",
+    smartAccount: "Smart Account",
     tickers: "Tickers",
     investors: "Authors",
     cnstocks: "China & HK",
     search: "Search",
     tracking: "Watchlist",
-    lab: "Lab",
     trending: "Trending",
     narratives: "Narratives",
     leaderboard: "Leaderboard",
@@ -119,7 +118,7 @@ export const en: Dictionary = {
     empty: "No data yet.",
   },
   searchHero: {
-    eyebrow: "Prismo · ticker intel",
+    eyebrow: "bSmart · ticker intel",
     title: "Search any stock, see Reddit's bull vs bear case",
     subPre: "We distill the community's real DD into ",
     subBull: "bulls",
@@ -150,11 +149,11 @@ export const en: Dictionary = {
     label: "Share",
     copy: "Copy link",
     copied: "Copied ✓",
-    tickerText: "{s} — the Reddit bull vs bear case · Prismo",
-    postText: "{s} · Reddit discussion · Prismo",
+    tickerText: "{s} — the Reddit bull vs bear case · bSmart",
+    postText: "{s} · Reddit discussion · bSmart",
   },
   install: {
-    title: "Install Prismo",
+    title: "Install bSmart",
     subtitle: "Open full-screen like an app — straight to the dashboard",
     installBtn: "Install",
     howBtn: "How",
@@ -199,7 +198,7 @@ export const en: Dictionary = {
     statPosts: "live posts",
     statTickers: "tracked tickers",
     statAuthors: "active authors",
-    enterTitle: "Enter Prismo",
+    enterTitle: "Enter bSmart",
     enterDesc:
       "Track mindshare, sentiment and narratives across Reddit's finance communities in real time. No signup — just open and go.",
     enterCta: "Enter live dashboard",
@@ -331,11 +330,11 @@ export const en: Dictionary = {
     topBadge: "Top",
   },
   auth: {
-    loginTitle: "Log in to Prismo",
+    loginTitle: "Log in to bSmart",
     loginSubtitle: "Mindshare, sentiment and a daily brief",
     noAccount: "No account yet?",
     signupLink: "Sign up",
-    signupTitle: "Sign up for Prismo",
+    signupTitle: "Sign up for bSmart",
     signupSubtitle: "Create a free account to unlock personalization",
     haveAccount: "Already have an account?",
     loginLink: "Log in",
@@ -421,7 +420,7 @@ export const en: Dictionary = {
   },
   tracking: {
     title: "Watchlist",
-    subtitle: "Tickers you follow — average sentiment across five communities, regions covered and cross-region spread",
+    subtitle: "Turn followed tickers, investors and narratives into a personalized opinion feed",
     loading: "Loading…",
     signInTitle: "Sign in to see your watchlist",
     signInDesc: "Follow the tickers you care about and come back anytime to see how global communities feel about them.",
@@ -482,7 +481,7 @@ export const en: Dictionary = {
     f2Title: "AI bull/bear distillation",
     f2Desc: "Per-post tagging that surfaces bull/bear theses and credible voices.",
     f3Title: "Save & follow",
-    f3Desc: "Bookmark posts and comments, follow communities and tickers.",
+    f3Desc: "Bookmark posts and comments, follow tickers and investors.",
     trust: "For research only, not investment advice",
   },
   onboarding: {
@@ -493,7 +492,7 @@ export const en: Dictionary = {
     stepOf: "Step {n} / {total}",
     selected: "{n} selected",
     // 0 welcome
-    welcomeTitle: "Welcome to Prismo 👋",
+    welcomeTitle: "Welcome to bSmart 👋",
     welcomeSubtitle:
       "Take a minute to answer a few questions and we'll tailor your dashboard and watchlist. Skip anytime — you can change it later in Settings.",
     welcomeBullet1: "Track the tickers you hold and see how the community feels at a glance",
@@ -598,7 +597,7 @@ export const en: Dictionary = {
   },
   bookmark: {
     tip: "Bookmark this page",
-    sub: "Press {combo} to save Prismo for one-click access next time.",
+    sub: "Press {combo} to save bSmart for one-click access next time.",
     dismiss: "Got it",
     close: "Dismiss",
   },

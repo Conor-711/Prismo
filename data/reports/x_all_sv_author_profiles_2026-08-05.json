@@ -1,0 +1,76 @@
+{
+  "database": "/Users/windz7z/Desktop/crypto_us/data/dev.db",
+  "scope": "all",
+  "candidates": 972,
+  "skippedFresh": 134,
+  "fetched": 822,
+  "failed": [
+    {
+      "handle": "YeahDrDave",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "handle": "bennybigbull",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "handle": "GlidingPhoenix",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "handle": "anytimeFXmetal",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "handle": "SwamiKnows_",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "handle": "pakpakchicken",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "handle": "HyperAICapital",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "handle": "tradergokux",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "handle": "tspencer322",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "handle": "ShortsellerST",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "handle": "ResetTime2030",
+      "error": "<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1028)>"
+    },
+    {
+      "handle": "WClementeIII",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "handle": "OptionsSean",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "handle": "ZeMirch",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "handle": "Glad_trades",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "handle": "Z06Z07",
+      "error": "HTTP Error 404: Not Found"
+    }
+  ],
+  "profileCoverage": 955,
+  "startedAt": "2026-08-04T18:46:45.095874+00:00",
+  "finishedAt": "2026-08-04T18:47:44.124409+00:00"
+}

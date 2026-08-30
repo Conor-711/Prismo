@@ -2,8 +2,7 @@ import SwiftUI
 
 private enum TickerIntelligenceSection: String, CaseIterable, Identifiable {
     case overview = "Overview"
-    case account = "Smart Account"
-    case money = "Smart Money"
+    case activity = "Smart Activity"
 
     var id: Self { self }
 }
@@ -14,17 +13,32 @@ struct TickerIntelligenceView: View {
     @State private var editingPosition: PortfolioPosition?
     @State private var isAddingTicker = false
     @State private var selection: TickerIntelligenceSection = .overview
+    @State private var activitySnapshot: TickerSmartActivitySnapshot?
 
-    private var accountUpdates: [SmartAccountUpdate] {
-        model.accountUpdates(for: ticker.ticker)
+    private struct ActivityRevision: Hashable {
+        let ticker: String
+        let accountCount: Int
+        let firstAccountID: UUID?
+        let lastAccountID: UUID?
+        let moneyCount: Int
+        let firstMoneyID: UUID?
+        let lastMoneyID: UUID?
+        let price: Double
+        let dataAsOf: Date
     }
 
-    private var moneyMovements: [SmartMoneyMovement] {
-        model.moneyMovements(for: ticker.ticker)
-    }
-
-    private var relatedSignals: [PortfolioSignal] {
-        model.signals(for: ticker.ticker)
+    private var activityRevision: ActivityRevision {
+        ActivityRevision(
+            ticker: ticker.ticker,
+            accountCount: model.smartAccountUpdates.count,
+            firstAccountID: model.smartAccountUpdates.first?.id,
+            lastAccountID: model.smartAccountUpdates.last?.id,
+            moneyCount: model.smartMoneyMovements.count,
+            firstMoneyID: model.smartMoneyMovements.first?.id,
+            lastMoneyID: model.smartMoneyMovements.last?.id,
+            price: ticker.currentPrice,
+            dataAsOf: ticker.dataAsOf
+        )
     }
 
     var body: some View {
@@ -35,13 +49,17 @@ struct TickerIntelligenceView: View {
 
                 switch selection {
                 case .overview:
-                    relationshipSummary
-                    evidencePulseSummary
-                    signalHistory
-                case .account:
-                    smartAccountSection
-                case .money:
-                    smartMoneySection
+                    if let activitySnapshot {
+                        overview(snapshot: activitySnapshot)
+                    } else {
+                        activityLoadingPlaceholder
+                    }
+                case .activity:
+                    if let activitySnapshot {
+                        TickerSmartActivityFeed(activities: activitySnapshot.activities)
+                    } else {
+                        activityLoadingPlaceholder
+                    }
                 }
             }
             .padding(BSmartSpacing.large)
@@ -83,16 +101,57 @@ struct TickerIntelligenceView: View {
             )
             .environmentObject(model)
         }
+        .task(id: activityRevision) {
+            await rebuildActivitySnapshot(for: activityRevision)
+        }
+        .bSmartDetailPage()
         .bSmartPage()
+    }
+
+    private func overview(snapshot: TickerSmartActivitySnapshot) -> some View {
+        VStack(alignment: .leading, spacing: BSmartSpacing.large) {
+            TickerPriceSmartActivityPanel(
+                ticker: ticker,
+                model: snapshot.priceModel
+            )
+
+            TickerSmartActivityFeed(
+                activities: snapshot.activities,
+                title: "Recent Smart Activity",
+                maximumItems: 4,
+                showsFilter: false
+            )
+
+            Button {
+                selection = .activity
+            } label: {
+                HStack {
+                    Text("View all Smart Activity".bSmartLocalized)
+                        .font(.subheadline.weight(.bold))
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.black))
+                }
+                .foregroundStyle(BSmartColor.brand)
+                .padding(.horizontal, BSmartSpacing.medium)
+                .frame(minHeight: 44)
+                .background(BSmartColor.brand.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: BSmartRadius.control, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: BSmartRadius.control, style: .continuous)
+                        .stroke(BSmartColor.brand.opacity(0.35), lineWidth: 0.6)
+                }
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("ticker-intelligence.view-all-activity")
+        }
     }
 
     private var sectionPicker: some View {
         HStack(spacing: 0) {
             ForEach(TickerIntelligenceSection.allCases) { section in
                 Button {
-                    withAnimation(BSmartMotion.quick) {
-                        selection = section
-                    }
+                    selection = section
                 } label: {
                     Text(section.rawValue.bSmartLocalized)
                         .font(.caption.weight(.bold))
@@ -147,278 +206,33 @@ struct TickerIntelligenceView: View {
         }
     }
 
-    private var relationshipSummary: some View {
-        VStack(alignment: .leading, spacing: BSmartSpacing.medium) {
-            HStack(spacing: BSmartSpacing.small) {
-                Label("Current relationship", systemImage: "point.3.connected.trianglepath.dotted")
-                    .font(.headline)
-                    .foregroundStyle(BSmartColor.primaryText)
-                Spacer()
-                BSmartTag(text: ticker.relationship.label, color: ticker.direction.color)
-                BSmartTag(text: ticker.direction.label, color: ticker.direction.color)
-            }
-
-            Text(ticker.conclusion.bSmartLocalized)
-                .font(.body.weight(.medium))
-                .fixedSize(horizontal: false, vertical: true)
-
-            if let latestSignal = relatedSignals.first(where: { $0.id == ticker.latestSignalId }) {
-                NavigationLink(value: latestSignal) {
-                    Label("Open latest signal", systemImage: "arrow.up.right")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(BSmartColor.brand)
-                }
-            }
-        }
-        .bSmartPanel(border: BSmartColor.pulse.opacity(0.34))
-    }
-
-    private var evidencePulseSummary: some View {
-        HStack(alignment: .top, spacing: BSmartSpacing.small) {
-            BSmartEvidenceStateCell(
-                title: "Smart Account",
-                symbol: "person.wave.2",
-                value: ticker.smartAccount.headline,
-                detail: "%d qualified authors".bSmartLocalized(ticker.smartAccount.qualifiedAuthorCount),
-                color: ticker.smartAccount.direction.color
-            )
-
-            BSmartEvidenceStateCell(
-                title: "Smart Money",
-                symbol: "wallet.bifold",
-                value: ticker.smartMoney.coverage == .available
-                    ? ticker.smartMoney.headline
-                    : "No capital verification",
-                detail: ticker.smartMoney.coverage == .available
-                    ? "%d qualified public accounts".bSmartLocalized(ticker.smartMoney.qualifiedAccountCount)
-                    : "Coverage is absent, not neutral",
-                color: ticker.smartMoney.coverage == .available
-                    ? ticker.smartMoney.direction.color
-                    : BSmartColor.gold
-            )
-        }
-    }
-
-    private var smartAccountSection: some View {
-        VStack(alignment: .leading, spacing: BSmartSpacing.medium) {
-            sourceHeader(
-                title: "Smart Account",
-                symbol: "person.wave.2",
-                direction: ticker.smartAccount.direction,
-                count: ticker.smartAccount.qualifiedAuthorCount,
-                countLabel: "qualified author"
-            )
-
-            Text(ticker.smartAccount.headline.bSmartLocalized)
-                .font(.headline)
-            Text(ticker.smartAccount.detail.bSmartLocalized)
+    private var activityLoadingPlaceholder: some View {
+        VStack(spacing: BSmartSpacing.medium) {
+            ProgressView()
+                .tint(BSmartColor.brand)
+            Text("Preparing Smart Activity".bSmartLocalized)
                 .font(.subheadline)
                 .foregroundStyle(BSmartColor.secondaryText)
-                .fixedSize(horizontal: false, vertical: true)
-
-            ForEach(Array(accountUpdates.prefix(3).enumerated()), id: \.element.id) { index, update in
-                if index > 0 {
-                    Divider().overlay(BSmartColor.line)
-                }
-                accountUpdateRow(update)
-            }
         }
+        .frame(maxWidth: .infinity, minHeight: 280)
         .bSmartSurface()
+        .accessibilityIdentifier("ticker-intelligence.activity-loading")
     }
 
-    private var smartMoneySection: some View {
-        VStack(alignment: .leading, spacing: BSmartSpacing.medium) {
-            HStack(spacing: BSmartSpacing.small) {
-                Label("Smart Money", systemImage: "wallet.bifold")
-                    .font(.headline)
-                Spacer()
-                if ticker.smartMoney.coverage == .available {
-                    BSmartTag(text: ticker.smartMoney.direction.label, color: ticker.smartMoney.direction.color)
-                }
-            }
+    private func rebuildActivitySnapshot(for revision: ActivityRevision) async {
+        let accountUpdates = model.accountUpdates(for: ticker.ticker)
+        let moneyMovements = model.moneyMovements(for: ticker.ticker)
+        let ticker = ticker
 
-            HStack {
-                Text(qualifiedCount(ticker.smartMoney.qualifiedAccountCount, label: "scored capital account"))
-                    .font(.caption2)
-                    .foregroundStyle(BSmartColor.tertiaryText)
-                Spacer()
-                BSmartTag(text: ticker.smartMoney.coverage.label, color: ticker.smartMoney.coverage.color)
-            }
+        let snapshot = await Task.detached(priority: .userInitiated) {
+            TickerSmartActivitySnapshot(
+                ticker: ticker,
+                accountUpdates: accountUpdates,
+                moneyMovements: moneyMovements
+            )
+        }.value
 
-            Text(ticker.smartMoney.headline.bSmartLocalized)
-                .font(.headline)
-            Text(ticker.smartMoney.detail.bSmartLocalized)
-                .font(.subheadline)
-                .foregroundStyle(BSmartColor.secondaryText)
-                .fixedSize(horizontal: false, vertical: true)
-
-            ForEach(Array(moneyMovements.prefix(3).enumerated()), id: \.element.id) { index, movement in
-                if index > 0 {
-                    Divider().overlay(BSmartColor.line)
-                }
-                moneyMovementRow(movement)
-            }
-        }
-        .bSmartSurface()
-    }
-
-    @ViewBuilder
-    private var signalHistory: some View {
-        if !relatedSignals.isEmpty {
-            VStack(alignment: .leading, spacing: BSmartSpacing.medium) {
-                BSmartSectionHeader(title: "Signal history", detail: "Latest first")
-
-                ForEach(Array(relatedSignals.prefix(5).enumerated()), id: \.element.id) { index, signal in
-                    if index > 0 {
-                        Divider().overlay(BSmartColor.line)
-                    }
-                    NavigationLink(value: signal) {
-                        HStack(alignment: .top, spacing: BSmartSpacing.medium) {
-                            Image(systemName: signal.priority.symbol)
-                                .foregroundStyle(signal.priority.color)
-                                .frame(width: 22)
-                            VStack(alignment: .leading, spacing: BSmartSpacing.xSmall) {
-                                Text(signal.title.bSmartLocalized)
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(BSmartColor.primaryText)
-                                    .multilineTextAlignment(.leading)
-                                Text(signal.occurredAt, style: .relative)
-                                    .font(.caption2)
-                                    .foregroundStyle(BSmartColor.tertiaryText)
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.caption2.weight(.bold))
-                                .foregroundStyle(BSmartColor.tertiaryText)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .bSmartSurface()
-        }
-    }
-
-    private func sourceHeader(
-        title: String,
-        symbol: String,
-        direction: SignalDirection,
-        count: Int,
-        countLabel: String
-    ) -> some View {
-        HStack(spacing: BSmartSpacing.small) {
-            Label(title, systemImage: symbol)
-                .font(.headline)
-            Spacer()
-            Text(qualifiedCount(count, label: countLabel))
-                .font(.caption2)
-                .foregroundStyle(BSmartColor.tertiaryText)
-            BSmartTag(text: direction.label, color: direction.color)
-        }
-    }
-
-    private func accountUpdateRow(_ update: SmartAccountUpdate) -> some View {
-        VStack(alignment: .leading, spacing: BSmartSpacing.small) {
-            HStack {
-                BSmartAvatar(url: update.authorAvatarURL, name: update.authorName, size: 28)
-                Text(update.authorName)
-                    .font(.subheadline.weight(.semibold))
-                if update.authorVerified == true {
-                    Image(systemName: "checkmark.seal.fill")
-                        .font(.caption2)
-                        .foregroundStyle(BSmartColor.sky)
-                }
-                BSmartTag(text: update.lifecycle.label, color: update.direction.color)
-                Spacer()
-                Text(
-                    "Score %@".bSmartLocalized(
-                        update.score.formatted(.number.precision(.fractionLength(0)))
-                    )
-                )
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(BSmartColor.brand)
-                    .monospacedDigit()
-            }
-
-            Text(update.originalText ?? update.thesis)
-                .font(.subheadline)
-                .foregroundStyle(BSmartColor.secondaryText)
-                .fixedSize(horizontal: false, vertical: true)
-
-            HStack(spacing: BSmartSpacing.medium) {
-                Text(update.platform)
-                if let followers = update.authorFollowersCount {
-                    Text("%@ followers".bSmartLocalized(followers.formatted()))
-                }
-                Text(update.horizon.bSmartLocalized)
-                if let targetPrice = update.targetPrice {
-                    Text(
-                        "Target %@".bSmartLocalized(
-                            targetPrice.formatted(.currency(code: "USD").precision(.fractionLength(0)))
-                        )
-                    )
-                }
-                Spacer()
-                Text(update.publishedAt, style: .relative)
-            }
-            .font(.caption2)
-            .foregroundStyle(BSmartColor.tertiaryText)
-        }
-    }
-
-    private func moneyMovementRow(_ movement: SmartMoneyMovement) -> some View {
-        VStack(alignment: .leading, spacing: BSmartSpacing.small) {
-            HStack(spacing: BSmartSpacing.small) {
-                BSmartSmartMoneyAvatar(identity: movement.publicIdentity, size: 32)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(movement.publicIdentity.displayName)
-                        .font(.subheadline.weight(.semibold))
-                    Text("Anonymous capital account".bSmartLocalized)
-                        .font(.caption2)
-                        .foregroundStyle(BSmartColor.tertiaryText)
-                }
-                Spacer()
-                VStack(alignment: .trailing, spacing: 3) {
-                    BSmartTag(text: movement.action.label, color: movement.direction.color)
-                    Text(compactSignedCurrency(movement.notionalChange))
-                        .font(.subheadline.weight(.bold))
-                        .foregroundStyle(movement.direction.color)
-                        .monospacedDigit()
-                }
-            }
-
-            HStack(spacing: BSmartSpacing.medium) {
-                Text(
-                    "Score %@".bSmartLocalized(
-                        movement.accountScore.formatted(.number.precision(.fractionLength(0)))
-                    )
-                )
-                if let leverage = movement.leverage {
-                    Text("\(leverage.formatted(.number.precision(.fractionLength(1))))x")
-                }
-                Spacer()
-                Text(movement.observedAt, style: .relative)
-            }
-            .font(.caption2)
-            .foregroundStyle(BSmartColor.tertiaryText)
-        }
-    }
-
-    private func compactSignedCurrency(_ value: Double) -> String {
-        let prefix = value >= 0 ? "+" : "-"
-        let magnitude = abs(value)
-        switch magnitude {
-        case 1_000_000...:
-            return String(format: "%@$%.2fM", prefix, magnitude / 1_000_000)
-        case 1_000...:
-            return String(format: "%@$%.0fK", prefix, magnitude / 1_000)
-        default:
-            return prefix + magnitude.formatted(.currency(code: "USD").precision(.fractionLength(0)))
-        }
-    }
-
-    private func qualifiedCount(_ count: Int, label: String) -> String {
-        let localizedLabel = "\(label)\(count == 1 ? "" : "s")".bSmartLocalized
-        return "\(count) \(localizedLabel)"
+        guard !Task.isCancelled, activityRevision == revision else { return }
+        activitySnapshot = snapshot
     }
 }

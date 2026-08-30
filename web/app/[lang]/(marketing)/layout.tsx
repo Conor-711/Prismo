@@ -24,9 +24,9 @@ export default function MarketingLayout({
               className="grid h-9 w-9 place-items-center rounded-xl font-display text-base font-extrabold text-white ring-1 ring-inset ring-white/15"
               style={{ backgroundImage: "var(--grad-brand)" }}
             >
-              P
+              b
             </span>
-            <span className="font-display text-xl font-extrabold tracking-tight text-cream">Prismo</span>
+            <span className="font-display text-xl font-extrabold tracking-tight text-cream">bSmart</span>
           </LocaleLink>
           <div className="flex items-center gap-2 sm:gap-3">
             <LanguageSwitcher />
@@ -50,7 +50,7 @@ export default function MarketingLayout({
 
       <footer className="border-t border-line">
         <div className="mx-auto flex w-full max-w-[1180px] flex-wrap items-center justify-between gap-3 px-5 py-7 text-xs text-neutral-600 sm:px-8">
-          <span>© Prismo</span>
+          <span>© bSmart</span>
           <span className="flex items-center gap-4">
             <a href="https://x.com/Connor_7s" target="_blank" rel="noreferrer noopener" className="transition hover:text-neutral-300">
               @Connor_7s

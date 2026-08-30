@@ -23,7 +23,7 @@ struct IntelligenceMethodView: View {
                 methodSection(
                     title: "Smart Money",
                     symbol: SignalEvidenceSource.smartMoney.symbol,
-                    body: "Public Hyperliquid activity for tokenized equities is grouped into wallet movements. bSmart reports observed entries, adds, reductions and exits when current coverage passes the minimum evidence threshold."
+                    body: "bSmart scores public capital accounts in tokenized US equity markets and reports observed entries, adds, reductions and exits when coverage passes the minimum evidence threshold. Consumer-facing names are stable aliases, not verified owner identities."
                 )
 
                 methodSection(

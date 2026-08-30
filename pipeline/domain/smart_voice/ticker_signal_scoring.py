@@ -1,4 +1,4 @@
-"""Point-in-time Smart Voice scores used by ticker signal backtests."""
+"""Point-in-time Smart Account scores used by ticker signal backtests."""
 from __future__ import annotations
 
 import collections

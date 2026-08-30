@@ -13,15 +13,15 @@ export function Sidebar({ dict }: { lang: Locale; dict: Dictionary }) {
       <SidebarCollapsedBehavior />
       <div className="border-b border-line px-3 py-3 shrink-0">
         <div className="sidebar-brand flex items-center gap-2">
-          {/* 品牌（占位 P 标，正式 Logo 待设计） */}
+          {/* 品牌字标；完整图形资产由设计系统统一维护。 */}
           <LocaleLink href="/" className="sidebar-brand-link sb-row flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-1 py-1">
             <span
               className="grid place-items-center w-10 h-10 rounded-xl text-white font-display font-extrabold text-lg ring-1 ring-inset ring-white/15 shrink-0"
               style={{ backgroundImage: "var(--grad-brand)" }}
             >
-              P
+              b
             </span>
-            <span className="sb-label font-display font-extrabold text-cream text-[22px] tracking-tight">Prismo</span>
+            <span className="sb-label font-display font-extrabold text-cream text-[22px] tracking-tight">bSmart</span>
           </LocaleLink>
           <SidebarToggle
             action="collapse"
@@ -36,7 +36,7 @@ export function Sidebar({ dict }: { lang: Locale; dict: Dictionary }) {
               className="sidebar-collapsed-brand-logo grid h-10 w-10 place-items-center rounded-xl text-white font-display font-extrabold text-lg ring-1 ring-inset ring-white/15"
               style={{ backgroundImage: "var(--grad-brand)" }}
             >
-              P
+              b
             </span>
             <span className="sidebar-collapsed-brand-icon grid h-10 w-10 place-items-center rounded-xl">
               <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">

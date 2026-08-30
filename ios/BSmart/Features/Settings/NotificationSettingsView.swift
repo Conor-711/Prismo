@@ -35,7 +35,6 @@ struct NotificationSettingsView: View {
         }
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
-        .preferredColorScheme(.dark)
     }
 
     private var intro: some View {

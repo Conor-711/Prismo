@@ -1,4 +1,4 @@
-"""Smart Voice v0 scoring workflow adapter."""
+"""Smart Account v0 scoring workflow adapter."""
 from __future__ import annotations
 
 import argparse
@@ -27,7 +27,7 @@ def run_sv_v0(
     xueqiu_allow_partial: bool,
     force: bool,
 ) -> None:
-    """Run the legacy Smart Voice v0 scorer through the domain boundary."""
+    """Run the legacy Smart Account v0 scorer through the domain boundary."""
     from .v0_impl import run
 
     run(

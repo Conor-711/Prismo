@@ -15,6 +15,18 @@ struct BSmartSmartMoneyAvatar: View {
     let identity: SmartMoneyPublicIdentity
     var size: CGFloat = 40
 
+    private var assetName: String {
+        let names = [
+            "SmartMoneyBorderCollie",
+            "SmartMoneyBorderCollieGlasses",
+            "SmartMoneyBorderCollieBowTie",
+            "SmartMoneyBorderCollieBandana",
+            "SmartMoneyBorderCollieCap",
+            "SmartMoneyBorderCollieBrown",
+        ]
+        return names[(identity.avatarVariant - 1) % names.count]
+    }
+
     private var accent: Color {
         let colors = [
             BSmartColor.brand,
@@ -23,18 +35,22 @@ struct BSmartSmartMoneyAvatar: View {
             BSmartColor.orange,
             BSmartColor.pulse,
             BSmartColor.electric,
+            BSmartColor.violet,
+            BSmartColor.pink,
+            BSmartColor.cyan,
         ]
-        return colors[(identity.avatarVariant - 1) % colors.count]
+        let colorIndex = ((identity.avatarVariant - 1) / 6) % colors.count
+        return colors[colorIndex]
     }
 
     var body: some View {
-        Image("SmartMoneyBorderCollie")
+        Image(assetName)
             .resizable()
             .scaledToFill()
             .frame(width: size, height: size)
             .clipShape(Circle())
             .overlay {
-                Circle().stroke(accent.opacity(0.82), lineWidth: max(1, size * 0.045))
+                Circle().stroke(accent, lineWidth: max(1.5, size * 0.065))
             }
             .accessibilityLabel("%@ · Anonymous capital account".bSmartLocalized(identity.displayName))
     }
@@ -44,6 +60,7 @@ struct BSmartPageTitle: View {
     let eyebrow: String
     let title: String
     let subtitle: String
+    @State private var showsHelp = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
@@ -52,14 +69,61 @@ struct BSmartPageTitle: View {
                 .tracking(1.15)
                 .foregroundStyle(BSmartColor.pulse)
                 .accessibilityLabel(eyebrow.bSmartLocalized)
-            Text(title.bSmartLocalized)
-                .font(.system(.title2, design: .rounded, weight: .black))
-                .foregroundStyle(BSmartColor.primaryText)
-            Text(subtitle.bSmartLocalized)
-                .font(.caption)
-                .foregroundStyle(BSmartColor.secondaryText)
-                .lineLimit(2)
+            HStack(spacing: BSmartSpacing.small) {
+                Text(title.bSmartLocalized)
+                    .font(.system(.title2, design: .rounded, weight: .black))
+                    .foregroundStyle(BSmartColor.primaryText)
+                BSmartHelpButton {
+                    showsHelp = true
+                }
+            }
         }
+        .sheet(isPresented: $showsHelp) {
+            BSmartHelpSheet(title: title, message: subtitle)
+        }
+    }
+}
+
+struct BSmartHelpButton: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "questionmark.circle")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(BSmartColor.tertiaryText)
+                .frame(width: 28, height: 28)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("More information".bSmartLocalized)
+    }
+}
+
+struct BSmartHelpSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let title: String
+    let message: String
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                Text(message.bSmartLocalized)
+                    .font(.body)
+                    .foregroundStyle(BSmartColor.secondaryText)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(BSmartSpacing.large)
+            }
+            .background(BSmartColor.surface)
+            .navigationTitle(title.bSmartLocalized)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done".bSmartLocalized) { dismiss() }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
     }
 }
 
@@ -89,6 +153,15 @@ struct BSmartIconButton: View {
 struct BSmartSectionTitle: View {
     let title: String
     var detail: String?
+    @State private var showsHelp = false
+
+    private var explanatoryDetail: Bool {
+        guard let detail else { return false }
+        let normalized = detail.lowercased()
+        return ["newest", "ranked", "only", "based", "derived", "qualified", "top "].contains {
+            normalized.contains($0)
+        }
+    }
 
     var body: some View {
         HStack(alignment: .lastTextBaseline, spacing: BSmartSpacing.medium) {
@@ -96,11 +169,18 @@ struct BSmartSectionTitle: View {
                 .font(.subheadline.weight(.bold))
                 .foregroundStyle(BSmartColor.primaryText)
             Spacer()
-            if let detail {
+            if explanatoryDetail {
+                BSmartHelpButton { showsHelp = true }
+            } else if let detail {
                 Text(detail.bSmartLocalized)
                     .font(.caption2)
                     .foregroundStyle(BSmartColor.tertiaryText)
                     .lineLimit(1)
+            }
+        }
+        .sheet(isPresented: $showsHelp) {
+            if let detail {
+                BSmartHelpSheet(title: title, message: detail)
             }
         }
     }
@@ -189,17 +269,19 @@ struct BSmartEvidenceStateCell: View {
 struct BSmartSectionHeader: View {
     let title: String
     var detail: String?
+    @State private var showsHelp = false
 
     var body: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(alignment: .firstTextBaseline) {
-                titleText
-                Spacer()
-                detailText
+        HStack(alignment: .firstTextBaseline) {
+            titleText
+            Spacer()
+            if detail != nil {
+                BSmartHelpButton { showsHelp = true }
             }
-            VStack(alignment: .leading, spacing: BSmartSpacing.xSmall) {
-                titleText
-                detailText
+        }
+        .sheet(isPresented: $showsHelp) {
+            if let detail {
+                BSmartHelpSheet(title: title, message: detail)
             }
         }
     }
@@ -210,14 +292,6 @@ struct BSmartSectionHeader: View {
             .foregroundStyle(BSmartColor.primaryText)
     }
 
-    @ViewBuilder
-    private var detailText: some View {
-        if let detail {
-            Text(detail.bSmartLocalized)
-                .font(.caption)
-                .foregroundStyle(BSmartColor.tertiaryText)
-        }
-    }
 }
 
 struct BSmartAssetMark: View {
@@ -229,7 +303,17 @@ struct BSmartAssetMark: View {
     }
 
     private var bundledTickers: Set<String> {
-        ["AVGO", "HOOD", "MSTR", "NVDA", "PLTR"]
+        ["AVGO", "HOOD", "MSTR", "NVDA", "PLTR", "TSLA"]
+    }
+
+    private var bundledLogoInset: CGFloat {
+        switch normalizedTicker {
+        case "PLTR": 0.21
+        case "HOOD", "TSLA": 0.15
+        case "NVDA": 0.11
+        case "AVGO", "MSTR": 0.07
+        default: 0.12
+        }
     }
 
     private var remoteLogoURL: URL? {
@@ -262,11 +346,11 @@ struct BSmartAssetMark: View {
     var body: some View {
         Group {
             if bundledTickers.contains(normalizedTicker) {
-                logoImage(Image("Ticker_\(normalizedTicker)"))
+                bundledLogo
             } else if let remoteLogoURL {
                 AsyncImage(url: remoteLogoURL, transaction: Transaction(animation: .easeOut(duration: 0.18))) { phase in
                     if case let .success(image) = phase {
-                        logoImage(image)
+                        logoImage(image, inset: 0.1)
                     } else {
                         fallback
                     }
@@ -276,20 +360,27 @@ struct BSmartAssetMark: View {
             }
         }
         .frame(width: size, height: size)
-        .background(Color.white)
-        .clipShape(RoundedRectangle(cornerRadius: min(8, size * 0.18), style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: min(8, size * 0.18), style: .continuous)
-                .stroke(BSmartColor.line, lineWidth: 0.75)
-        }
         .accessibilityLabel("%@ asset".bSmartLocalized(ticker))
     }
 
-    private func logoImage(_ image: Image) -> some View {
+    @ViewBuilder
+    private var bundledLogo: some View {
+        if normalizedTicker == "PLTR" {
+            logoImage(
+                Image("Ticker_\(normalizedTicker)").renderingMode(.template),
+                inset: bundledLogoInset
+            )
+            .foregroundStyle(BSmartColor.primaryText)
+        } else {
+            logoImage(Image("Ticker_\(normalizedTicker)"), inset: bundledLogoInset)
+        }
+    }
+
+    private func logoImage(_ image: Image, inset: CGFloat) -> some View {
         image
             .resizable()
             .scaledToFit()
-            .padding(size * 0.12)
+            .padding(size * inset)
     }
 
     private var fallback: some View {
@@ -298,6 +389,7 @@ struct BSmartAssetMark: View {
             .foregroundStyle(color)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(color.opacity(0.1))
+            .clipShape(RoundedRectangle(cornerRadius: min(8, size * 0.18), style: .continuous))
     }
 }
 
@@ -406,7 +498,7 @@ struct BSmartTag: View {
             .foregroundStyle(color)
             .padding(.horizontal, 7)
             .padding(.vertical, 4)
-            .background(color.opacity(0.08))
+            .background(color.opacity(0.12))
             .clipShape(RoundedRectangle(cornerRadius: BSmartRadius.control, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: BSmartRadius.control, style: .continuous)

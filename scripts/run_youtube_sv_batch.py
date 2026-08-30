@@ -44,7 +44,7 @@ def main() -> None:
         youtube_transcript_candidate_rows,
     )
 
-    lock_path = Path(os.environ.get("YOUTUBE_SV_BATCH_LOCK", "/tmp/prismo-youtube-sv-batch.lock"))
+    lock_path = Path(os.environ.get("YOUTUBE_SV_BATCH_LOCK", "/tmp/bsmart-youtube-sv-batch.lock"))
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     lock_file = lock_path.open("w")
     try:

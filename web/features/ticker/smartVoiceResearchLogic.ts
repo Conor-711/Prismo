@@ -150,26 +150,26 @@ export function buildExplainableAlerts({
   const alerts: SvExplainableAlert[] = [];
   if (indicators.divergence >= 35 && divergence.spread != null) alerts.push({
     id: "divergence", severity: indicators.divergence >= 65 ? "high" : "medium",
-    titleZh: "高低 SV 出现预期差", titleEn: "High/low SV expectation gap",
+    titleZh: "高低 Score 出现预期差", titleEn: "High/low Score expectation gap",
     reasonZh: `净方向差 ${divergence.spread >= 0 ? "+" : ""}${divergence.spread.toFixed(2)}，信号强度 ${indicators.divergence.toFixed(0)}/100。`,
     reasonEn: `Net direction spread is ${divergence.spread >= 0 ? "+" : ""}${divergence.spread.toFixed(2)} with ${indicators.divergence.toFixed(0)}/100 strength.`,
   });
   if (momentum.state === "bullish_reversal" || momentum.state === "bearish_reversal") alerts.push({
     id: "momentum-reversal", severity: "high",
-    titleZh: momentum.state === "bullish_reversal" ? "Top SV 转为看多" : "Top SV 转为看空",
-    titleEn: momentum.state === "bullish_reversal" ? "Top SV turned bullish" : "Top SV turned bearish",
+    titleZh: momentum.state === "bullish_reversal" ? "Top Score 转为看多" : "Top Score 转为看空",
+    titleEn: momentum.state === "bullish_reversal" ? "Top Score turned bullish" : "Top Score turned bearish",
     reasonZh: `近 5 个交易日净方向变化 ${momentum.delta == null ? "—" : `${momentum.delta >= 0 ? "+" : ""}${momentum.delta.toFixed(2)}`}。`,
     reasonEn: `Net direction changed ${momentum.delta == null ? "—" : `${momentum.delta >= 0 ? "+" : ""}${momentum.delta.toFixed(2)}`} over roughly five sessions.`,
   });
   if (indicators.crowding >= 60) alerts.push({
     id: "crowding", severity: indicators.crowding >= 78 ? "high" : "medium",
     titleZh: "观点存在拥挤风险", titleEn: "Thesis crowding risk",
-    reasonZh: `近期高 SV 作者观点同向且集中，拥挤度为 ${indicators.crowding.toFixed(0)}/100。`,
-    reasonEn: `Recent high-SV views are aligned and concentrated, with a crowding score of ${indicators.crowding.toFixed(0)}/100.`,
+    reasonZh: `近期高 Score 作者观点同向且集中，拥挤度为 ${indicators.crowding.toFixed(0)}/100。`,
+    reasonEn: `Recent high-Score views are aligned and concentrated, with a crowding score of ${indicators.crowding.toFixed(0)}/100.`,
   });
   if (targets.impliedMove != null && Math.abs(targets.impliedMove) >= 0.15) alerts.push({
     id: "target-gap", severity: Math.abs(targets.impliedMove) >= 0.3 ? "high" : "medium",
-    titleZh: "SV 目标价与现价偏离", titleEn: "SV target diverges from spot",
+    titleZh: "Score 目标价与现价偏离", titleEn: "Score target diverges from spot",
     reasonZh: `加权目标中位数隐含 ${targets.impliedMove >= 0 ? "+" : ""}${(targets.impliedMove * 100).toFixed(1)}%，多数目标区间跨度相当于现价的 ${targets.dispersion == null ? "—" : `${(targets.dispersion * 100).toFixed(0)}%`}。`,
     reasonEn: `The weighted median implies ${targets.impliedMove >= 0 ? "+" : ""}${(targets.impliedMove * 100).toFixed(1)}%; the middle target range spans ${targets.dispersion == null ? "—" : `${(targets.dispersion * 100).toFixed(0)}%`} of spot.`,
   });

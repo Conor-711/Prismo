@@ -8,7 +8,7 @@ import { isLocale, defaultLocale, type Locale } from "@/lib/i18n";
 
 export function generateMetadata({ params }: { params: { lang: string } }): Metadata {
   const zh = params.lang === "zh";
-  return { title: zh ? "标的总览 · Prismo" : "Tickers · Prismo" };
+  return { title: zh ? "标的总览 · bSmart" : "Tickers · bSmart" };
 }
 
 export default function TickersPage({ params }: { params: { lang: string } }) {
@@ -22,7 +22,7 @@ export default function TickersPage({ params }: { params: { lang: string } }) {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow={zh ? "PRISMO · 标的" : "PRISMO · Tickers"}
+        eyebrow={zh ? "bSmart · 标的" : "bSmart · Tickers"}
         title={zh ? "标的总览" : "Tickers"}
         subtitle={
           zh

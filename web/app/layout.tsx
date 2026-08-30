@@ -6,7 +6,7 @@ import { PwaRegister } from "@/components/PwaRegister";
 import { SITE_URL, BASE_PATH, OG_IMAGE } from "@/lib/site";
 
 // 初始化：强制深色主题（已停用白天模式）+ 套用侧边栏折叠状态 + 按路径设 <html lang>。
-const THEME_INIT = `try{var d=document.documentElement;d.classList.add('dark');var sb=localStorage.getItem('prismo:sidebar');if(sb){d.setAttribute('data-sb',sb)}var lp=location.pathname.split('/')[1];var LM={zh:'zh-CN',en:'en',ja:'ja',ko:'ko'};if(LM[lp]){d.lang=LM[lp]}}catch(e){}`;
+const THEME_INIT = `try{var d=document.documentElement;d.classList.add('dark');var sb=localStorage.getItem('bsmart:sidebar');if(sb){d.setAttribute('data-sb',sb)}var lp=location.pathname.split('/')[1];var LM={zh:'zh-CN',en:'en',ja:'ja',ko:'ko'};if(LM[lp]){d.lang=LM[lp]}}catch(e){}`;
 
 // 移动端适配：随设备宽度自适应 + 覆盖刘海安全区（配合 sticky/fixed 元素的 env(safe-area-*) 留白）。
 export const viewport: Viewport = {
@@ -16,7 +16,7 @@ export const viewport: Viewport = {
   themeColor: "#17191c", // 深色唯一主题（已停用白天模式）
 };
 
-const SITE_TITLE = "Prismo · 多社区美股舆情聚合";
+const SITE_TITLE = "bSmart · 多社区美股舆情聚合";
 const SITE_DESC =
   "聚合 Reddit、Yahoo Finance Japan、Naver、雪球、PTT 五大本土社区的美股舆情：跨区情绪对比、共识与分歧、代表讨论。";
 
@@ -24,13 +24,13 @@ export const metadata: Metadata = {
   metadataBase: new URL(`${SITE_URL}${BASE_PATH}`),
   title: SITE_TITLE,
   description: SITE_DESC,
-  applicationName: "Prismo",
+  applicationName: "bSmart",
   manifest: `${BASE_PATH}/manifest.webmanifest`,
-  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Prismo" },
+  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "bSmart" },
   formatDetection: { telephone: false },
   openGraph: {
     type: "website",
-    siteName: "Prismo",
+    siteName: "bSmart",
     title: SITE_TITLE,
     description: SITE_DESC,
     images: [{ url: OG_IMAGE, width: 1200, height: 630 }],

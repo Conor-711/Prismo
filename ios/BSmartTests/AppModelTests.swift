@@ -3,6 +3,43 @@ import XCTest
 
 final class AppModelTests: XCTestCase {
     @MainActor
+    func testAIAssistantGroundsPortfolioAndTickerResponsesInExistingModels() async throws {
+        let suiteName = "BSmartTests.AI.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let model = AppModel(
+            client: BundleBSmartAPIClient(),
+            defaults: defaults,
+            portfolioBootstrapStrategy: .remoteFallback
+        )
+        await model.load()
+
+        let portfolio = AIResearchAssistant.answer(prompt: .portfolio, model: model)
+        XCTAssertNotNil(portfolio.signal)
+        XCTAssertFalse(portfolio.evidence.isEmpty)
+        XCTAssertEqual(portfolio.ticker, model.personalizedPortfolioSignals.first?.signal.ticker)
+
+        let ticker = AIResearchAssistant.answer(query: "What changed in NVDA?", model: model)
+        XCTAssertEqual(ticker.ticker, "NVDA")
+        XCTAssertTrue(ticker.signal != nil || !ticker.evidence.isEmpty)
+
+        XCTAssertFalse(AIAssistantPrompt.allCases.map(\.title).contains {
+            let title = $0.lowercased()
+            return title.contains("diverg") || title.contains("disagree") || title.contains("confirm")
+        })
+        let activity = AIResearchAssistant.answer(prompt: .activity, model: model)
+        let activityCopy = [activity.title, activity.summary, activity.context, activity.nextStep]
+            .compactMap { $0 }
+            .joined(separator: " ")
+            .lowercased()
+        XCTAssertFalse(activityCopy.contains("diverg"))
+        XCTAssertFalse(activityCopy.contains("disagree"))
+        XCTAssertFalse(activityCopy.contains("confirm"))
+        XCTAssertTrue(Set(activity.evidence.map(\.source)).isSubset(of: ["Smart Account", "Smart Money"]))
+    }
+
+    @MainActor
     func testAppLanguagePreferencePersistsAndLocalizesDynamicCopy() throws {
         let suiteName = "BSmartTests.Language.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
@@ -17,6 +54,14 @@ final class AppModelTests: XCTestCase {
         language.select(.simplifiedChinese)
         XCTAssertEqual("Settings".bSmartLocalized, "设置")
         XCTAssertEqual("Score %@".bSmartLocalized("112"), "评分 112")
+        XCTAssertEqual("Smart".bSmartLocalized, "Smart")
+        XCTAssertEqual("Smart Account".bSmartLocalized, "Smart Account")
+        XCTAssertEqual("Smart Money".bSmartLocalized, "Smart Money")
+        XCTAssertEqual("Ask Mr Collie".bSmartLocalized, "询问 Mr Collie")
+        XCTAssertEqual("Need attention".bSmartLocalized, "需关注")
+        XCTAssertEqual("AI recent summary".bSmartLocalized, "AI 近期概括")
+        XCTAssertEqual("Investment strategy profile".bSmartLocalized, "投资策略画像")
+        XCTAssertEqual("Representative works".bSmartLocalized, "历史代表作")
 
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
@@ -44,14 +89,18 @@ final class AppModelTests: XCTestCase {
         async let moneyMovements = client.fetchSmartMoneyMovements()
         async let intelligence = client.fetchTickerIntelligence()
         async let portfolio = client.fetchPortfolio()
+        async let portfolioHistory = client.fetchPortfolioHistory()
         async let smartAccounts = client.fetchSmartAccounts()
+        async let smartMoney = client.fetchSmartMoney()
 
         let loadedSignals = try await signals
         let loadedAccountUpdates = try await accountUpdates
         let loadedMoneyMovements = try await moneyMovements
         let loadedIntelligence = try await intelligence
         let loadedPortfolio = try await portfolio
+        let loadedPortfolioHistory = try await portfolioHistory
         let loadedSmartAccounts = try await smartAccounts
+        let loadedSmartMoney = try await smartMoney
         let accountIds = Set(loadedAccountUpdates.map(\.id))
         let moneyIds = Set(loadedMoneyMovements.map(\.id))
 
@@ -64,6 +113,8 @@ final class AppModelTests: XCTestCase {
         XCTAssertTrue(loadedMoneyMovements.allSatisfy { $0.evidenceURL != nil })
         XCTAssertEqual(loadedIntelligence.count, 5)
         XCTAssertEqual(loadedPortfolio.count, 4)
+        XCTAssertGreaterThan(loadedPortfolioHistory.count, 20)
+        XCTAssertEqual(loadedPortfolioHistory, loadedPortfolioHistory.sorted { $0.timestamp < $1.timestamp })
         XCTAssertGreaterThan(loadedSmartAccounts.count, 100)
         XCTAssertTrue(loadedSmartAccounts.contains { $0.avatarURL != nil && $0.followersCount != nil })
         let rankedAccount = try XCTUnwrap(loadedSmartAccounts.first)
@@ -72,7 +123,41 @@ final class AppModelTests: XCTestCase {
         XCTAssertTrue(accountEvidence.allSatisfy { $0.authorId == rankedAccount.id })
         XCTAssertTrue(accountEvidence.contains { !($0.evidenceSpan ?? "").isEmpty })
         XCTAssertTrue(accountEvidence.contains { $0.settlement?.actualHit != nil })
-        XCTAssertTrue(accountEvidence.contains { $0.evidenceRole == "latest" })
+        let representativeWorks = accountEvidence.filter { $0.evidenceRole == "representative" }
+        XCTAssertFalse(representativeWorks.isEmpty)
+        XCTAssertLessThanOrEqual(representativeWorks.count, 3)
+        XCTAssertEqual(Set(representativeWorks.map { $0.ticker.uppercased() }).count, representativeWorks.count)
+        XCTAssertEqual(
+            representativeWorks.compactMap(\.representativeTickerRank),
+            Array(1...representativeWorks.count)
+        )
+        XCTAssertTrue(representativeWorks.allSatisfy { ($0.representativeTickerContribution ?? 0) > 0 })
+        XCTAssertTrue(representativeWorks.allSatisfy { ($0.representativeCallCount ?? 0) > 0 })
+        XCTAssertTrue(representativeWorks.allSatisfy { work in
+            guard let priceEvidence = work.priceEvidence,
+                  let markers = priceEvidence.opinionMarkers,
+                  !priceEvidence.candles.isEmpty,
+                  !markers.isEmpty else {
+                return false
+            }
+            return markers.count <= 10
+                && markers.allSatisfy { $0.contribution > 0 }
+                && markers.allSatisfy { marker in
+                    priceEvidence.candles.contains { $0.day == marker.viewDay }
+                }
+        })
+        let rankedMoney = try XCTUnwrap(loadedSmartMoney.first)
+        let moneyEvidence = try await client.fetchSmartMoneyEvidence(accountID: rankedMoney.id)
+        XCTAssertFalse(moneyEvidence.isEmpty)
+        XCTAssertLessThanOrEqual(moneyEvidence.count, 3)
+        XCTAssertTrue(moneyEvidence.allSatisfy { $0.accountId == rankedMoney.id })
+        XCTAssertEqual(
+            moneyEvidence.map(\.representativeRank),
+            Array(1...moneyEvidence.count)
+        )
+        XCTAssertTrue(moneyEvidence.allSatisfy { !$0.priceEvidence.candles.isEmpty })
+        XCTAssertTrue(moneyEvidence.allSatisfy { !$0.priceEvidence.entryMarkers.isEmpty })
+        XCTAssertTrue(moneyEvidence.allSatisfy { $0.priceEvidence.entryMarkers.count <= 10 })
         XCTAssertTrue(loadedPortfolio.allSatisfy { $0.resolvedKind == .position })
         XCTAssertEqual(loadedPortfolio.compactMap(\.portfolioWeight).reduce(0, +), 1, accuracy: 0.001)
         XCTAssertTrue(loadedSignals.allSatisfy { !$0.resolvedLimitations.isEmpty })
@@ -97,6 +182,61 @@ final class AppModelTests: XCTestCase {
                 XCTAssertTrue(moneyIds.contains(evidence.referenceId))
             }
         }
+    }
+
+    @MainActor
+    func testTodaySmartAccountPreviewResolvesRankingAndThreeDistinctRepresentativeWorks() async throws {
+        let suiteName = "BSmartTests.AccountPreview.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let model = AppModel(
+            client: BundleBSmartAPIClient(),
+            defaults: defaults,
+            portfolioBootstrapStrategy: .remoteFallback
+        )
+        await model.load()
+
+        let update = try XCTUnwrap(model.smartAccountUpdates.first { $0.authorId == "427693716" })
+        let account = model.smartAccountProfile(for: update)
+        XCTAssertEqual(account.name, "Trade With Insight")
+        XCTAssertEqual(account.resolvedRank, 7)
+        XCTAssertEqual(account.resolvedSettledCalls, 221)
+
+        await model.loadSmartAccountEvidence(for: account)
+        let works = model.representativeAccountEvidence(for: account, limit: 3)
+        XCTAssertEqual(works.map(\.ticker), ["TSLA", "MU", "CRCL"])
+        XCTAssertEqual(Set(works.map { $0.ticker.uppercased() }).count, 3)
+        XCTAssertTrue(works.allSatisfy { $0.priceEvidence != nil })
+        XCTAssertTrue(works.allSatisfy { $0.settlement?.status.lowercased() == "settled" })
+    }
+
+    @MainActor
+    func testEvidenceFallsBackToBundledSnapshotsWhenLiveAPIIsUnavailable() async throws {
+        let suiteName = "BSmartTests.EvidenceFallback.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let bundledClient = BundleBSmartAPIClient()
+        let accounts = try await bundledClient.fetchSmartAccounts()
+        let account = try XCTUnwrap(accounts.first { $0.id == "427693716" })
+        let money = try await bundledClient.fetchSmartMoney()
+        let moneyAccount = try XCTUnwrap(
+            money.first { $0.id == "0x0ad9e656d9e6211d0ea1c5462342e1fc94cc4cbf" }
+        )
+
+        let model = AppModel(
+            client: FailingBSmartAPIClient(),
+            bootstrapFallbackClient: bundledClient,
+            defaults: defaults
+        )
+
+        await model.loadSmartAccountEvidence(for: account)
+        await model.loadSmartMoneyEvidence(for: moneyAccount)
+
+        XCTAssertFalse(model.representativeAccountEvidence(for: account).isEmpty)
+        XCTAssertFalse(model.moneyEvidence(for: moneyAccount).isEmpty)
+        XCTAssertNil(model.errorMessage)
     }
 
     @MainActor
@@ -160,6 +300,42 @@ final class AppModelTests: XCTestCase {
 
         XCTAssertEqual(restoredModel.watchlist.map(\.ticker), ["NVDA"])
         XCTAssertTrue(restoredModel.hasCompletedPortfolioSetup)
+    }
+
+    @MainActor
+    func testBrokeragePrototypeConnectionPersistsWithoutCredentials() throws {
+        let suiteName = "BSmartTests.Brokerage.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let firstModel = AppModel(
+            client: TestBSmartAPIClient(),
+            defaults: defaults,
+            portfolioBootstrapStrategy: .localOnly
+        )
+        XCTAssertTrue(firstModel.linkedBrokerageAccounts.isEmpty)
+
+        let linked = firstModel.connectBrokeragePrototype(
+            provider: .interactiveBrokers,
+            detectedHoldingCount: 3,
+            importedPositionCount: 2
+        )
+
+        XCTAssertEqual(linked.provider, .interactiveBrokers)
+        XCTAssertEqual(linked.detectedHoldingCount, 3)
+        XCTAssertEqual(linked.importedPositionCount, 2)
+        XCTAssertTrue(linked.isPrototype)
+
+        let restoredModel = AppModel(
+            client: TestBSmartAPIClient(),
+            defaults: defaults,
+            portfolioBootstrapStrategy: .localOnly
+        )
+        XCTAssertEqual(restoredModel.linkedBrokerageAccounts, [linked])
+
+        restoredModel.disconnectBrokerage(.interactiveBrokers)
+        XCTAssertTrue(restoredModel.linkedBrokerageAccounts.isEmpty)
+        XCTAssertNil(defaults.string(forKey: "brokerage-api-key"))
     }
 
     @MainActor
@@ -466,6 +642,25 @@ final class AppModelTests: XCTestCase {
     }
 
     @MainActor
+    func testTodayActivityReadStatePersistsAcrossAppModelInstances() async throws {
+        let suiteName = "BSmartTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let activityID = UUID()
+        let firstModel = AppModel(client: TestBSmartAPIClient(), defaults: defaults)
+        await firstModel.load()
+        firstModel.markTodayActivityRead(activityID)
+
+        let restoredModel = AppModel(client: TestBSmartAPIClient(), defaults: defaults)
+        await restoredModel.load()
+
+        XCTAssertTrue(restoredModel.isTodayActivityRead(activityID))
+        restoredModel.markTodayActivityRead(activityID, isRead: false)
+        XCTAssertFalse(restoredModel.isTodayActivityRead(activityID))
+    }
+
+    @MainActor
     func testIgnoredSignalLeavesFeedAndCanBeRestored() async throws {
         let suiteName = "BSmartTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
@@ -484,6 +679,26 @@ final class AppModelTests: XCTestCase {
 
         XCTAssertTrue(model.portfolioSignals.contains { $0.id == signal.id })
         XCTAssertFalse(model.ignoredPortfolioSignals.contains { $0.id == signal.id })
+    }
+
+    @MainActor
+    func testBundledSnapshotBootstrapsFirstLaunchWhenLiveAPIIsUnavailable() async throws {
+        let suiteName = "BSmartTests.OfflineBootstrap.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let model = AppModel(
+            client: FailingBSmartAPIClient(),
+            bootstrapFallbackClient: BundleBSmartAPIClient(),
+            defaults: defaults
+        )
+        await model.load()
+
+        XCTAssertTrue(model.hasFinishedInitialLoad)
+        XCTAssertFalse(model.signals.isEmpty)
+        XCTAssertFalse(model.smartAccounts.isEmpty)
+        XCTAssertFalse(model.smartMoney.isEmpty)
+        XCTAssertNil(model.errorMessage)
     }
 
     @MainActor
@@ -644,17 +859,20 @@ final class AppModelTests: XCTestCase {
         model.toggleSignalSaved(signal.id)
         model.toggleSmartAccountFollow(account.id)
         model.toggleSmartMoneyFollow(money.id)
+        model.markTodayActivityRead(UUID())
 
         await model.resetLocalAppData()
 
         XCTAssertTrue(model.positions.isEmpty)
         XCTAssertTrue(model.signalUserStates.isEmpty)
+        XCTAssertTrue(model.readTodayActivityIDs.isEmpty)
         XCTAssertTrue(model.followedSmartAccountIDs.isEmpty)
         XCTAssertTrue(model.followedSmartMoneyIDs.isEmpty)
         XCTAssertFalse(model.hasCompletedPortfolioSetup)
         XCTAssertNil(defaults.object(forKey: "bsmart.portfolio.v1"))
         XCTAssertNil(defaults.object(forKey: "bsmart.portfolio-setup-complete.v1"))
         XCTAssertNil(defaults.object(forKey: "bsmart.signal-user-states.v1"))
+        XCTAssertNil(defaults.object(forKey: "bsmart.today-read-activities.v1"))
         XCTAssertNil(defaults.object(forKey: "bsmart.client-cache.v1"))
         XCTAssertNil(defaults.object(forKey: "bsmart.followed-smart-accounts.v1"))
         XCTAssertNil(defaults.object(forKey: "bsmart.followed-smart-money.v1"))

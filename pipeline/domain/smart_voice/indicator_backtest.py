@@ -1,4 +1,4 @@
-"""Build leakage-free historical signals for the Smart Voice discovery indicators."""
+"""Build leakage-free historical signals for the Smart Account discovery indicators."""
 from __future__ import annotations
 
 import bisect

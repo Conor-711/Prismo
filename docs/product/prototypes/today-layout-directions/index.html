@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>bSmart Today 布局方向</title>
+  <meta name="description" content="bSmart iOS Today 页面四套成熟布局方案评审原型">
+  <link rel="icon" href="../../../../ios/BSmart/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png">
+  <style>
+    :root {
+      color-scheme: dark;
+      --page: #080a0a;
+      --panel: #0f1211;
+      --panel-2: #141817;
+      --line: #272e2c;
+      --line-strong: #3a4541;
+      --text: #f7f8f9;
+      --muted: #aab3b9;
+      --dim: #69747b;
+      --brand: #59e0be;
+      --pulse: #d4ff44;
+      --bear: #ff5c6c;
+      --gold: #ffca4b;
+      --blue: #68b7ff;
+      --phone-w: 375px;
+      --phone-h: 812px;
+      --ease: 220ms cubic-bezier(.2,.75,.2,1);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Helvetica Neue", sans-serif;
+      font-synthesis: none;
+      letter-spacing: 0;
+    }
+
+    * { box-sizing: border-box; }
+    html { background: var(--page); }
+    body { margin: 0; min-width: 320px; min-height: 100vh; color: var(--text); background: var(--page); }
+    button { font: inherit; color: inherit; }
+    button:focus-visible { outline: 2px solid var(--pulse); outline-offset: 2px; }
+
+    .review-header {
+      min-height: 76px;
+      padding: 16px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      border-bottom: 1px solid var(--line);
+      background: #0b0e0d;
+    }
+    .brand-lockup { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .brand-mark { width: 40px; aspect-ratio: 1; display: grid; place-items: center; border-radius: 8px; color: #0a120e; background: var(--brand); font-size: 21px; font-weight: 900; }
+    .brand-copy strong { display: block; font-size: 15px; }
+    .brand-copy span { display: block; margin-top: 4px; color: var(--dim); font-size: 11px; }
+    .review-status { display: inline-flex; align-items: center; gap: 7px; padding: 7px 10px; border: 1px solid var(--line-strong); border-radius: 999px; color: var(--muted); font-size: 11px; white-space: nowrap; }
+    .review-status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--gold); }
+
+    .control-bar {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      padding: 12px 28px;
+      display: grid;
+      grid-template-columns: minmax(520px, 1fr) auto;
+      gap: 18px;
+      align-items: center;
+      border-bottom: 1px solid var(--line);
+      background: rgba(12,15,14,.96);
+      backdrop-filter: blur(18px);
+    }
+    .concept-switch, .view-switch { display: grid; grid-auto-flow: column; padding: 3px; border: 1px solid var(--line); border-radius: 8px; background: #080a0a; }
+    .concept-switch { grid-auto-columns: minmax(0,1fr); }
+    .concept-switch button, .view-switch button { min-height: 36px; padding: 6px 11px; border: 0; border-radius: 5px; color: var(--dim); background: transparent; font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: color var(--ease), background var(--ease); }
+    .concept-switch button:hover, .view-switch button:hover { color: var(--text); background: var(--panel-2); }
+    .concept-switch button.active { color: #101507; background: var(--pulse); }
+    .view-switch button.active { color: var(--text); background: #202624; }
+
+    .stage { padding: 28px 28px 56px; background-image: linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px); background-size: 32px 32px; }
+    .stage-intro { max-width: 1660px; margin: 0 auto 22px; display: flex; align-items: end; justify-content: space-between; gap: 24px; }
+    .stage-intro h1 { margin: 0; font-size: 22px; }
+    .stage-intro p { max-width: 740px; margin: 7px 0 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+    .shared-rule { color: var(--dim); font-size: 10px; text-align: right; }
+
+    .concept-grid { max-width: 1660px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 20px; align-items: start; }
+    .concept-card { min-width: 0; }
+    .concept-head { min-height: 92px; margin-bottom: 10px; padding: 0 2px; }
+    .concept-kicker { color: var(--brand); font: 800 10px ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .concept-head h2 { margin: 7px 0 4px; font-size: 16px; }
+    .concept-head p { margin: 0; color: var(--dim); font-size: 10px; line-height: 1.5; }
+    .concept-fit { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
+    .fit-tag { padding: 3px 6px; border: 1px solid var(--line); border-radius: 4px; color: var(--muted); background: var(--panel); font-size: 8px; }
+
+    .phone-wrap { display: flex; justify-content: center; }
+    .phone {
+      width: min(100%, var(--phone-w));
+      height: var(--phone-h);
+      overflow: hidden;
+      position: relative;
+      border: 1px solid #3a4240;
+      border-radius: 42px;
+      background: #090b0b;
+      box-shadow: 0 22px 60px rgba(0,0,0,.34);
+    }
+    .phone::before { content: ""; position: absolute; z-index: 10; top: 9px; left: 50%; width: 104px; height: 28px; transform: translateX(-50%); border-radius: 18px; background: #020303; }
+    .status-bar { height: 44px; padding: 12px 22px 0; display: flex; align-items: center; justify-content: space-between; position: relative; z-index: 12; font-size: 10px; font-weight: 750; }
+    .status-icons { display: flex; align-items: center; gap: 5px; }
+    .status-icons span { display: block; width: 13px; height: 7px; border: 1px solid currentColor; border-radius: 2px; }
+    .status-icons span:first-child { width: 12px; border: 0; background: currentColor; clip-path: polygon(0 100%,0 75%,18% 75%,18% 55%,40% 55%,40% 34%,63% 34%,63% 15%,85% 15%,85% 0,100% 0,100% 100%); }
+    .phone-screen { height: calc(100% - 44px); display: grid; grid-template-rows: minmax(0,1fr) 66px; }
+    .phone-scroll { overflow-y: auto; scrollbar-width: none; overscroll-behavior: contain; }
+    .phone-scroll::-webkit-scrollbar { display: none; }
+    .phone-content { min-height: 100%; padding: 10px 15px 28px; }
+
+    .app-head { min-height: 49px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .app-head .eyebrow { color: var(--pulse); font-size: 8px; font-weight: 850; text-transform: uppercase; }
+    .app-head h3 { margin: 3px 0 0; font-size: 22px; line-height: 1.1; }
+    .head-actions { display: flex; gap: 7px; }
+    .icon-btn { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%; color: var(--muted); background: var(--panel); cursor: pointer; font-weight: 800; }
+    .status-line { display: flex; align-items: center; gap: 5px; color: var(--dim); font-size: 9px; }
+    .status-line i { width: 6px; height: 6px; border-radius: 50%; background: var(--brand); }
+
+    .section-label { margin: 18px 0 9px; display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+    .section-label strong { font-size: 12px; }
+    .section-label span { color: var(--dim); font-size: 8px; }
+    .tag { display: inline-flex; align-items: center; min-height: 20px; padding: 2px 6px; border: 1px solid var(--line); border-radius: 4px; color: var(--muted); font-size: 8px; font-weight: 700; }
+    .tag.confirm { color: var(--brand); border-color: rgba(89,224,190,.38); }
+    .tag.diverge { color: var(--gold); border-color: rgba(255,202,75,.38); }
+    .tag.risk { color: var(--bear); border-color: rgba(255,92,108,.38); }
+
+    .portfolio-state { padding: 11px 12px; display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+    .portfolio-state strong { display: block; font-size: 12px; }
+    .portfolio-state p { margin: 4px 0 0; color: var(--dim); font-size: 9px; line-height: 1.35; }
+    .state-pill { padding: 5px 7px; border: 1px solid rgba(255,202,75,.38); border-radius: 4px; color: var(--gold); font-size: 8px; font-weight: 800; }
+
+    .decision-card { margin-top: 10px; padding: 14px; border: 1px solid #52651f; border-radius: 8px; background: var(--panel); box-shadow: inset 3px 0 var(--pulse); }
+    .ticker-line { display: flex; align-items: center; gap: 9px; }
+    .ticker-logo { width: 35px; height: 35px; flex: 0 0 auto; object-fit: contain; border-radius: 7px; background: #111514; }
+    .ticker-line h4 { margin: 0; font-size: 15px; }
+    .ticker-line p { margin: 3px 0 0; color: var(--dim); font-size: 8px; }
+    .ticker-line time { margin-left: auto; color: var(--dim); font-size: 8px; align-self: flex-start; }
+    .decision-card h5 { margin: 12px 0 7px; font-size: 18px; line-height: 1.28; }
+    .decision-card > p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+    .evidence-pair { margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+    .evidence-box { min-height: 70px; padding: 9px; border: 1px solid var(--line); border-radius: 6px; background: #0c0f0e; }
+    .evidence-box span { color: var(--dim); font-size: 7px; font-weight: 800; text-transform: uppercase; }
+    .evidence-box strong { display: block; margin-top: 6px; font-size: 10px; line-height: 1.25; }
+    .evidence-box p { margin: 4px 0 0; color: var(--dim); font-size: 8px; line-height: 1.3; }
+    .decision-action { margin-top: 11px; padding-top: 10px; display: flex; align-items: center; justify-content: space-between; gap: 9px; border-top: 1px solid var(--line); color: var(--muted); font-size: 8px; }
+    .decision-action strong { color: var(--pulse); font-size: 9px; }
+
+    .compact-link { margin-top: 10px; min-height: 48px; width: 100%; padding: 0 2px; display: flex; align-items: center; gap: 10px; border: 0; border-bottom: 1px solid var(--line); color: var(--text); background: transparent; text-align: left; cursor: pointer; }
+    .compact-link .glyph { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 6px; color: var(--pulse); background: #1b2112; font-size: 12px; }
+    .compact-link strong { display: block; font-size: 10px; }
+    .compact-link span { display: block; margin-top: 3px; color: var(--dim); font-size: 8px; }
+    .compact-link b { margin-left: auto; color: var(--dim); font-size: 16px; }
+
+    .other-events { border-top: 1px solid var(--line); }
+    .event-row { min-height: 66px; padding: 10px 0; display: grid; grid-template-columns: 34px minmax(0,1fr) auto; gap: 9px; align-items: start; border-bottom: 1px solid var(--line); }
+    .event-row h5 { margin: 1px 0 0; font-size: 10px; line-height: 1.35; }
+    .event-row p { margin: 4px 0 0; color: var(--dim); font-size: 8px; line-height: 1.35; }
+    .event-row time { color: var(--dim); font-size: 7px; }
+
+    .bottom-nav { padding: 7px 10px 13px; display: grid; grid-template-columns: repeat(5,1fr); border-top: 1px solid var(--line); background: rgba(16,19,18,.96); backdrop-filter: blur(18px); }
+    .bottom-nav button { min-height: 46px; display: grid; place-items: center; align-content: center; gap: 3px; border: 0; color: var(--dim); background: transparent; font-size: 7px; cursor: pointer; }
+    .nav-glyph { font-size: 17px; line-height: 1; }
+    .bottom-nav button.active { color: var(--pulse); }
+
+    /* B: timeline */
+    .pulse-summary { padding: 12px; border-block: 1px solid var(--line); }
+    .pulse-summary header { display: flex; align-items: baseline; justify-content: space-between; }
+    .pulse-summary h4 { margin: 0; font-size: 12px; }
+    .pulse-summary header span { color: var(--gold); font-size: 9px; font-weight: 800; }
+    .pulse-bar { height: 5px; margin: 10px 0 7px; overflow: hidden; display: flex; border-radius: 4px; background: #222; }
+    .pulse-bar span:nth-child(1) { width: 55%; background: var(--brand); }
+    .pulse-bar span:nth-child(2) { width: 29%; background: var(--gold); }
+    .pulse-bar span:nth-child(3) { width: 16%; background: var(--bear); }
+    .pulse-summary p { margin: 0; color: var(--dim); font-size: 8px; }
+    .time-group { margin: 14px 0 6px; color: var(--dim); font: 800 8px ui-monospace,SFMono-Regular,Menlo,monospace; text-transform: uppercase; }
+    .timeline { margin-left: 16px; padding-left: 18px; border-left: 1px solid var(--line); }
+    .timeline-item { position: relative; padding: 0 0 15px; }
+    .timeline-item::before { content: ""; position: absolute; left: -22px; top: 3px; width: 7px; height: 7px; border: 2px solid #090b0b; border-radius: 50%; background: var(--brand); }
+    .timeline-item.risk::before { background: var(--bear); }
+    .timeline-item.watch::before { background: var(--gold); }
+    .timeline-item header { display: flex; align-items: center; gap: 7px; }
+    .timeline-item .ticker-logo { width: 27px; height: 27px; }
+    .timeline-item h5 { margin: 0; font-size: 10px; }
+    .timeline-item time { margin-left: auto; color: var(--dim); font-size: 7px; }
+    .timeline-item p { margin: 7px 0 0; color: var(--muted); font-size: 9px; line-height: 1.45; }
+    .timeline-item footer { margin-top: 7px; display: flex; align-items: center; justify-content: space-between; }
+
+    /* C: matrix */
+    .value-strip { padding: 12px 0 13px; border-bottom: 1px solid var(--line); }
+    .value-strip span { color: var(--dim); font-size: 8px; }
+    .value-strip strong { display: block; margin-top: 4px; font-size: 24px; }
+    .value-strip b { color: var(--brand); font-size: 9px; }
+    .mini-spark { width: 100%; height: 32px; margin-top: 7px; display: block; }
+    .mini-spark polyline { fill: none; stroke: var(--brand); stroke-width: 2; vector-effect: non-scaling-stroke; }
+    .matrix { display: grid; grid-template-columns: 1.35fr 1fr; grid-template-rows: 94px 76px; gap: 6px; }
+    .matrix-cell { padding: 10px; position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: 7px; background: var(--panel); cursor: pointer; }
+    .matrix-cell.selected { border-color: rgba(212,255,68,.6); box-shadow: inset 0 0 0 1px rgba(212,255,68,.14); }
+    .matrix-cell:nth-child(3) { grid-column: span 1; }
+    .matrix-cell h5 { margin: 0; font-size: 12px; }
+    .matrix-cell p { margin: 4px 0 0; color: var(--dim); font-size: 8px; }
+    .matrix-cell strong { position: absolute; left: 10px; bottom: 9px; font-size: 9px; }
+    .matrix-cell .heat { position: absolute; right: -14px; bottom: -20px; width: 70px; height: 70px; border: 20px solid rgba(89,224,190,.11); border-radius: 50%; }
+    .matrix-cell.risk .heat { border-color: rgba(255,92,108,.12); }
+    .matrix-cell.watch .heat { border-color: rgba(255,202,75,.12); }
+    .selected-detail { margin-top: 10px; padding: 12px 0; border-block: 1px solid var(--line); }
+    .selected-detail header { display: flex; align-items: center; gap: 8px; }
+    .selected-detail h4 { margin: 0; font-size: 13px; }
+    .selected-detail p { margin: 8px 0 0; color: var(--muted); font-size: 9px; line-height: 1.45; }
+    .impact-table { margin-top: 10px; display: grid; grid-template-columns: repeat(3,1fr); border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
+    .impact-table div { padding: 8px; background: var(--panel); border-right: 1px solid var(--line); }
+    .impact-table div:last-child { border-right: 0; }
+    .impact-table span { display: block; color: var(--dim); font-size: 7px; }
+    .impact-table strong { display: block; margin-top: 5px; font-size: 10px; }
+
+    /* D: briefing */
+    .brief-date { color: var(--dim); font: 750 8px ui-monospace,SFMono-Regular,Menlo,monospace; }
+    .brief-title { margin: 10px 0 7px; font-size: 25px; line-height: 1.15; }
+    .brief-deck { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.55; }
+    .brief-rule { margin: 14px 0; border: 0; border-top: 1px solid var(--line); }
+    .brief-block { padding: 12px 0; border-bottom: 1px solid var(--line); }
+    .brief-block header { display: flex; align-items: center; justify-content: space-between; }
+    .brief-block header span { color: var(--pulse); font-size: 8px; font-weight: 850; text-transform: uppercase; }
+    .brief-block h4 { margin: 8px 0 5px; font-size: 14px; line-height: 1.32; }
+    .brief-block p { margin: 0; color: var(--muted); font-size: 9px; line-height: 1.5; }
+    .brief-evidence { margin-top: 10px; padding-left: 10px; border-left: 2px solid var(--brand); color: var(--muted); font-size: 8px; line-height: 1.5; }
+    .watch-list { margin: 0; padding: 0; list-style: none; }
+    .watch-list li { padding: 9px 0; display: grid; grid-template-columns: 32px 1fr auto; gap: 8px; align-items: center; border-bottom: 1px solid var(--line); }
+    .watch-list .ticker-logo { width: 30px; height: 30px; }
+    .watch-list strong { display: block; font-size: 9px; }
+    .watch-list span { display: block; margin-top: 3px; color: var(--dim); font-size: 8px; }
+
+    .concept-note { margin: 12px auto 0; width: min(100%, var(--phone-w)); padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: rgba(15,18,17,.9); }
+    .concept-note strong { display: block; color: var(--brand); font-size: 10px; }
+    .concept-note p { margin: 6px 0 0; color: var(--muted); font-size: 9px; line-height: 1.5; }
+
+    .recommendation { max-width: 1660px; margin: 30px auto 0; padding: 18px; display: grid; grid-template-columns: 230px minmax(0,1fr); gap: 22px; border: 1px solid #495c1b; border-radius: 8px; background: #10140d; }
+    .recommendation .label { color: var(--pulse); font: 850 10px ui-monospace,SFMono-Regular,Menlo,monospace; }
+    .recommendation h3 { margin: 6px 0 0; font-size: 18px; }
+    .recommendation p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
+    .score-grid { margin-top: 12px; display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
+    .score-grid div { padding: 9px; border: 1px solid var(--line); border-radius: 6px; background: #0b0e0c; }
+    .score-grid span { display: block; color: var(--dim); font-size: 8px; }
+    .score-grid strong { display: block; margin-top: 5px; font-size: 11px; }
+
+    body.focus-mode .concept-grid { max-width: 1120px; grid-template-columns: minmax(375px, .58fr) minmax(340px,.42fr); }
+    body.focus-mode .concept-card:not(.selected) { display: none; }
+    body.focus-mode .concept-card.selected { display: contents; }
+    body.focus-mode .concept-card.selected .concept-head { grid-column: 2; grid-row: 1; align-self: start; min-height: 0; padding: 22px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+    body.focus-mode .concept-card.selected .phone-wrap { grid-column: 1; grid-row: 1 / span 2; }
+    body.focus-mode .concept-card.selected .concept-note { grid-column: 2; grid-row: 2; width: 100%; margin: 0; align-self: start; }
+
+    @media (max-width: 1500px) { .concept-grid { grid-template-columns: repeat(2,minmax(0,1fr)); max-width: 900px; row-gap: 34px; } }
+    @media (max-width: 860px) {
+      .review-header { padding: 14px 16px; }
+      .review-status { display: none; }
+      .control-bar { position: static; padding: 12px 16px; grid-template-columns: 1fr; }
+      .concept-switch { grid-auto-flow: row; grid-template-columns: 1fr 1fr; }
+      .view-switch { display: none; }
+      .stage { padding: 22px 12px 40px; }
+      .stage-intro { align-items: flex-start; }
+      .shared-rule { display: none; }
+      .concept-grid { grid-template-columns: 1fr; }
+      .recommendation { grid-template-columns: 1fr; }
+      .score-grid { grid-template-columns: 1fr 1fr; }
+      body.focus-mode .concept-grid { display: block; }
+      body.focus-mode .concept-card.selected { display: block; }
+      body.focus-mode .concept-card.selected .concept-head { margin-bottom: 10px; }
+      body.focus-mode .concept-card.selected .concept-note { margin-top: 12px; }
+    }
+    @media (max-width: 430px) {
+      :root { --phone-w: 100%; --phone-h: 800px; }
+      .brand-copy span { max-width: 210px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .phone { border-radius: 30px; }
+    }
+    @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
+  </style>
+</head>
+<body>
+  <header class="review-header">
+    <div class="brand-lockup">
+      <div class="brand-mark">b</div>
+      <div class="brand-copy">
+        <strong>Today Layout Directions</strong>
+        <span>持仓事件首页 · iOS 设计评审</span>
+      </div>
+    </div>
+    <div class="review-status">交互原型 · 统一业务样本</div>
+  </header>
+
+  <nav class="control-bar" aria-label="方案控制">
+    <div class="concept-switch" role="tablist" aria-label="今日页面方案">
+      <button class="active" data-concept="all">全部方案</button>
+      <button data-concept="priority">A · 单一决策</button>
+      <button data-concept="timeline">B · 变化时间线</button>
+      <button data-concept="matrix">C · 持仓矩阵</button>
+      <button data-concept="brief">D · 投资简报</button>
+    </div>
+    <div class="view-switch" aria-label="查看模式">
+      <button class="active" data-view="compare">并排评审</button>
+      <button data-view="focus">单案聚焦</button>
+    </div>
+  </nav>
+
+  <main class="stage">
+    <section class="stage-intro">
+      <div>
+        <h1>四种不同的信息组织逻辑</h1>
+        <p>四套页面使用同一组持仓和事件：HOOD 是当前最重要变化，NVDA 出现观点与资金背离，PLTR 出现资金领先，MSTR 仅有 Smart Account 证据。由此可以直接判断哪种布局最容易形成行动焦点。</p>
+      </div>
+      <div class="shared-rule">共同约束：持仓优先 · 证据分层 · 不制造虚假资金确认</div>
+    </section>
+
+    <section class="concept-grid" id="conceptGrid">
+      <article class="concept-card selected" data-concept-card="priority">
+        <header class="concept-head">
+          <span class="concept-kicker">DIRECTION A / RECOMMENDED</span>
+          <h2>单一决策</h2>
+          <p>首屏只保留一个必须处理的持仓变化，其余事件退到二级。</p>
+          <div class="concept-fit"><span class="fit-tag">5 秒读懂</span><span class="fit-tag">推送承接强</span><span class="fit-tag">低认知负担</span></div>
+        </header>
+        <div class="phone-wrap">
+          <div class="phone" aria-label="单一决策方案手机预览">
+            <div class="status-bar"><span>9:41</span><div class="status-icons"><span></span><span></span></div></div>
+            <div class="phone-screen">
+              <div class="phone-scroll"><div class="phone-content">
+                <header class="app-head">
+                  <div><span class="eyebrow">Portfolio monitor</span><h3>今日</h3></div>
+                  <div class="head-actions"><button class="icon-btn" aria-label="通知">•</button><button class="icon-btn" aria-label="更多">•••</button></div>
+                </header>
+                <div class="status-line"><i></i><span>刚刚完成检查 · 4 个持仓</span></div>
+                <section class="portfolio-state">
+                  <div><strong>今天需要关注 1 项变化</strong><p>其余持仓暂未出现需要处理的信号</p></div>
+                  <span class="state-pill">注意</span>
+                </section>
+                <section class="decision-card">
+                  <div class="ticker-line">
+                    <img class="ticker-logo" src="../../../../ios/BSmart/Assets.xcassets/Ticker_HOOD.imageset/HOOD.png" alt="HOOD">
+                    <div><h4>HOOD</h4><p>持仓 22% · 成本 US$78.40</p></div><time>12 分钟前</time>
+                  </div>
+                  <h5>高分作者转多，链上资金已提前增持</h5>
+                  <p>两类独立证据同向，且该标的是你当前第二大持仓。这是今天对组合影响最大的变化。</p>
+                  <div class="evidence-pair">
+                    <div class="evidence-box"><span>Smart Account</span><strong>3 位头部作者转多</strong><p>近 24 小时首次形成一致方向</p></div>
+                    <div class="evidence-box"><span>Smart Money</span><strong>净多仓 +18.6%</strong><p>领先社交观点约 7 小时</p></div>
+                  </div>
+                  <div class="decision-action"><span>下一步：检查是否突破你的成本区间</span><strong>查看证据 ›</strong></div>
+                </section>
+                <button class="compact-link" data-toggle-list><span class="glyph">≡</span><span><strong>自上次查看后</strong><span>4 项实质变化 · 每日简报已生成</span></span><b>›</b></button>
+                <div class="section-label"><strong>其他持仓变化</strong><span>按组合影响排序</span></div>
+                <div class="other-events">
+                  <div class="event-row"><img class="ticker-logo" src="../../../../ios/BSmart/Assets.xcassets/Ticker_NVDA.imageset/NVDA.png" alt="NVDA"><div><h5>观点继续看多，链上资金开始减仓</h5><p><span class="tag diverge">证据背离</span> 暂不支持追涨</p></div><time>38m</time></div>
+                  <div class="event-row"><img class="ticker-logo" src="../../../../ios/BSmart/Assets.xcassets/Ticker_PLTR.imageset/PLTR.png" alt="PLTR"><div><h5>链上资金领先增持</h5><p><span class="tag confirm">资金领先</span> 社交尚未明显升温</p></div><time>2h</time></div>
+                  <div class="event-row"><img class="ticker-logo" src="../../../../ios/BSmart/Assets.xcassets/Ticker_MSTR.imageset/MSTR.png" alt="MSTR"><div><h5>高分作者更新中线观点</h5><p><span class="tag">暂无资金验证</span></p></div><time>4h</time></div>
+                </div>
+              </div></div>
+              <nav class="bottom-nav"><button class="active"><span class="nav-glyph">⌂</span>今日</button><button><span class="nav-glyph">◔</span>持仓</button><button><span class="nav-glyph">ϟ</span>Smart</button><button><span class="nav-glyph">⌕</span>标的</button><button><span class="nav-glyph">✦</span>AI</button></nav>
+            </div>
+          </div>
+        </div>
+        <aside class="concept-note"><strong>适合 MVP 首页</strong><p>最贴近“主动告诉用户发生了什么”的产品承诺。缺点是对希望一次扫完全部变化的高频用户不够快。</p></aside>
+      </article>
+
+      <article class="concept-card" data-concept-card="timeline">
+        <header class="concept-head">
+          <span class="concept-kicker">DIRECTION B</span>
+          <h2>变化时间线</h2>
+          <p>按事件发生顺序组织，突出“资金先动、观点后转”的因果过程。</p>
+          <div class="concept-fit"><span class="fit-tag">时间关系清楚</span><span class="fit-tag">持续监控</span><span class="fit-tag">适合活跃用户</span></div>
+        </header>
+        <div class="phone-wrap">
+          <div class="phone" aria-label="变化时间线方案手机预览">
+            <div class="status-bar"><span>9:41</span><div class="status-icons"><span></span><span></span></div></div>
+            <div class="phone-screen">
+              <div class="phone-scroll"><div class="phone-content">
+                <header class="app-head"><div><span class="eyebrow">Live portfolio</span><h3>今日变化</h3></div><div class="head-actions"><button class="icon-btn" aria-label="筛选">≡</button></div></header>
+                <section class="pulse-summary">
+                  <header><h4>组合事件脉冲</h4><span>1 项需关注</span></header>
+                  <div class="pulse-bar"><span></span><span></span><span></span></div>
+                  <p>确认 2 · 观察 1 · 风险 1</p>
+                </section>
+                <div class="time-group">现在</div>
+                <div class="timeline">
+                  <article class="timeline-item"><header><img class="ticker-logo" src="../../../../ios/BSmart/Assets.xcassets/Ticker_HOOD.imageset/HOOD.png" alt="HOOD"><h5>HOOD · 形成双重确认</h5><time>09:29</time></header><p>3 位头部作者转多，链上净多仓同步升至两周高位。</p><footer><span class="tag confirm">观点 + 资金</span><span class="tag">持仓 22%</span></footer></article>
+                  <article class="timeline-item risk"><header><img class="ticker-logo" src="../../../../ios/BSmart/Assets.xcassets/Ticker_NVDA.imageset/NVDA.png" alt="NVDA"><h5>NVDA · 出现背离</h5><time>09:03</time></header><p>Smart Account 仍看多，但高分链上账户连续减仓。</p><footer><span class="tag diverge">观点 ↔ 资金</span><span class="tag">持仓 34%</span></footer></article>
+                </div>
+                <div class="time-group">今天早些时候</div>
+                <div class="timeline">
+                  <article class="timeline-item watch"><header><img class="ticker-logo" src="../../../../ios/BSmart/Assets.xcassets/Ticker_PLTR.imageset/PLTR.png" alt="PLTR"><h5>PLTR · 资金率先行动</h5><time>07:18</time></header><p>链上净敞口增长 11.2%，社交关注暂未同步。</p><footer><span class="tag confirm">资金领先</span><span class="tag">持仓 16%</span></footer></article>
+                  <article class="timeline-item"><header><img class="ticker-logo" src="../../../../ios/BSmart/Assets.xcassets/Ticker_MSTR.imageset/MSTR.png" alt="MSTR"><h5>MSTR · 新增中线观点</h5><time>05:44</time></header><p>头部作者给出 90D 看多判断，暂无资金验证。</p><footer><span class="tag">仅观点</span><span class="tag">持仓 12%</span></footer></article>
+                </div>
+                <button class="compact-link"><span class="glyph">▤</span><span><strong>查看每日简报</strong><span>从 18 条更新中提炼 4 项变化</span></span><b>›</b></button>
+              </div></div>
+              <nav class="bottom-nav"><button class="active"><span class="nav-glyph">⌂</span>今日</button><button><span class="nav-glyph">◔</span>持仓</button><button><span class="nav-glyph">ϟ</span>Smart</button><button><span class="nav-glyph">⌕</span>标的</button><button><span class="nav-glyph">✦</span>AI</button></nav>
+            </div>
+          </div>
+        </div>
+        <aside class="concept-note"><strong>最强的事件过程感</strong><p>能直接解释先后关系，适合一天多次打开产品的用户；但第一条与第二条的视觉权重容易过于接近。</p></aside>
+      </article>
+
+      <article class="concept-card" data-concept-card="matrix">
+        <header class="concept-head">
+          <span class="concept-kicker">DIRECTION C</span>
+          <h2>持仓矩阵</h2>
+          <p>先建立组合全局，再选择一只标的查看其关键变化与证据。</p>
+          <div class="concept-fit"><span class="fit-tag">组合感强</span><span class="fit-tag">适合多持仓</span><span class="fit-tag">扫描效率高</span></div>
+        </header>
+        <div class="phone-wrap">
+          <div class="phone" aria-label="持仓矩阵方案手机预览">
+            <div class="status-bar"><span>9:41</span><div class="status-icons"><span></span><span></span></div></div>
+            <div class="phone-screen">
+              <div class="phone-scroll"><div class="phone-content">
+                <header class="app-head"><div><span class="eyebrow">Portfolio map</span><h3>今日</h3></div><div class="head-actions"><button class="icon-btn" aria-label="通知">•</button></div></header>
+                <section class="value-strip"><span>持仓总价值</span><strong>US$21,422</strong><b>+$198.42 · +0.9% 今日</b><svg class="mini-spark" viewBox="0 0 330 32" preserveAspectRatio="none" aria-label="今日持仓曲线"><polyline points="0,24 24,21 47,23 72,18 96,20 121,13 146,16 171,10 195,15 220,8 244,11 269,5 294,8 330,3"></polyline></svg></section>
+                <div class="section-label"><strong>持仓影响图</strong><span>面积代表持仓占比</span></div>
+                <div class="matrix">
+                  <button class="matrix-cell selected"><h5>HOOD</h5><p>确认增强</p><strong class="positive">22% · +18.6%</strong><i class="heat"></i></button>
+                  <button class="matrix-cell risk"><h5>NVDA</h5><p>证据背离</p><strong class="negative">34% · 风险</strong><i class="heat"></i></button>
+                  <button class="matrix-cell watch"><h5>PLTR</h5><p>资金领先</p><strong class="warning">16% · 观察</strong><i class="heat"></i></button>
+                  <button class="matrix-cell"><h5>MSTR</h5><p>仅观点</p><strong>12% · 新观点</strong><i class="heat"></i></button>
+                </div>
+                <section class="selected-detail">
+                  <header><img class="ticker-logo" src="../../../../ios/BSmart/Assets.xcassets/Ticker_HOOD.imageset/HOOD.png" alt="HOOD"><div><h4>HOOD · 双重确认</h4><span class="tag confirm">当前最重要</span></div></header>
+                  <p>Smart Account 转多与链上净多仓增加发生在同一窗口，组合影响高于其他变化。</p>
+                  <div class="impact-table"><div><span>观点变化</span><strong class="positive">+23pt</strong></div><div><span>链上敞口</span><strong class="positive">+18.6%</strong></div><div><span>组合暴露</span><strong>22%</strong></div></div>
+                </section>
+                <div class="section-label"><strong>证据摘要</strong><span>09:29 更新</span></div>
+                <div class="evidence-pair"><div class="evidence-box"><span>Smart Account</span><strong>3 位头部作者转多</strong><p>方向一致性升至 78%</p></div><div class="evidence-box"><span>Smart Money</span><strong>4 个高分账户增仓</strong><p>未发现同步减仓账户</p></div></div>
+                <button class="compact-link"><span class="glyph">↗</span><span><strong>打开 HOOD 研究</strong><span>查看完整观点与链上账户</span></span><b>›</b></button>
+              </div></div>
+              <nav class="bottom-nav"><button class="active"><span class="nav-glyph">⌂</span>今日</button><button><span class="nav-glyph">◔</span>持仓</button><button><span class="nav-glyph">ϟ</span>Smart</button><button><span class="nav-glyph">⌕</span>标的</button><button><span class="nav-glyph">✦</span>AI</button></nav>
+            </div>
+          </div>
+        </div>
+        <aside class="concept-note"><strong>最像持仓智能工具</strong><p>组合状态一眼可扫，能容纳更多股票；代价是矩阵需要用户学习颜色、面积和状态三种编码。</p></aside>
+      </article>
+
+      <article class="concept-card" data-concept-card="brief">
+        <header class="concept-head">
+          <span class="concept-kicker">DIRECTION D</span>
+          <h2>投资简报</h2>
+          <p>把事件组织成可阅读的投资结论，强调变化、含义与待验证条件。</p>
+          <div class="concept-fit"><span class="fit-tag">解释性最强</span><span class="fit-tag">每日一次</span><span class="fit-tag">专业叙事</span></div>
+        </header>
+        <div class="phone-wrap">
+          <div class="phone" aria-label="投资简报方案手机预览">
+            <div class="status-bar"><span>9:41</span><div class="status-icons"><span></span><span></span></div></div>
+            <div class="phone-screen">
+              <div class="phone-scroll"><div class="phone-content">
+                <header class="app-head"><div><span class="eyebrow">Daily intelligence</span><h3>今日简报</h3></div><div class="head-actions"><button class="icon-btn" aria-label="分享">↗</button></div></header>
+                <div class="brief-date">2026.08.12 / 09:41 CST</div>
+                <h2 class="brief-title">组合整体平稳，HOOD 出现值得处理的新确认</h2>
+                <p class="brief-deck">过去 24 小时共有 4 项实质变化。最重要的是观点转多与链上资金增持同时发生；NVDA 则出现相反方向。</p>
+                <hr class="brief-rule">
+                <article class="brief-block">
+                  <header><span>01 / 最大变化</span><span class="tag confirm">双重确认</span></header>
+                  <h4>HOOD 的看多共识开始获得真实资金支持</h4>
+                  <p>三位头部作者在同一窗口转多，随后链上净多仓增加 18.6%。该变化与你 22% 的组合暴露直接相关。</p>
+                  <div class="brief-evidence">证据顺序：Smart Money 先增持 → Smart Account 共识形成。当前并非单一社交热度驱动。</div>
+                </article>
+                <article class="brief-block">
+                  <header><span>02 / 主要风险</span><span class="tag diverge">背离</span></header>
+                  <h4>NVDA 的乐观观点未获得资金确认</h4>
+                  <p>作者观点仍偏多，但高分链上账户已连续两个窗口降低净敞口。你的 NVDA 暴露为组合最高。</p>
+                </article>
+                <article class="brief-block">
+                  <header><span>03 / 今日观察</span><span class="tag">条件</span></header>
+                  <h4>下一步只验证两个条件</h4>
+                  <p>HOOD 是否站稳你的成本区间；NVDA 链上减仓是否延续到下一个 6 小时窗口。</p>
+                </article>
+                <div class="section-label"><strong>其余变化</strong><span>按组合影响排序</span></div>
+                <ul class="watch-list">
+                  <li><img class="ticker-logo" src="../../../../ios/BSmart/Assets.xcassets/Ticker_PLTR.imageset/PLTR.png" alt="PLTR"><div><strong>PLTR · 资金领先</strong><span>社交观点尚未跟进</span></div><b>›</b></li>
+                  <li><img class="ticker-logo" src="../../../../ios/BSmart/Assets.xcassets/Ticker_MSTR.imageset/MSTR.png" alt="MSTR"><div><strong>MSTR · 新增中线观点</strong><span>暂无资金验证</span></div><b>›</b></li>
+                </ul>
+              </div></div>
+              <nav class="bottom-nav"><button class="active"><span class="nav-glyph">⌂</span>今日</button><button><span class="nav-glyph">◔</span>持仓</button><button><span class="nav-glyph">ϟ</span>Smart</button><button><span class="nav-glyph">⌕</span>标的</button><button><span class="nav-glyph">✦</span>AI</button></nav>
+            </div>
+          </div>
+        </div>
+        <aside class="concept-note"><strong>最适合低频主动投资者</strong><p>能把证据转化为专业解释，阅读体验最好；但事件实时感较弱，且摘要质量高度依赖生成稳定性。</p></aside>
+      </article>
+    </section>
+
+    <section class="recommendation">
+      <div><span class="label">PRODUCT RECOMMENDATION</span><h3>以 A 为骨架，吸收 B 的时间关系</h3></div>
+      <div><p>首版建议采用“单一决策”作为 Today 默认入口：它最直接承接推送通知，也最符合持仓事件助手的定位。事件详情页再使用时间线解释资金和观点的先后关系；投资简报保留为每天一次的二级入口，而不是首页主体。</p><div class="score-grid"><div><span>首屏焦点</span><strong>A · 最强</strong></div><div><span>事件过程</span><strong>B · 最强</strong></div><div><span>组合扫描</span><strong>C · 最强</strong></div><div><span>解释阅读</span><strong>D · 最强</strong></div></div></div>
+    </section>
+  </main>
+
+  <script>
+    const conceptButtons = [...document.querySelectorAll('[data-concept]')];
+    const cards = [...document.querySelectorAll('[data-concept-card]')];
+    const viewButtons = [...document.querySelectorAll('[data-view]')];
+
+    function selectConcept(name) {
+      conceptButtons.forEach(button => button.classList.toggle('active', button.dataset.concept === name));
+      cards.forEach(card => card.classList.toggle('selected', name === 'all' ? card.dataset.conceptCard === 'priority' : card.dataset.conceptCard === name));
+      if (name === 'all') {
+        document.body.classList.remove('focus-mode');
+        viewButtons.forEach(button => button.classList.toggle('active', button.dataset.view === 'compare'));
+      } else {
+        document.body.classList.add('focus-mode');
+        viewButtons.forEach(button => button.classList.toggle('active', button.dataset.view === 'focus'));
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    conceptButtons.forEach(button => button.addEventListener('click', () => selectConcept(button.dataset.concept)));
+    viewButtons.forEach(button => button.addEventListener('click', () => {
+      const focus = button.dataset.view === 'focus';
+      document.body.classList.toggle('focus-mode', focus);
+      viewButtons.forEach(item => item.classList.toggle('active', item === button));
+      if (!focus) conceptButtons.forEach(item => item.classList.toggle('active', item.dataset.concept === 'all'));
+    }));
+
+    document.querySelectorAll('.matrix-cell').forEach(cell => cell.addEventListener('click', () => {
+      document.querySelectorAll('.matrix-cell').forEach(item => item.classList.remove('selected'));
+      cell.classList.add('selected');
+    }));
+  </script>
+</body>
+</html>

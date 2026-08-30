@@ -1,4 +1,4 @@
-"""Backfill Yahoo daily OHLC history for SV scoring.
+"""Backfill Yahoo daily OHLC history for Score scoring.
 
 This script writes to the existing local ``price_daily`` table. It is additive:
 it upserts historical rows and does not delete the short-window data used by the
@@ -361,7 +361,7 @@ def run(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Backfill price_daily for SV scoring.")
+    parser = argparse.ArgumentParser(description="Backfill price_daily for Score scoring.")
     parser.add_argument("--db", default=str(DB))
     parser.add_argument("--start", default="2025-06-01")
     parser.add_argument("--end", default=None, help="Inclusive YYYY-MM-DD. Defaults to today UTC.")

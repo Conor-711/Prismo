@@ -1,4 +1,4 @@
-"""SQLite schema for leakage-free vertical segment-SV backtests."""
+"""SQLite schema for leakage-free vertical segment-Score backtests."""
 from __future__ import annotations
 
 import sqlite3

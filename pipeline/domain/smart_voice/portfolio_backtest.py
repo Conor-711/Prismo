@@ -1,4 +1,4 @@
-"""Annualized portfolio backtests for X Smart Voice signals and authors."""
+"""Annualized portfolio backtests for X Smart Account signals and authors."""
 from __future__ import annotations
 
 import bisect

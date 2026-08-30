@@ -17,6 +17,7 @@ private struct BSmartCacheSnapshot: Codable {
     let smartMoney: [SmartMoneySignal]
     let smartAccountFreshness: BSmartDataFreshness?
     let smartMoneyFreshness: BSmartDataFreshness?
+    let portfolioHistory: [PortfolioValuePoint]?
 }
 
 @MainActor
@@ -30,10 +31,15 @@ final class AppModel: ObservableObject {
     @Published private(set) var smartAccountEvidenceByAuthor: [String: [SmartAccountUpdate]] = [:]
     @Published private(set) var loadingSmartAccountEvidenceIDs: Set<String> = []
     @Published private(set) var smartMoney: [SmartMoneySignal] = []
+    @Published private(set) var smartMoneyEvidenceByAccount: [String: [SmartMoneyRepresentativeEvidence]] = [:]
+    @Published private(set) var loadingSmartMoneyEvidenceIDs: Set<String> = []
     @Published private(set) var dailyDigestSnapshot: DailyDigestSnapshot?
     @Published private(set) var signalUserStates: [UUID: SignalUserState] = [:]
+    @Published private(set) var readTodayActivityIDs: Set<UUID> = []
     @Published private(set) var followedSmartAccountIDs: Set<String> = []
     @Published private(set) var followedSmartMoneyIDs: Set<String> = []
+    @Published private(set) var linkedBrokerageAccounts: [LinkedBrokerageAccount] = []
+    @Published private(set) var portfolioHistory: [PortfolioValuePoint] = []
     @Published private(set) var isLoading = false
     @Published private(set) var isRefreshingLiveIntelligence = false
     @Published private(set) var hasFinishedInitialLoad = false
@@ -45,29 +51,41 @@ final class AppModel: ObservableObject {
     let isUsingDemoData: Bool
 
     private let client: BSmartAPIClient
+    private let bootstrapFallbackClient: BSmartAPIClient?
+    private let directMrCollieClient: DirectMrCollieAnswering?
     private let syncCoordinator: BSmartSyncCoordinator?
     private let defaults: UserDefaults
     private let portfolioBootstrapStrategy: PortfolioBootstrapStrategy
     private let savedPortfolioKey = "bsmart.portfolio.v1"
     private let completedPortfolioSetupKey = "bsmart.portfolio-setup-complete.v1"
     private let savedSignalStatesKey = "bsmart.signal-user-states.v1"
+    private let readTodayActivityIDsKey = "bsmart.today-read-activities.v1"
     private let savedClientCacheKey = "bsmart.client-cache.v1"
     private let followedSmartAccountsKey = "bsmart.followed-smart-accounts.v1"
     private let followedSmartMoneyKey = "bsmart.followed-smart-money.v1"
+    private let linkedBrokerageAccountsKey = "bsmart.linked-brokerages.v1"
     private var hasLoaded = false
 
     init(
         client: BSmartAPIClient = BundleBSmartAPIClient(),
+        bootstrapFallbackClient: BSmartAPIClient? = nil,
+        directMrCollieClient: DirectMrCollieAnswering? = nil,
         defaults: UserDefaults = .standard,
         portfolioBootstrapStrategy: PortfolioBootstrapStrategy = .remoteFallback,
         syncCoordinator: BSmartSyncCoordinator? = nil,
         isUsingDemoData: Bool = false
     ) {
         self.client = client
+        self.bootstrapFallbackClient = bootstrapFallbackClient
+        self.directMrCollieClient = directMrCollieClient
         self.defaults = defaults
         self.portfolioBootstrapStrategy = portfolioBootstrapStrategy
         self.syncCoordinator = syncCoordinator
         self.isUsingDemoData = isUsingDemoData
+        linkedBrokerageAccounts = Self.restoreLinkedBrokerageAccounts(
+            from: defaults,
+            key: linkedBrokerageAccountsKey
+        )
     }
 
     var valuedHeldPositions: [PortfolioPosition] {
@@ -218,46 +236,75 @@ final class AppModel: ObservableObject {
         hasCompletedPortfolioSetup = defaults.bool(forKey: completedPortfolioSetupKey)
             || !positions.isEmpty
         restoreSignalUserStates()
+        restoreReadTodayActivities()
         restoreFollowedIntelligence()
-        if restoreClientCache() {
+        let restoredCache = restoreClientCache()
+        if restoredCache {
             refreshCurrentPrices()
             hasFinishedInitialLoad = true
         }
 
         do {
-            async let loadedPortfolio = client.fetchPortfolio()
-            async let loadedSignals = client.fetchSignals()
-            async let loadedAccountUpdates = client.fetchSmartAccountUpdates()
-            async let loadedMoneyMovements = client.fetchSmartMoneyMovements()
-            async let loadedIntelligence = client.fetchTickerIntelligence()
-            async let loadedAccounts = client.fetchSmartAccounts()
-            async let loadedMoney = client.fetchSmartMoney()
-            async let loadedDigest = fetchDailyDigestIfAvailable()
-
-            let remotePortfolio = try await loadedPortfolio
-            positions = localPortfolio
-                ?? (portfolioBootstrapStrategy == .remoteFallback ? remotePortfolio : [])
-            hasCompletedPortfolioSetup = defaults.bool(forKey: completedPortfolioSetupKey)
-                || !positions.isEmpty
-            signals = (try await loadedSignals).sorted { $0.occurredAt > $1.occurredAt }
-            smartAccountUpdates = (try await loadedAccountUpdates).sorted { $0.publishedAt > $1.publishedAt }
-            smartMoneyMovements = (try await loadedMoneyMovements).sorted { $0.observedAt > $1.observedAt }
-            intelligence = (try await loadedIntelligence).sorted { $0.ticker < $1.ticker }
-            refreshCurrentPrices()
-            smartAccounts = (try await loadedAccounts).sorted { $0.score > $1.score }
-            smartMoney = (try await loadedMoney).sorted { $0.changedAt > $1.changedAt }
-            dailyDigestSnapshot = await loadedDigest
+            try await loadSnapshot(from: client, localPortfolio: localPortfolio)
             refreshSourceFreshness()
-            lastDataRefreshAt = resolvedLatestDataAsOf()
-            persistClientCache()
-            enqueueLocalStateBootstrap()
+            errorMessage = nil
         } catch {
-            hasLoaded = false
-            errorMessage = error.localizedDescription
+            if !restoredCache, let bootstrapFallbackClient {
+                do {
+                    try await loadSnapshot(
+                        from: bootstrapFallbackClient,
+                        localPortfolio: localPortfolio,
+                        persist: false
+                    )
+                    errorMessage = nil
+                } catch {
+                    hasLoaded = false
+                    errorMessage = error.localizedDescription
+                }
+            } else {
+                hasLoaded = false
+                errorMessage = error.localizedDescription
+            }
         }
 
         isLoading = false
         hasFinishedInitialLoad = true
+    }
+
+    private func loadSnapshot(
+        from source: BSmartAPIClient,
+        localPortfolio: [PortfolioPosition]?,
+        persist: Bool = true
+    ) async throws {
+        async let loadedPortfolio = source.fetchPortfolio()
+        async let loadedPortfolioHistory = fetchPortfolioHistoryIfAvailable(from: source)
+        async let loadedSignals = source.fetchSignals()
+        async let loadedAccountUpdates = source.fetchSmartAccountUpdates()
+        async let loadedMoneyMovements = source.fetchSmartMoneyMovements()
+        async let loadedIntelligence = source.fetchTickerIntelligence()
+        async let loadedAccounts = source.fetchSmartAccounts()
+        async let loadedMoney = source.fetchSmartMoney()
+        async let loadedDigest = fetchDailyDigestIfAvailable(from: source)
+
+        let remotePortfolio = try await loadedPortfolio
+        positions = localPortfolio
+            ?? (portfolioBootstrapStrategy == .remoteFallback ? remotePortfolio : [])
+        hasCompletedPortfolioSetup = defaults.bool(forKey: completedPortfolioSetupKey)
+            || !positions.isEmpty
+        portfolioHistory = (await loadedPortfolioHistory).sorted { $0.timestamp < $1.timestamp }
+        signals = (try await loadedSignals).sorted { $0.occurredAt > $1.occurredAt }
+        smartAccountUpdates = (try await loadedAccountUpdates).sorted { $0.publishedAt > $1.publishedAt }
+        smartMoneyMovements = (try await loadedMoneyMovements).sorted { $0.observedAt > $1.observedAt }
+        intelligence = (try await loadedIntelligence).sorted { $0.ticker < $1.ticker }
+        refreshCurrentPrices()
+        smartAccounts = (try await loadedAccounts).sorted { $0.score > $1.score }
+        smartMoney = (try await loadedMoney).sorted { $0.changedAt > $1.changedAt }
+        dailyDigestSnapshot = await loadedDigest
+        lastDataRefreshAt = resolvedLatestDataAsOf()
+        if persist {
+            persistClientCache()
+        }
+        enqueueLocalStateBootstrap()
     }
 
     func retry() async {
@@ -273,6 +320,7 @@ final class AppModel: ObservableObject {
 
         do {
             async let loadedSignals = client.fetchSignals()
+            async let loadedPortfolioHistory = fetchPortfolioHistoryIfAvailable()
             async let loadedAccountUpdates = client.fetchSmartAccountUpdates()
             async let loadedMoneyMovements = client.fetchSmartMoneyMovements()
             async let loadedIntelligence = client.fetchTickerIntelligence()
@@ -290,6 +338,7 @@ final class AppModel: ObservableObject {
             smartMoneyMovements = refreshed.2.sorted { $0.observedAt > $1.observedAt }
             intelligence = refreshed.3.sorted { $0.ticker < $1.ticker }
             smartMoney = refreshed.4.sorted { $0.changedAt > $1.changedAt }
+            portfolioHistory = (await loadedPortfolioHistory).sorted { $0.timestamp < $1.timestamp }
             refreshSourceFreshness()
             refreshCurrentPrices()
             lastDataRefreshAt = resolvedLatestDataAsOf()
@@ -302,7 +351,7 @@ final class AppModel: ObservableObject {
 
     @discardableResult
     func completePortfolioSetup() -> Bool {
-        guard !positions.isEmpty else { return false }
+        guard !positions.isEmpty || !linkedBrokerageAccounts.isEmpty else { return false }
         hasCompletedPortfolioSetup = true
         defaults.set(true, forKey: completedPortfolioSetupKey)
         return true
@@ -367,6 +416,7 @@ final class AppModel: ObservableObject {
         } else {
             positions.append(position)
         }
+        portfolioHistory = []
         persistPortfolio()
         enqueuePortfolioUpsert(position)
         return true
@@ -377,11 +427,13 @@ final class AppModel: ObservableObject {
             let removed = positions.remove(at: index)
             enqueuePortfolioDelete(removed.id)
         }
+        portfolioHistory = []
         persistPortfolio()
     }
 
     func deletePosition(id: UUID) {
         positions.removeAll { $0.id == id }
+        portfolioHistory = []
         persistPortfolio()
         enqueuePortfolioDelete(id)
     }
@@ -389,20 +441,68 @@ final class AppModel: ObservableObject {
     func resetLocalAppData() async {
         positions = []
         signalUserStates = [:]
+        readTodayActivityIDs = []
         followedSmartAccountIDs = []
         followedSmartMoneyIDs = []
+        linkedBrokerageAccounts = []
+        portfolioHistory = []
         hasCompletedPortfolioSetup = false
 
         [
             savedPortfolioKey,
             completedPortfolioSetupKey,
             savedSignalStatesKey,
+            readTodayActivityIDsKey,
             savedClientCacheKey,
             followedSmartAccountsKey,
-            followedSmartMoneyKey
+            followedSmartMoneyKey,
+            linkedBrokerageAccountsKey
         ].forEach(defaults.removeObject(forKey:))
 
         await syncCoordinator?.clearPendingOperations()
+    }
+
+    func linkedBrokerageAccount(for provider: BrokerageProvider) -> LinkedBrokerageAccount? {
+        linkedBrokerageAccounts.first { $0.provider == provider }
+    }
+
+    @discardableResult
+    func connectBrokeragePrototype(
+        provider: BrokerageProvider,
+        detectedHoldingCount: Int,
+        importedPositionCount: Int
+    ) -> LinkedBrokerageAccount {
+        let now = Date()
+        let existing = linkedBrokerageAccount(for: provider)
+        let account = LinkedBrokerageAccount(
+            id: existing?.id ?? UUID(),
+            provider: provider,
+            connectedAt: existing?.connectedAt ?? now,
+            lastSyncedAt: now,
+            detectedHoldingCount: max(0, detectedHoldingCount),
+            importedPositionCount: max(0, importedPositionCount),
+            isPrototype: true
+        )
+
+        if let index = linkedBrokerageAccounts.firstIndex(where: { $0.provider == provider }) {
+            linkedBrokerageAccounts[index] = account
+        } else {
+            linkedBrokerageAccounts.append(account)
+            linkedBrokerageAccounts.sort { $0.provider.displayName < $1.provider.displayName }
+        }
+        persistLinkedBrokerageAccounts()
+        return account
+    }
+
+    func refreshBrokeragePrototype(_ provider: BrokerageProvider) {
+        guard let index = linkedBrokerageAccounts.firstIndex(where: { $0.provider == provider }) else { return }
+        linkedBrokerageAccounts[index].lastSyncedAt = Date()
+        persistLinkedBrokerageAccounts()
+    }
+
+    func disconnectBrokerage(_ provider: BrokerageProvider) {
+        linkedBrokerageAccounts.removeAll { $0.provider == provider }
+        persistLinkedBrokerageAccounts()
     }
 
     func signalUserState(for signalId: UUID) -> SignalUserState {
@@ -411,6 +511,19 @@ final class AppModel: ObservableObject {
 
     func markSignalRead(_ signalId: UUID, isRead: Bool = true) {
         updateSignalUserState(signalId) { $0.isRead = isRead }
+    }
+
+    func isTodayActivityRead(_ activityID: UUID) -> Bool {
+        readTodayActivityIDs.contains(activityID)
+    }
+
+    func markTodayActivityRead(_ activityID: UUID, isRead: Bool = true) {
+        if isRead {
+            readTodayActivityIDs.insert(activityID)
+        } else {
+            readTodayActivityIDs.remove(activityID)
+        }
+        persistReadTodayActivities()
     }
 
     func toggleSignalSaved(_ signalId: UUID) {
@@ -524,8 +637,94 @@ final class AppModel: ObservableObject {
         smartAccountUpdates.filter { $0.authorId == account.id }
     }
 
+    func smartAccountProfile(for update: SmartAccountUpdate) -> SmartAccountProfile {
+        if let account = smartAccounts.first(where: {
+            $0.id.caseInsensitiveCompare(update.authorId) == .orderedSame
+        }) {
+            return account
+        }
+
+        if let account = smartAccounts.first(where: {
+            $0.name.caseInsensitiveCompare(update.authorName) == .orderedSame
+                && $0.platform.caseInsensitiveCompare(update.platform) == .orderedSame
+        }) {
+            return account
+        }
+
+        return SmartAccountProfile(
+            id: update.authorId,
+            name: update.authorName,
+            handle: update.authorName,
+            platform: update.platform,
+            score: update.score,
+            scoreChange: 0,
+            specialty: "Cross-sector equities",
+            horizon: update.horizon,
+            recentTicker: update.ticker,
+            platformPercentile: update.platformPercentile,
+            confidence: "observing",
+            topTickers: [update.ticker],
+            style: "Mixed",
+            avatarURL: update.authorAvatarURL,
+            followersCount: update.authorFollowersCount,
+            verified: update.authorVerified
+        )
+    }
+
     func accountEvidence(for account: SmartAccountProfile) -> [SmartAccountUpdate] {
         smartAccountEvidenceByAuthor[account.id] ?? accountUpdates(for: account)
+    }
+
+    func representativeAccountEvidence(
+        for account: SmartAccountProfile,
+        limit: Int = 3
+    ) -> [SmartAccountUpdate] {
+        guard limit > 0 else { return [] }
+        let candidates = accountEvidence(for: account)
+            .filter { update in
+                guard update.priceEvidence != nil,
+                      update.settlement?.status.lowercased() == "settled",
+                      (update.representativeTickerContribution ?? update.settlement?.contribution ?? 0) > 0
+                else { return false }
+                return update.evidenceRole?.lowercased() != "latest"
+            }
+            .sorted { lhs, rhs in
+                let lhsRank = lhs.representativeTickerRank ?? .max
+                let rhsRank = rhs.representativeTickerRank ?? .max
+                if lhsRank != rhsRank { return lhsRank < rhsRank }
+                let lhsContribution = lhs.representativeTickerContribution
+                    ?? lhs.settlement?.contribution
+                    ?? -.infinity
+                let rhsContribution = rhs.representativeTickerContribution
+                    ?? rhs.settlement?.contribution
+                    ?? -.infinity
+                if lhsContribution != rhsContribution {
+                    return lhsContribution > rhsContribution
+                }
+
+                let lhsExcess = max(
+                    abs(lhs.settlement?.marketExcessReturnPercent ?? 0),
+                    abs(lhs.settlement?.industryExcessReturnPercent ?? 0)
+                )
+                let rhsExcess = max(
+                    abs(rhs.settlement?.marketExcessReturnPercent ?? 0),
+                    abs(rhs.settlement?.industryExcessReturnPercent ?? 0)
+                )
+                if lhsExcess != rhsExcess {
+                    return lhsExcess > rhsExcess
+                }
+                return lhs.publishedAt > rhs.publishedAt
+            }
+
+        var seenTickers = Set<String>()
+        var works: [SmartAccountUpdate] = []
+        for candidate in candidates {
+            let ticker = candidate.ticker.uppercased()
+            guard seenTickers.insert(ticker).inserted else { continue }
+            works.append(candidate)
+            if works.count == limit { break }
+        }
+        return works
     }
 
     func isLoadingAccountEvidence(_ account: SmartAccountProfile) -> Bool {
@@ -540,16 +739,55 @@ final class AppModel: ObservableObject {
         loadingSmartAccountEvidenceIDs.insert(account.id)
         defer { loadingSmartAccountEvidenceIDs.remove(account.id) }
         do {
-            let evidence = try await client.fetchSmartAccountEvidence(accountID: account.id)
+            var evidence = try await client.fetchSmartAccountEvidence(accountID: account.id)
+            if evidence.isEmpty, let bootstrapFallbackClient {
+                evidence = try await bootstrapFallbackClient.fetchSmartAccountEvidence(accountID: account.id)
+            }
             smartAccountEvidenceByAuthor[account.id] = evidence.sorted { $0.publishedAt > $1.publishedAt }
         } catch {
-            smartAccountEvidenceByAuthor[account.id] = accountUpdates(for: account)
-            errorMessage = error.localizedDescription
+            let bundledEvidence = try? await bootstrapFallbackClient?.fetchSmartAccountEvidence(
+                accountID: account.id
+            )
+            smartAccountEvidenceByAuthor[account.id] = (bundledEvidence ?? accountUpdates(for: account))
+                .sorted { $0.publishedAt > $1.publishedAt }
         }
     }
 
     func moneyMovements(for signal: SmartMoneySignal) -> [SmartMoneyMovement] {
         smartMoneyMovements.filter { $0.accountId == signal.id }
+    }
+
+    func moneyEvidence(for signal: SmartMoneySignal) -> [SmartMoneyRepresentativeEvidence] {
+        smartMoneyEvidenceByAccount[signal.id] ?? []
+    }
+
+    func isLoadingMoneyEvidence(_ signal: SmartMoneySignal) -> Bool {
+        loadingSmartMoneyEvidenceIDs.contains(signal.id)
+    }
+
+    func loadSmartMoneyEvidence(for signal: SmartMoneySignal) async {
+        guard smartMoneyEvidenceByAccount[signal.id] == nil,
+              !loadingSmartMoneyEvidenceIDs.contains(signal.id)
+        else { return }
+
+        loadingSmartMoneyEvidenceIDs.insert(signal.id)
+        defer { loadingSmartMoneyEvidenceIDs.remove(signal.id) }
+        do {
+            var evidence = try await client.fetchSmartMoneyEvidence(accountID: signal.id)
+            if evidence.isEmpty, let bootstrapFallbackClient {
+                evidence = try await bootstrapFallbackClient.fetchSmartMoneyEvidence(accountID: signal.id)
+            }
+            smartMoneyEvidenceByAccount[signal.id] = evidence.sorted {
+                $0.representativeRank < $1.representativeRank
+            }
+        } catch {
+            let bundledEvidence = try? await bootstrapFallbackClient?.fetchSmartMoneyEvidence(
+                accountID: signal.id
+            )
+            smartMoneyEvidenceByAccount[signal.id] = (bundledEvidence ?? []).sorted {
+                $0.representativeRank < $1.representativeRank
+            }
+        }
     }
 
     func position(for ticker: String) -> PortfolioPosition? {
@@ -569,6 +807,33 @@ final class AppModel: ObservableObject {
             position: position(for: signal.ticker),
             resolvedWeight: positionWeight(for: signal.ticker)
         )
+    }
+
+    func queryMrCollie(
+        _ question: String,
+        locale: String,
+        conversation: [MrCollieConversationTurn] = []
+    ) async throws -> MrCollieResponse {
+        let query = MrCollieQuery(
+            question: question,
+            locale: locale,
+            conversation: conversation
+        )
+        if let directMrCollieClient {
+            return try await directMrCollieClient.answer(
+                query: query,
+                portfolio: positions,
+                signals: signals,
+                smartAccountUpdates: smartAccountUpdates,
+                smartMoneyMovements: smartMoneyMovements,
+                intelligence: intelligence
+            )
+        }
+        return try await client.queryMrCollie(query)
+    }
+
+    var canQueryMrCollieRemotely: Bool {
+        directMrCollieClient != nil || !isUsingDemoData
     }
 
     private func priorityValue(_ priority: SignalPriority) -> Int {
@@ -601,10 +866,33 @@ final class AppModel: ObservableObject {
         return try? JSONDecoder().decode([PortfolioPosition].self, from: data)
     }
 
+    private func persistLinkedBrokerageAccounts() {
+        guard let data = try? JSONEncoder().encode(linkedBrokerageAccounts) else { return }
+        defaults.set(data, forKey: linkedBrokerageAccountsKey)
+    }
+
+    private static func restoreLinkedBrokerageAccounts(
+        from defaults: UserDefaults,
+        key: String
+    ) -> [LinkedBrokerageAccount] {
+        guard let data = defaults.data(forKey: key) else { return [] }
+        return (try? JSONDecoder().decode([LinkedBrokerageAccount].self, from: data)) ?? []
+    }
+
     private func persistSignalUserStates() {
         let states = signalUserStates.values.sorted { $0.updatedAt < $1.updatedAt }
         guard let data = try? JSONEncoder().encode(states) else { return }
         defaults.set(data, forKey: savedSignalStatesKey)
+    }
+
+    private func persistReadTodayActivities() {
+        defaults.set(readTodayActivityIDs.map(\.uuidString).sorted(), forKey: readTodayActivityIDsKey)
+    }
+
+    private func restoreReadTodayActivities() {
+        readTodayActivityIDs = Set(
+            (defaults.stringArray(forKey: readTodayActivityIDsKey) ?? []).compactMap(UUID.init(uuidString:))
+        )
     }
 
     private func persistFollowedIntelligence() {
@@ -652,7 +940,8 @@ final class AppModel: ObservableObject {
             smartAccounts: smartAccounts,
             smartMoney: smartMoney,
             smartAccountFreshness: smartAccountFreshness,
-            smartMoneyFreshness: smartMoneyFreshness
+            smartMoneyFreshness: smartMoneyFreshness,
+            portfolioHistory: portfolioHistory
         )
         guard let data = try? JSONEncoder().encode(snapshot) else { return }
         defaults.set(data, forKey: savedClientCacheKey)
@@ -672,15 +961,28 @@ final class AppModel: ObservableObject {
         smartMoney = snapshot.smartMoney.sorted { $0.changedAt > $1.changedAt }
         smartAccountFreshness = snapshot.smartAccountFreshness
         smartMoneyFreshness = snapshot.smartMoneyFreshness
+        portfolioHistory = (snapshot.portfolioHistory ?? []).sorted { $0.timestamp < $1.timestamp }
         lastDataRefreshAt = snapshot.dataAsOf ?? snapshot.savedAt
         return true
     }
 
-    private func fetchDailyDigestIfAvailable() async -> DailyDigestSnapshot? {
+    private func fetchDailyDigestIfAvailable(
+        from source: BSmartAPIClient? = nil
+    ) async -> DailyDigestSnapshot? {
         do {
-            return try await client.fetchDailyDigest()
+            return try await (source ?? client).fetchDailyDigest()
         } catch {
             return nil
+        }
+    }
+
+    private func fetchPortfolioHistoryIfAvailable(
+        from source: BSmartAPIClient? = nil
+    ) async -> [PortfolioValuePoint] {
+        do {
+            return try await (source ?? client).fetchPortfolioHistory()
+        } catch {
+            return []
         }
     }
 

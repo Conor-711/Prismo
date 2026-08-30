@@ -1,4 +1,4 @@
-"""Point-in-time Top/Bottom X SV event construction."""
+"""Point-in-time Top/Bottom X Score event construction."""
 from __future__ import annotations
 
 import bisect

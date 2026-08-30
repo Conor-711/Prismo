@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { LocaleLink } from "@/components/i18n/LocaleLink";
 import { TickerLogo } from "@/shared/market/TickerLogo";
-import { RegionBadge, SentScore } from "@/shared/ui/prismoBits";
+import { RegionBadge, SentScore } from "@/shared/ui/bsmartBits";
 import { fmtCompact } from "@/shared/formatting/format";
 import type { Locale } from "@/lib/i18n";
 import type { DashboardSignalItem, DashboardSignalKey } from "../types";

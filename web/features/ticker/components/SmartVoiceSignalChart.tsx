@@ -50,7 +50,7 @@ export function SmartVoiceSignalChart({
         const event = params.data?.event as SvTickerSignalEvent | undefined;
         const outcome = params.data?.outcome;
         if (!event) return "";
-        const group = event.cohort.startsWith("top") ? "Top SV" : "Bottom SV";
+        const group = event.cohort.startsWith("top") ? "Top Score" : "Bottom Score";
         const direction = event.direction === "bull" ? (zh ? "看多" : "Bullish") : (zh ? "看空" : "Bearish");
         return [
           `${event.signalDay} · ${group} ${direction}`,
@@ -85,7 +85,7 @@ export function SmartVoiceSignalChart({
         z: 2,
       },
       {
-        name: "Top SV Bull",
+        name: "Top Score Bull",
         type: "scatter",
         data: seriesFor("top", "bull"),
         symbol: "diamond",
@@ -94,7 +94,7 @@ export function SmartVoiceSignalChart({
         z: 5,
       },
       {
-        name: "Top SV Bear",
+        name: "Top Score Bear",
         type: "scatter",
         data: seriesFor("top", "bear"),
         symbol: "diamond",
@@ -103,7 +103,7 @@ export function SmartVoiceSignalChart({
         z: 5,
       },
       {
-        name: "Bottom SV Bull",
+        name: "Bottom Score Bull",
         type: "scatter",
         data: seriesFor("bottom", "bull"),
         symbol: "circle",
@@ -112,7 +112,7 @@ export function SmartVoiceSignalChart({
         z: 4,
       },
       {
-        name: "Bottom SV Bear",
+        name: "Bottom Score Bear",
         type: "scatter",
         data: seriesFor("bottom", "bear"),
         symbol: "circle",

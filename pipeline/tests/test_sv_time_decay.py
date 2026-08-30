@@ -2,6 +2,11 @@ from __future__ import annotations
 
 import pytest
 
+from pipeline.domain.smart_voice.time_decay import (
+    DEFAULT_TIME_DECAY_CONFIG,
+    TIME_DECAY_VERSION,
+    evidence_decay_weight,
+)
 from pipeline.domain.smart_voice.v0_impl import aggregate_stats
 
 
@@ -88,6 +93,23 @@ def test_long_horizon_call_retains_evidence_longer() -> None:
     assert short is not None and long is not None
     assert long["raw_z"] > short["raw_z"]
     assert long["n_eff"] > short["n_eff"]
+
+
+def test_default_decay_is_a_moderate_recency_adjustment() -> None:
+    assert TIME_DECAY_VERSION == "sv-time-decay-v2-moderate"
+    assert DEFAULT_TIME_DECAY_CONFIG.half_life_days_by_horizon == {
+        "1D": 60.0,
+        "5D": 75.0,
+        "20D": 150.0,
+        "60D": 300.0,
+        "90D": 450.0,
+        "180D": 675.0,
+    }
+    assert evidence_decay_weight(
+        "2026-03-03",
+        "20D",
+        "2026-07-01",
+    ) == pytest.approx(0.5 ** (120 / 150))
 
 
 def test_as_of_day_excludes_same_day_and_future_settlements() -> None:

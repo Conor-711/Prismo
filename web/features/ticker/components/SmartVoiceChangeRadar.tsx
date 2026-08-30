@@ -20,12 +20,12 @@ export function SmartVoiceChangeRadar({ radar, zh }: { radar: SvOpinionChangeRad
     <section className="min-w-0">
       <div className="flex items-center justify-between gap-3 border-b border-line/70 px-4 py-2.5">
         <div>
-          <h4 className="text-[10px] font-semibold text-neutral-300">{zh ? "SV 观点变化雷达" : "SV opinion change radar"}</h4>
+          <h4 className="text-[10px] font-semibold text-neutral-300">{zh ? "Score 观点变化雷达" : "Score opinion change radar"}</h4>
           <p className="mt-0.5 text-[8.5px] text-neutral-600">{zh ? "最近 7 天相对前 7 天；基于同一作者的 Call 生命周期" : "Latest 7 days vs prior 7; based on author call lifecycle"}</p>
         </div>
         <div className="text-right">
           <div className={`font-mono text-[15px] font-bold ${deltaTone}`}>{signed(radar.netDelta)}</div>
-          <div className="text-[8.5px] text-neutral-600">{zh ? "SV 净方向变化" : "SV net direction delta"}</div>
+          <div className="text-[8.5px] text-neutral-600">{zh ? "Score 净方向变化" : "Score net direction delta"}</div>
         </div>
       </div>
       <div className="grid grid-cols-4 divide-x divide-line/60 border-b border-line/60 px-4 py-2 text-[8.5px]">

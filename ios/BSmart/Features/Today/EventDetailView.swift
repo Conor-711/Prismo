@@ -70,6 +70,7 @@ struct EventDetailView: View {
             didTrackOpen = true
             model.trackSignalOpened(signal)
         }
+        .bSmartDetailPage()
         .bSmartPage()
         .accessibilityIdentifier("event-detail.screen")
     }

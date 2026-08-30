@@ -115,6 +115,7 @@ def cmd_youtube_fulltext(args):
         max_native_min=getattr(args, "max_native_min", 150),
         fail_after=getattr(args, "fail_after", 3),
         max_rate_waits=getattr(args, "max_rate_waits", 4),
+        prefer_transcript=getattr(args, "prefer_transcript", False),
     )
 
 
@@ -225,6 +226,11 @@ def register_commands(sub, root) -> None:
     sp.add_argument("--max-rate-waits", type=int, default=4, help="Gemini 429 限流时最多等待次数")
     sp.add_argument("--low-res", action="store_true", help="低清看视频(省 token，图表细节略差)")
     sp.add_argument("--no-frames", action="store_true", help="只出优化口播、不抽关键画面帧(快、免下载)")
+    sp.add_argument(
+        "--prefer-transcript",
+        action="store_true",
+        help="字幕优先：完整整理并翻译公开字幕；字幕不可用时才回退到 Gemini 原生视频。",
+    )
     sp.add_argument("--force", action="store_true", help="重生成已有的")
     sp.set_defaults(func=cmd_youtube_fulltext)
 

@@ -1,0 +1,879 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>bSmart Today · Asset Editorial Prototype</title>
+  <meta name="description" content="借鉴 App Store Today 与有知有行节奏，以视觉化模块呈现标的、Smart Account 与 Smart Money">
+  <link rel="icon" href="../../../../ios/BSmart/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png">
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #080a09;
+      --canvas: #0d100f;
+      --surface: #151918;
+      --elevated: #1b201e;
+      --line: #2b322f;
+      --line-strong: #414c47;
+      --text: #f7f8f7;
+      --secondary: #aab2ae;
+      --tertiary: #747e79;
+      --brand: #57dfbd;
+      --pulse: #d8ff48;
+      --blue: #72baff;
+      --red: #ff6374;
+      --gold: #ffca59;
+      --lavender: #c6b3ff;
+      --paper: #e9eeeb;
+      --paper-ink: #111714;
+      --ease: 180ms cubic-bezier(.2,.75,.2,1);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Helvetica Neue", sans-serif;
+      font-synthesis: none;
+      letter-spacing: 0;
+    }
+
+    * { box-sizing: border-box; }
+    html { background: var(--ink); }
+    body { margin: 0; min-width: 320px; min-height: 100vh; color: var(--text); background: var(--ink); }
+    button { font: inherit; color: inherit; }
+    button:focus-visible { outline: 2px solid var(--pulse); outline-offset: 2px; }
+    [hidden] { display: none !important; }
+
+    .review-bar {
+      min-height: 64px;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      border-bottom: 1px solid var(--line);
+      background: #0a0d0c;
+    }
+    .review-brand { display: flex; align-items: center; gap: 11px; }
+    .brand-mark { width: 38px; aspect-ratio: 1; display: grid; place-items: center; border-radius: 8px; color: #07110d; background: var(--brand); font-size: 20px; font-weight: 900; }
+    .review-brand strong { display: block; font-size: 14px; }
+    .review-brand span { display: block; margin-top: 3px; color: var(--tertiary); font-size: 10px; }
+    .review-meta { display: flex; align-items: center; gap: 8px; color: var(--tertiary); font-size: 10px; }
+    .review-meta i { width: 6px; height: 6px; border-radius: 50%; background: var(--pulse); }
+
+    .stage {
+      min-height: calc(100vh - 64px);
+      padding: 28px 24px 50px;
+      background-color: var(--canvas);
+      background-image: linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px), linear-gradient(90deg,rgba(255,255,255,.018) 1px, transparent 1px);
+      background-size: 32px 32px;
+    }
+    .stage-grid { max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 420px minmax(0,1fr); gap: 36px; align-items: start; }
+
+    .phone {
+      width: 402px;
+      height: 874px;
+      overflow: hidden;
+      position: sticky;
+      top: 24px;
+      border: 1px solid #3a4240;
+      border-radius: 46px;
+      background: #090b0b;
+      box-shadow: 0 26px 70px rgba(0,0,0,.42);
+    }
+    .phone::before { content: ""; position: absolute; z-index: 50; top: 9px; left: 50%; width: 106px; height: 29px; transform: translateX(-50%); border-radius: 18px; background: #020303; }
+    .status-bar { height: 44px; padding: 13px 22px 0; display: flex; align-items: center; justify-content: space-between; position: relative; z-index: 51; font-size: 10px; font-weight: 750; }
+    .status-icons { display: flex; align-items: center; gap: 5px; }
+    .status-icons span { display: block; width: 13px; height: 7px; border: 1px solid currentColor; border-radius: 2px; }
+    .status-icons span:first-child { width: 12px; border: 0; background: currentColor; clip-path: polygon(0 100%,0 75%,18% 75%,18% 55%,40% 55%,40% 34%,63% 34%,63% 15%,85% 15%,85% 0,100% 0,100% 100%); }
+    .phone-screen { height: calc(100% - 44px); display: grid; grid-template-rows: minmax(0,1fr) 68px; transition: transform 360ms cubic-bezier(.2,.78,.2,1), opacity 260ms ease; }
+    .phone.pack-open .phone-screen { transform: translateX(-13%) scale(.975); opacity: .2; pointer-events: none; }
+    .app-scroll { overflow-y: auto; scrollbar-width: none; overscroll-behavior: contain; scroll-behavior: smooth; }
+    .app-scroll::-webkit-scrollbar { display: none; }
+    .app-content { min-height: 100%; padding: 5px 14px 34px; }
+
+    .app-header { min-height: 62px; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+    .app-date { color: var(--tertiary); font-size: 8px; font-weight: 750; text-transform: uppercase; }
+    .app-header h1 { margin: 3px 0 0; font-size: 27px; line-height: 1; }
+    .avatar-button { width: 35px; height: 35px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%; color: var(--pulse); background: var(--surface); font-size: 10px; font-weight: 850; cursor: pointer; }
+    .freshness { margin: 8px 0 13px; display: flex; align-items: center; gap: 5px; color: var(--tertiary); font-size: 7.5px; }
+    .freshness i { width: 5px; height: 5px; border-radius: 50%; background: var(--brand); }
+
+    .hero-story {
+      position: relative;
+      min-height: 404px;
+      padding: 15px;
+      overflow: hidden;
+      border-radius: 8px;
+      color: #07110d;
+      background: var(--pulse);
+    }
+    .hero-story::after { content: ""; position: absolute; right: -22px; bottom: 84px; width: 88px; height: 88px; border: 1px solid rgba(7,17,13,.16); transform: rotate(45deg); pointer-events: none; }
+    .hero-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; position: relative; z-index: 2; }
+    .hero-label { font-size: 7px; font-weight: 900; text-transform: uppercase; }
+    .hero-tools { display: flex; gap: 6px; }
+    .hero-tool { min-height: 27px; padding: 0 8px; border: 1px solid rgba(7,17,13,.24); border-radius: 5px; color: #07110d; background: rgba(255,255,255,.18); font-size: 7px; font-weight: 800; cursor: pointer; }
+    .hero-tool.active { color: var(--text); border-color: #07110d; background: #07110d; }
+    .hero-title { position: relative; z-index: 2; max-width: 290px; margin: 14px 0 0; font-size: 25px; line-height: 1.12; }
+    .hero-meta { margin-top: 7px; display: flex; align-items: center; gap: 7px; position: relative; z-index: 2; color: rgba(7,17,13,.62); font-size: 8px; font-weight: 700; }
+    .hero-meta strong { color: #07110d; font-size: 9px; }
+    .hero-chart { height: 210px; margin: 8px -5px 0; position: relative; z-index: 2; }
+    #heroChart { width: 100%; height: 100%; display: block; overflow: visible; }
+    .hero-footer { min-height: 48px; display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: center; position: relative; z-index: 2; border-top: 1px solid rgba(7,17,13,.18); }
+    .hero-stat span { display: block; color: rgba(7,17,13,.58); font-size: 6.5px; }
+    .hero-stat strong { display: block; margin-top: 4px; font-size: 9px; }
+    .hero-open { width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid rgba(7,17,13,.28); border-radius: 50%; color: #07110d; background: transparent; cursor: pointer; }
+
+    .section-head { margin: 21px 1px 10px; display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+    .section-head h2 { margin: 0; font-size: 15px; }
+    .section-head span, .section-head button { color: var(--tertiary); font-size: 7.5px; }
+    .section-head button { padding: 0; border: 0; background: transparent; cursor: pointer; }
+
+    .portfolio-strip { margin: 0 -14px; padding: 0 14px; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+    .portfolio-strip::-webkit-scrollbar { display: none; }
+    .asset-snapshot { width: 137px; min-height: 126px; padding: 11px; flex: 0 0 auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); text-align: left; cursor: pointer; transition: transform var(--ease), border-color var(--ease); }
+    .asset-snapshot:hover { transform: translateY(-2px); border-color: var(--line-strong); }
+    .snapshot-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .snapshot-top img { width: 27px; height: 27px; object-fit: contain; border-radius: 5px; background: #0f1211; }
+    .snapshot-top span { color: var(--tertiary); font-size: 7px; }
+    .asset-snapshot h3 { margin: 9px 0 0; font-size: 12px; }
+    .asset-snapshot p { margin: 4px 0 0; color: var(--brand); font-size: 8px; }
+    .asset-snapshot p.down { color: var(--red); }
+    .mini-chart { width: 100%; height: 33px; margin-top: 9px; display: block; }
+    .snapshot-events { margin-top: 4px; color: var(--tertiary); font-size: 7px; }
+
+    .viewpoint-packs { margin: 0 -14px; padding: 0 14px; display: flex; gap: 9px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
+    .viewpoint-packs::-webkit-scrollbar { display: none; }
+    .editorial-pack-card { width: 318px; min-height: 238px; padding: 15px; flex: 0 0 auto; position: relative; overflow: hidden; border: 0; border-radius: 8px; color: #07110d; background: var(--paper); text-align: left; scroll-snap-align: start; cursor: pointer; }
+    .editorial-pack-card.secondary { color: #fff; background: #332f52; }
+    .editorial-pack-card::after { content: ""; width: 132px; height: 132px; position: absolute; right: -55px; bottom: -58px; border: 1px solid currentColor; border-radius: 50%; opacity: .12; }
+    .editorial-pack-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 9px; position: relative; z-index: 2; }
+    .editorial-pack-label { font-size: 6.5px; font-weight: 900; text-transform: uppercase; opacity: .62; }
+    .editorial-pack-open { width: 28px; height: 28px; display: grid; place-items: center; border: 1px solid currentColor; border-radius: 50%; font-size: 10px; opacity: .64; }
+    .editorial-pack-card h3 { max-width: 270px; margin: 15px 0 0; position: relative; z-index: 2; font-size: 21px; line-height: 1.17; }
+    .editorial-pack-card > p { max-width: 270px; margin: 7px 0 0; position: relative; z-index: 2; font-size: 8px; line-height: 1.45; opacity: .65; }
+    .editorial-pack-art { height: 74px; margin-top: 13px; padding: 10px; display: grid; grid-template-columns: 39px minmax(0,1fr); gap: 10px; align-items: center; position: relative; z-index: 2; border-top: 1px solid currentColor; border-bottom: 1px solid currentColor; border-color: rgba(7,17,13,.16); }
+    .secondary .editorial-pack-art { border-color: rgba(255,255,255,.14); }
+    .pack-logo { width: 39px; height: 39px; padding: 4px; object-fit: contain; border-radius: 7px; background: rgba(255,255,255,.72); }
+    .secondary .pack-logo { background: rgba(255,255,255,.1); }
+    .pack-meter-label { display: flex; justify-content: space-between; gap: 8px; font-size: 6.5px; font-weight: 780; }
+    .stance-meter { height: 6px; margin-top: 7px; display: flex; overflow: hidden; border-radius: 3px; background: rgba(0,0,0,.12); }
+    .stance-meter i { display: block; height: 100%; }
+    .stance-meter .bull { background: var(--brand); }
+    .stance-meter .neutral { background: var(--gold); }
+    .stance-meter .bear { background: var(--red); }
+    .editorial-pack-foot { margin-top: 11px; display: flex; align-items: center; justify-content: space-between; gap: 9px; position: relative; z-index: 2; }
+    .pack-meta { font-size: 6.5px; font-weight: 750; opacity: .62; }
+    .avatar-stack { display: flex; justify-content: flex-end; }
+    .mini-avatar { width: 25px; height: 25px; margin-left: -6px; display: grid; place-items: center; border: 2px solid var(--paper); border-radius: 50%; color: #07110d; font-size: 7px; font-weight: 900; }
+    .secondary .mini-avatar { border-color: #332f52; }
+
+    .standalone-panel { overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+    .standalone-view { min-height: 76px; padding: 11px; display: grid; grid-template-columns: 34px minmax(0,1fr) auto; gap: 9px; align-items: center; }
+    .standalone-view + .standalone-view { border-top: 1px solid var(--line); }
+    .standalone-avatar { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 8px; color: #07110d; font-size: 9px; font-weight: 900; }
+    .standalone-copy { min-width: 0; }
+    .standalone-identity { display: flex; align-items: center; gap: 5px; color: var(--tertiary); font-size: 6.2px; }
+    .standalone-identity strong { overflow: hidden; color: var(--text); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+    .standalone-title { margin-top: 5px; display: -webkit-box; overflow: hidden; color: var(--secondary); font-size: 7.5px; line-height: 1.38; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+    .standalone-action { min-width: 42px; min-height: 27px; padding: 0 8px; border: 1px solid rgba(87,223,189,.38); border-radius: 14px; color: var(--brand); background: #101713; font-size: 6.5px; font-weight: 800; cursor: pointer; }
+
+    .pack-page { position: absolute; z-index: 60; inset: 0; color: var(--text); background: #0b0e0d; opacity: 0; pointer-events: none; transform: translateX(103%); transition: transform 380ms cubic-bezier(.2,.78,.2,1), opacity 260ms ease; }
+    .pack-page.open { opacity: 1; pointer-events: auto; transform: translateX(0); }
+    .pack-page-scroll { height: 100%; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
+    .pack-page-scroll::-webkit-scrollbar { display: none; }
+    .pack-page-nav { height: 50px; padding: 8px 14px 0; position: sticky; z-index: 4; top: 0; display: grid; grid-template-columns: 31px 1fr 31px; align-items: center; background: rgba(11,14,13,.88); backdrop-filter: blur(18px); }
+    .pack-page-nav button { width: 31px; height: 31px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%; color: var(--text); background: #151918; cursor: pointer; }
+    .pack-page-nav strong { text-align: center; font-size: 9px; }
+    .pack-page-hero { min-height: 286px; padding: 22px 16px 18px; color: #07110d; background: var(--paper); }
+    .pack-page-hero.secondary { color: #fff; background: #332f52; }
+    .pack-page-kicker { font-size: 7px; font-weight: 900; text-transform: uppercase; opacity: .62; }
+    .pack-page-hero h1 { margin: 10px 0 0; font-size: 26px; line-height: 1.12; }
+    .pack-page-hero p { margin: 9px 0 0; font-size: 9px; line-height: 1.55; opacity: .68; }
+    .pack-page-proof { margin-top: 17px; padding-top: 13px; display: flex; justify-content: space-between; gap: 10px; align-items: center; border-top: 1px solid currentColor; border-color: rgba(7,17,13,.16); }
+    .pack-page-hero.secondary .pack-page-proof { border-color: rgba(255,255,255,.16); }
+    .pack-page-proof strong { display: block; font-size: 11px; }
+    .pack-page-proof span { display: block; margin-top: 3px; font-size: 6.5px; opacity: .58; }
+    .pack-page-body { padding: 14px 14px 34px; }
+    .pack-page-section { margin-top: 18px; }
+    .pack-page-section:first-child { margin-top: 0; }
+    .pack-page-section h2 { margin: 0 0 9px; font-size: 14px; }
+    .pack-thesis-grid { display: grid; gap: 7px; }
+    .pack-thesis { padding: 11px; border-left: 2px solid var(--brand); background: var(--surface); }
+    .pack-thesis.difference { border-left-color: var(--gold); }
+    .pack-thesis span { color: var(--brand); font-size: 6.5px; font-weight: 850; }
+    .pack-thesis.difference span { color: var(--gold); }
+    .pack-thesis p { margin: 5px 0 0; color: var(--secondary); font-size: 8.5px; line-height: 1.55; }
+    .pack-chart-card { padding: 11px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+    .pack-chart-head { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+    .pack-chart-head span { color: var(--tertiary); font-size: 6.5px; }
+    #packChart { width: 100%; height: 154px; margin-top: 7px; display: block; }
+    .pack-view-list { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+    .pack-view { padding: 10px; display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 7px; align-items: center; }
+    .pack-view + .pack-view { border-top: 1px solid var(--line); }
+    .view-open { min-width: 0; padding: 0; display: grid; grid-template-columns: 28px minmax(0,1fr); gap: 9px; align-items: center; border: 0; color: var(--text); background: transparent; text-align: left; cursor: pointer; }
+    .view-avatar { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; color: #07110d; font-size: 8px; font-weight: 900; }
+    .view-copy { min-width: 0; }
+    .view-identity { display: flex; align-items: center; gap: 5px; }
+    .view-identity strong { overflow: hidden; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+    .view-identity span { flex: 0 0 auto; color: var(--tertiary); font-size: 6px; }
+    .view-title { margin-top: 4px; display: block; overflow: hidden; color: var(--secondary); font-size: 7.5px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+    .view-tags { margin-top: 5px; display: flex; gap: 4px; }
+    .view-tag { padding: 2px 4px; border: 1px solid var(--line); border-radius: 3px; color: var(--tertiary); font-size: 5.8px; }
+    .view-tag.bull { color: var(--brand); border-color: rgba(87,223,189,.34); }
+    .view-tag.neutral { color: var(--gold); border-color: rgba(255,202,89,.34); }
+    .view-tag.bear { color: var(--red); border-color: rgba(255,99,116,.34); }
+    .locate-view { min-height: 28px; padding: 0 7px; border: 1px solid var(--line); border-radius: 5px; color: var(--secondary); background: #0d100f; font-size: 6px; cursor: pointer; }
+    .locate-view:hover { color: var(--brand); border-color: rgba(87,223,189,.45); }
+
+    .money-feature {
+      min-height: 272px;
+      padding: 15px;
+      position: relative;
+      overflow: hidden;
+      border-radius: 8px;
+      color: #071421;
+      background: var(--blue);
+    }
+    .money-feature header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .money-feature header span { font-size: 7px; font-weight: 900; text-transform: uppercase; }
+    .money-feature header button { width: 29px; height: 29px; border: 1px solid rgba(7,20,33,.22); border-radius: 50%; color: #071421; background: transparent; cursor: pointer; }
+    .money-feature h3 { max-width: 300px; margin: 14px 0 0; font-size: 23px; line-height: 1.13; }
+    .money-visual { height: 112px; margin-top: 16px; display: grid; grid-template-columns: 58px minmax(0,1fr); gap: 12px; align-items: center; }
+    .money-avatar { width: 58px; height: 58px; border-radius: 50%; object-fit: cover; background: #132536; }
+    .flow-bars { display: grid; gap: 10px; }
+    .flow-bar { display: grid; grid-template-columns: 54px minmax(0,1fr) 50px; gap: 7px; align-items: center; font-size: 7px; font-weight: 750; }
+    .flow-track { height: 9px; background: rgba(7,20,33,.12); }
+    .flow-track i { height: 100%; display: block; background: #071421; }
+    .flow-bar em { font-style: normal; text-align: right; }
+    .money-footer { padding-top: 11px; display: grid; grid-template-columns: repeat(3,1fr); border-top: 1px solid rgba(7,20,33,.18); }
+    .money-footer div + div { padding-left: 9px; border-left: 1px solid rgba(7,20,33,.18); }
+    .money-footer span { display: block; font-size: 6.5px; opacity: .58; }
+    .money-footer strong { display: block; margin-top: 4px; font-size: 9px; }
+
+    .map-feature { padding: 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+    .map-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+    .map-head h3 { margin: 0; font-size: 13px; }
+    .map-head p { margin: 4px 0 0; color: var(--tertiary); font-size: 7px; }
+    .map-head button { min-height: 27px; padding: 0 8px; border: 1px solid var(--line); border-radius: 5px; color: var(--secondary); background: var(--elevated); font-size: 7px; cursor: pointer; }
+    .judgment-map { margin-top: 13px; display: grid; grid-template-columns: 45px repeat(4,1fr); align-items: center; }
+    .judgment-map > span { min-height: 35px; display: grid; place-items: center; border-top: 1px solid #242a28; color: var(--tertiary); font-size: 6.5px; }
+    .judgment-map > span.axis { min-height: 22px; border: 0; }
+    .map-ticker { justify-content: start !important; color: var(--text) !important; font-weight: 800; }
+    .map-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--brand); box-shadow: 0 0 0 5px rgba(87,223,189,.08); }
+    .map-dot.medium { width: 14px; height: 14px; }
+    .map-dot.large { width: 19px; height: 19px; }
+    .map-dot.bear { background: var(--red); box-shadow: 0 0 0 5px rgba(255,99,116,.08); }
+    .map-dot.mixed { background: var(--gold); box-shadow: 0 0 0 5px rgba(255,202,89,.08); }
+    .map-legend { margin-top: 10px; display: flex; align-items: center; gap: 10px; color: var(--tertiary); font-size: 6.5px; }
+    .map-legend i { width: 6px; height: 6px; display: inline-block; margin-right: 4px; border-radius: 50%; background: var(--brand); }
+    .map-legend i.bear { background: var(--red); }
+    .map-legend i.mixed { background: var(--gold); }
+    .map-legend em { margin-left: auto; font-style: normal; }
+
+    .watch-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .watch-card { min-height: 152px; padding: 12px; border: 0; border-radius: 8px; color: #161311; background: #f0dcae; text-align: left; cursor: pointer; }
+    .watch-card:nth-child(2) { color: #151220; background: var(--lavender); }
+    .watch-card img { width: 30px; height: 30px; object-fit: contain; border-radius: 6px; background: rgba(255,255,255,.55); }
+    .watch-card span { display: block; margin-top: 18px; font-size: 7px; font-weight: 800; text-transform: uppercase; opacity: .58; }
+    .watch-card h3 { margin: 5px 0 0; font-size: 13px; line-height: 1.25; }
+    .watch-card p { margin: 8px 0 0; font-size: 7px; opacity: .62; }
+
+    .bottom-nav { padding: 7px 10px 13px; display: grid; grid-template-columns: repeat(5,1fr); border-top: 1px solid var(--line); background: rgba(16,19,18,.97); backdrop-filter: blur(18px); }
+    .bottom-nav button { min-height: 47px; display: grid; place-items: center; align-content: center; gap: 3px; border: 0; color: var(--tertiary); background: transparent; font-size: 7px; cursor: pointer; }
+    .bottom-nav button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .bottom-nav button.active { color: var(--pulse); }
+
+    .sheet-backdrop { position: absolute; z-index: 70; inset: 0; display: flex; align-items: flex-end; background: rgba(0,0,0,.62); opacity: 0; pointer-events: none; transition: opacity var(--ease); }
+    .sheet-backdrop.open { opacity: 1; pointer-events: auto; }
+    .detail-sheet { width: 100%; max-height: 77%; overflow-y: auto; padding: 8px 15px 24px; border-top: 1px solid var(--line-strong); border-radius: 18px 18px 0 0; color: var(--text); background: #151918; transform: translateY(100%); transition: transform 240ms cubic-bezier(.2,.75,.2,1); }
+    .sheet-backdrop.open .detail-sheet { transform: translateY(0); }
+    .sheet-handle { width: 36px; height: 4px; margin: 0 auto 13px; border-radius: 3px; background: #505b56; }
+    .detail-top { display: flex; align-items: center; gap: 9px; }
+    .detail-avatar { width: 39px; height: 39px; border-radius: 50%; object-fit: cover; background: #202825; }
+    .detail-identity { min-width: 0; }
+    .detail-identity strong { display: block; font-size: 10px; }
+    .detail-identity span { display: block; margin-top: 4px; color: var(--tertiary); font-size: 7px; }
+    .sheet-close { width: 31px; height: 31px; margin-left: auto; border: 1px solid var(--line); border-radius: 50%; color: var(--secondary); background: transparent; cursor: pointer; }
+    .detail-sheet h2 { margin: 14px 0 7px; font-size: 20px; line-height: 1.2; }
+    .detail-sheet > p { margin: 0; color: var(--secondary); font-size: 9px; line-height: 1.55; }
+    .reason-panel { margin-top: 14px; padding: 11px 0 11px 10px; border-left: 2px solid var(--brand); background: #111513; }
+    .reason-panel span { color: var(--brand); font-size: 7px; font-weight: 850; text-transform: uppercase; }
+    .reason-panel p { margin: 5px 0 0; color: var(--secondary); font-size: 8.5px; line-height: 1.5; }
+    .detail-facts { margin-top: 12px; display: grid; grid-template-columns: repeat(3,1fr); border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
+    .detail-facts div { padding: 9px; background: #101311; }
+    .detail-facts div + div { border-left: 1px solid var(--line); }
+    .detail-facts span { display: block; color: var(--tertiary); font-size: 6.5px; }
+    .detail-facts strong { display: block; margin-top: 5px; font-size: 8px; }
+    .detail-action { width: 100%; min-height: 40px; margin-top: 12px; border: 1px solid rgba(216,255,72,.55); border-radius: 6px; color: var(--pulse); background: #151b10; font-size: 9px; font-weight: 800; cursor: pointer; }
+
+    .filter-sheet .filter-title { margin: 0; font-size: 18px; }
+    .filter-group { margin-top: 16px; }
+    .filter-group strong { display: block; margin-bottom: 8px; font-size: 9px; }
+    .choice-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; }
+    .choice-row button { min-height: 36px; border: 1px solid var(--line); border-radius: 5px; color: var(--secondary); background: #101311; font-size: 8px; cursor: pointer; }
+    .choice-row button.active { color: var(--pulse); border-color: rgba(216,255,72,.55); background: #151b10; }
+
+    .rationale { padding: 4px 0; }
+    .rationale .kicker { color: var(--brand); font: 850 10px ui-monospace,SFMono-Regular,Menlo,monospace; }
+    .rationale h2 { max-width: 650px; margin: 8px 0 10px; font-size: 29px; line-height: 1.18; }
+    .rationale > p { max-width: 680px; margin: 0; color: var(--secondary); font-size: 12px; line-height: 1.65; }
+    .reference-grid { margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+    .reference-card { padding: 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+    .reference-card span { color: var(--brand); font: 800 9px ui-monospace,SFMono-Regular,Menlo,monospace; }
+    .reference-card h3 { margin: 8px 0 0; font-size: 13px; }
+    .reference-card p { margin: 7px 0 0; color: var(--tertiary); font-size: 9px; line-height: 1.55; }
+    .rhythm-list { margin-top: 18px; display: grid; gap: 8px; }
+    .rhythm-item { padding: 12px 13px; display: grid; grid-template-columns: 42px minmax(0,1fr); gap: 11px; align-items: center; border: 1px solid var(--line); border-radius: 8px; background: rgba(21,25,24,.94); }
+    .rhythm-item b { color: var(--pulse); font: 850 12px ui-monospace,SFMono-Regular,Menlo,monospace; }
+    .rhythm-item strong { display: block; font-size: 10px; }
+    .rhythm-item p { margin: 4px 0 0; color: var(--tertiary); font-size: 8.5px; line-height: 1.45; }
+    .principle-note { margin-top: 18px; padding: 15px; border-left: 3px solid var(--pulse); background: #10140d; }
+    .principle-note strong { color: var(--pulse); font-size: 9px; }
+    .principle-note p { margin: 7px 0 0; font-size: 12px; line-height: 1.55; }
+    .sources { margin-top: 18px; color: var(--tertiary); font-size: 8px; line-height: 1.65; }
+    .sources a { color: var(--brand); }
+
+    @media (max-width: 900px) {
+      .review-bar { padding: 12px 16px; }
+      .review-meta { display: none; }
+      .stage { padding: 20px 12px 40px; }
+      .stage-grid { grid-template-columns: 1fr; }
+      .phone { position: relative; top: 0; width: min(100%,402px); margin: 0 auto; }
+      .rationale { max-width: 650px; margin: 8px auto 0; }
+    }
+    @media (max-width: 430px) {
+      .review-bar { display: none; }
+      .stage { min-height: 100vh; padding: 0; background: #090b0b; }
+      .stage-grid { display: block; }
+      .phone { width: 100%; height: 100vh; border: 0; border-radius: 0; box-shadow: none; }
+      .phone::before, .status-bar { display: none; }
+      .phone-screen { height: 100%; }
+      .rationale { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
+  </style>
+</head>
+<body>
+  <header class="review-bar">
+    <div class="review-brand"><div class="brand-mark">b</div><div><strong>Today · Asset Editorial</strong><span>App Store Today × 有知有行 × bSmart 标的情报</span></div></div>
+    <div class="review-meta"><i></i><span>少文字 · 强视觉 · 大小模块交替 · 点击展开证据</span></div>
+  </header>
+
+  <main class="stage">
+    <div class="stage-grid">
+      <section class="phone" aria-label="bSmart 今日页面手机原型">
+        <div class="status-bar"><span>9:41</span><div class="status-icons"><span></span><span></span></div></div>
+        <div class="phone-screen">
+          <div class="app-scroll" id="appScroll">
+            <div class="app-content">
+              <header class="app-header">
+                <div><span class="app-date">8月21日 · 星期五</span><h1>今日</h1></div>
+                <button class="avatar-button" aria-label="个人设置">CZ</button>
+              </header>
+              <div class="freshness"><i></i><span>最近更新 09:41 · 4 个持仓有新数据</span></div>
+
+              <article class="hero-story" id="heroStory">
+                <div class="hero-top">
+                  <span class="hero-label">你的标的 · 今日主图</span>
+                  <div class="hero-tools">
+                    <button class="hero-tool active" data-hero-period="30">1M</button>
+                    <button class="hero-tool" id="openFilter">筛选</button>
+                  </div>
+                </div>
+                <h2 class="hero-title" id="heroTitle">NVDA 的观点都落在什么价格？</h2>
+                <div class="hero-meta"><strong id="heroTicker">NVDA · US$184.86</strong><span id="heroChange">+2.18% 今日</span></div>
+                <div class="hero-chart"><svg id="heroChart" viewBox="0 0 340 210" role="img" aria-label="NVDA 价格与观点标记"></svg></div>
+                <footer class="hero-footer">
+                  <div class="hero-stat"><span>Smart Account</span><strong id="accountCount">3 个观点</strong></div>
+                  <div class="hero-stat"><span>Smart Money</span><strong id="moneyCount">2 个动作</strong></div>
+                  <button class="hero-open" id="openFirstEvent" aria-label="查看最新证据">↗</button>
+                </footer>
+              </article>
+
+              <section>
+                <header class="section-head"><h2>持仓现在</h2><span>价格与新情报</span></header>
+                <div class="portfolio-strip" id="portfolioStrip"></div>
+              </section>
+
+              <section>
+                <header class="section-head"><h2>本周观点精华</h2><span>多个账户 · 一个主题</span></header>
+                <div class="viewpoint-packs" id="viewpointPacks"></div>
+              </section>
+
+              <section>
+                <header class="section-head"><h2>单独观点</h2><button>查看全部 ›</button></header>
+                <div class="standalone-panel" id="standaloneViews"></div>
+              </section>
+
+              <section>
+                <header class="section-head"><h2>链上聪明钱刚刚做了什么</h2><span>Hyperliquid</span></header>
+                <article class="money-feature">
+                  <header><span>Smart Money · NVDA</span><button id="openMoney" aria-label="查看 Smart Money 详情">↗</button></header>
+                  <h3>两笔多仓仍在，一笔刚刚减掉一半。</h3>
+                  <div class="money-visual">
+                    <img class="money-avatar" src="../../../../ios/BSmart/Assets.xcassets/SmartMoneyBorderCollie.imageset/SmartMoneyBorderCollie.png" alt="Smart Money">
+                    <div class="flow-bars">
+                      <div class="flow-bar"><span>Micah</span><div class="flow-track"><i style="width:88%"></i></div><em>+143K</em></div>
+                      <div class="flow-bar"><span>Adrian</span><div class="flow-track"><i style="width:42%"></i></div><em>-4.2K</em></div>
+                      <div class="flow-bar"><span>0x87f</span><div class="flow-track"><i style="width:64%"></i></div><em>+38.6K</em></div>
+                    </div>
+                  </div>
+                  <footer class="money-footer"><div><span>净名义变化</span><strong>+US$177K</strong></div><div><span>活跃账户</span><strong>3</strong></div><div><span>最大杠杆</span><strong>20×</strong></div></footer>
+                </article>
+              </section>
+
+              <section>
+                <header class="section-head"><h2>这周，他们看了哪里</h2><span>观点 × 周期</span></header>
+                <article class="map-feature">
+                  <header class="map-head"><div><h3>持仓观点分布</h3><p>圆越大，提及该周期的高分作者越多</p></div><button>Top 25%</button></header>
+                  <div class="judgment-map" aria-label="观点周期分布图">
+                    <span class="axis"></span><span class="axis">1D</span><span class="axis">20D</span><span class="axis">60D</span><span class="axis">180D</span>
+                    <span class="map-ticker">NVDA</span><span><i class="map-dot"></i></span><span><i class="map-dot medium mixed"></i></span><span><i class="map-dot large"></i></span><span><i class="map-dot medium"></i></span>
+                    <span class="map-ticker">HOOD</span><span><i class="map-dot mixed"></i></span><span><i class="map-dot large"></i></span><span><i class="map-dot medium"></i></span><span></span>
+                    <span class="map-ticker">MSTR</span><span><i class="map-dot bear"></i></span><span><i class="map-dot medium bear"></i></span><span><i class="map-dot mixed"></i></span><span><i class="map-dot large"></i></span>
+                    <span class="map-ticker">PLTR</span><span><i class="map-dot medium bear"></i></span><span><i class="map-dot bear"></i></span><span><i class="map-dot medium"></i></span><span></span>
+                  </div>
+                  <div class="map-legend"><span><i></i>看多</span><span><i class="bear"></i>看空</span><span><i class="mixed"></i>观望/混合</span><em>过去 7 天</em></div>
+                </article>
+              </section>
+
+              <section>
+                <header class="section-head"><h2>关注中的新变化</h2><span>2 个标的</span></header>
+                <div class="watch-grid">
+                  <button class="watch-card" data-symbol="HOOD"><img src="../../../../ios/BSmart/Assets.xcassets/Ticker_HOOD.imageset/HOOD.png" alt="HOOD"><span>短线观点</span><h3>HOOD 出现 US$100 目标价</h3><p>Top 8% · 12 分钟前</p></button>
+                  <button class="watch-card" data-symbol="PLTR"><img src="../../../../ios/BSmart/Assets.xcassets/Ticker_PLTR.imageset/PLTR.png" alt="PLTR"><span>交易管理</span><h3>PLTR 空头先兑现一半利润</h3><p>Top 19% · 25 分钟前</p></button>
+                </div>
+              </section>
+            </div>
+          </div>
+
+          <nav class="bottom-nav" aria-label="主导航">
+            <button class="active"><svg viewBox="0 0 24 24"><path d="m3 11 9-8 9 8v9a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"/></svg><span>今日</span></button>
+            <button><svg viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg><span>Smart</span></button>
+            <button><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v9l7 4"/></svg><span>持仓</span></button>
+            <button><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><span>标的</span></button>
+            <button><svg viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/><circle cx="12" cy="12" r="3"/></svg><span>AI</span></button>
+          </nav>
+        </div>
+
+        <section class="pack-page" id="packPage" aria-hidden="true" aria-label="观点精华详情页">
+          <div class="pack-page-scroll" id="packPageScroll">
+            <nav class="pack-page-nav"><button id="closePackPage" aria-label="返回今日页面">‹</button><strong>观点精华</strong><span></span></nav>
+            <header class="pack-page-hero" id="packPageHero">
+              <span class="pack-page-kicker" id="packPageKicker"></span>
+              <h1 id="packPageTitle"></h1>
+              <p id="packPageSummary"></p>
+              <div class="pack-page-proof"><div><strong id="packPageCount"></strong><span>相近主题与时间周期</span></div><div class="avatar-stack" id="packPageAvatars"></div></div>
+            </header>
+            <div class="pack-page-body">
+              <section class="pack-page-section"><h2>这组观点在说什么</h2><div class="pack-thesis-grid"><div class="pack-thesis"><span>共同判断</span><p id="packPageCommon"></p></div><div class="pack-thesis difference"><span>分歧在哪里</span><p id="packPageDifference"></p></div></div></section>
+              <section class="pack-page-section"><h2>观点与价格位置</h2><article class="pack-chart-card"><header class="pack-chart-head"><strong id="packChartTicker"></strong><span>点击圆点查看具体观点</span></header><svg id="packChart" viewBox="0 0 340 154" role="img" aria-label="精华包观点与价格位置"></svg></article></section>
+              <section class="pack-page-section"><h2>涉及的 Smart Account</h2><div class="pack-view-list" id="packPageViews"></div></section>
+            </div>
+          </div>
+        </section>
+
+        <div class="sheet-backdrop" id="detailBackdrop" aria-hidden="true">
+          <section class="detail-sheet" id="detailSheet" role="dialog" aria-modal="true" aria-label="事件证据详情">
+            <div class="sheet-handle"></div>
+            <div class="detail-top"><img class="detail-avatar" id="detailAvatar" src="" alt=""><div class="detail-identity"><strong id="detailActor"></strong><span id="detailMeta"></span></div><button class="sheet-close" data-close-sheet aria-label="关闭">×</button></div>
+            <h2 id="detailTitle"></h2><p id="detailSummary"></p>
+            <div class="reason-panel"><span id="reasonLabel"></span><p id="detailReason"></p></div>
+            <div class="detail-facts"><div><span>标的</span><strong id="detailTicker"></strong></div><div><span>周期</span><strong id="detailHorizon"></strong></div><div><span>账户层级</span><strong id="detailRank"></strong></div></div>
+            <button class="detail-action">查看原文、完整译文与价格证据</button>
+          </section>
+        </div>
+
+        <div class="sheet-backdrop" id="filterBackdrop" aria-hidden="true">
+          <section class="detail-sheet filter-sheet" role="dialog" aria-modal="true" aria-label="图表筛选">
+            <div class="sheet-handle"></div>
+            <div class="detail-top"><h2 class="filter-title">图表显示</h2><button class="sheet-close" data-close-sheet aria-label="关闭">×</button></div>
+            <div class="filter-group"><strong>来源</strong><div class="choice-row" id="sourceChoices"><button class="active" data-source="all">全部</button><button data-source="account">Smart Account</button><button data-source="money">Smart Money</button></div></div>
+            <div class="filter-group"><strong>时间</strong><div class="choice-row" id="periodChoices"><button data-period="7">7D</button><button class="active" data-period="30">1M</button><button data-period="90">3M</button></div></div>
+            <div class="filter-group"><strong>事件顺序</strong><div class="choice-row" id="sortChoices"><button class="active" data-sort="recent">最新</button><button data-sort="score">账户分数</button><button data-sort="impact">价格影响</button></div></div>
+            <button class="detail-action" id="applyFilter">应用到主图</button>
+          </section>
+        </div>
+      </section>
+
+      <aside class="rationale">
+        <span class="kicker">DIRECTION 02 · EDITORIAL RHYTHM</span>
+        <h2>像编辑一本“只关于你的持仓”的每日杂志。</h2>
+        <p>这版不再让每种数据都长成相同的卡片。首页同时保留编辑式观点精华包与独立观点条目：前者负责压缩同题信息并进入专题页，后者负责让高价值单条判断直接可见。</p>
+
+        <div class="reference-grid">
+          <article class="reference-card"><span>APP STORE TODAY</span><h3>每日主视觉 + 集合式发现</h3><p>Apple 用一张高占比主卡建立焦点，再用列表、横向集合和大小不一的内容块打破连续阅读疲劳。故事先靠视觉吸引，点击后再展开。</p></article>
+          <article class="reference-card"><span>有知有行</span><h3>克制文案 + 图表化陪伴</h3><p>有知有行使用留白、柔和色块、单一图表和简短标题区分资产、内容、工具等模块，避免投资首页持续制造“别错过”的焦虑。</p></article>
+        </div>
+
+        <div class="rhythm-list">
+          <article class="rhythm-item"><b>XL</b><div><strong>主视觉：一个标的，一张价格与观点图</strong><p>首页先建立唯一焦点；点击圆点或菱形再看详细证据。</p></div></article>
+          <article class="rhythm-item"><b>S→</b><div><strong>横向持仓快照</strong><p>用 Logo、价格和迷你趋势图完成扫视，不重复展示长文。</p></div></article>
+          <article class="rhythm-item"><b>L</b><div><strong>Smart Account 观点精华包</strong><p>按标的、主题和周期合并重复观点；先读共识与分歧，再展开查看每位作者的原始证据。</p></div></article>
+          <article class="rhythm-item"><b>S</b><div><strong>独立观点条目</strong><p>像 App Store 的单独 App 一样保留作者、标的与核心判断，避免所有信息都被聚合隐藏。</p></div></article>
+          <article class="rhythm-item"><b>XL</b><div><strong>Smart Money 行为图</strong><p>资金条形图、净敞口和杠杆替代解释性长文。</p></div></article>
+          <article class="rhythm-item"><b>M</b><div><strong>观点 × 周期分布</strong><p>用气泡矩阵展示不同标的在哪些周期被集中讨论。</p></div></article>
+          <article class="rhythm-item"><b>S²</b><div><strong>关注标的新变化</strong><p>两个短卡收尾，形成从持仓到新机会的自然过渡。</p></div></article>
+        </div>
+
+        <div class="principle-note"><strong>信息原则</strong><p>默认压缩、按需展开。首页告诉用户“哪里发生了什么”，详情才解释“为什么、证据是什么”。不使用待办语言，也不把 Smart Account 与 Smart Money 强制合并为同向或背离。</p></div>
+
+        <div class="sources">调研参考：<a href="https://www.apple.com/app-store/" target="_blank" rel="noreferrer">Apple App Store</a>、<a href="https://www.apple.com/newsroom/2017/06/apple-unveils-all-new-app-store/" target="_blank" rel="noreferrer">Apple Today 设计说明</a>、<a href="https://apps.apple.com/cn/app/id1513319754" target="_blank" rel="noreferrer">有知有行 App Store 页面</a>、<a href="https://youzhiyouxing.cn/" target="_blank" rel="noreferrer">有知有行官网</a>。</div>
+      </aside>
+    </div>
+  </main>
+
+  <script>
+    const ROOT = "../../../../ios/BSmart/Assets.xcassets/";
+    const accountAvatar = "https://pbs.twimg.com/profile_images/2025494376554844161/xvL7GXVG_400x400.png";
+    const moneyAvatar = ROOT + "SmartMoneyBorderCollie.imageset/SmartMoneyBorderCollie.png";
+
+    const assets = {
+      NVDA: { name: "NVIDIA", logo: ROOT + "Ticker_NVDA.imageset/NVDA.png", price: 184.86, change: 2.18, events: [
+        { id:"nvda-a1", source:"account", day:87, tone:"bull", actor:"The Finance Hydra", meta:"Smart Account · YouTube · 1 小时前", ticker:"NVDA", title:"突破 US$212 后，NVDA 可能打开新的上行空间", summary:"作者把 US$212 视为关键阻力，认为放量突破后，价格有机会回测 US$236。", reason:"数据中心订单与 Blackwell 交付节奏仍在增强；短期估值压力尚未破坏中期增长判断。", horizon:"60D", rank:"Top 10%", score:94, impact:9, avatar:accountAvatar },
+        { id:"nvda-m1", source:"money", day:84, tone:"bull", actor:"Micah", meta:"Smart Money · Hyperliquid · 38 分钟前", ticker:"NVDA", title:"新开 NVDA 多仓，总规模约 US$143,000", summary:"该地址分四笔建立 10× 多仓，平均每笔约 US$35.7K。", reason:"公开成交只说明资金动作；当前仓位仍未平仓，不推测其操作理由。", horizon:"短线资金", rank:"Score 35", score:88, impact:10, avatar:moneyAvatar },
+        { id:"nvda-a2", source:"account", day:76, tone:"bull", actor:"True North", meta:"Smart Account · YouTube · 4 天前", ticker:"NVDA", title:"长期判断不变，但估值风险成为第一观察项", summary:"作者维持长期看多，同时新增条件：未来两个季度毛利率必须维持在当前区间。", reason:"需求仍强，但越高的市场预期意味着财报容错率继续下降。", horizon:"180D", rank:"Top 7%", score:96, impact:6, avatar:accountAvatar },
+        { id:"nvda-a3", source:"account", day:85, tone:"bull", actor:"Market Signal", meta:"Smart Account · YouTube · 2 小时前", ticker:"NVDA", title:"Blackwell 交付改善，回调仍被视为中期加仓窗口", summary:"作者认为供应改善正在把订单转化为收入，当前回调没有改变未来两个季度的增长斜率。", reason:"判断依据是供应链交付、数据中心订单可见度以及客户资本开支延续。", horizon:"60D", rank:"Top 16%", score:88, impact:8, avatar:accountAvatar },
+        { id:"nvda-a4", source:"account", day:81, tone:"neutral", actor:"JTrader", meta:"Smart Account · X · 1 天前", ticker:"NVDA", title:"趋势仍强，但不在 US$212 下方提前追价", summary:"作者认可中期趋势，同时把 US$212 突破与成交量确认证据作为新的入场条件。", reason:"分歧集中在交易位置，而不是对 AI 基础设施需求的判断。", horizon:"30D", rank:"Top 19%", score:84, impact:5, avatar:accountAvatar },
+        { id:"nvda-a5", source:"account", day:78, tone:"bull", actor:"WallStTitan", meta:"Smart Account · X · 3 天前", ticker:"NVDA", title:"供应链控制与 SK 海力士合作支撑下一轮增长", summary:"作者继续看多，认为先进封装与 HBM 供给改善会支持下一轮产品爬坡。", reason:"核心证据来自供应链协作与 Blackwell 后续产品的产能准备。", horizon:"90D", rank:"Top 23%", score:80, impact:5, avatar:accountAvatar },
+        { id:"nvda-m2", source:"money", day:65, tone:"bear", actor:"Adrian", meta:"Smart Money · Hyperliquid · 12 天前", ticker:"NVDA", title:"平掉 NVDA 多仓，减少约 US$4,211 敞口", summary:"该地址结束一笔 20× 多仓，记录中的 NVDA 名义敞口降至 0。", reason:"这里只呈现已发生的平仓行为，不将短线杠杆操作外推为长期看空。", horizon:"短线资金", rank:"Score 34", score:85, impact:7, avatar:moneyAvatar }
+      ]},
+      HOOD: { name:"Robinhood", logo:ROOT + "Ticker_HOOD.imageset/HOOD.png", price:95.24, change:1.42, events:[
+        { id:"hood-a1", source:"account", day:88, tone:"bull", actor:"Trade With Insight", meta:"Smart Account · X · 12 分钟前", ticker:"HOOD", title:"HOOD 出现 5 日交易计划，目标价 US$100", summary:"作者将 US$93.08 设为触发位，认为股价在 US$93 形成双底。", reason:"US$93 支撑与均线收敛可能推动价格向 US$100 运行；跌破 US$92.50 则判断失效。", horizon:"5D", rank:"Top 8%", score:95, impact:9, avatar:accountAvatar },
+        { id:"hood-m1", source:"money", day:82, tone:"bull", actor:"0x87f…1c2", meta:"Smart Money · Hyperliquid · 1 天前", ticker:"HOOD", title:"HOOD 多仓增加 US$38,600，杠杆维持 6×", summary:"该地址在价格回落时分两笔增加多仓，未改变原有方向。", reason:"这是公开仓位变化，不代表其持有周期与社媒作者一致。", horizon:"短线资金", rank:"Score 31", score:81, impact:7, avatar:moneyAvatar },
+        { id:"hood-a2", source:"account", day:70, tone:"neutral", actor:"JTrader", meta:"Smart Account · X · 8 天前", ticker:"HOOD", title:"增长叙事仍在，但当前价格已反映较高预期", summary:"作者继续关注预测市场和加密业务增长，但不建议在财报前追高。", reason:"判断变化来自估值与事件窗口，不是基本面转弱。", horizon:"30D", rank:"Top 19%", score:84, impact:4, avatar:accountAvatar }
+      ]},
+      MSTR: { name:"Strategy", logo:ROOT + "Ticker_MSTR.imageset/MSTR.png", price:401.78, change:-1.16, events:[
+        { id:"mstr-a1", source:"account", day:86, tone:"bull", actor:"True North", meta:"Smart Account · YouTube · 4 小时前", ticker:"MSTR", title:"长期判断不变，继续观察比特币持仓扩张", summary:"作者认为公司仍在向 2026 年持有 100 万枚比特币的目标推进。", reason:"核心依据是购币节奏、融资能力以及资产负债表溢价能否维持。", horizon:"180D", rank:"Top 7%", score:96, impact:8, avatar:accountAvatar },
+        { id:"mstr-m1", source:"money", day:79, tone:"bear", actor:"0xa21…be8", meta:"Smart Money · Hyperliquid · 2 天前", ticker:"MSTR", title:"MSTR 多仓减半，释放 US$91,400 名义敞口", summary:"该地址通过两笔成交降低多仓，剩余仓位仍保持多头方向。", reason:"动作体现短期风险暴露下降，不等于长期基本面转空。", horizon:"短线资金", rank:"Score 37", score:92, impact:9, avatar:moneyAvatar },
+        { id:"mstr-a2", source:"account", day:61, tone:"bear", actor:"Market Signal", meta:"Smart Account · YouTube · 18 天前", ticker:"MSTR", title:"警惕净值溢价收缩带来的短期回撤", summary:"作者将比特币稳定但 MSTR 相对走弱视为溢价收缩信号。", reason:"若相对强度继续下降，短期价格可能回到前期成交密集区。", horizon:"20D", rank:"Top 16%", score:88, impact:6, avatar:accountAvatar },
+        { id:"mstr-a3", source:"account", day:74, tone:"neutral", actor:"The Finance Hydra", meta:"Smart Account · YouTube · 6 天前", ticker:"MSTR", title:"继续持有，但把净值溢价设为仓位上限约束", summary:"作者没有否定比特币长期方向，只是在溢价扩张时降低 MSTR 的新增仓位。", reason:"比特币敞口仍有吸引力，但融资摊薄与净值溢价决定新增仓位的性价比。", horizon:"90D", rank:"Top 10%", score:94, impact:7, avatar:accountAvatar }
+      ]},
+      PLTR: { name:"Palantir", logo:ROOT + "Ticker_PLTR.imageset/PLTR.png", price:131.18, change:-.72, events:[
+        { id:"pltr-a1", source:"account", day:89, tone:"bear", actor:"JTrader", meta:"Smart Account · X · 25 分钟前", ticker:"PLTR", title:"PLTR 空头先兑现一半利润，剩余仓位继续观察", summary:"作者平均做空位置约 US$133，价格向预期方向运行后先锁定 50% 利润。", reason:"这是约 5 日的交易管理，不代表作者否定公司的长期增长。", horizon:"5D", rank:"Top 19%", score:84, impact:8, avatar:accountAvatar },
+        { id:"pltr-m1", source:"money", day:73, tone:"bull", actor:"0x991…7aa", meta:"Smart Money · Hyperliquid · 6 天前", ticker:"PLTR", title:"PLTR 空仓平仓后转为小规模多仓", summary:"该地址先结束空仓，随后建立约 US$14,800 的 3× 多仓。", reason:"方向发生切换，但仓位规模较小，先作为新行为记录。", horizon:"短线资金", rank:"Score 29", score:78, impact:5, avatar:moneyAvatar },
+        { id:"pltr-a2", source:"account", day:58, tone:"bull", actor:"The Finance Hydra", meta:"Smart Account · YouTube · 22 天前", ticker:"PLTR", title:"商业合同增长支持中期判断，但不追财报缺口", summary:"作者认可商业业务增速，同时认为财报后跳空区域需要时间消化。", reason:"增长质量支持中期看多，但买入位置应等待波动收敛。", horizon:"60D", rank:"Top 10%", score:94, impact:6, avatar:accountAvatar }
+      ]}
+    };
+
+    const symbols = Object.keys(assets);
+    let selectedSymbol = "NVDA";
+    let sourceFilter = "all";
+    let period = 30;
+    let sortMode = "recent";
+    let focusedEventId = null;
+    const allEvents = symbols.flatMap(symbol => assets[symbol].events);
+
+    const viewpointPacks = [
+      {
+        id:"nvda-growth", ticker:"NVDA", theme:"AI 基础设施 · 30–180D", updated:"1 小时前", views:6,
+        title:"增长判断仍积极，但 US$212 成为共同的确认位",
+        summary:"5 位 Smart Account 仍认可 Blackwell 与数据中心需求，其中 4 位维持看多；新的关注点从“需求是否存在”转向“什么价格值得行动”。",
+        common:"Blackwell 交付、HBM 供应与云厂商资本开支仍支持未来两个季度的收入增长。",
+        difference:"主要分歧不在方向，而在买点：2 位要求先放量突破 US$212，1 位认为当前回调已具备中期吸引力。",
+        eventIds:["nvda-a1","nvda-a3","nvda-a4","nvda-a5","nvda-a2"]
+      },
+      {
+        id:"mstr-premium", ticker:"MSTR", theme:"比特币代理 · 90–180D", updated:"4 小时前", views:4,
+        title:"长期持币逻辑未变，仓位判断转向关注净值溢价",
+        summary:"3 位 Smart Account 均未否定比特币方向，但开始把融资能力、潜在摊薄与净值溢价加入仓位判断。",
+        common:"持续购币能力仍是长期判断的核心，资产负债表扩张速度决定上行弹性。",
+        difference:"一位作者继续长期持有；一位减少新增仓位；另一位认为相对强度走弱可能先带来短期回撤。",
+        eventIds:["mstr-a1","mstr-a3","mstr-a2"]
+      }
+    ];
+
+    const avatarColors = ["#57dfbd", "#72baff", "#ffca59", "#c6b3ff", "#f18cba"];
+
+    function toneColor(tone) { return tone === "bear" ? "#ff6374" : tone === "neutral" ? "#ffca59" : "#57dfbd"; }
+
+    function makeSeries(symbol) {
+      const asset = assets[symbol];
+      const seed = symbols.indexOf(symbol) + 4;
+      const points = [];
+      let close = asset.price * (symbol === "MSTR" ? .72 : .8);
+      for (let day = 0; day < 90; day += 1) {
+        const drift = (asset.price - close) / Math.max(12, 90 - day);
+        const wave = Math.sin((day + seed * 6) * .47) * asset.price * .0045;
+        const micro = Math.sin((day + seed) * 1.71) * asset.price * .0022;
+        const open = close + Math.sin(day * .9 + seed) * asset.price * .003;
+        close = Math.max(asset.price * .56, close + drift + wave + micro);
+        const high = Math.max(open, close) + asset.price * (.004 + ((day + seed) % 4) * .0013);
+        const low = Math.min(open, close) - asset.price * (.004 + ((day + seed * 2) % 3) * .0014);
+        points.push({ day, open, high, low, close });
+      }
+      const correction = asset.price - points[89].close;
+      points.forEach((point, index) => {
+        const offset = correction * index / 89;
+        point.open += offset; point.high += offset; point.low += offset; point.close += offset;
+      });
+      return points;
+    }
+    const series = Object.fromEntries(symbols.map(symbol => [symbol, makeSeries(symbol)]));
+
+    function visibleEvents() {
+      const minDay = 90 - period;
+      let events = assets[selectedSymbol].events.filter(event => event.day >= minDay && (sourceFilter === "all" || event.source === sourceFilter));
+      if (sortMode === "score") events.sort((a,b) => b.score - a.score);
+      else if (sortMode === "impact") events.sort((a,b) => b.impact - a.impact);
+      else events.sort((a,b) => b.day - a.day);
+      return events;
+    }
+
+    function renderHero() {
+      const asset = assets[selectedSymbol];
+      const events = visibleEvents();
+      document.getElementById("heroTitle").textContent = `${selectedSymbol} 的观点都落在什么价格？`;
+      document.getElementById("heroTicker").textContent = `${selectedSymbol} · US$${asset.price.toFixed(2)}`;
+      const change = document.getElementById("heroChange");
+      change.textContent = `${asset.change >= 0 ? "+" : ""}${asset.change.toFixed(2)}% 今日`;
+      document.getElementById("accountCount").textContent = `${events.filter(event => event.source === "account").length} 个观点`;
+      document.getElementById("moneyCount").textContent = `${events.filter(event => event.source === "money").length} 个动作`;
+      drawHeroChart(events);
+    }
+
+    function drawHeroChart(events) {
+      const svg = document.getElementById("heroChart");
+      const all = series[selectedSymbol];
+      const start = 90 - period;
+      const points = all.filter(point => point.day >= start);
+      const W = 340, H = 210, m = { t:16, r:8, b:20, l:8 };
+      const min = Math.min(...points.map(point => point.low));
+      const max = Math.max(...points.map(point => point.high));
+      const pad = Math.max((max - min) * .14, max * .015);
+      const x = day => m.l + (day - start) / Math.max(1, period - 1) * (W - m.l - m.r);
+      const y = value => m.t + ((max + pad - value) / (max - min + 2 * pad)) * (H - m.t - m.b);
+      const candleW = Math.max(2.1, Math.min(7, (W - m.l - m.r) / points.length * .58));
+      let html = "";
+      [0,.5,1].forEach(ratio => { const yy = m.t + ratio * (H - m.t - m.b); html += `<line x1="${m.l}" y1="${yy}" x2="${W-m.r}" y2="${yy}" stroke="rgba(7,17,13,.12)" stroke-width="1"/>`; });
+      points.forEach(point => {
+        const xx = x(point.day); const up = point.close >= point.open; const color = up ? "#07110d" : "#a9273b";
+        const top = Math.min(y(point.open), y(point.close)); const body = Math.max(1.2, Math.abs(y(point.open)-y(point.close)));
+        html += `<line x1="${xx}" y1="${y(point.high)}" x2="${xx}" y2="${y(point.low)}" stroke="${color}" stroke-width="1"/>`;
+        html += `<rect x="${xx-candleW/2}" y="${top}" width="${candleW}" height="${body}" rx=".5" fill="${color}"/>`;
+      });
+      events.forEach((event,index) => {
+        const xx = x(event.day); const base = y(all[event.day].close); const markerY = Math.max(20, base - (index % 2 ? 30 : 18));
+        const color = event.source === "money" ? "#24699f" : toneColor(event.tone);
+        html += `<line x1="${xx}" y1="${base}" x2="${xx}" y2="${markerY}" stroke="${color}" stroke-width="1.2" stroke-dasharray="2 3"/>`;
+        if (event.id === focusedEventId) {
+          const label = event.actor.length > 13 ? `${event.actor.slice(0,12)}…` : event.actor;
+          const labelX = Math.max(8, Math.min(W - 91, xx - 42));
+          const labelY = Math.max(3, markerY - 27);
+          html += `<circle cx="${xx}" cy="${markerY}" r="12" fill="none" stroke="#fff" stroke-width="1.4" opacity=".92"/>`;
+          html += `<rect x="${labelX}" y="${labelY}" width="84" height="15" rx="4" fill="#07110d"/>`;
+          html += `<text x="${labelX+42}" y="${labelY+10}" text-anchor="middle" fill="#fff" font-size="6" font-weight="800">${label}</text>`;
+        }
+        if (event.source === "account") {
+          html += `<circle class="event-marker" data-event-id="${event.id}" cx="${xx}" cy="${markerY}" r="8" fill="#07110d" stroke="${color}" stroke-width="2" tabindex="0" role="button" aria-label="${event.title}"/>`;
+          html += `<text x="${xx}" y="${markerY+2.5}" text-anchor="middle" fill="${color}" font-size="6" font-weight="900" pointer-events="none">A</text>`;
+        } else {
+          html += `<rect class="event-marker" data-event-id="${event.id}" x="${xx-6}" y="${markerY-6}" width="12" height="12" rx="1" fill="#07110d" stroke="#72baff" stroke-width="2" transform="rotate(45 ${xx} ${markerY})" tabindex="0" role="button" aria-label="${event.title}"/>`;
+          html += `<text x="${xx}" y="${markerY+2.5}" text-anchor="middle" fill="#72baff" font-size="6" font-weight="900" pointer-events="none">M</text>`;
+        }
+      });
+      if (!events.length) html += `<text x="170" y="105" text-anchor="middle" fill="rgba(7,17,13,.56)" font-size="9">当前筛选下暂无事件</text>`;
+      html += `<text x="8" y="205" fill="rgba(7,17,13,.48)" font-size="7">${period === 7 ? "7 天前" : period === 30 ? "30 天前" : "3 个月前"}</text><text x="332" y="205" text-anchor="end" fill="rgba(7,17,13,.48)" font-size="7">今天</text>`;
+      svg.innerHTML = html;
+      svg.querySelectorAll(".event-marker").forEach(marker => {
+        marker.style.cursor = "pointer";
+        marker.addEventListener("click", () => openEvent(marker.dataset.eventId));
+        marker.addEventListener("keydown", event => { if (event.key === "Enter" || event.key === " ") openEvent(marker.dataset.eventId); });
+      });
+    }
+
+    function renderPortfolio() {
+      document.getElementById("portfolioStrip").innerHTML = symbols.map(symbol => {
+        const asset = assets[symbol];
+        const path = series[symbol].slice(-20).map((point,index,array) => {
+          const min = Math.min(...array.map(p=>p.close)), max = Math.max(...array.map(p=>p.close));
+          return `${index ? "L" : "M"}${index/19*112},${29-(point.close-min)/Math.max(.01,max-min)*25}`;
+        }).join(" ");
+        return `<button class="asset-snapshot" data-symbol="${symbol}"><div class="snapshot-top"><img src="${asset.logo}" alt="${symbol}"><span>${asset.events.length} 条</span></div><h3>${symbol}</h3><p class="${asset.change < 0 ? "down" : ""}">${asset.change >= 0 ? "+" : ""}${asset.change.toFixed(2)}%</p><svg class="mini-chart" viewBox="0 0 112 33" aria-hidden="true"><path d="${path}" fill="none" stroke="${asset.change >= 0 ? "#57dfbd" : "#ff6374"}" stroke-width="2"/></svg><div class="snapshot-events">观点 ${asset.events.filter(e=>e.source==='account').length} · 资金 ${asset.events.filter(e=>e.source==='money').length}</div></button>`;
+      }).join("");
+      document.querySelectorAll(".asset-snapshot").forEach(button => button.addEventListener("click", () => chooseAsset(button.dataset.symbol)));
+    }
+
+    function toneLabel(tone) { return tone === "bear" ? "看空" : tone === "neutral" ? "观望" : "看多"; }
+
+    function avatarMarkup(event, index, className = "mini-avatar") {
+      const initial = event.actor.trim().charAt(0).toUpperCase();
+      return `<span class="${className}" style="background:${avatarColors[index % avatarColors.length]}">${initial}</span>`;
+    }
+
+    function renderViewpointPacks() {
+      const container = document.getElementById("viewpointPacks");
+      container.innerHTML = viewpointPacks.map((pack,packIndex) => {
+        const events = pack.eventIds.map(findEvent).filter(Boolean);
+        const counts = events.reduce((result,event) => {
+          result[event.tone] = (result[event.tone] || 0) + 1;
+          return result;
+        }, {});
+        const total = Math.max(1, events.length);
+        return `
+          <button class="editorial-pack-card ${packIndex ? "secondary" : ""}" data-pack-id="${pack.id}" aria-label="打开 ${pack.title}">
+            <span class="editorial-pack-top"><span class="editorial-pack-label">观点精华 · ${pack.ticker}</span><span class="editorial-pack-open">↗</span></span>
+            <h3>${pack.title}</h3>
+            <p>${pack.summary}</p>
+            <span class="editorial-pack-art">
+              <img class="pack-logo" src="${assets[pack.ticker].logo}" alt="${pack.ticker}">
+              <span><span class="pack-meter-label"><span>${Math.round((counts.bull || 0) / total * 100)}% 维持看多</span><span>${counts.neutral || 0} 观望 · ${counts.bear || 0} 看空</span></span><span class="stance-meter"><i class="bull" style="width:${(counts.bull || 0) / total * 100}%"></i><i class="neutral" style="width:${(counts.neutral || 0) / total * 100}%"></i><i class="bear" style="width:${(counts.bear || 0) / total * 100}%"></i></span></span>
+            </span>
+            <span class="editorial-pack-foot">
+              <span class="pack-meta">${events.length} 位账户 · ${pack.views} 条观点 · ${pack.updated}</span>
+              <span class="avatar-stack">${events.slice(0,5).map((event,index) => avatarMarkup(event,index)).join("")}</span>
+            </span>
+          </button>`;
+      }).join("");
+      container.querySelectorAll("[data-pack-id]").forEach(button => button.addEventListener("click", () => openPackPage(button.dataset.packId)));
+    }
+
+    function renderStandaloneViews() {
+      const eventIds = ["hood-a1", "pltr-a1", "nvda-a3"];
+      const container = document.getElementById("standaloneViews");
+      container.innerHTML = eventIds.map((id,index) => {
+        const event = findEvent(id);
+        return `
+          <article class="standalone-view">
+            ${avatarMarkup(event,index,"standalone-avatar")}
+            <span class="standalone-copy"><span class="standalone-identity"><strong>${event.actor}</strong><span>${event.ticker} · ${event.rank} · ${event.meta.split(" · ").at(-1)}</span></span><span class="standalone-title">${event.title}</span></span>
+            <button class="standalone-action" data-event-id="${event.id}">查看</button>
+          </article>`;
+      }).join("");
+      container.querySelectorAll("[data-event-id]").forEach(button => button.addEventListener("click", () => openEvent(button.dataset.eventId)));
+    }
+
+    function packViewRows(events) {
+      return events.map((event,index) => `
+        <article class="pack-view">
+          <button class="view-open" data-event-id="${event.id}" aria-label="查看 ${event.actor} 的完整观点">
+            ${avatarMarkup(event,index,"view-avatar")}
+            <span class="view-copy">
+              <span class="view-identity"><strong>${event.actor}</strong><span>${event.rank}</span></span>
+              <span class="view-title">${event.title}</span>
+              <span class="view-tags"><span class="view-tag ${event.tone}">${toneLabel(event.tone)}</span><span class="view-tag">${event.horizon}</span><span class="view-tag">${event.meta.split(" · ").at(-1)}</span></span>
+            </span>
+          </button>
+          <button class="locate-view" data-focus-event="${event.id}">主图</button>
+        </article>`).join("");
+    }
+
+    function drawPackChart(pack, events) {
+      const svg = document.getElementById("packChart");
+      const points = series[pack.ticker];
+      const W = 340, H = 154, m = { t:18, r:10, b:19, l:8 };
+      const min = Math.min(...points.map(point => point.close));
+      const max = Math.max(...points.map(point => point.close));
+      const x = day => m.l + day / 89 * (W - m.l - m.r);
+      const y = value => m.t + (max - value) / Math.max(.01,max-min) * (H - m.t - m.b);
+      const line = points.map((point,index) => `${index ? "L" : "M"}${x(point.day)},${y(point.close)}`).join(" ");
+      let html = `<path d="${line}" fill="none" stroke="#57dfbd" stroke-width="2"/>`;
+      [0,.5,1].forEach(ratio => { const yy = m.t + ratio * (H - m.t - m.b); html = `<line x1="${m.l}" y1="${yy}" x2="${W-m.r}" y2="${yy}" stroke="#28302d" stroke-width="1"/>` + html; });
+      events.forEach((event,index) => {
+        const xx = x(event.day); const yy = y(points[event.day].close); const color = toneColor(event.tone);
+        html += `<line x1="${xx}" y1="${yy}" x2="${xx}" y2="${Math.max(12,yy-25)}" stroke="${color}" stroke-width="1" stroke-dasharray="2 3"/>`;
+        html += `<circle class="pack-event-marker" data-event-id="${event.id}" cx="${xx}" cy="${Math.max(12,yy-25)}" r="8" fill="#0b0e0d" stroke="${color}" stroke-width="2" tabindex="0" role="button" aria-label="${event.title}"/>`;
+        html += `<text x="${xx}" y="${Math.max(12,yy-25)+2.5}" text-anchor="middle" fill="${color}" font-size="6" font-weight="900" pointer-events="none">${index+1}</text>`;
+      });
+      html += `<text x="8" y="151" fill="#747e79" font-size="6.5">3 个月前</text><text x="332" y="151" text-anchor="end" fill="#747e79" font-size="6.5">今天 · US$${assets[pack.ticker].price.toFixed(2)}</text>`;
+      svg.innerHTML = html;
+      svg.querySelectorAll(".pack-event-marker").forEach(marker => {
+        marker.style.cursor = "pointer";
+        marker.addEventListener("click", () => openEvent(marker.dataset.eventId));
+        marker.addEventListener("keydown", event => { if (event.key === "Enter" || event.key === " ") openEvent(marker.dataset.eventId); });
+      });
+    }
+
+    function openPackPage(packId) {
+      const pack = viewpointPacks.find(item => item.id === packId);
+      if (!pack) return;
+      const packIndex = viewpointPacks.indexOf(pack);
+      const events = pack.eventIds.map(findEvent).filter(Boolean);
+      document.getElementById("packPageKicker").textContent = `${pack.ticker} · ${pack.theme}`;
+      document.getElementById("packPageTitle").textContent = pack.title;
+      document.getElementById("packPageSummary").textContent = pack.summary;
+      document.getElementById("packPageCount").textContent = `${events.length} 位 Smart Account · ${pack.views} 条观点`;
+      document.getElementById("packPageAvatars").innerHTML = events.slice(0,5).map((event,index) => avatarMarkup(event,index)).join("");
+      document.getElementById("packPageCommon").textContent = pack.common;
+      document.getElementById("packPageDifference").textContent = pack.difference;
+      document.getElementById("packChartTicker").textContent = `${pack.ticker} · 观点发布时间`;
+      document.getElementById("packPageViews").innerHTML = packViewRows(events);
+      document.getElementById("packPageHero").classList.toggle("secondary", packIndex > 0);
+      document.getElementById("packPageViews").querySelectorAll(".view-open").forEach(button => button.addEventListener("click", () => openEvent(button.dataset.eventId)));
+      document.getElementById("packPageViews").querySelectorAll(".locate-view").forEach(button => button.addEventListener("click", () => focusEventOnChart(button.dataset.focusEvent)));
+      drawPackChart(pack,events);
+      document.getElementById("packPageScroll").scrollTop = 0;
+      document.querySelector(".phone").classList.add("pack-open");
+      const page = document.getElementById("packPage");
+      page.classList.add("open");
+      page.setAttribute("aria-hidden","false");
+    }
+
+    function closePackPage() {
+      document.querySelector(".phone").classList.remove("pack-open");
+      const page = document.getElementById("packPage");
+      page.classList.remove("open");
+      page.setAttribute("aria-hidden","true");
+    }
+
+    function chooseAsset(symbol) {
+      selectedSymbol = symbol;
+      focusedEventId = null;
+      renderHero();
+      document.getElementById("heroStory").scrollIntoView({ behavior:"smooth", block:"start" });
+    }
+
+    function focusEventOnChart(id) {
+      const event = findEvent(id);
+      if (!event) return;
+      closePackPage();
+      selectedSymbol = event.ticker;
+      focusedEventId = id;
+      sourceFilter = "all";
+      if (event.day < 90 - period) period = 90;
+      document.querySelector("[data-hero-period]").textContent = period === 7 ? "7D" : period === 30 ? "1M" : "3M";
+      renderHero();
+      document.getElementById("heroStory").scrollIntoView({ behavior:"smooth", block:"start" });
+    }
+
+    function findEvent(id) { return allEvents.find(event => event.id === id); }
+    function openEvent(id) {
+      const event = findEvent(id);
+      if (!event) return;
+      document.getElementById("detailAvatar").src = event.avatar;
+      document.getElementById("detailAvatar").alt = event.actor;
+      document.getElementById("detailActor").textContent = event.actor;
+      document.getElementById("detailMeta").textContent = event.meta;
+      document.getElementById("detailTitle").textContent = event.title;
+      document.getElementById("detailSummary").textContent = event.summary;
+      document.getElementById("reasonLabel").textContent = event.source === "money" ? "资金行为说明" : "观点依据";
+      document.getElementById("detailReason").textContent = event.reason;
+      document.getElementById("detailTicker").textContent = event.ticker;
+      document.getElementById("detailHorizon").textContent = event.horizon;
+      document.getElementById("detailRank").textContent = event.rank;
+      openSheet(document.getElementById("detailBackdrop"));
+    }
+    function openSheet(backdrop) { backdrop.classList.add("open"); backdrop.setAttribute("aria-hidden","false"); }
+    function closeSheets() { document.querySelectorAll(".sheet-backdrop").forEach(item => { item.classList.remove("open"); item.setAttribute("aria-hidden","true"); }); }
+
+    document.getElementById("openFilter").addEventListener("click", () => openSheet(document.getElementById("filterBackdrop")));
+    document.getElementById("openFirstEvent").addEventListener("click", () => { const event = visibleEvents()[0]; if (event) openEvent(event.id); });
+    document.getElementById("openMoney").addEventListener("click", () => openEvent("nvda-m1"));
+    document.getElementById("closePackPage").addEventListener("click", closePackPage);
+    document.querySelectorAll("[data-symbol]").forEach(button => button.addEventListener("click", () => chooseAsset(button.dataset.symbol)));
+    document.querySelectorAll("[data-close-sheet]").forEach(button => button.addEventListener("click", closeSheets));
+    document.querySelectorAll(".sheet-backdrop").forEach(backdrop => backdrop.addEventListener("click", event => { if (event.target === backdrop) closeSheets(); }));
+    document.addEventListener("keydown", event => {
+      if (event.key !== "Escape") return;
+      if (document.querySelector(".sheet-backdrop.open")) closeSheets();
+      else closePackPage();
+    });
+
+    document.querySelectorAll("[data-source]").forEach(button => button.addEventListener("click", () => { sourceFilter = button.dataset.source; document.querySelectorAll("[data-source]").forEach(item => item.classList.toggle("active", item === button)); }));
+    document.querySelectorAll("[data-period]").forEach(button => button.addEventListener("click", () => { period = Number(button.dataset.period); document.querySelectorAll("[data-period]").forEach(item => item.classList.toggle("active", item === button)); }));
+    document.querySelectorAll("[data-sort]").forEach(button => button.addEventListener("click", () => { sortMode = button.dataset.sort; document.querySelectorAll("[data-sort]").forEach(item => item.classList.toggle("active", item === button)); }));
+    document.getElementById("applyFilter").addEventListener("click", () => { renderHero(); document.querySelector("[data-hero-period]").textContent = period === 7 ? "7D" : period === 30 ? "1M" : "3M"; closeSheets(); });
+
+    renderPortfolio();
+    renderViewpointPacks();
+    renderStandaloneViews();
+    renderHero();
+  </script>
+</body>
+</html>

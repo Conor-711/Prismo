@@ -1,4 +1,4 @@
-"""Compatibility wrapper for Smart Voice X sentiment scoring."""
+"""Compatibility wrapper for Smart Account X sentiment scoring."""
 from __future__ import annotations
 
 from ..domain.smart_voice.tweet_sentiment import MEGACAP, main, megacap_regex, score

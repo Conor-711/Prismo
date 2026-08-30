@@ -8,11 +8,13 @@ struct BSmartApp: App {
     @StateObject private var notifications = NotificationService()
     @StateObject private var notificationPreferences: NotificationPreferencesStore
     @StateObject private var language: AppLanguageStore
+    @StateObject private var appearance: AppAppearanceStore
     private let syncCoordinator: BSmartSyncCoordinator?
 
     init() {
         let client: BSmartAPIClient
         let portfolioBootstrapStrategy: PortfolioBootstrapStrategy
+        let directMrCollieClient: DirectMrCollieAnswering?
         let syncCoordinator: BSmartSyncCoordinator?
         let isUsingDemoData: Bool
 
@@ -26,12 +28,14 @@ struct BSmartApp: App {
             client = DebugBSmartAPIClient(scenario: scenario)
             portfolioBootstrapStrategy = .remoteFallback
             syncCoordinator = nil
+            directMrCollieClient = nil
             isUsingDemoData = true
         } else {
             let composition = BSmartClientFactory.make()
             client = composition.client
             portfolioBootstrapStrategy = composition.portfolioBootstrapStrategy
             syncCoordinator = composition.syncCoordinator
+            directMrCollieClient = composition.directMrCollieClient
             isUsingDemoData = composition.isUsingDemoData
         }
         #else
@@ -39,13 +43,17 @@ struct BSmartApp: App {
         client = composition.client
         portfolioBootstrapStrategy = composition.portfolioBootstrapStrategy
         syncCoordinator = composition.syncCoordinator
+        directMrCollieClient = composition.directMrCollieClient
         isUsingDemoData = composition.isUsingDemoData
         #endif
 
         self.syncCoordinator = syncCoordinator
         _language = StateObject(wrappedValue: AppLanguageStore())
+        _appearance = StateObject(wrappedValue: AppAppearanceStore())
         _model = StateObject(wrappedValue: AppModel(
             client: client,
+            bootstrapFallbackClient: isUsingDemoData ? nil : BundleBSmartAPIClient(),
+            directMrCollieClient: directMrCollieClient,
             portfolioBootstrapStrategy: portfolioBootstrapStrategy,
             syncCoordinator: syncCoordinator,
             isUsingDemoData: isUsingDemoData
@@ -63,8 +71,9 @@ struct BSmartApp: App {
                 .environmentObject(notifications)
                 .environmentObject(notificationPreferences)
                 .environmentObject(language)
+                .environmentObject(appearance)
                 .environment(\.locale, language.locale)
-                .preferredColorScheme(.dark)
+                .preferredColorScheme(appearance.selection.colorScheme)
                 .onOpenURL { url in
                     appDelegate.router.handle(url: url)
                 }

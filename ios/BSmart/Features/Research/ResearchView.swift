@@ -1,71 +1,68 @@
 import SwiftUI
 
-struct ResearchView: View {
+struct AllTickersView: View {
     @EnvironmentObject private var model: AppModel
-    @EnvironmentObject private var language: AppLanguageStore
     @State private var query = ""
 
     private var filteredIntelligence: [TickerIntelligence] {
-        guard !query.isEmpty else { return model.intelligence }
-        return model.intelligence.filter {
+        let source = model.intelligence.sorted { lhs, rhs in
+            if lhs.ticker != rhs.ticker { return lhs.ticker < rhs.ticker }
+            return lhs.companyName < rhs.companyName
+        }
+        guard !query.isEmpty else { return source }
+        return source.filter {
             $0.ticker.localizedCaseInsensitiveContains(query)
                 || $0.companyName.localizedCaseInsensitiveContains(query)
         }
     }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: BSmartSpacing.medium) {
-                    searchField
+        ScrollView {
+            VStack(alignment: .leading, spacing: BSmartSpacing.medium) {
+                searchField
 
-                    BSmartSectionTitle(
-                        title: "Current intelligence",
-                        detail: "%d supported stocks".bSmartLocalized(filteredIntelligence.count)
+                BSmartSectionTitle(
+                    title: query.isEmpty ? "All supported tickers" : "Search results",
+                    detail: "%d of %d supported tickers".bSmartLocalized(
+                        filteredIntelligence.count,
+                        model.intelligence.count
                     )
+                )
 
-                    if filteredIntelligence.isEmpty {
-                        ContentUnavailableView.search(text: query)
-                            .frame(maxWidth: .infinity)
-                            .padding(.top, BSmartSpacing.xxxLarge)
-                    } else {
-                        LazyVStack(spacing: 0) {
-                            ForEach(Array(filteredIntelligence.enumerated()), id: \.element.id) { index, ticker in
-                                NavigationLink(value: ticker) {
-                                    researchRow(ticker)
-                                }
-                                .buttonStyle(.plain)
-                                .accessibilityIdentifier("research.ticker.\(ticker.ticker)")
+                if filteredIntelligence.isEmpty {
+                    ContentUnavailableView.search(text: query)
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, BSmartSpacing.xxxLarge)
+                } else {
+                    LazyVStack(spacing: 0) {
+                        ForEach(Array(filteredIntelligence.enumerated()), id: \.element.id) { index, ticker in
+                            BSmartDetailNavigationLink(id: "ticker-\(ticker.ticker)") {
+                                TickerIntelligenceView(ticker: ticker)
+                            } label: {
+                                tickerRow(ticker)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("portfolio.ticker.\(ticker.ticker)")
 
-                                if index < filteredIntelligence.count - 1 {
-                                    Divider()
-                                        .overlay(BSmartColor.line)
-                                }
+                            if index < filteredIntelligence.count - 1 {
+                                Divider()
+                                    .overlay(BSmartColor.line)
                             }
                         }
-                        .background(BSmartColor.surface)
-                        .clipShape(RoundedRectangle(cornerRadius: BSmartRadius.card, style: .continuous))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: BSmartRadius.card, style: .continuous)
-                                .stroke(BSmartColor.line, lineWidth: 0.6)
-                        }
+                    }
+                    .background(BSmartColor.surface)
+                    .clipShape(RoundedRectangle(cornerRadius: BSmartRadius.card, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: BSmartRadius.card, style: .continuous)
+                            .stroke(BSmartColor.line, lineWidth: 0.6)
                     }
                 }
-                .padding(.horizontal, BSmartSpacing.large)
-                .padding(.vertical, BSmartSpacing.medium)
             }
-            .background(BSmartColor.ink)
-            .navigationTitle(language.localized("Intelligence"))
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationDestination(for: TickerIntelligence.self) { ticker in
-                TickerIntelligenceView(ticker: ticker)
-            }
-            .navigationDestination(for: PortfolioSignal.self) { signal in
-                EventDetailView(signal: signal)
-            }
-            .accessibilityIdentifier("research.screen")
+            .padding(.horizontal, BSmartSpacing.large)
+            .padding(.vertical, BSmartSpacing.medium)
         }
-        .bSmartPage()
+        .background(BSmartColor.ink)
+        .accessibilityIdentifier("portfolio.all-tickers")
     }
 
     private var searchField: some View {
@@ -98,8 +95,13 @@ struct ResearchView: View {
         }
     }
 
-    private func researchRow(_ ticker: TickerIntelligence) -> some View {
-        HStack(alignment: .top, spacing: BSmartSpacing.medium) {
+    private func tickerRow(_ ticker: TickerIntelligence) -> some View {
+        let latestAccount = model.accountUpdates(for: ticker.ticker)
+            .max { $0.publishedAt < $1.publishedAt }
+        let latestMoney = model.moneyMovements(for: ticker.ticker)
+            .max { $0.observedAt < $1.observedAt }
+
+        return HStack(alignment: .top, spacing: BSmartSpacing.medium) {
             BSmartAssetMark(ticker: ticker.ticker, size: 40)
 
             VStack(alignment: .leading, spacing: 5) {
@@ -112,7 +114,7 @@ struct ResearchView: View {
                         .lineLimit(1)
                 }
 
-                Text(ticker.conclusion.bSmartLocalized)
+                Text(tickerSummary(ticker, account: latestAccount, money: latestMoney))
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(BSmartColor.primaryText)
                     .lineLimit(2)
@@ -120,9 +122,6 @@ struct ResearchView: View {
                 HStack(spacing: BSmartSpacing.small) {
                     Label("\(ticker.smartAccount.qualifiedAuthorCount)", systemImage: "person.wave.2")
                     Label("\(ticker.smartMoney.qualifiedAccountCount)", systemImage: "wallet.bifold")
-                    Text("·")
-                    Text(ticker.relationship.label.bSmartLocalized)
-                        .foregroundStyle(ticker.direction.color)
                 }
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(BSmartColor.tertiaryText)
@@ -146,5 +145,39 @@ struct ResearchView: View {
         }
         .padding(BSmartSpacing.medium)
         .contentShape(Rectangle())
+    }
+
+    private func tickerSummary(
+        _ ticker: TickerIntelligence,
+        account: SmartAccountUpdate?,
+        money: SmartMoneyMovement?
+    ) -> String {
+        switch (account, money) {
+        case let (account?, money?) where account.publishedAt >= money.observedAt:
+            return accountTitle(account)
+        case let (_, money?):
+            return "%@ %@ %@".bSmartLocalized(
+                money.publicIdentity.displayName,
+                money.action.label,
+                ticker.ticker
+            )
+        case let (account?, nil):
+            return accountTitle(account)
+        case (nil, nil):
+            return "No recent Smart Account or Smart Money update".bSmartLocalized
+        }
+    }
+
+    private func accountTitle(_ update: SmartAccountUpdate) -> String {
+        let value = BSmartLocalization.isSimplifiedChinese
+            ? (nonBlank(update.activityTitleZH) ?? nonBlank(update.activityTitle))
+            : (nonBlank(update.activityTitleEN) ?? nonBlank(update.activityTitle))
+        return value ?? update.thesis
+    }
+
+    private func nonBlank(_ value: String?) -> String? {
+        guard let value else { return nil }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 }

@@ -15,7 +15,7 @@ shared/
   market/      # 跨页面市场内容展示基础件，如平台/立场配色、作者头像、原文/译文选择
 ```
 
-不应放入具体业务逻辑，例如“标的观点排序”“叙事归类”“SV 过滤”。这些应放到对应 `web/features/<domain>`。
+不应放入具体业务逻辑，例如“标的观点排序”“叙事归类”“Score 过滤”。这些应放到对应 `web/features/<domain>`。
 
 当前已迁移：
 
@@ -27,5 +27,5 @@ shared/
 - `market/mockDetail.ts`：兼容聚合导出；`market/mockDetail/marketMock.ts` 保存标的 fallback，`kolTypes.ts` 保存 KOL 观点类型，`kolFlowMock.ts` 保存 KOL mock 流。
 - `charts/PriceSparkline.tsx`：跨页面迷你价格走势折线图。
 - `layout/ViewportWorkspace.tsx`：固定视窗工作区布局，负责禁止页面整体滚动并按视窗高度约束内容区。
-- `ui/prismoBits.tsx`：跨页面 KPI、情绪分、共识、区域、多空条、价格标签等纯展示件。
+- `ui/bsmartBits.tsx`：跨页面 KPI、情绪分、共识、区域、多空条、价格标签等纯展示件。
 - `ui/detailBits.tsx`：详情页模块外壳、统计条、徽标、变化量等纯展示件。

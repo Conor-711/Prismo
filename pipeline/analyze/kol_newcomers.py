@@ -1,4 +1,4 @@
-"""Compatibility wrapper for Smart Voice KOL newcomer rollup."""
+"""Compatibility wrapper for Smart Account KOL newcomer rollup."""
 from __future__ import annotations
 
 from ..domain.smart_voice.kol_newcomers import rollup

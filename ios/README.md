@@ -30,6 +30,13 @@ Normal Debug launches use the bundled contract fixtures, so Simulator and
 physical iPhone previews work without a development server. The `bSmart Local`
 scheme is reserved for an explicitly configured local API.
 
+Internal testing may call DeepSeek directly while the rest of the app continues
+to use bundled data. Create `ios/Config/Secrets.xcconfig` from the example and
+set `BSMART_DEEPSEEK_API_KEY`. The file is ignored by Git, but the key is still
+embedded in the built app and must be treated as temporary and rotated. Remove
+the local key to restore the server AI boundary or deterministic on-device
+fallback.
+
 `bSmart Internal Alpha` is a separate release-optimized scheme. It excludes all
 fixture JSON and connects through `HTTPBSmartAPIClient` to the live Vultr API.
 Validate it with `make ios-alpha-check`; override `IOS_ALPHA_API_BASE_URL` only
@@ -54,19 +61,20 @@ retry in the background. Portfolio entries retain their client-generated UUID
 through idempotent `PUT /v1/portfolio/{id}`. Debug fixture scenarios do not start
 the sync coordinator.
 
-The current fixture slice exercises the first portfolio-signal loop, including
-an explicit Smart Account-only MSTR signal with `smartMoneyCoverage=unavailable`.
-Today surfaces signals for locally held and watched tickers; event detail shows
-coverage, user context, evidence, and the next research step. Portfolio entries
-support add, edit, delete, position/watchlist conversion, optional cost basis,
-optional declared weight, and `UserDefaults` restoration.
+The current fixture slice exercises independent Smart Account views and Smart
+Money actions for locally held and watched tickers. Today does not manufacture
+same-direction, opposite-direction, or divergence relationships between sources
+that may operate on different horizons. It ranks the raw activities by portfolio
+exposure, evidence quality, action magnitude, and recency, then shows the actor,
+reason or observed action, horizon, target or position change, user context, and
+auditable source evidence. Read state is local-first and persisted in
+`UserDefaults`.
 
-The Mock-data MVP also includes a generated daily portfolio brief and persistent
-Smart Account / Smart Money follows. Signals from followed actors can surface in
-Today even when the ticker is outside the current portfolio, while tracked ticker
-signals remain the primary feed. Today can filter the current feed by evidence
-system, relationship state, or unread state. Follow state and signal state are
-both local-first.
+Portfolio entries support add, edit, delete, position/watchlist conversion,
+optional cost basis, optional declared weight, and `UserDefaults` restoration.
+Smart Account / Smart Money follow state and legacy aggregate signal state remain
+available to their detail and research surfaces, but they do not add generic or
+untracked content to Today.
 
 Alert preferences are also local-first. `NotificationPreferencesStore` persists
 important-change delivery, daily digest time, quiet-hour boundaries, and
@@ -74,12 +82,9 @@ per-ticker switches while preserving the existing local preview notification.
 The production APNs service will consume the same choices after device and
 anonymous-session endpoints are available.
 
-The secondary Opportunity Radar exercises discovery without turning Today into
-a generic market feed. It only shows important fixture signals from the covered
-stock universe that are outside the local portfolio and watchlist. Users can
-inspect the same Smart Account / Smart Money evidence detail and add the ticker
-to their watchlist in one step. Production candidate qualification remains a
-backend Signal Engine responsibility.
+Opportunity discovery remains available outside Today. Production candidate
+qualification remains a backend responsibility; Today is limited to holdings
+and watchlist activity.
 
 Debug launch scenarios support repeatable UI and screenshot acceptance:
 

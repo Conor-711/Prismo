@@ -1,4 +1,4 @@
-"""Backfill one-year uploads for the versioned YouTube SV author pool."""
+"""Backfill one-year uploads for the versioned YouTube Score author pool."""
 from __future__ import annotations
 
 import concurrent.futures
@@ -193,7 +193,7 @@ def _selected_channels(
 
 def _playlist_ids(channel_ids: list[str], api_key: str) -> dict[str, str]:
     session = requests.Session()
-    session.headers["User-Agent"] = "prismo-youtube-author-backfill/0.1"
+    session.headers["User-Agent"] = "bsmart-youtube-author-backfill/0.1"
     playlists: dict[str, str] = {}
     for index in range(0, len(channel_ids), 50):
         chunk = channel_ids[index : index + 50]
@@ -411,7 +411,7 @@ def _crawl_channel(
     started_at = dt.datetime.now(dt.timezone.utc).isoformat()
     cutoff_utc = cutoff.isoformat()
     session = requests.Session()
-    session.headers["User-Agent"] = "prismo-youtube-author-backfill/0.1"
+    session.headers["User-Agent"] = "bsmart-youtube-author-backfill/0.1"
     con = _connect(db_path)
     pages = 0
     seen = 0
@@ -707,7 +707,7 @@ def hydrate_mapped_uploads(
 
     def fetch(chunk: list[str]) -> list[dict[str, Any]]:
         session = requests.Session()
-        session.headers["User-Agent"] = "prismo-youtube-author-hydrate/0.1"
+        session.headers["User-Agent"] = "bsmart-youtube-author-hydrate/0.1"
         return _hydrate_videos(session, chunk, api_key)
 
     hydrated = 0

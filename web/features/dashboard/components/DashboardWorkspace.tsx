@@ -2,10 +2,10 @@ import { LocaleLink } from "@/components/i18n/LocaleLink";
 import { AsiaHeatmap } from "@/components/asia/AsiaCharts";
 import { ViewportWorkspace } from "@/shared/layout/ViewportWorkspace";
 import { TickerLogo } from "@/shared/market/TickerLogo";
-import { SentScore, StanceBar } from "@/shared/ui/prismoBits";
+import { SentScore, StanceBar } from "@/shared/ui/bsmartBits";
 import { fmtCompact, fmtInt, timeAgo } from "@/shared/formatting/format";
 import { regionLabel } from "@/shared/market/regions";
-import { smartVoiceInvestorHref } from "@/features/smart-voice";
+import { smartVoiceInvestorHref } from "@/features/smart-account";
 import type { Locale } from "@/lib/i18n";
 import type { DashboardModel } from "../types";
 import { DashboardSignalPanel } from "./DashboardSignalPanel";
@@ -157,11 +157,11 @@ function VoicePanel({ model, lang }: { model: DashboardModel; lang: Locale }) {
 
   return (
     <PanelShell
-      title={zh ? "Smart Voice 投资者" : "Smart Voice investors"}
+      title={zh ? "Smart Account 投资者" : "Smart Account investors"}
       meta={`${fmtCompact(model.voicePool)} ${zh ? "样本" : "pool"}`}
       className="h-full"
       right={(
-        <LocaleLink href="/smart-voice" className="ml-1 shrink-0 text-[10px] font-semibold text-reddit hover:text-cream">
+        <LocaleLink href="/smart-account" className="ml-1 shrink-0 text-[10px] font-semibold text-reddit hover:text-cream">
           {zh ? "工作台" : "Workspace"} →
         </LocaleLink>
       )}
@@ -200,7 +200,7 @@ function VoicePanel({ model, lang }: { model: DashboardModel; lang: Locale }) {
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-[8px] font-bold uppercase tracking-wider text-neutral-600">SV</div>
+                <div className="text-[8px] font-bold uppercase tracking-wider text-neutral-600">Score</div>
                 <div className={`font-display text-[16px] font-extrabold leading-none tabular ${scoreTone(voice.score)}`}>{voice.score}</div>
               </div>
             </div>
@@ -232,14 +232,14 @@ export function DashboardWorkspace({ model, lang }: { model: DashboardModel; lan
         <header className="flex min-h-9 shrink-0 items-center justify-between gap-4 border-b border-line pb-2">
           <div className="flex min-w-0 items-center gap-3">
             <div className="shrink-0">
-              <div className="text-[9.5px] font-bold uppercase tracking-[0.14em] text-reddit">PRISMO · MARKET INTELLIGENCE</div>
+              <div className="text-[9.5px] font-bold uppercase tracking-[0.14em] text-reddit">bSmart · MARKET INTELLIGENCE</div>
               <h1 className="mt-0.5 font-display text-[20px] font-extrabold leading-none text-cream">
                 {zh ? "总览看板" : "Market overview"}
               </h1>
             </div>
             <span className="hidden h-7 w-px bg-line xl:block" />
             <p className="hidden truncate text-[11px] text-neutral-500 xl:block">
-              {zh ? "跨社区信号、市场热度与 Smart Voice 的统一工作台" : "Cross-community signals, market activity and Smart Voice in one workspace"}
+              {zh ? "跨社区信号、市场热度与 Smart Account 的统一工作台" : "Cross-community signals, market activity and Smart Account in one workspace"}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2 text-[10px] text-neutral-500">

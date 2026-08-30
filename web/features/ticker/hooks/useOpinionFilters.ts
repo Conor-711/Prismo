@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import type { KolOpinion, KolSource, Stance } from "@/shared/market/mockDetail";
-import type { SvTickerBoard } from "@/features/smart-voice/svMock";
+import type { SvTickerBoard } from "@/features/smart-account/svMock";
 import type { CollectionKind } from "@/lib/favorites";
 import {
   DEFAULT_SV_FILTER,

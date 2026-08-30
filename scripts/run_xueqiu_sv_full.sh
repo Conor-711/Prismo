@@ -7,7 +7,7 @@ cd "$ROOT_DIR"
 POOL_VERSION="${POOL_VERSION:-xueqiu-sv-pool-20260710-v2}"
 PYTHON="${PIPELINE_PYTHON:-pipeline/.venv/bin/python}"
 DB_PATH="${XUEQIU_DB_PATH:-data/dev.db}"
-PID_FILE="${XUEQIU_SV_PID_FILE:-/tmp/prismo-xueqiu-sv-full.pid}"
+PID_FILE="${XUEQIU_SV_PID_FILE:-/tmp/bsmart-xueqiu-sv-full.pid}"
 export DATABASE_URL="sqlite:///./${DB_PATH}"
 
 if [[ ! "$POOL_VERSION" =~ ^[A-Za-z0-9._-]+$ ]]; then

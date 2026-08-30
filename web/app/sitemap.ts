@@ -6,7 +6,7 @@ import { getNarrativeSlugs } from "@/server/queries/narrativeRotation";
 
 export const dynamic = "force-static";
 
-// Prismo 站点地图：语言 ×（总览/标的/叙事/搜索 + 各标的 + 各叙事）。
+// bSmart 站点地图：语言 ×（总览/标的/叙事/搜索 + 各标的 + 各叙事）。
 // 标的从 gr_ticker 取；缺数据时只剩静态路由。账号/设置等私有页不收录。
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = `${SITE_URL}${BASE_PATH}`;

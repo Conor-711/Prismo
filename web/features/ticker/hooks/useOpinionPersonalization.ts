@@ -25,7 +25,7 @@ export function useOpinionPersonalization({
 }) {
   const [personal, setPersonal] = useState<PersonalPrefs>(EMPTY_PERSONAL_PREFS);
   const [personalDraft, setPersonalDraft] = useState<PersonalPrefs>(EMPTY_PERSONAL_PREFS);
-  const personalKey = useMemo(() => `prismo:opinion-personal:${symbol || "global"}`, [symbol]);
+  const personalKey = useMemo(() => `bsmart:opinion-personal:${symbol || "global"}`, [symbol]);
   const personalConfigured = isPersonalConfigured(personal);
   const defaultSort: SortMode = personalConfigured ? "personal" : "rel";
 
@@ -52,8 +52,8 @@ export function useOpinionPersonalization({
       setPersonalDraft(next);
       setSort(isPersonalConfigured(next) ? "personal" : "rel");
     };
-    window.addEventListener("prismo:opinion-personal-update", sync);
-    return () => window.removeEventListener("prismo:opinion-personal-update", sync);
+    window.addEventListener("bsmart:opinion-personal-update", sync);
+    return () => window.removeEventListener("bsmart:opinion-personal-update", sync);
   }, [setSort, symbol]);
 
   const applyPersonal = useCallback(() => {

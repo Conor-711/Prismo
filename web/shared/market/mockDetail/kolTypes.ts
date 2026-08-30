@@ -87,7 +87,7 @@ export interface TargetMark {
   source: KolSource;
   opinionId?: string; // 对应 OpinionExplorer 里的观点 id，用于图表点击后在站内打开正文
   author: string;
-  svScore?: number; // 当前 SV_Global；仅作者已进入 SV 评分池时存在
+  svScore?: number; // 当前 SV_Global；仅作者已进入 Score 评分池时存在
   svPlatformScore?: number; // 当前平台内 SV_Platform
   svPercentile?: number; // 当前平台内百分位；越小排名越高
   svRank?: number;

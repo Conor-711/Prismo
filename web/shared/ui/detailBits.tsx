@@ -1,4 +1,4 @@
-import { RegionBadge } from "@/shared/ui/prismoBits";
+import { RegionBadge } from "@/shared/ui/bsmartBits";
 import { regionLabel, regionColor } from "@/shared/market/regions";
 import { sentTextClass } from "@/shared/formatting/format";
 import { IconFlame, IconLayers, IconTrend, IconPulse, IconDoc } from "@/components/icons";

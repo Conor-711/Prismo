@@ -30,8 +30,8 @@ domain/
 - `target_prices/youtube.py`：YouTube 目标价、周期、关键位置判断入口。
 - `target_prices/kol.py`：KOL 目标价和操作周期抽取入口。
 - `authors/youtube.py`：YouTube 创作者对同一标的的综合观点入口。
-- `smart_voice/signals.py`：Smart Voice 情绪、讨论度、新增参与者、整体信号入口。
-- `smart_voice/v0.py` / `v0_impl.py`：Smart Voice v0 候选召回、结构化抽取、结算、评分、导出入口。
+- `smart_voice/signals.py`：Smart Account 情绪、讨论度、新增参与者、整体信号入口。
+- `smart_voice/v0.py` / `v0_impl.py`：Smart Account v0 候选召回、结构化抽取、结算、评分、导出入口。
 - `narratives/rotation.py`：固定 taxonomy 的跨社区叙事轮动导出入口。
 - `narratives/legacy.py`：旧版市场 narrative 聚类入口。
 - `tickers/catalog.py`：ticker 种子和帖子提及抽取入口。

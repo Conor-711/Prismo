@@ -54,7 +54,7 @@ export function SmartVoiceDecisionSuite({
           <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-neutral-500">{zh ? "决策实验室" : "Decision lab"}</span>
           <span className="ml-2 text-[8.5px] text-neutral-700">{topCohort} / {bottomCohort} · {horizon} · {asOfDay}</span>
         </div>
-        <span className="rounded bg-reddit/10 px-1.5 py-0.5 text-[8px] font-semibold text-reddit ring-1 ring-inset ring-reddit/25">{zh ? "真实 SV" : "REAL SV"}</span>
+        <span className="rounded bg-reddit/10 px-1.5 py-0.5 text-[8px] font-semibold text-reddit ring-1 ring-inset ring-reddit/25">{zh ? "真实 Score" : "REAL Score"}</span>
       </div>
       <SmartVoiceOpportunityStrip indicators={indicators} divergence={divergence} targets={distribution} zh={zh} />
       <div className="grid lg:grid-cols-2">

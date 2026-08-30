@@ -1,21 +1,13 @@
 import type { CollectionKind, CollectionRow } from "@/lib/favorites";
+import type { KolOpinion, KolSource, Stance } from "@/shared/market/mockDetail";
 
-export type TrackKind = Extract<CollectionKind, "ticker" | "author" | "narrative" | "subreddit">;
-export type SortKey = "added" | "sent" | "posts";
-export type ActiveTab = "all" | TrackKind;
-
-export const TRACK_KINDS: TrackKind[] = ["ticker", "author", "narrative", "subreddit"];
+export type TrackKind = Extract<CollectionKind, "ticker" | "author" | "narrative">;
 
 export const emptyCollections = (): Record<TrackKind, CollectionRow[]> => ({
   ticker: [],
   author: [],
   narrative: [],
-  subreddit: [],
 });
-
-export function emptyCounts(): Record<TrackKind, number> {
-  return { ticker: 0, author: 0, narrative: 0, subreddit: 0 };
-}
 
 export interface TrackingAuthorCandidate {
   refId: string;
@@ -41,6 +33,7 @@ export interface TrackingNarrativeCandidate {
   volume: number;
   trendZh: string;
   trendEn: string;
+  tickers: string[];
 }
 
 export interface TrackingCatalog {
@@ -60,14 +53,27 @@ export type QuickCandidate = {
   ticker?: string;
 };
 
-export function kindLabel(kind: TrackKind, zh: boolean) {
-  const z: Record<TrackKind, string> = { ticker: "标的", author: "作者", narrative: "叙事", subreddit: "社区" };
-  const e: Record<TrackKind, string> = { ticker: "Tickers", author: "Authors", narrative: "Narratives", subreddit: "Communities" };
-  return (zh ? z : e)[kind];
+export type TrackingFeedMode = "personal" | "latest" | "quality" | "changes";
+export type TrackingPeriod = 1 | 3 | 7 | 30;
+export type TrackingStanceFilter = "all" | Stance;
+export type TrackingSourceFilter = "all" | KolSource;
+
+export interface TrackingFeedItem {
+  symbol: string;
+  opinion: KolOpinion;
+  narrativeKey?: string;
+  svScore?: number;
+  svRank?: number;
+  svPopulation?: number;
+  svPercentile?: number;
 }
 
-export function kindHint(kind: TrackKind, zh: boolean) {
-  const z: Record<TrackKind, string> = { ticker: "价格与情绪", author: "观点来源", narrative: "市场故事", subreddit: "Reddit" };
-  const e: Record<TrackKind, string> = { ticker: "prices & sentiment", author: "source voices", narrative: "market stories", subreddit: "Reddit" };
-  return (zh ? z : e)[kind];
+export interface TrackingRankReason {
+  zh: string;
+  en: string;
+}
+
+export interface TrackingRankedItem extends TrackingFeedItem {
+  feedScore: number;
+  reasons: TrackingRankReason[];
 }

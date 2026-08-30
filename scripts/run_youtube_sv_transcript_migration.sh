@@ -14,7 +14,7 @@ TRANSCRIPT_MODEL="${TRANSCRIPT_MODEL:-${GEMINI_MODEL:-gemini-3-flash-preview}}"
 EXTRACT_WORKERS="${EXTRACT_WORKERS:-8}"
 MIN_READY_AUTHORS="${MIN_READY_AUTHORS:-300}"
 DB_PATH="${PRICE_DB:-$ROOT/data/dev.db}"
-LOCK_DIR="${YOUTUBE_SV_LOCK_DIR:-${TMPDIR:-/tmp}/prismo-youtube-sv-migration.lock}"
+LOCK_DIR="${YOUTUBE_SV_LOCK_DIR:-${TMPDIR:-/tmp}/bsmart-youtube-sv-migration.lock}"
 
 acquire_lock() {
   if mkdir "$LOCK_DIR" 2>/dev/null; then

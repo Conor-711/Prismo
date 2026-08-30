@@ -1,4 +1,4 @@
-"""Build a versioned Xueqiu author discovery pool for Smart Voice."""
+"""Build a versioned Xueqiu author discovery pool for Smart Account."""
 from __future__ import annotations
 
 import csv

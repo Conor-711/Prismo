@@ -2,13 +2,14 @@
 
 // 通用收藏/追踪按钮。两种形态：
 //   variant="bookmark" → 图标书签（帖子/评论收藏）
-//   variant="follow"   → 带标签的胶囊（社区/标的/作者追踪）
-// 未配置 Supabase → 不渲染（静默降级）；未登录 → 点击跳 /login。
+//   variant="follow"   → 带标签的胶囊（标的/作者/叙事追踪）
+// 追踪类按钮直接写设备缓存；帖子/评论收藏仍要求登录及 Supabase。
 import { useRouter } from "next/navigation";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { withLang } from "@/lib/i18n";
+import { isAuthConfigured } from "@/lib/supabase";
 import { useFavorites } from "./FavoritesProvider";
-import type { CollectionKind, Snapshot } from "@/lib/favorites";
+import { isLocalTrackingKind, type CollectionKind, type Snapshot } from "@/lib/favorites";
 
 export function SaveButton({
   kind,
@@ -28,16 +29,17 @@ export function SaveButton({
   const { lang, dict } = useLocale();
   const t = dict.favorites;
   const router = useRouter();
-  const { configured, signedIn, isSaved, toggle } = useFavorites();
+  const { signedIn, isSaved, toggle } = useFavorites();
 
-  if (!configured) return null;
+  const localTracking = isLocalTrackingKind(kind);
+  if (!localTracking && !isAuthConfigured) return null;
 
   const saved = isSaved(kind, refId);
 
   const onClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!signedIn) {
+    if (!localTracking && !signedIn) {
       router.push(withLang(lang, "/login"));
       return;
     }

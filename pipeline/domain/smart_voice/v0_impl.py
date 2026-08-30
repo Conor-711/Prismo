@@ -1,4 +1,4 @@
-"""Smart Voice hybrid pipeline.
+"""Smart Account hybrid pipeline.
 
 The pipeline separates responsibilities:
   1. deterministic rules recall candidate X posts;
@@ -9,7 +9,7 @@ The current scorer uses one evidence-bearing horizon per call and integrates
 the cumulative directional excess-return path against both SPY and an
 auditable industry ETF. It also tracks call lifecycle: a later opposite
 actionable call by the same investor on the same ticker closes the older call
-early. Global SV applies time decay, sample shrinkage, and a concentration gate
+early. Global Score applies time decay, sample shrinkage, and a concentration gate
 before platform-relative scores are exposed.
 
 The pipeline writes local SQLite tables and exports ``web/lib/data/smartVoice.json``.
@@ -78,13 +78,12 @@ SOURCE_LABELS = {
     "reddit": {"zh": "Reddit", "en": "Reddit"},
     "xueqiu": {"zh": "雪球", "en": "Xueqiu"},
     "toss": {"zh": "Toss", "en": "Toss"},
-    "telegram": {"zh": "Telegram", "en": "Telegram"},
 }
 HORIZONS = {"1D": 1, "5D": 5, "20D": 20, "60D": 60, "90D": 90, "180D": 180}
 # Call extraction and investor aggregation are versioned independently. Existing
 # transcript-backed calls remain valid when the ranking formula changes.
 SV_SCORING_VERSION = "v1.8-transcript-lifecycle"
-SV_RANKING_VERSION = "v2.0-dual-benchmark-auc"
+SV_RANKING_VERSION = "v2.1-dual-benchmark-moderate-decay"
 YOUTUBE_UPLOAD_MAPPING_VERSION = "youtube-title-v3"
 YOUTUBE_UPLOAD_MIN_MAPPING_CONFIDENCE = 0.90
 PLATFORM_QUALIFICATION = {
@@ -93,7 +92,6 @@ PLATFORM_QUALIFICATION = {
     "reddit": {"n_eff": 3.0, "settled_calls": 4},
     "xueqiu": {"n_eff": 5.0, "settled_calls": 8},
     "toss": {"n_eff": 5.0, "settled_calls": 8},
-    "telegram": {"n_eff": 5.0, "settled_calls": 8},
 }
 BASE_RATE_PRIOR = 20.0
 BASE_RATE_MIN = 0.40
@@ -220,7 +218,7 @@ INVALIDATE_BEAR_RE = re.compile(
 )
 
 SV_SYSTEM = (
-    "You structure public equity-market posts or videos into tradable calls for Smart Voice scoring. "
+    "You structure public equity-market posts or videos into tradable calls for Smart Account scoring. "
     "Judge only the specified ticker, but first understand whether the post is a single-ticker call, "
     "a basket/sector thesis, a pair trade, a portfolio update, a retrospective, or merely context. "
     "Do not decide whether the call was correct. "
@@ -268,7 +266,7 @@ SV_SYSTEM = (
 )
 
 SV_X_AUDIT_SYSTEM = (
-    "You audit existing X/Twitter Smart Voice calls for attribution errors. "
+    "You audit existing X/Twitter Smart Account calls for attribution errors. "
     "The previous extraction is untrusted. A call survives only when the POST AUTHOR personally makes a "
     "forward-looking bull/bear forecast, states an actual position action, or gives directional risk management "
     "for the specified ticker. News reporting, market briefs, historical price recaps, company announcements, "
@@ -1907,7 +1905,6 @@ def user_prompt(row: sqlite3.Row) -> str:
     item_label = {
         "reddit": "Reddit post",
         "youtube": "YouTube video",
-        "telegram": "Telegram channel post",
     }.get(source, "Tweet")
     text_cap = 5200 if source == "youtube" else 2200
     return (
@@ -2588,7 +2585,7 @@ def extract_calls(
     if transcript_missing:
         print(
             f"[sv-v0] youtube transcript gate skipped={transcript_missing}; "
-            "run the YouTube SV transcript stage first.",
+            "run the YouTube Score transcript stage first.",
             flush=True,
         )
     rows = [
@@ -2620,7 +2617,7 @@ def extract_calls(
                 if isinstance(data, dict):
                     return data, sv_extract_model_label(provider)
         raise RuntimeError(
-            "all Smart Voice extraction providers failed to return valid JSON"
+            "all Smart Account extraction providers failed to return valid JSON"
         )
 
     def work(row: sqlite3.Row) -> tuple[sqlite3.Row, dict[str, Any], str]:
@@ -2776,7 +2773,7 @@ def audit_x_calls(
                 parsed = _x_audit_items(data, batch)
                 if parsed is not None:
                     return batch, parsed, sv_extract_model_label(provider)
-        raise RuntimeError("all Smart Voice audit providers failed to return a complete batch")
+        raise RuntimeError("all Smart Account audit providers failed to return a complete batch")
 
     audited = kept = rejected = fail = 0
     pending_updates: list[tuple[sqlite3.Row, dict[str, Any], str]] = []
@@ -4323,9 +4320,9 @@ def confidence_factor(level: str) -> float:
 
 
 def global_sv_from_platform(platform_sv: float, level: str) -> tuple[int, float]:
-    """Convert platform-relative SV into global deviation ranking.
+    """Convert platform-relative Score into global deviation ranking.
 
-    Global SV measures how far an investor is from the median investor in the
+    Global Score measures how far an investor is from the median investor in the
     investor's own platform, with low-confidence evidence pulled toward 100.
     """
     deviation = ((platform_sv - 100.0) / 100.0) * confidence_factor(level)
@@ -5303,7 +5300,7 @@ def run(args: argparse.Namespace) -> None:
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Smart Voice v0 hybrid scorer")
+    ap = argparse.ArgumentParser(description="Smart Account v0 hybrid scorer")
     ap.add_argument("--stage", choices=["candidates", "transcripts", "extract", "audit", "settle", "score", "export", "all"], default="all")
     ap.add_argument("--source", default="x", help="Comma-separated source subset: x,youtube,reddit,xueqiu,toss,all. Default keeps legacy X-only behavior.")
     ap.add_argument("--candidate-limit", type=int, default=50_000, help="0 means insert all recalled candidates.")
@@ -5318,7 +5315,7 @@ def main() -> None:
     ap.add_argument("--reddit-author-limit", type=int, default=1_000, help="Top Reddit author pool size for candidate recall; 0 means all authors.")
     ap.add_argument("--reddit-since-days", type=int, default=365, help="Reddit candidate lookback window.")
     ap.add_argument("--reddit-min-author-posts", type=int, default=8, help="Minimum ticker-mentioned Reddit posts for Reddit author-pool eligibility.")
-    ap.add_argument("--youtube-min-subs", type=int, default=2_000, help="Minimum public YouTube subscribers for SV eligibility (shared product threshold).")
+    ap.add_argument("--youtube-min-subs", type=int, default=2_000, help="Minimum public YouTube subscribers for Score eligibility (shared product threshold).")
     ap.add_argument("--youtube-since-days", type=int, default=365, help="YouTube candidate lookback window.")
     ap.add_argument("--xueqiu-pool-version", default="", help="Versioned selected Xueqiu author pool; empty uses the latest pool.")
     ap.add_argument("--xueqiu-since-days", type=int, default=365, help="Xueqiu candidate lookback window.")

@@ -13,16 +13,17 @@ import { SaveButton } from "@/components/favorites/SaveButton";
 import { displayName, avatarUrl } from "@/lib/auth";
 import {
   listCollection,
+  listLocalTrackingCollection,
+  isLocalTrackingKind,
   type CollectionKind,
   type CollectionRow,
   type PostSnapshot,
   type CommentSnapshot,
 } from "@/lib/favorites";
 import { Panel, SubredditChip, TickerChip, Avatar } from "@/components/ui";
-import { CommunityIcon } from "@/components/CommunityIcon";
 import { timeAgo } from "@/lib/format";
 
-const TAB_KINDS: CollectionKind[] = ["post", "comment", "subreddit", "ticker", "author"];
+const TAB_KINDS: CollectionKind[] = ["post", "comment", "ticker", "author"];
 
 export function ProfileView() {
   const { lang, dict } = useLocale();
@@ -47,6 +48,11 @@ export function ProfileView() {
       setBusy(false);
       return;
     }
+    if (isLocalTrackingKind(kind)) {
+      setRows(listLocalTrackingCollection(kind));
+      setBusy(false);
+      return;
+    }
     setBusy(true);
     listCollection(user.id, kind).then((r) => {
       if (!active) return;
@@ -68,20 +74,17 @@ export function ProfileView() {
   const label = (k: CollectionKind) =>
     k === "post" ? p.tabPosts
     : k === "comment" ? p.tabComments
-    : k === "subreddit" ? p.tabCommunities
     : k === "ticker" ? p.tabTickers
     : p.tabAuthors;
   const emptyText = (k: CollectionKind) =>
     k === "post" ? p.emptyPosts
     : k === "comment" ? p.emptyComments
-    : k === "subreddit" ? p.emptyCommunities
     : k === "ticker" ? p.emptyTickers
     : p.emptyAuthors;
 
   const statLabel = (k: CollectionKind) =>
     k === "post" ? p.statPosts
     : k === "comment" ? p.statComments
-    : k === "subreddit" ? p.statCommunities
     : k === "ticker" ? p.statTickers
     : p.statAuthors;
 
@@ -120,7 +123,7 @@ export function ProfileView() {
           <span className="w-[3px] h-3.5 rounded-full bg-reddit shrink-0" />
           <h2 className="font-display text-[13px] font-bold text-cream tracking-tight">{p.overview}</h2>
         </div>
-        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {TAB_KINDS.map((k) => {
             const active = k === kind;
             const n = countOf(k);
@@ -186,7 +189,7 @@ export function ProfileView() {
 }
 
 function EmptyIcon({ kind }: { kind: CollectionKind }) {
-  const follow = kind === "subreddit" || kind === "ticker" || kind === "author";
+  const follow = kind === "ticker" || kind === "author";
   return (
     <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       {follow ? <path d="M12 5v14M5 12h14" /> : <path d="M6 4h12a1 1 0 0 1 1 1v15l-7-4-7 4V5a1 1 0 0 1 1-1z" />}
@@ -238,24 +241,6 @@ function CollectionItem({ row, lang, p }: { row: CollectionRow; lang: Locale; p:
           )}
         </div>
         <SaveButton kind="comment" refId={row.ref_id} size="xs" className="shrink-0" />
-      </Panel>
-    );
-  }
-
-  if (row.kind === "subreddit") {
-    return (
-      <Panel className="p-3 flex items-center gap-3">
-        <CommunityIcon id={row.ref_id} size={24} className="text-[11px]" />
-        <span className="text-sm text-neutral-200 flex-1 truncate">r/{row.ref_id}</span>
-        <a
-          href={`https://www.reddit.com/r/${row.ref_id}`}
-          target="_blank"
-          rel="noreferrer noopener"
-          className="text-xs text-neutral-600 hover:text-reddit transition shrink-0"
-        >
-          {p.viewOnReddit} ↗
-        </a>
-        <SaveButton kind="subreddit" refId={row.ref_id} variant="follow" size="xs" />
       </Panel>
     );
   }

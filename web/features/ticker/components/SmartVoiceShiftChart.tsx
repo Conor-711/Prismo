@@ -38,7 +38,7 @@ export function SmartVoiceShiftChart({
         const price = priceByDay.get(day);
         return [
           day,
-          `${zh ? "SV 7日转向" : "SV 7D shift"} <b style="color:${(shift ?? 0) >= 0 ? BULL : BEAR}">${shift == null ? "—" : signed(shift)}</b>`,
+          `${zh ? "Score 7日转向" : "Score 7D shift"} <b style="color:${(shift ?? 0) >= 0 ? BULL : BEAR}">${shift == null ? "—" : signed(shift)}</b>`,
           `${zh ? "股价" : "Price"} <b>${price == null ? "—" : `$${price.toFixed(2)}`}</b>`,
         ].join("<br/>");
       },
@@ -49,7 +49,7 @@ export function SmartVoiceShiftChart({
       itemWidth: 12,
       itemHeight: 2,
       textStyle: { color: AXIS, fontSize: 9 },
-      data: [zh ? "SV 7日转向" : "SV 7D shift", zh ? "股价" : "Price"],
+      data: [zh ? "Score 7日转向" : "Score 7D shift", zh ? "股价" : "Price"],
     },
     xAxis: {
       type: "category",
@@ -86,7 +86,7 @@ export function SmartVoiceShiftChart({
     ],
     series: [
       {
-        name: zh ? "SV 7日转向" : "SV 7D shift",
+        name: zh ? "Score 7日转向" : "Score 7D shift",
         type: "bar",
         yAxisIndex: 0,
         data: points.map((item) => ({

@@ -17,6 +17,8 @@ settings:
     SWIFT_VERSION: "5.0"
     DEVELOPMENT_TEAM: ""
     CODE_SIGN_STYLE: Automatic
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "5"
 
 targets:
   BSmart:
@@ -26,6 +28,8 @@ targets:
       path: BSmart/Supporting/Info.plist
       properties:
         CFBundleDisplayName: bSmart
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         CFBundleURLTypes:
           - CFBundleTypeRole: Editor
             CFBundleURLName: today.bsmart.signal
@@ -33,10 +37,13 @@ targets:
               - bsmart
         BSMART_API_BASE_URL: $(BSMART_ENDPOINT_URL)
         BSMART_DATA_ENVIRONMENT: $(BSMART_DATA_ENVIRONMENT)
+        BSMART_DEEPSEEK_API_KEY: $(BSMART_DEEPSEEK_API_KEY)
+        BSMART_DEEPSEEK_BASE_URL: $(BSMART_DEEPSEEK_BASE_URL)
+        BSMART_MR_COLLIE_MODEL: $(BSMART_MR_COLLIE_MODEL)
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
-        UILaunchScreen: {}
         UIUserInterfaceStyle: Dark
+        UILaunchScreen: {}
     sources:
       - path: BSmart
       - path: ../contracts/fixtures
@@ -46,16 +53,19 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: today.bsmart.ios
         PRODUCT_NAME: BSmart
         PRODUCT_MODULE_NAME: BSmart
+        MARKETING_VERSION: 1.0
+        CURRENT_PROJECT_VERSION: 5
         APS_ENVIRONMENT: development
         BSMART_ENDPOINT_URL: https://api.bsmart.today
         BSMART_DATA_ENVIRONMENT: production
+        BSMART_DEEPSEEK_BASE_URL: https://api.deepseek.com
+        BSMART_MR_COLLIE_MODEL: deepseek-v4-flash
         CODE_SIGN_ENTITLEMENTS: BSmart/Supporting/BSmart.entitlements
         GENERATE_INFOPLIST_FILE: true
         INFOPLIST_KEY_CFBundleDisplayName: bSmart
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: true
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: true
         INFOPLIST_KEY_UILaunchScreen_Generation: true
-        INFOPLIST_KEY_UIUserInterfaceStyle: Dark
         TARGETED_DEVICE_FAMILY: "1"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
@@ -72,9 +82,12 @@ targets:
           BSMART_DATA_ENVIRONMENT: production
         Release:
           APS_ENVIRONMENT: production
-          EXCLUDED_SOURCE_FILE_NAMES: "*.json"
           BSMART_ENDPOINT_URL: https://api.bsmart.today
           BSMART_DATA_ENVIRONMENT: production
+    configFiles:
+      Debug: Config/Base.xcconfig
+      InternalAlpha: Config/Base.xcconfig
+      Release: Config/Base.xcconfig
   BSmartTests:
     type: bundle.unit-test
     platform: iOS

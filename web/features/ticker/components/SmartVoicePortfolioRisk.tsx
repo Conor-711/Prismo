@@ -8,7 +8,7 @@ import { buildPortfolioRisk } from "../smartVoiceResearchLogic";
 const PILOT = ["MU", "NVDA", "MSTR"] as const;
 
 export function SmartVoicePortfolioRisk({ profiles, ticker, zh }: { profiles: SvTickerLensProfile[]; ticker: string; zh: boolean }) {
-  const storageKey = "prismo:sv-pilot-portfolio";
+  const storageKey = "bsmart:sv-pilot-portfolio";
   const [allocations, setAllocations] = useState<Record<string, string>>({ MU: "", NVDA: "", MSTR: "" });
   useEffect(() => {
     try {

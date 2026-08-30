@@ -46,14 +46,14 @@ make cf-deploy
 等价于：
 ```bash
 make site
-rm -rf /tmp/prismo-out-cf
-rsync -a --exclude='/ja/' --exclude='/ko/' web/out/ /tmp/prismo-out-cf/
-npx wrangler pages deploy /tmp/prismo-out-cf --project-name prismo --branch main --commit-dirty=true
+rm -rf /tmp/bsmart-out-cf
+rsync -a --exclude='/ja/' --exclude='/ko/' web/out/ /tmp/bsmart-out-cf/
+npx wrangler pages deploy /tmp/bsmart-out-cf --project-name bsmart --branch main --commit-dirty=true
 ```
 
 当前产品只发布 `zh/en`。如果 `web/out/` 里存在历史 `ja/ko` 静态页，`make cf-deploy` 会在上传前排除它们，避免 Cloudflare Direct Upload 因产物过大而超时。
 
-如果 Cloudflare Pages 项目名不是 `prismo`：
+如果 Cloudflare Pages 项目名不是 `bsmart`：
 ```bash
 PROJECT=<你的项目名> make cf-deploy
 ```
@@ -61,8 +61,8 @@ PROJECT=<你的项目名> make cf-deploy
 Cloudflare 发布成功后会给一个 `*.pages.dev` 预览域名。确认页面和登录功能没问题后，再到 Cloudflare Pages 的 **Custom domains** 绑定正式域名。
 
 需要在 Supabase 同步配置 Auth 回调：
-- Site URL：正式域名，例如 `https://prismo.today`
-- Redirect URLs：`https://prismo.today/**` 和 Cloudflare 预览域名，例如 `https://prismo.pages.dev/**`
+- Site URL：正式域名，例如 `https://bsmart.today`
+- Redirect URLs：`https://bsmart.today/**` 和 Cloudflare 预览域名，例如 `https://bsmart.pages.dev/**`
 
 ## 方式 C：Vercel（部署静态产物，不在平台 build）
 ```bash

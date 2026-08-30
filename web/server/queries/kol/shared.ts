@@ -1,16 +1,11 @@
 import { all } from "@/lib/db";
+import { safeQuery } from "@/server/db/safeQuery";
 import type { Bi, KolCandle, KolJudgment, KolSource, Stance, TweetMetrics, YtSeg } from "@/shared/market/mockDetail";
 
 export const YOUTUBE_MIN_DISPLAY_SUBSCRIBERS = 2_000;
 export const YOUTUBE_MIN_DISPLAY_DURATION_SECONDS = 60;
 
-export function safe<T>(fn: () => T, fb: T): T {
-  try {
-    return fn();
-  } catch {
-    return fb;
-  }
-}
+export const safe = safeQuery;
 
 export const dayOf = (ts: string) => (ts || "").slice(0, 10);
 
@@ -117,9 +112,9 @@ export interface RawOp {
   points?: { zh: string[]; en: string[] };
   metrics?: TweetMetrics; // X 逐项互动数（赞/转/评/引/看/藏）
   ytSegments?: YtSeg[]; // YouTube 完整口播段落（yt_fulltext.segments；多人带说话人）
-  relevance?: number; // 没有 kol_relevance 时的源侧兜底相关度（SV X call）
-  quality?: number; // 没有 kol_quality 时的源侧兜底质量分（SV X call）
-  judgment?: KolJudgment; // 源侧直接结构化出的目标价/周期（SV X call）
+  relevance?: number; // 没有 kol_relevance 时的源侧兜底相关度（Score X call）
+  quality?: number; // 没有 kol_quality 时的源侧兜底质量分（Score X call）
+  judgment?: KolJudgment; // 源侧直接结构化出的目标价/周期（Score X call）
 }
 
 function cleanAuthorKey(author: string): string {

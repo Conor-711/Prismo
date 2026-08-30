@@ -34,7 +34,6 @@ export function OpinionFilterBar({
   trackedAuthorsOnly,
   onTrackedAuthorsOnlyChange,
   trackingConfigured,
-  trackingSignedIn,
   maxDay,
   sinceEff,
   dateInputMinDay,
@@ -68,7 +67,6 @@ export function OpinionFilterBar({
   trackedAuthorsOnly: boolean;
   onTrackedAuthorsOnlyChange: (value: boolean) => void;
   trackingConfigured: boolean;
-  trackingSignedIn: boolean;
   maxDay: string;
   sinceEff: string;
   dateInputMinDay: string;
@@ -148,16 +146,16 @@ export function OpinionFilterBar({
             </div>
           )}
         </Dropdown>
-        <Dropdown label="SV" value={svLabel}>
+        <Dropdown label="Score" value={svLabel}>
           {(close) => (
             <div className="w-[260px] p-1">
               <div className="px-2 pb-2 pt-1">
                 <div className="flex items-center justify-between text-[11px]">
-                  <span className="font-semibold text-neutral-300">{zh ? "Smart Voice 排名" : "Smart Voice rank"}</span>
+                  <span className="font-semibold text-neutral-300">{zh ? "Smart Account 排名" : "Smart Account rank"}</span>
                   <span className="font-mono text-[10.5px] text-neutral-600">{svIndexCount} {zh ? "位" : "voices"}</span>
                 </div>
                 <p className="mt-1 text-[10.5px] leading-snug text-neutral-600">
-                  {zh ? "按当前标的的 SV 排名百分位筛选，0% 越靠近头部。" : "Filter by ticker-specific SV percentile. 0% is the top end."}
+                  {zh ? "按当前标的的 Score 排名百分位筛选，0% 越靠近头部。" : "Filter by ticker-specific Score percentile. 0% is the top end."}
                 </p>
               </div>
               {SV_PRESETS.map((preset) => (
@@ -236,9 +234,7 @@ export function OpinionFilterBar({
           title={
             !trackingConfigured
               ? (zh ? "当前未配置追踪功能" : "Tracking is not configured")
-              : !trackingSignedIn
-                ? (zh ? "登录后可筛选已追踪作者" : "Sign in to filter tracked authors")
-                : (zh ? "只展示已追踪作者发布的观点" : "Only show opinions from tracked authors")
+              : (zh ? "只展示当前设备已追踪作者发布的观点" : "Only show opinions from authors tracked on this device")
           }
           aria-pressed={trackedAuthorsOnly}
         >

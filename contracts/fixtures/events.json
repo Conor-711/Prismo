@@ -3,15 +3,15 @@
     "id": "00000000-0000-0000-0000-000000000201",
     "ticker": "NVDA",
     "companyName": "NVIDIA",
-    "title": "High-ranked accounts turned more constructive while onchain exposure increased",
-    "summary": "Three top-quartile Smart Accounts raised their medium-term view. High-scoring Hyperliquid wallets also added net long exposure.",
+    "title": "High-ranked accounts turned more constructive while capital exposure increased",
+    "summary": "Three top-quartile Smart Accounts raised their medium-term view. High-scoring capital accounts also added net long exposure.",
     "occurredAt": "2026-08-03T01:40:00Z",
     "severity": "important",
     "kind": "confirmation",
     "smartMoneyCoverage": "available",
     "conclusion": "The social view and observable capital are moving in the same direction. This is stronger than a discussion-volume spike, but price is already above your cost basis and the signal should be monitored for follow-through.",
     "positionImpact": "Your NVDA position is 35% of this sample portfolio. Avoid treating the confirmation as an automatic add signal; watch whether net long exposure persists after the next session.",
-    "nextStep": "Compare the next two sessions of high-score wallet exposure with whether the three semiconductor authors maintain their upgraded view.",
+    "nextStep": "Compare the next two sessions of high-score account exposure with whether the three semiconductor authors maintain their upgraded view.",
     "evidence": [
       {
         "id": "00000000-0000-0000-0000-000000000211",
@@ -25,7 +25,7 @@
         "id": "00000000-0000-0000-0000-000000000212",
         "source": "smart_money",
         "title": "Net long exposure increased",
-        "detail": "Five independently scored HIP-3 wallets increased aggregate NVDA long notional.",
+        "detail": "Five independently scored capital accounts increased aggregate NVDA long exposure.",
         "metric": "+$1.8M",
         "sourceURL": null
       }
@@ -36,7 +36,7 @@
     "ticker": "HOOD",
     "companyName": "Robinhood Markets",
     "title": "Social optimism is rising without matching capital confirmation",
-    "summary": "Positive creator commentary accelerated, while high-scoring onchain accounts reduced aggregate exposure over the same window.",
+    "summary": "Positive creator commentary accelerated, while high-scoring capital accounts reduced aggregate exposure over the same window.",
     "occurredAt": "2026-08-02T22:15:00Z",
     "severity": "critical",
     "kind": "divergence",
@@ -56,7 +56,7 @@
       {
         "id": "00000000-0000-0000-0000-000000000222",
         "source": "smart_money",
-        "title": "High-scoring wallets reduced exposure",
+        "title": "High-scoring accounts reduced exposure",
         "detail": "Aggregate long notional declined despite the increase in positive social views.",
         "metric": "-$940K",
         "sourceURL": null

@@ -28,7 +28,7 @@ export function SmartVoiceOpportunityStrip({
 }) {
   const cards = [
     {
-      label: zh ? "高低 SV 预期差" : "High/low SV gap",
+      label: zh ? "高低 Score 预期差" : "High/low Score gap",
       value: `${indicators.divergence.toFixed(0)}/100`,
       detail: divergence.spread == null
         ? (zh ? "样本不足" : "Insufficient")
@@ -58,7 +58,7 @@ export function SmartVoiceOpportunityStrip({
     <div className="border-b border-line">
       <div className="flex items-center justify-between border-b border-line/60 px-4 py-2">
         <h3 className="text-[10px] font-semibold text-neutral-300">{zh ? "多空分歧机会扫描" : "Bull/bear divergence scanner"}</h3>
-        <span className="text-[8px] font-semibold uppercase text-reddit">SV</span>
+        <span className="text-[8px] font-semibold uppercase text-reddit">Score</span>
       </div>
       <div className="grid sm:grid-cols-2 xl:grid-cols-4">
         {cards.map((card) => (

@@ -1,4 +1,4 @@
-"""Smart Voice signal-domain workflows."""
+"""Smart Account signal-domain workflows."""
 from __future__ import annotations
 
 
@@ -69,7 +69,7 @@ def build_overall_signals(
     recent_days: int,
     prior_days: int,
 ) -> None:
-    """Build derived Smart Voice signals for the ticker detail overview."""
+    """Build derived Smart Account signals for the ticker detail overview."""
     from .overall_signals import run
 
     run(ticker, kol_file, window, look, aspect_days, cap, skill_dir, recent_days, prior_days)

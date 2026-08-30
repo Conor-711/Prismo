@@ -44,17 +44,24 @@ struct DebugBSmartAPIClient: BSmartAPIClient {
         return try await value { try await bundleClient.fetchPortfolio() }
     }
 
+    func fetchPortfolioHistory() async throws -> [PortfolioValuePoint] {
+        if scenario == .firstUse || scenario == .weightOnly { return [] }
+        return try await value { try await bundleClient.fetchPortfolioHistory() }
+    }
+
     func fetchSignals() async throws -> [PortfolioSignal] {
         if scenario == .noSignals { return [] }
         return try await value { try await bundleClient.fetchSignals() }
     }
 
     func fetchSmartAccountUpdates() async throws -> [SmartAccountUpdate] {
-        try await value { try await bundleClient.fetchSmartAccountUpdates() }
+        if scenario == .noSignals { return [] }
+        return try await value { try await bundleClient.fetchSmartAccountUpdates() }
     }
 
     func fetchSmartMoneyMovements() async throws -> [SmartMoneyMovement] {
-        try await value { try await bundleClient.fetchSmartMoneyMovements() }
+        if scenario == .noSignals { return [] }
+        return try await value { try await bundleClient.fetchSmartMoneyMovements() }
     }
 
     func fetchTickerIntelligence() async throws -> [TickerIntelligence] {
@@ -71,6 +78,10 @@ struct DebugBSmartAPIClient: BSmartAPIClient {
 
     func fetchSmartMoney() async throws -> [SmartMoneySignal] {
         try await value { try await bundleClient.fetchSmartMoney() }
+    }
+
+    func fetchSmartMoneyEvidence(accountID: String) async throws -> [SmartMoneyRepresentativeEvidence] {
+        try await value { try await bundleClient.fetchSmartMoneyEvidence(accountID: accountID) }
     }
 
     private func value<T>(_ loader: () async throws -> T) async throws -> T {

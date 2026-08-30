@@ -90,7 +90,7 @@ def fetch_sec_names() -> dict[str, tuple[str, str]]:
     try:
         resp = requests.get(
             SEC_COMPANY_TICKERS,
-            headers={"User-Agent": "Prismo local data loader zfy3712@gmail.com"},
+            headers={"User-Agent": "bSmart local data loader zfy3712@gmail.com"},
             timeout=30,
         )
         resp.raise_for_status()

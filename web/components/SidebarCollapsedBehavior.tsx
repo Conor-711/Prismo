@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-const KEY = "prismo:sidebar";
+const KEY = "bsmart:sidebar";
 
 function expandSidebar() {
   document.documentElement.setAttribute("data-sb", "expanded");

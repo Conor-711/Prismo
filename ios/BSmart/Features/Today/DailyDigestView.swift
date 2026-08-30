@@ -148,6 +148,7 @@ struct DailyDigestView: View {
             didTrackOpen = true
             model.trackDailyDigestOpened()
         }
+        .bSmartDetailPage()
         .bSmartPage()
     }
 
@@ -211,7 +212,7 @@ struct DailyDigestView: View {
 
                 ForEach(Array(signals.enumerated()), id: \.element.id) { index, item in
                     if index > 0 { Divider().overlay(BSmartColor.line) }
-                    NavigationLink {
+                    BSmartDetailNavigationLink(id: "digest-signal-\(item.signal.id)") {
                         EventDetailView(signal: item.signal)
                     } label: {
                         HStack(alignment: .top, spacing: BSmartSpacing.medium) {

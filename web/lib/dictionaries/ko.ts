@@ -1,10 +1,10 @@
 import type { Dictionary } from "./zh";
 
-// Korean mirror of zh.ts. Proper nouns (tickers, Prismo, r/subreddits, people) stay verbatim.
+// Korean mirror of zh.ts. Proper nouns (tickers, bSmart, r/subreddits, people) stay verbatim.
 // Post content has no KO translation, so it falls back to the English original at render time.
 export const ko: Dictionary = {
   meta: {
-    title: "Prismo · Reddit 미국 주식 심리 인텔리전스",
+    title: "bSmart · Reddit 미국 주식 심리 인텔리전스",
     description:
       "Reddit 금융 커뮤니티를 전문적으로 분석: 마인드셰어, 투자 심리, 모멘텀 급등, 내러티브 클러스터링, 데일리 브리핑.",
   },
@@ -36,13 +36,12 @@ export const ko: Dictionary = {
   nav: {
     dashboard: "대시보드",
     overview: "개요",
-    smartVoice: "Smart Voice",
+    smartAccount: "Smart Account",
     tickers: "종목",
     investors: "투자자",
     cnstocks: "중국·홍콩주",
     search: "검색",
     tracking: "관심목록",
-    lab: "랩",
     trending: "트렌드",
     narratives: "내러티브",
     leaderboard: "랭킹",
@@ -120,7 +119,7 @@ export const ko: Dictionary = {
     empty: "데이터가 없습니다.",
   },
   searchHero: {
-    eyebrow: "Prismo · 종목 인텔",
+    eyebrow: "bSmart · 종목 인텔",
     title: "어떤 종목이든 검색, Reddit의 강세 vs 약세 논점 보기",
     subPre: "커뮤니티의 진짜 DD(심층 리서치)를 ",
     subBull: "강세론",
@@ -151,11 +150,11 @@ export const ko: Dictionary = {
     label: "공유",
     copy: "링크 복사",
     copied: "복사됨 ✓",
-    tickerText: "{s} — Reddit의 강세 vs 약세 논점 · Prismo",
-    postText: "{s} · Reddit 토론 · Prismo",
+    tickerText: "{s} — Reddit의 강세 vs 약세 논점 · bSmart",
+    postText: "{s} · Reddit 토론 · bSmart",
   },
   install: {
-    title: "Prismo 설치",
+    title: "bSmart 설치",
     subtitle: "앱처럼 전체 화면으로 열기——대시보드로 바로",
     installBtn: "설치",
     howBtn: "방법",
@@ -200,7 +199,7 @@ export const ko: Dictionary = {
     statPosts: "라이브 게시물",
     statTickers: "추적 종목",
     statAuthors: "활성 작성자",
-    enterTitle: "Prismo 입장",
+    enterTitle: "bSmart 입장",
     enterDesc:
       "Reddit 금융 커뮤니티의 마인드셰어, 투자 심리, 내러티브를 실시간 추적. 가입 불필요——열기만 하면 됩니다.",
     enterCta: "라이브 대시보드로",
@@ -332,11 +331,11 @@ export const ko: Dictionary = {
     topBadge: "인기",
   },
   auth: {
-    loginTitle: "Prismo 로그인",
+    loginTitle: "bSmart 로그인",
     loginSubtitle: "마인드셰어, 투자 심리, 데일리 브리핑",
     noAccount: "아직 계정이 없으신가요?",
     signupLink: "가입",
-    signupTitle: "Prismo 가입",
+    signupTitle: "bSmart 가입",
     signupSubtitle: "무료 계정을 만들어 개인화 기능을 잠금 해제",
     haveAccount: "이미 계정이 있으신가요?",
     loginLink: "로그인",
@@ -422,7 +421,7 @@ export const ko: Dictionary = {
   },
   tracking: {
     title: "관심목록",
-    subtitle: "팔로우한 종목 — 5개 커뮤니티 평균 심리, 포함 지역, 지역 간 격차",
+    subtitle: "관심 종목, 투자자와 내러티브로 개인화된 의견 피드를 구성",
     loading: "불러오는 중…",
     signInTitle: "로그인하고 관심목록 보기",
     signInDesc: "관심 종목을 팔로우하고 전 세계 커뮤니티의 심리 변화를 언제든 확인하세요.",
@@ -494,7 +493,7 @@ export const ko: Dictionary = {
     stepOf: "{n} / {total} 단계",
     selected: "{n}개 선택",
     // 0 환영
-    welcomeTitle: "Prismo에 오신 것을 환영합니다 👋",
+    welcomeTitle: "bSmart에 오신 것을 환영합니다 👋",
     welcomeSubtitle:
       "1분 정도 몇 가지 질문에 답하면 대시보드와 관심목록을 맞춤 설정해 드립니다. 언제든 건너뛸 수 있고, 설정에서 변경할 수 있습니다.",
     welcomeBullet1: "보유 종목을 추적하고 커뮤니티 시각을 한눈에 파악",
@@ -599,7 +598,7 @@ export const ko: Dictionary = {
   },
   bookmark: {
     tip: "이 페이지 북마크",
-    sub: "{combo}를 눌러 Prismo를 저장하면 다음에 원클릭으로 접속.",
+    sub: "{combo}를 눌러 bSmart를 저장하면 다음에 원클릭으로 접속.",
     dismiss: "확인",
     close: "닫기",
   },

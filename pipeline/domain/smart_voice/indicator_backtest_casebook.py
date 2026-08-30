@@ -10,7 +10,7 @@ INDICATOR_LABELS = {
     "weighted_net": "加权净强度",
     "author_net": "作者净人数",
     "author_net_shift": "作者净人数突变",
-    "high_low_divergence": "高低 SV 分歧",
+    "high_low_divergence": "高低 Score 分歧",
 }
 
 
@@ -176,7 +176,7 @@ def write_indicator_casebook(report_dir: str | Path, per_side: int = 5) -> int:
                 evidence[row["event_id"]].append(row)
 
     lines = [
-        "# Smart Voice 成功/失败证据案例集",
+        "# Smart Account 成功/失败证据案例集",
         "",
         f"固定口径：全平台合并、7 个自然日信号窗口、20 个交易日持有。每个指标分别选择相对 SPY 超额最好和最差的 {per_side} 个不同标的，共 {len(INDICATOR_LABELS) * per_side * 2} 个案例。所有链接均来自实际参与该事件计算的 Call。",
         "",

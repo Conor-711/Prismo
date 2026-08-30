@@ -26,7 +26,7 @@ from ...common.ticker_extraction import extract_mentions, load_ticker_dict
 from .realtime import store_mentions, upsert_author, upsert_post
 
 BASE = "https://arctic-shift.photon-reddit.com/api/posts/search"
-UA = settings.reddit_user_agent or "Prismo/0.1 (research)"
+UA = settings.reddit_user_agent or "bSmart/0.1 (research)"
 
 QUALITY_GATE = 0.55       # 粗筛过线阈值（0–1）
 MAX_FETCH_PER = 120       # 每位作者最多拉多少历史帖
@@ -70,7 +70,7 @@ def top_authors(s, limit: int = 50) -> list[str]:
 
 
 def repeat_ticker_authors(s, limit: int = 500, min_ticker_posts: int = 3) -> list[str]:
-    """选择重复发表 ticker 相关帖的 Reddit 作者，用于 SV 数据扩爬。
+    """选择重复发表 ticker 相关帖的 Reddit 作者，用于 Score 数据扩爬。
 
     这个池子不要求帖子都已完成 item_analysis，避免早期分析覆盖不足时漏掉
     有持续发帖记录的作者；排序仍用质量、互动、覆盖 ticker 数和方向性作为优先级。

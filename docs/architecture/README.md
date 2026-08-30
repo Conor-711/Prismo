@@ -9,10 +9,11 @@
 3. `02-pipeline.md`：Python 数据管线模块边界。
 4. `03-data-model.md`：数据库、派生表、快照和 schema 规则。
 5. `04-platform-adapters.md`：新增平台时的适配器规范。
-6. `05-smart-voice.md`：Smart Voice 的实现边界。
+6. `05-smart-account.md`：Smart Account 的实现边界。
 7. `06-deployment.md`：构建、数据快照和部署路径。
 8. `08-development-rules.md`：后续新功能开发落点、禁止落点、常见场景和验证清单。
-9. `07-conventions.md`：命名、目录和维护约定。
+9. `09-ios.md`：iOS 主客户端、SwiftUI 边界、API 消费和发布规则。
+10. `07-conventions.md`：命名、目录和维护约定。
 
 ## 维护原则
 

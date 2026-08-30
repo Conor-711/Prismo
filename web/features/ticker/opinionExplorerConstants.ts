@@ -77,7 +77,7 @@ export const SV_PRESETS: {
   en: string;
   enabled: boolean;
 }[] = [
-  { key: "off", low: 0, high: 100, zh: "全部 SV", en: "All SV", enabled: false },
+  { key: "off", low: 0, high: 100, zh: "全部 Score", en: "All Score", enabled: false },
   { key: "top25", low: 0, high: 25, zh: "头部 25%", en: "Top 25%", enabled: true },
   { key: "middle50", low: 25, high: 75, zh: "中部 50%", en: "Middle 50%", enabled: true },
   { key: "bottom25", low: 75, high: 100, zh: "尾部 25%", en: "Bottom 25%", enabled: true },

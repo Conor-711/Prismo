@@ -1,10 +1,10 @@
 # Advanced-Mindshare → 股票 移植可行性分析
 
-> 3 角色独立分析 + 交叉评审 + 综合（2026-06-20）。数字均在 `data/prismo_snapshot.db` + `experiments/prices_cache.json` 实测复核。
+> 3 角色独立分析 + 交叉评审 + 综合（2026-06-20）。数字均在 `data/bsmart_snapshot.db` + `experiments/prices_cache.json` 实测复核。
 > 方法学源：`equity1000/mindshare/ADVANCED_MINDSHARE.md`(v25)。产品规格映射见 `PRODUCT_SPEC_FEASIBILITY.md`。
 
 ## 一句话
-advanced-mindshare 是为 **Twitter 加密代币**设计的机制引擎，靠三根支柱：① 固定 circle-size 分母 ② KOL 关注/smart-engagement 图 ③ 每标的 ≥60–90 天日级历史。**Prismo 三根都不达标**（karma 全 0 无关注图、论坛无固定用户基数、美区仅 11 个日历日）。能原样活的只有不吃长历史、不吃社交图的：自归一化 penetration、entropy、当日量加权方向。**而"NVDA/MU 排名太低"是对的，是方法学伪影——线上 `trending` 按尖峰速度 z 排名，机械埋葬长期在场的大盘股；改按 penetration，NVDA #10→#2。**
+advanced-mindshare 是为 **Twitter 加密代币**设计的机制引擎，靠三根支柱：① 固定 circle-size 分母 ② KOL 关注/smart-engagement 图 ③ 每标的 ≥60–90 天日级历史。**bSmart 三根都不达标**（karma 全 0 无关注图、论坛无固定用户基数、美区仅 11 个日历日）。能原样活的只有不吃长历史、不吃社交图的：自归一化 penetration、entropy、当日量加权方向。**而"NVDA/MU 排名太低"是对的，是方法学伪影——线上 `trending` 按尖峰速度 z 排名，机械埋葬长期在场的大盘股；改按 penetration，NVDA #10→#2。**
 
 ## Q1 指标移植裁定
 | 指标 | 裁定 | 股票化改法 |
@@ -26,7 +26,7 @@ advanced-mindshare 是为 **Twitter 加密代币**设计的机制引擎，靠三
 - **中保真(历史限)**：penetration_ma7 及"vs近期变化"，仅 cn dense 名字真。
 - **历史阻塞(~60–90天后解锁)**：att_60d、vel z、dir z、regime —— 约规格 80% 字段。
 - **特征阻塞(需爬虫/抽取)**：smart/KOL、intent/tone/horizon、期权（原文有料可正则）。
-- **跨区(jp/kr/tw)**：仅聚合 forum_mindshare.json（@120 封顶、14天、无日序，且在 equity1000 不在 Prismo 云）→ 跨区 penetration/velocity/entropy 不可建。
+- **跨区(jp/kr/tw)**：仅聚合 forum_mindshare.json（@120 封顶、14天、无日序，且在 equity1000 不在 bSmart 云）→ 跨区 penetration/velocity/entropy 不可建。
 
 ## Q3 Sense-check（核心发现，全实测）
 **用户对：sentiment 标注合理，但排名坏了——方法学伪影，非数据短缺。**

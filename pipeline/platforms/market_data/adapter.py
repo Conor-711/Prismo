@@ -15,7 +15,7 @@ def backfill_price_history(
     workers: int,
     limit: int,
 ) -> None:
-    """Backfill daily OHLC prices for Smart Voice scoring."""
+    """Backfill daily OHLC prices for Smart Account scoring."""
     from .price_history import run
 
     run(

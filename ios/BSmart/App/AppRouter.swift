@@ -3,9 +3,9 @@ import SwiftUI
 
 enum AppSection: String, Hashable {
     case today
-    case portfolio
-    case research
     case smart
+    case portfolio
+    case ai
 }
 
 enum TodayRoute: Hashable {
@@ -61,6 +61,21 @@ final class AppRouter: ObservableObject {
     @Published var selection: AppSection = .today
     @Published var todayPath = NavigationPath()
     @Published private(set) var pendingSignalID: UUID?
+    @Published private var tabBarHiddenTokens = Set<UUID>()
+
+    var isTabBarHidden: Bool { !tabBarHiddenTokens.isEmpty }
+
+    func setTabBarHidden(_ hidden: Bool, token: UUID) {
+        if hidden {
+            tabBarHiddenTokens.insert(token)
+        } else {
+            tabBarHiddenTokens.remove(token)
+        }
+    }
+
+    func restoreTabBarImmediately() {
+        tabBarHiddenTokens.removeAll()
+    }
 
     #if DEBUG
     func applyDebugLaunchSection(from arguments: [String]) {

@@ -1,17 +1,17 @@
-# Decision Document — Porting equity1000's Mindshare/Regime Methodology to Prismo
+# Decision Document — Porting equity1000's Mindshare/Regime Methodology to bSmart
 
-**For:** Prismo data-layer owner
+**For:** bSmart data-layer owner
 **From:** Research lead (synthesis of 4 role reports + 4 cross-reviews)
 **Date:** 2026-06-19
 **Status:** Recommendation for one runnable-this-week experiment, plus a port map and signal set.
 
-All "measured" numbers below were re-verified live against `data/prismo_snapshot.db` this session, not taken on faith from the reports.
+All "measured" numbers below were re-verified live against `data/bsmart_snapshot.db` this session, not taken on faith from the reports.
 
 ---
 
 ## 0. The one-paragraph answer
 
-equity1000 is two machines bolted together: a **signal-construction front-end** (per-ticker daily time series → 60–90d rolling z-scores / expanding percentiles / EMA / Gaussian smoothing → a 5-state regime label) and a **validation back-end** (forward-return Pearson by horizon, regime-conditional return separation, shuffle/permutation discipline, look-ahead-safe `shift(-N)`). **The validation back-end ports cleanly and is worth doing now. The signal-construction front-end does not fit the data we have** — Prismo's cloud has ~10 dense US days (06-05→06-15), and you cannot fit a single 60-day window on that. So the honest first move is to port the *validation methodology* and run it **cross-sectionally across ticker-days** to answer one gating question: *does any Prismo forum signal carry forward-return information at all?* Everything else (the rolling regime engine, the cross-region divergence layer, author/KOL weighting) is blocked on data that doesn't exist yet and should be sequenced after history and the multi-region forum tables land.
+equity1000 is two machines bolted together: a **signal-construction front-end** (per-ticker daily time series → 60–90d rolling z-scores / expanding percentiles / EMA / Gaussian smoothing → a 5-state regime label) and a **validation back-end** (forward-return Pearson by horizon, regime-conditional return separation, shuffle/permutation discipline, look-ahead-safe `shift(-N)`). **The validation back-end ports cleanly and is worth doing now. The signal-construction front-end does not fit the data we have** — bSmart's cloud has ~10 dense US days (06-05→06-15), and you cannot fit a single 60-day window on that. So the honest first move is to port the *validation methodology* and run it **cross-sectionally across ticker-days** to answer one gating question: *does any bSmart forum signal carry forward-return information at all?* Everything else (the rolling regime engine, the cross-region divergence layer, author/KOL weighting) is blocked on data that doesn't exist yet and should be sequenced after history and the multi-region forum tables land.
 
 All four specialists and all four reviewers independently converged on this. That convergence is the strongest evidence it's right.
 
@@ -21,24 +21,24 @@ All four specialists and all four reviewers independently converged on this. Tha
 
 ### 1A. Ports cleanly (do this)
 
-| equity1000 method | Maps to Prismo via | Note |
+| equity1000 method | Maps to bSmart via | Note |
 |---|---|---|
-| **Forward-return Pearson by horizon** (`01_correlation_analysis.py`): `r(signal[t], fwd_ret_Nd[t])`, min-n gating, `shift(-N)` to kill look-ahead | Source-agnostic. Signal vector swaps Twitter metrics → Prismo columns; prices come from yfinance instead of the internal cache | The single most portable piece. Run it **pooled cross-sectionally over ticker-days**, not per-ticker-over-time |
+| **Forward-return Pearson by horizon** (`01_correlation_analysis.py`): `r(signal[t], fwd_ret_Nd[t])`, min-n gating, `shift(-N)` to kill look-ahead | Source-agnostic. Signal vector swaps Twitter metrics → bSmart columns; prices come from yfinance instead of the internal cache | The single most portable piece. Run it **pooled cross-sectionally over ticker-days**, not per-ticker-over-time |
 | **Regime/bucket-conditional return separation** (`02_regime_return_analysis.py`): stratify forward returns by a discrete state, report mean/median/win-rate | Stratify by **signal terciles or median-split** instead of named regimes (too little history for regimes) | "Does state X separate forward returns" logic is identical; needs no rolling window |
 | **Look-ahead-safe forward returns**: `fwd_ret = price.shift(-N)/price - 1` | Ports verbatim; prices from yfinance aligned to UTC post-days | |
-| **Min-observation gating + OMIT-not-zero doctrine** | Essential given Prismo's thin tail — a 1–2 mention ticker-day must be dropped, not zero-filled | From both `add_forum_mindshare.py` and the n>20/n>50 thresholds |
+| **Min-observation gating + OMIT-not-zero doctrine** | Essential given bSmart's thin tail — a 1–2 mention ticker-day must be dropped, not zero-filled | From both `add_forum_mindshare.py` and the n>20/n>50 thresholds |
 | **Shannon entropy as a direction-independent consensus measure** | Computable today from `item_analysis.stance` (3-bucket bull/bear/neutral) | The *raw* value is computable; the `entropy_ma7` rolling/percentile-gated version is deferred |
-| **Per-region NON-BLEND + breadth-only doctrine** (`add_forum_mindshare.py`) | Already correct for Prismo's `posts.market` us/cn split | The one piece equity1000 *literally wrote to consume Prismo's export*. Keep it — but see 1C on why cross-region can't be *tested* yet |
+| **Per-region NON-BLEND + breadth-only doctrine** (`add_forum_mindshare.py`) | Already correct for bSmart's `posts.market` us/cn split | The one piece equity1000 *literally wrote to consume bSmart's export*. Keep it — but see 1C on why cross-region can't be *tested* yet |
 
 ### 1B. Ports only with substantial adaptation
 
-| equity1000 assumption | Why it breaks on Prismo | Adaptation |
+| equity1000 assumption | Why it breaks on bSmart | Adaptation |
 |---|---|---|
-| **Fixed 12,400-person circle** normalizes `penetration_rate` | Prismo is **post-first**, has no universe denominator and no follower circle | Use **relative attention**: weighted-mention market-share within the day (`mindshare` logic from `rollups.py`), recomputed per day from raw. Drop the circle constant entirely |
+| **Fixed 12,400-person circle** normalizes `penetration_rate` | bSmart is **post-first**, has no universe denominator and no follower circle | Use **relative attention**: weighted-mention market-share within the day (`mindshare` logic from `rollups.py`), recomputed per day from raw. Drop the circle constant entirely |
 | **Per-ticker 60–90d rolling z-scores / expanding percentiles / EMA / causal Gaussian σ=2** | Only ~10 dense US days exist (measured: US posts start 06-05, real density 06-06→06-15). A 60d window cannot fit; expanding percentile with `min_periods=14` yields **zero valid rows** for every US ticker | Pivot to a **cross-sectional panel of ticker-days**. Defer all rolling/percentile machinery until ≥60–90 days of daily history accrue |
 | **Direction = rolling z-score / expanding percentile of `(bull_ratio − bear_ratio)`** | The z-score/percentile *wrapper* needs history we lack | Keep the **raw core** `raw_dir = (bull − bear) / total` (computable today). Defer the normalization layer |
 | **Smart-engagement gate `se_z60`** = retweet-graph weighted KOL interaction | Forums have no retweet graph | Replace with **content/venue weight** = `quality_score × subreddit_weight × (1+ln(1+score))`. See 1C — this is NOT a person-influence proxy |
-| **Sentiment bucketed at 0.6/0.4** (Twitter LLM, 0..1 scale) | Prismo `item_analysis.sentiment_score` is **−1..1** (verified MIN=−1.0, MAX=1.0). Bucketing −1..1 at 0.6/0.4 would label the entire negative half + mild positives as "bear" — a silent units bug that inverts entropy/direction | Use `item_analysis.stance` (already a 3-class label) directly, after the COALESCE fix below |
+| **Sentiment bucketed at 0.6/0.4** (Twitter LLM, 0..1 scale) | bSmart `item_analysis.sentiment_score` is **−1..1** (verified MIN=−1.0, MAX=1.0). Bucketing −1..1 at 0.6/0.4 would label the entire negative half + mild positives as "bear" — a silent units bug that inverts entropy/direction | Use `item_analysis.stance` (already a 3-class label) directly, after the COALESCE fix below |
 | **`tag_retail.py` 10-signal retail-concentration score** | 6 of 10 signals need price/volume/fundamentals not in cloud | Only the social half (mention volume, sentiment extremity) + theme membership (`item_analysis.themes[]`) is computable now. Treat the rest as a yfinance/fundamentals-dependent extension |
 
 ### 1C. Does NOT transfer (and why) — be honest about these
@@ -51,7 +51,7 @@ All four specialists and all four reviewers independently converged on this. Tha
 
 4. **`posts.upvote_ratio` as a consensus/disagreement axis.** **Measured (US): mean 0.979, 4,411 of 4,740 posts (93%) exactly 1.0, only 221 (4.7%) below 0.9.** Reddit vote-fuzzing has crushed it to a spike at 1.0. Behavioral's Miller-disagreement proxy (`1 − mean(upvote_ratio)`) and NLP's `crowd_entropy`/`agreement` axis both have **near-zero cross-sectional variance** and cannot rank tickers. This is the single largest unfounded claim in the role reports — drop every upvote_ratio-derived signal.
 
-5. **Intraday velocity ratios (24h/7d/30d)** from `add_30d_kol_mentions.py`. Prismo `created_utc` is sec-level but volume is far too thin for intraday buckets. Daily only.
+5. **Intraday velocity ratios (24h/7d/30d)** from `add_30d_kol_mentions.py`. bSmart `created_utc` is sec-level but volume is far too thin for intraday buckets. Daily only.
 
 ---
 
@@ -59,7 +59,7 @@ All four specialists and all four reviewers independently converged on this. Tha
 
 These are the signals to **pre-register** for the experiment. All are computed **per (ticker, day) from raw `mentions JOIN posts JOIN item_analysis`** — never from `ticker_rollup` (see feasibility note below). All require the stance COALESCE fix first.
 
-| Signal | Computation (Prismo columns) | equity1000 analog |
+| Signal | Computation (bSmart columns) | equity1000 analog |
 |---|---|---|
 | **attention_share** | `Σ confidence·(1+ln(1+posts.score))·subreddit_weight` for the ticker that day ÷ same summed over all tickers that day. Columns: `mentions.confidence`, `posts.score`, subreddit weight (from `subreddits.yml`/`subreddits` table), grouped by `substr(created_utc,1,10)` | `penetration_rate` (look-ahead-free, no fixed circle) |
 | **raw_dir** | `(bull − bear) / (bull + bear + neutral)` from `item_analysis.stance` joined to mentions per ticker-day. Range ≈ [−1,1] | `filt_bullish_ratio − filt_bearish_ratio` (un-normalized core) |
@@ -80,7 +80,7 @@ These are the signals to **pre-register** for the experiment. All are computed *
 **Cross-sectional forward-return predictivity probe on Reddit US single-names.** This is the design all four specialists converged on, with the three reviewer-verified corrections folded in (recompute-from-raw not rollup; 4-name dense core not 7; T+3/T+5 horizons not T+7/T+14). It is a **methodology go/no-go + effect-size probe — explicitly NOT a backtest and NOT validated alpha.**
 
 ### 3.1 Setup (one-time)
-- **DB:** `data/prismo_snapshot.db` (present, 25 MB, contains us+cn Reddit only). **No `.env` exists in this checkout** (verified) — the cloud path is unavailable; use the snapshot. It is current through 06-16.
+- **DB:** `data/bsmart_snapshot.db` (present, 25 MB, contains us+cn Reddit only). **No `.env` exists in this checkout** (verified) — the cloud path is unavailable; use the snapshot. It is current through 06-16.
 - **Deps:** fresh venv, `pip install yfinance pandas scipy numpy` (verified: none currently installed — this is a real setup step, not a one-liner to gloss).
 
 ### 3.2 Universe (verified by direct query)
@@ -134,11 +134,11 @@ The script *is* the reusable substrate: as daily history backfills over the comi
 
 ## 4. Honest caveats
 
-1. **6 weeks is not enough for the thing equity1000 actually is.** equity1000's value is in *per-ticker time-series regime classification* validated over 60–90 day windows. Prismo has ~10 dense US days. This experiment tests the *validation methodology and signal content*, not the regime engine. A GO result means "worth building toward," not "we have a working regime classifier."
+1. **6 weeks is not enough for the thing equity1000 actually is.** equity1000's value is in *per-ticker time-series regime classification* validated over 60–90 day windows. bSmart has ~10 dense US days. This experiment tests the *validation methodology and signal content*, not the regime engine. A GO result means "worth building toward," not "we have a working regime classifier."
 
 2. **Effective sample is single-digit, not the nominal n.** ~4 dense names × ~3 anchor days, all mega-cap US tech that co-move with AI/market beta, with overlapping forward windows. The "effective independent observations" are closer to 1–2 names than to nominal ticker-day count. SPY-relative returns + the shuffle null reduce but do not eliminate false discovery. **Any single result is hypothesis-generating only. Do not greenlight a strategy on it.**
 
-3. **The post-first universe is attention-conditioned (selection bias).** Prismo only sees a ticker once it's discussed (169 of 250 dict tickers ever appear). We cannot study names that crashed silently and were never posted about. Every correlation overstates the tradeability of "attention" relative to equity1000's universe-first design. State this on every result.
+3. **The post-first universe is attention-conditioned (selection bias).** bSmart only sees a ticker once it's discussed (169 of 250 dict tickers ever appear). We cannot study names that crashed silently and were never posted about. Every correlation overstates the tradeability of "attention" relative to equity1000's universe-first design. State this on every result.
 
 4. **The single most predictive equity1000 family is unreproducible.** No follower graph, and author karma is 0 for all 9,767 authors. The smart-follower-weighted direction and `se_z60` — equity1000's best signals — have no analog until the author-library crawl runs. The quality/venue substitute is unvalidated.
 

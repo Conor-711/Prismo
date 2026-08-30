@@ -1,4 +1,4 @@
-"""Asynchronous Gemini Batch transport for transcript-backed YouTube SV."""
+"""Asynchronous Gemini Batch transport for transcript-backed YouTube Score."""
 from __future__ import annotations
 
 import datetime as dt
@@ -107,7 +107,7 @@ def submit_fulltext_batch(
     ]
     body = {
         "batch": {
-            "display_name": f"prismo-youtube-sv-{dt.datetime.now(dt.UTC):%Y%m%d-%H%M%S}",
+            "display_name": f"bsmart-youtube-sv-{dt.datetime.now(dt.UTC):%Y%m%d-%H%M%S}",
             "input_config": {"requests": {"requests": requests_payload}},
         }
     }

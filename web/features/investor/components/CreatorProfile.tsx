@@ -8,11 +8,11 @@ import { LocaleLink } from "@/components/i18n/LocaleLink";
 import { SaveButton } from "@/components/favorites/SaveButton";
 import { Panel } from "@/components/ui";
 import { fmtCompact } from "@/shared/formatting/format";
-import { SmartVoiceCreatorModule } from "@/features/smart-voice";
+import { SmartVoiceCreatorModule } from "@/features/smart-account";
 import { Avatar } from "@/shared/market/kolPresentation";
 import type { YoutubeCreator, TickerJudgments, Judgment, CreatorVideo } from "@/server/queries/creatorQueries";
 import type { Stance } from "@/shared/market/mockDetail";
-import type { SvInvestor } from "@/features/smart-voice/svMock";
+import type { SvInvestor } from "@/features/smart-account/svMock";
 
 const YT = "#E0A33E";
 // 本地立场配色/文案与日期格式：不从 "use client" 的 kolShared dot 进来——其导出在 RSC（generateStaticParams

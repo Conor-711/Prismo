@@ -1,4 +1,4 @@
-"""Compatibility wrapper for Smart Voice overall ticker signals."""
+"""Compatibility wrapper for Smart Account overall ticker signals."""
 from __future__ import annotations
 
 from ..domain.smart_voice.overall_signals import main, run

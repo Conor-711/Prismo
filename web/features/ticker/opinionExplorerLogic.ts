@@ -1,5 +1,5 @@
 import type { KolOpinion, KolSource } from "@/shared/market/mockDetail";
-import type { SvSource, SvTickerBoard } from "@/features/smart-voice/svMock";
+import type { SvSource, SvTickerBoard } from "@/features/smart-account/svMock";
 import { QUALITY_MIN_BY_SOURCE, STYLE_BUCKET, STYLE_LABEL } from "./opinionExplorerConstants";
 import type {
   LensKey,

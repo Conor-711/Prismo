@@ -1,10 +1,10 @@
 import type { Dictionary } from "./zh";
 
-// Japanese mirror of zh.ts. Proper nouns (tickers, Prismo, r/subreddits, people) stay verbatim.
+// Japanese mirror of zh.ts. Proper nouns (tickers, bSmart, r/subreddits, people) stay verbatim.
 // Post content has no JA translation, so it falls back to the English original at render time.
 export const ja: Dictionary = {
   meta: {
-    title: "Prismo · Reddit 米国株センチメント・インテリジェンス",
+    title: "bSmart · Reddit 米国株センチメント・インテリジェンス",
     description:
       "Reddit の金融コミュニティをプロの視点で分析：マインドシェア、センチメント、モメンタムの急騰、ナラティブのクラスタリング、デイリーブリーフ。",
   },
@@ -36,13 +36,12 @@ export const ja: Dictionary = {
   nav: {
     dashboard: "ダッシュボード",
     overview: "概要",
-    smartVoice: "Smart Voice",
+    smartAccount: "Smart Account",
     tickers: "銘柄",
     investors: "投資家",
     cnstocks: "中国・香港株",
     search: "検索",
     tracking: "ウォッチリスト",
-    lab: "ラボ",
     trending: "トレンド",
     narratives: "ナラティブ",
     leaderboard: "ランキング",
@@ -120,7 +119,7 @@ export const ja: Dictionary = {
     empty: "データがありません。",
   },
   searchHero: {
-    eyebrow: "Prismo · 銘柄インテル",
+    eyebrow: "bSmart · 銘柄インテル",
     title: "どんな銘柄でも検索、Reddit の強気・弱気の論点を見る",
     subPre: "コミュニティの本物の DD（詳細調査）を凝縮して ",
     subBull: "強気派",
@@ -151,11 +150,11 @@ export const ja: Dictionary = {
     label: "シェア",
     copy: "リンクをコピー",
     copied: "コピーしました ✓",
-    tickerText: "{s} — Reddit の強気 vs 弱気の論点 · Prismo",
-    postText: "{s} · Reddit ディスカッション · Prismo",
+    tickerText: "{s} — Reddit の強気 vs 弱気の論点 · bSmart",
+    postText: "{s} · Reddit ディスカッション · bSmart",
   },
   install: {
-    title: "Prismo をインストール",
+    title: "bSmart をインストール",
     subtitle: "アプリのように全画面で開く——ダッシュボードへ直行",
     installBtn: "インストール",
     howBtn: "方法",
@@ -200,7 +199,7 @@ export const ja: Dictionary = {
     statPosts: "ライブ投稿",
     statTickers: "追跡銘柄",
     statAuthors: "アクティブ作者",
-    enterTitle: "Prismo に入る",
+    enterTitle: "bSmart に入る",
     enterDesc:
       "Reddit の金融コミュニティのマインドシェア、センチメント、ナラティブをリアルタイムで追跡。登録不要——開くだけ。",
     enterCta: "ライブダッシュボードへ",
@@ -332,11 +331,11 @@ export const ja: Dictionary = {
     topBadge: "高評価",
   },
   auth: {
-    loginTitle: "Prismo にログイン",
+    loginTitle: "bSmart にログイン",
     loginSubtitle: "マインドシェア、センチメント、デイリーブリーフ",
     noAccount: "アカウントをお持ちでない方は",
     signupLink: "登録",
-    signupTitle: "Prismo に登録",
+    signupTitle: "bSmart に登録",
     signupSubtitle: "無料アカウントを作成してパーソナライズを解放",
     haveAccount: "すでにアカウントをお持ちですか？",
     loginLink: "ログイン",
@@ -422,7 +421,7 @@ export const ja: Dictionary = {
   },
   tracking: {
     title: "ウォッチリスト",
-    subtitle: "フォロー中の銘柄 — 5つのコミュニティの平均センチメント、対象地域、地域間の乖離",
+    subtitle: "フォロー中の銘柄、投資家、ナラティブからパーソナライズされたフィードを作成",
     loading: "読み込み中…",
     signInTitle: "ログインしてウォッチリストを表示",
     signInDesc: "気になる銘柄をフォローして、世界中のコミュニティのセンチメントをいつでも確認できます。",
@@ -494,7 +493,7 @@ export const ja: Dictionary = {
     stepOf: "ステップ {n} / {total}",
     selected: "{n} 件選択",
     // 0 ウェルカム
-    welcomeTitle: "Prismo へようこそ 👋",
+    welcomeTitle: "bSmart へようこそ 👋",
     welcomeSubtitle:
       "1分ほどでいくつかの質問に答えると、ダッシュボードとウォッチリストをカスタマイズします。いつでもスキップ可；後で設定から変更できます。",
     welcomeBullet1: "保有銘柄を追跡し、コミュニティの見方を一目で把握",
@@ -599,7 +598,7 @@ export const ja: Dictionary = {
   },
   bookmark: {
     tip: "このページをブックマーク",
-    sub: "{combo} を押して Prismo を保存、次回ワンクリックでアクセス。",
+    sub: "{combo} を押して bSmart を保存、次回ワンクリックでアクセス。",
     dismiss: "了解",
     close: "閉じる",
   },

@@ -1,132 +1,28 @@
 [
   {
-    "ticker": "HOOD",
-    "companyName": "Robinhood Markets",
-    "currentPrice": 69.84,
-    "dayChangePercent": -0.018,
-    "dataAsOf": "2026-08-03T22:20:00Z",
-    "relationship": "divergence",
-    "direction": "mixed",
-    "conclusion": "Smart Account conviction strengthened while a high-scoring public account reduced long exposure. The disagreement deserves monitoring before adding risk.",
-    "latestSignalId": "30000000-0000-0000-0000-000000000501",
-    "smartAccount": {
-      "direction": "neutral",
-      "headline": "No recent qualified Smart Account view",
-      "detail": "No database-backed view is inside the current monitoring window.",
-      "qualifiedAuthorCount": 4,
-      "latestUpdateAt": null
-    },
-    "smartMoney": {
-      "coverage": "available",
-      "direction": "bullish",
-      "headline": "3 qualified public accounts added directional exposure",
-      "detail": "Across 10 auditable Hyperliquid fills, tracked accounts produced a $126,151 net bullish change in visible directional exposure.",
-      "qualifiedAccountCount": 3,
-      "latestMovementAt": "2026-07-31T14:12:50+00:00"
-    }
-  },
-  {
-    "ticker": "MSTR",
-    "companyName": "Strategy",
-    "currentPrice": 386.2,
-    "dayChangePercent": -0.012,
-    "dataAsOf": "2026-08-03T18:12:00Z",
-    "relationship": "account_leads",
-    "direction": "bullish",
-    "conclusion": "A high-ranked author remains constructive but tightened the thesis risk limit. Public capital data does not meet bSmart's verification threshold.",
-    "latestSignalId": "30000000-0000-0000-0000-000000000503",
-    "smartAccount": {
-      "direction": "neutral",
-      "headline": "No recent qualified Smart Account view",
-      "detail": "No database-backed view is inside the current monitoring window.",
-      "qualifiedAuthorCount": 13,
-      "latestUpdateAt": null
-    },
-    "smartMoney": {
-      "coverage": "unavailable",
-      "direction": "neutral",
-      "headline": "No qualifying public capital movement",
-      "detail": "No qualifying Hyperliquid tokenized-equity account movement is inside the current observation window.",
-      "qualifiedAccountCount": 0,
-      "latestMovementAt": null
-    }
-  },
-  {
     "ticker": "NVDA",
     "companyName": "NVIDIA",
-    "currentPrice": 128.62,
-    "dayChangePercent": 0.014,
-    "dataAsOf": "2026-08-04T16:15:05+00:00",
-    "relationship": "confirmation",
+    "currentPrice": 0.0,
+    "dayChangePercent": 0.0,
+    "dataAsOf": "2026-08-14T07:56:37Z",
+    "relationship": "smart_money_movement",
     "direction": "bullish",
-    "conclusion": "A strengthened creator thesis and increased public long exposure point in the same direction. Position concentration remains the main user-specific constraint.",
-    "latestSignalId": "30000000-0000-0000-0000-000000000502",
+    "conclusion": "Onchain capital changed before a matching qualified social consensus formed.",
+    "latestSignalId": "3e2ac6af-044c-57ad-bdcc-376402b973ce",
     "smartAccount": {
       "direction": "neutral",
       "headline": "No recent qualified Smart Account view",
       "detail": "No database-backed view is inside the current monitoring window.",
-      "qualifiedAuthorCount": 86,
+      "qualifiedAuthorCount": 187,
       "latestUpdateAt": null
     },
     "smartMoney": {
       "coverage": "available",
-      "direction": "bullish",
-      "headline": "4 qualified public accounts added directional exposure",
-      "detail": "Across 11 auditable Hyperliquid fills, tracked accounts produced a $133,127 net bullish change in visible directional exposure.",
-      "qualifiedAccountCount": 4,
-      "latestMovementAt": "2026-08-04T16:15:05+00:00"
-    }
-  },
-  {
-    "ticker": "PLTR",
-    "companyName": "Palantir Technologies",
-    "currentPrice": 146.18,
-    "dayChangePercent": 0.006,
-    "dataAsOf": "2026-08-04T16:15:08+00:00",
-    "relationship": "money_leads",
-    "direction": "bullish",
-    "conclusion": "A high-scoring public account opened a PLTR long before any qualified Smart Account update met the current observation window.",
-    "latestSignalId": "30000000-0000-0000-0000-000000000504",
-    "smartAccount": {
-      "direction": "neutral",
-      "headline": "No recent qualified Smart Account view",
-      "detail": "No database-backed view is inside the current monitoring window.",
-      "qualifiedAuthorCount": 22,
-      "latestUpdateAt": null
-    },
-    "smartMoney": {
-      "coverage": "available",
-      "direction": "bullish",
-      "headline": "3 qualified public accounts added directional exposure",
-      "detail": "Across 8 auditable Hyperliquid fills, tracked accounts produced a $496 net bullish change in visible directional exposure.",
-      "qualifiedAccountCount": 3,
-      "latestMovementAt": "2026-08-04T16:15:08+00:00"
-    }
-  },
-  {
-    "ticker": "AVGO",
-    "companyName": "Broadcom",
-    "currentPrice": 214.36,
-    "dayChangePercent": 0.011,
-    "dataAsOf": "2026-08-03T20:42:00Z",
-    "relationship": "confirmation",
-    "direction": "bullish",
-    "conclusion": "A qualified new semiconductor thesis received independent confirmation from a high-scoring public account. AVGO remains outside the current portfolio.",
-    "latestSignalId": "30000000-0000-0000-0000-000000000505",
-    "smartAccount": {
-      "direction": "neutral",
-      "headline": "No recent qualified Smart Account view",
-      "detail": "No database-backed view is inside the current monitoring window.",
-      "qualifiedAuthorCount": 2,
-      "latestUpdateAt": null
-    },
-    "smartMoney": {
-      "coverage": "unavailable",
-      "direction": "neutral",
-      "headline": "No qualifying public capital movement",
-      "detail": "No qualifying Hyperliquid tokenized-equity account movement is inside the current observation window.",
-      "qualifiedAccountCount": 0,
-      "latestMovementAt": null
+      "direction": "bearish",
+      "headline": "5 qualified public accounts reduced directional exposure",
+      "detail": "Across 5 auditable Hyperliquid fills, tracked accounts produced a $14,071,535 net bearish change in visible directional exposure.",
+      "qualifiedAccountCount": 5,
+      "latestMovementAt": "2026-08-14T07:56:37+00:00"
     }
   }
 ]

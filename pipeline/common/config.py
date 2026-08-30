@@ -5,6 +5,7 @@ import os
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
+from urllib.parse import urlsplit
 
 try:
     from dotenv import load_dotenv
@@ -33,7 +34,7 @@ def normalize_db_url(url: str) -> str:
     """规范化数据库连接串，让 Supabase 的连接串可直接用：
     - `postgres://` / `postgresql://`（Supabase/Heroku 风格）→ SQLAlchemy + psycopg(3) 用的
       `postgresql+psycopg://`；
-    - Postgres 连接自动强制 SSL（Supabase 必须）。
+    - 远端 Postgres 连接自动强制 SSL（Supabase 必须）；本机 Postgres 自动关闭 SSL。
     SQLite 原样返回。这样用户把 Supabase 控制台复制的串直接粘进 DATABASE_URL 即可，无需手改。
     """
     if not url:
@@ -43,7 +44,14 @@ def normalize_db_url(url: str) -> str:
     elif url.startswith("postgresql://"):
         url = "postgresql+psycopg://" + url[len("postgresql://"):]
     if url.startswith("postgresql+psycopg://") and "sslmode=" not in url:
-        url += ("&" if "?" in url else "?") + "sslmode=require"
+        host = (urlsplit(url).hostname or "").lower()
+        internal = (
+            host in {"localhost", "127.0.0.1", "::1", "host.docker.internal"}
+            or host.endswith(".railway.internal")
+            or "." not in host
+        )
+        sslmode = "disable" if internal else "require"
+        url += ("&" if "?" in url else "?") + f"sslmode={sslmode}"
     return url
 
 

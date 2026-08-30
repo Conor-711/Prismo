@@ -1,4 +1,4 @@
-"""YouTube transcript adapter for Smart Voice calls.
+"""YouTube transcript adapter for Smart Account calls.
 
 Metadata is allowed to recall a candidate video, but only the complete
 transcript may create a formal YouTube call.  The shared settlement and score

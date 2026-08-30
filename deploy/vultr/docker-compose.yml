@@ -1,0 +1,162 @@
+name: prismo
+
+x-app-environment: &app-environment
+  BSMART_ENV: production
+  BSMART_READ_MODEL_MODE: database
+  DATABASE_URL: ${DATABASE_URL}
+  BSMART_X_DATABASE_URL: ${DATABASE_URL}
+  BSMART_READ_MODEL_DATABASE_URL: ${DATABASE_URL}
+  BSMART_CLIENT_API_DATABASE_URL: ${DATABASE_URL}
+
+x-service-defaults: &service-defaults
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: "3"
+
+services:
+  postgres:
+    <<: *service-defaults
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "127.0.0.1:${POSTGRES_BIND_PORT:-54329}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    mem_limit: 512m
+
+  postgres-backup:
+    <<: *service-defaults
+    image: postgres:16-alpine
+    environment:
+      PGHOST: postgres
+      PGDATABASE: ${POSTGRES_DB}
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        while true; do
+          stamp=$$(date -u +%Y%m%dT%H%M%SZ)
+          pg_dump --format=custom --no-owner --no-acl > "/backups/prismo-$${stamp}.dump"
+          find /backups -type f -name 'prismo-*.dump' -mtime +7 -delete
+          sleep 86400
+        done
+    volumes:
+      - postgres-backups:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+    mem_limit: 128m
+
+  client-api:
+    <<: *service-defaults
+    build:
+      context: ../..
+      dockerfile: services/client_api/Dockerfile
+    command: >-
+      python -m uvicorn services.client_api.main:create_app --factory
+      --host 0.0.0.0 --port 8081 --proxy-headers --forwarded-allow-ips '*'
+    env_file:
+      - .env.production
+    environment:
+      <<: *app-environment
+    expose:
+      - "8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8081/health', timeout=5)"
+      interval: 15s
+      timeout: 6s
+      retries: 8
+    mem_limit: 384m
+
+  x-ingest-api:
+    <<: *service-defaults
+    image: prismo-x-ingest:local
+    build:
+      context: ../..
+      dockerfile: services/x_ingest/Dockerfile
+    command: >-
+      python -m uvicorn services.x_ingest.main:create_app --factory
+      --host 0.0.0.0 --port 8083 --proxy-headers --forwarded-allow-ips '*'
+    env_file:
+      - .env.production
+    environment:
+      <<: *app-environment
+    expose:
+      - "8083"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8083/health', timeout=5)"
+      interval: 15s
+      timeout: 6s
+      retries: 8
+    mem_limit: 384m
+
+  x-worker:
+    <<: *service-defaults
+    image: prismo-x-ingest:local
+    build:
+      context: ../..
+      dockerfile: services/x_ingest/Dockerfile
+    command: python -m services.x_ingest.worker
+    env_file:
+      - .env.production
+    environment:
+      <<: *app-environment
+    depends_on:
+      postgres:
+        condition: service_healthy
+      x-ingest-api:
+        condition: service_healthy
+    mem_limit: 640m
+
+  caddy:
+    <<: *service-defaults
+    image: caddy:2.10-alpine
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      client-api:
+        condition: service_healthy
+      x-ingest-api:
+        condition: service_healthy
+    mem_limit: 192m
+
+volumes:
+  postgres-data:
+  postgres-backups:
+  caddy-data:
+  caddy-config:

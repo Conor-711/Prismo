@@ -44,10 +44,10 @@ function NetMeter({ value }: { value: number | null }) {
 
 const DIVERGENCE_COPY = {
   insufficient: ["样本不足", "Insufficient"],
-  aligned_bull: ["高低 SV 同向看多", "High/low SV aligned bullish"],
-  aligned_bear: ["高低 SV 同向看空", "High/low SV aligned bearish"],
-  bullish_divergence: ["高 SV 看多 / 低 SV 看空", "High SV bull / low SV bear"],
-  bearish_divergence: ["高 SV 看空 / 低 SV 看多", "High SV bear / low SV bull"],
+  aligned_bull: ["高低 Score 同向看多", "High/low Score aligned bullish"],
+  aligned_bear: ["高低 Score 同向看空", "High/low Score aligned bearish"],
+  bullish_divergence: ["高 Score 看多 / 低 Score 看空", "High Score bull / low Score bear"],
+  bearish_divergence: ["高 Score 看空 / 低 Score 看多", "High Score bear / low Score bull"],
   mixed: ["弱分歧 / 中性", "Weak divergence / neutral"],
 } as const;
 
@@ -178,11 +178,11 @@ export function SmartVoiceSignalDiagnostics({
   return (
     <div className="border-b border-line">
       <div className="border-b border-line/70 px-4 py-2">
-        <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-neutral-600">{zh ? "SV 信号诊断" : "SV signal diagnostics"}</div>
+        <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-neutral-600">{zh ? "Score 信号诊断" : "Score signal diagnostics"}</div>
       </div>
       <div className="grid divide-y divide-line/70 lg:grid-cols-3 lg:divide-x lg:divide-y-0">
         <div className="min-w-0 px-4 py-3">
-          <div className="text-[8.5px] text-neutral-600">{zh ? "高低 SV 分歧" : "High/low SV divergence"}</div>
+          <div className="text-[8.5px] text-neutral-600">{zh ? "高低 Score 分歧" : "High/low Score divergence"}</div>
           <div className={`mt-1 text-[12px] font-semibold ${toneForState(divergence.state)}`}>{divergenceLabel}</div>
           <div className="mt-2 grid grid-cols-2 gap-3 text-[8.5px]">
             <div><span className="text-neutral-600">Top</span><b className="ml-1 font-mono text-cream">{signed(divergence.topNet)}</b><NetMeter value={divergence.topNet} /></div>
@@ -195,7 +195,7 @@ export function SmartVoiceSignalDiagnostics({
         </div>
 
         <div className="min-w-0 px-4 py-3">
-          <div className="text-[8.5px] text-neutral-600">{zh ? "Top SV 周期结构" : "Top SV term structure"}</div>
+          <div className="text-[8.5px] text-neutral-600">{zh ? "Top Score 周期结构" : "Top Score term structure"}</div>
           <div className={`mt-1 text-[12px] font-semibold ${toneForState(term.state)}`}>{termLabel}</div>
           <div className="mt-2 grid grid-cols-6 gap-1.5">
             {term.points.map((point) => (
@@ -213,7 +213,7 @@ export function SmartVoiceSignalDiagnostics({
         </div>
 
         <div className="min-w-0 px-4 py-3">
-          <div className="text-[8.5px] text-neutral-600">{zh ? `Top SV 加速与反转 · ${horizon}` : `Top SV momentum · ${horizon}`}</div>
+          <div className="text-[8.5px] text-neutral-600">{zh ? `Top Score 加速与反转 · ${horizon}` : `Top Score momentum · ${horizon}`}</div>
           <div className={`mt-1 text-[12px] font-semibold ${toneForState(momentum.state)}`}>{momentumLabel}</div>
           <div className="mt-2 flex h-7 items-center gap-1">
             {momentum.points.map((point) => (
@@ -238,8 +238,8 @@ export function SmartVoiceSignalDiagnostics({
         <span>{zh ? "最新日线" : "Last close"} {money(currentPrice)} · {data.prices.at(-1)?.day ?? "—"}</span>
       </div>
       <div className="grid divide-y divide-line/70 border-t border-line/70 lg:grid-cols-2 lg:divide-x lg:divide-y-0">
-        <EvidenceColumn title={`Top ${cut}% SV · ${horizon}`} evidence={topEvidence} currentPrice={currentPrice} windowDays={data.evidenceWindowDays} zh={zh} />
-        <EvidenceColumn title={`Bottom ${cut}% SV · ${horizon}`} evidence={bottomEvidence} currentPrice={currentPrice} windowDays={data.evidenceWindowDays} zh={zh} />
+        <EvidenceColumn title={`Top ${cut}% Score · ${horizon}`} evidence={topEvidence} currentPrice={currentPrice} windowDays={data.evidenceWindowDays} zh={zh} />
+        <EvidenceColumn title={`Bottom ${cut}% Score · ${horizon}`} evidence={bottomEvidence} currentPrice={currentPrice} windowDays={data.evidenceWindowDays} zh={zh} />
       </div>
     </div>
   );

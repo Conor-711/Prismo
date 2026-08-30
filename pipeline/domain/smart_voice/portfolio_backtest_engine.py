@@ -1,4 +1,4 @@
-"""Pure portfolio simulation helpers for Smart Voice strategy backtests."""
+"""Pure portfolio simulation helpers for Smart Account strategy backtests."""
 from __future__ import annotations
 
 import math

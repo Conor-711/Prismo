@@ -48,8 +48,8 @@ export function useSelectedOpinion({
       setSelectedId(target.id);
       setShowTranslation(false);
     };
-    window.addEventListener("prismo:open-opinion", openOpinion);
-    return () => window.removeEventListener("prismo:open-opinion", openOpinion);
+    window.addEventListener("bsmart:open-opinion", openOpinion);
+    return () => window.removeEventListener("bsmart:open-opinion", openOpinion);
   }, [defaultSort, opinions, resetFiltersForOpinion, setSort]);
 
   return {

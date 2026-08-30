@@ -2,7 +2,7 @@
 
 只读源库（仅 SELECT + 反射）；只写本地目标 sqlite 文件。不动云端。
 用法：
-  DATABASE_URL=<cloud-uri> pipeline/.venv/bin/python -m pipeline.snapshot_pull data/prismo_snapshot.db
+  DATABASE_URL=<cloud-uri> pipeline/.venv/bin/python -m pipeline.snapshot_pull data/bsmart_snapshot.db
 """
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from sqlalchemy import MetaData, create_engine, insert, select
 from pipeline.common.config import normalize_db_url
 
 SRC_URL = os.environ.get("DATABASE_URL")
-DST_PATH = sys.argv[1] if len(sys.argv) > 1 else "data/prismo_snapshot.db"
+DST_PATH = sys.argv[1] if len(sys.argv) > 1 else "data/bsmart_snapshot.db"
 if not SRC_URL:
     print("✗ 未设置 DATABASE_URL（源云库）")
     sys.exit(1)

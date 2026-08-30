@@ -2,7 +2,7 @@
 
 > **维护约定**：本文件是项目的「活地图」。**每次对项目结构或功能有实质改动后，必须同步更新本文件对应章节**
 > （新增/删除模块、改数据流、改命令、改部署方式、改 schema 等）。详见根目录 `CLAUDE.md`。
-> 最近更新：2026-07-30。
+> 最近更新：2026-08-11。
 
 ---
 
@@ -10,27 +10,53 @@
 
 根目录 `ARCHITECTURE.md` 保持为项目活地图，记录当前系统事实、数据真源、主要目录和关键命令。长期设计边界已拆到专题文档：
 
+- `docs/product/product-direction-mvp.md`：第一阶段产品决策真源，定义持仓事件、Smart Account / Smart Money、覆盖策略和 iOS/Web 分工。
 - `docs/architecture/00-overview.md`：系统总览、当前真源和迁移策略。
 - `docs/architecture/01-frontend.md`：Next.js 前端 feature/shared/server 边界。
 - `docs/architecture/02-pipeline.md`：Python 管线 platforms/domain/jobs/cli 边界。
 - `docs/architecture/03-data-model.md`：raw/normalized/analysis/rollup/export 数据层级。
 - `docs/architecture/04-platform-adapters.md`：新增平台适配器规范。
-- `docs/architecture/05-smart-voice.md`：Smart Voice 工程边界。
+- `docs/architecture/05-smart-account.md`：Smart Account 工程边界。
 - `docs/architecture/06-deployment.md`：静态构建、数据快照与部署。
 - `docs/architecture/07-conventions.md`：命名、文件大小、验证和文档同步规则。
 - `docs/architecture/08-development-rules.md`：后续新功能开发落点、禁止落点、常见场景和验证清单。
+- `docs/architecture/09-ios.md`：iOS 主客户端、SwiftUI 模块、API 消费和发布规则。
+- `docs/architecture/10-congress-score.md`：美国国会两院公开交易评分的来源、结算、输出和隔离边界。
+- `docs/operations/smart-money-live.md`：Hyperdash 主源、Hyperliquid 降级、原子发布、健康阈值与事故处置。
 
-跨平台产品契约位于 `docs/contracts/`：`opinion`、`author`、`ticker`、`judgment`、`smart_voice`、`narrative`。新增平台、观点筛选、SV、目标价、叙事等功能前，先确认 `docs/architecture/08-development-rules.md` 和对应 contract。
+跨平台产品契约位于 `docs/contracts/`：`opinion`、`author`、`ticker`、`judgment`、`smart_account`、`narrative`、`congress_score`。新增平台、观点筛选、Score、目标价、叙事等功能前，先确认 `docs/architecture/08-development-rules.md` 和对应 contract。
 
-**迁移期规则**：现有 `web/lib/*Queries.ts`、`web/components/prismo/*`、`pipeline/manage.py`、`pipeline/ingest`、`pipeline/analyze` 继续可用；新增复杂功能优先落到目标边界 `web/features`、`web/shared`、`web/server`、`pipeline/platforms`、`pipeline/domain`、`pipeline/jobs`、`pipeline/cli`。`pipeline/ingest` 和 `pipeline/analyze` 现在只作为历史导入/命令路径兼容层保留，新增平台或分析实现不得继续写入旧目录。前端 Tailwind content 必须覆盖 `web/features` 和 `web/shared`，否则迁移后的组件样式不会被生成。
+**iOS-first MVP（2026-08-03）**：`ios/` 是第一版产品的主客户端，使用 iOS 17+ 原生 SwiftUI；`contracts/openapi/bsmart-v1.yaml` 和 `contracts/fixtures/` 是客户端接口与开发数据入口。iOS 不读 `data/dev.db`、不直接调用平台 API、也不重算 Score。现有 `web/` 保留为公开页、内部研究工具和迁移回归基线，停止承接面向 MVP 的 Web-only 复杂看板；删除旧 Web 功能必须等 iOS 替代、API 契约和下游依赖都完成核验。
 
-**边界检查**：结构性改动后运行 `python3 scripts/check_architecture.py`。该脚本目前强制检查：`pipeline/cli` 只能调用 `pipeline/jobs`，`pipeline/jobs` 不得直连旧 `pipeline/ingest`/`pipeline/analyze`，平台/domain 层不反向依赖上层；前端禁止迁移后的 feature/shared/server 回流到旧 Prismo 组件或旧 query 文件。
+**持仓信号首个纵向切片（2026-08-04）**：`PortfolioSignal` 契约显式包含 `smartMoneyCoverage`、`dataStatus`、`limitations` 与 `nextStep`；iOS `AppModel.portfolioSignals` 只保留当前本地持仓或关注标的信号，并按严重度、仓位权重和时间排序。Today 提供空持仓入口、日报、观点/资金/关系/未读筛选和相关信号空态；详情展示持仓影响、覆盖解释、下一步研究和原始证据。Smart Account / Smart Money 关注状态、信号阅读状态与通知策略均本地持久化；通知策略由 `Core/Notifications/NotificationPreferencesStore` 统一管理每日摘要时间、安静时段和逐标的开关，生产 APNs 仍由后端执行。关注对象在持仓外产生的新信号只进入 Today 次级区域。次级 Opportunity Radar 仅展示覆盖股票池内、达到重要级别且尚未持有或观察的服务端信号，并允许从证据详情一键加入观察；生产候选资格仍由后端 Signal Engine 决定，iOS 不从原始平台数据自行发现机会。`contracts/fixtures` 以 MSTR 验证 Smart Account-only 场景，必须显示“暂无资金验证”，不能把缺失资金数据解释为中性；旧 `InvestmentEvent` 仅作为 1.0 兼容层。
+
+**品牌标识（2026-08-10）**：产品公开名称统一为 `bSmart`；Swift 类型和 target 使用 `BSmart` 前缀，环境变量使用 `BSMART_` 前缀，URL scheme、存储键、数据库和机器标识使用小写 `bsmart`。旧品牌名不得重新出现在页面、接口说明、文档、资源文件名或新代码中；外部域名、部署配置和应用商店标识必须与该映射保持一致。
+
+**iOS Signal Pulse 展示层（2026-08-24）**：iOS 主客户端采用 `Signal Pulse` 原生视觉层。Today 以“状态条 + 单一首要持仓事件 + 次级变化流”组织；Smart 保持 Smart Account / Smart Money 平行入口并将叠加筛选收进统一 Sheet；标的详情使用 `概览 / Smart Activity` 的单标的联动结构，价格线上统一标注两种来源但保留各自语义；Smart Account 作者详情使用 `概览 / 观点 / 历史表现`，概览优先展示已发布作者画像、近 30 天每标的最新有效方向和最新观点，历史代表作与 Score 说明归入历史表现；Portfolio 统一承载 `持仓 / 关注标的 / 全部标的` 三个场景。荧光绿色只承担选中、实时、主要动作和最高优先级边线，不代表底层看多判断。该改版只调整 SwiftUI 信息层级与交互，不改变 API、Score、信号生成、持仓个性化和数据覆盖逻辑。共享组件必须落在 `ios/BSmart/Core/DesignSystem`，Feature 不得复制局部设计系统；完整规则见 `docs/architecture/09-ios.md`。
+
+**iOS Mr Collie 研究入口（2026-08-13）**：主导航固定为 `Today / Smart / Portfolio / Mr Collie`（中文同样保留 `Mr Collie`），Smart 为第二个 Tab，Mr Collie 为最后一个 Tab；四个入口使用一致的原生 Tab 样式。界面位于 `ios/BSmart/Features/AI`；Live/Release 构建通过经过安装会话认证的 `POST /v1/mr-collie/query` 请求 Client API，由服务端把该安装的持仓与版本化 `PortfolioSignal`、`TickerIntelligence`、Smart Account / Smart Money 证据上下文交给 DeepSeek。服务端只回填模型引用的真实证据 ID，并返回 `contextVersion`、`dataAsOf` 与模型名；默认使用成本适中的 `deepseek-v4-flash`，通过独立的 `BSMART_MR_COLLIE_MODEL` 覆盖，不继承其他管道的 Pro 设置。模型不可在客户端生成市场事实、重算 Score、把缺失证据解释为中性或给出个性化买卖/杠杆/仓位指令。DeepSeek 不可用时，iOS 明确降级到本地确定性证据回答。
+
+**iOS 持仓估值与标的目录（2026-08-12）**：Portfolio 的 `持仓` 场景顶部优先展示当前持仓总价值；历史变动曲线只能读取独立的持仓估值快照，缺失时显示不可用，禁止从成本价或当前收益生成伪历史。独立 `Tickers` Tab 已取消，Portfolio 的 `全部标的` 场景必须完整列出服务端 `TickerIntelligence` 支持范围并在其上搜索，客户端不得维护第二份静态股票池。
+
+**iOS 生产数据边界（2026-08-04）**：`BSmartClientFactory` 是客户端数据源的唯一组合入口。未带 `--use-live-api` 的 Debug 构建使用 `BundleBSmartAPIClient`；Release 构建无条件使用 `HTTPBSmartAPIClient`，且 Archive 不包含 `contracts/fixtures`。未登录用户通过持久化安装 UUID 创建匿名安装会话，Opaque Bearer Token 仅存 Keychain；除 `/v1/installations` 外的 `/v1` 接口均要求安装会话。任何 Feature 不得自行选择 Fixture、读取 Token 或绕过该组合根。
+
+**iOS 本地优先同步边界（2026-08-04）**：持仓、信号阅读/保存/忽略/反馈、通知偏好和 APNs 设备 Token 通过 `BSmartSyncCoordinator` 写入生产 API。用户操作先落本地，再进入 `UserDefaults` 持久化 outbox；同一实体只保留最新待同步状态，失败操作在下次启动或下一次变更时重放。持仓使用客户端生成 UUID 的幂等 `PUT /v1/portfolio/{id}`。Feature 不直接发 mutation，也不得因网络失败回滚用户已经完成的本地操作。
+
+**生产客户端 API 边界（2026-08-04）**：`services/client_api` 实现 `contracts/openapi/bsmart-v1.yaml` 的 `/v1` HTTP 边界，负责匿名安装会话、安装级用户状态、设备注册与 Read Model 读取。开发环境可用 `contracts/fixtures` 联调，生产环境拒绝 Fixture Read Model。该服务不得导入或编排 `pipeline` 抓取、AI 分析和 Score 任务；真实信号必须由管线生成并写入独立物化 Read Model 后再由服务读取。
+
+**MVP 数据覆盖闸门（2026-08-04）**：`scripts/audit_mvp_coverage.py` 从只读 SQLite 真源审计首发标的的 Smart Account 新鲜度、近 30 天合格独立作者、YouTube 证据/口播版本绑定，以及 Smart Money 市场流动性、成交新鲜度、7 日当前合格账户和派生信号。入口为 `make mvp-coverage-audit`，当前基准报告为 `docs/product/mvp-data-coverage-audit-2026-08-04.md`。历史观点数、历史合格账户或历史成交量不能代替当前覆盖；未达到双侧门槛时不得生成确认或背离，Smart Account 单侧通过时必须标注“暂无资金验证”。
+
+**Smart Account 术语约定**：产品和页面统一称 `Smart Account`，具体数值统一称 `Score`；iOS 中间主 Tab 固定称 `Smart`。`Smart`、`Smart Account`、`Smart Money` 是所有语言环境中的英文保留术语，不得翻译为中文或其他语言。`smart_voice` 包、`sv_*` 表/字段、`smartVoice.json` 和 `smartVoice*` adapter 是历史兼容标识，不得直接显示在 UI；没有 schema 与构建产物双读迁移前不得贸然改名。公开正式入口为 `/smart-account`，旧入口仅保留兼容。
+
+**迁移期规则**：现有 `web/lib/*Queries.ts`、`web/components/bsmart/*`、`pipeline/manage.py`、`pipeline/ingest`、`pipeline/analyze` 继续可用；新增复杂功能优先落到目标边界 `web/features`、`web/shared`、`web/server`、`pipeline/platforms`、`pipeline/domain`、`pipeline/jobs`、`pipeline/cli`。`pipeline/ingest` 和 `pipeline/analyze` 现在只作为历史导入/命令路径兼容层保留，新增平台或分析实现不得继续写入旧目录。前端 Tailwind content 必须覆盖 `web/features` 和 `web/shared`，否则迁移后的组件样式不会被生成。
+
+**边界检查**：结构性改动后运行 `python3 scripts/check_architecture.py`。该脚本目前强制检查：`pipeline/cli` 只能调用 `pipeline/jobs`，`pipeline/jobs` 不得直连旧 `pipeline/ingest`/`pipeline/analyze`，平台/domain 层不反向依赖上层；`services/client_api` 不得导入管线实现；前端禁止迁移后的 feature/shared/server 回流到旧 bSmart 组件或旧 query 文件。
 
 ---
 
 ## 1. 这是什么
 
-**Prismo** —— 一个多语（中文默认 / English / 日本語 / 한국어）的 **多社区美股舆情聚合看板**：聚合 **Reddit / Yahoo Finance Japan / Naver / 雪球 / PTT** 五大本土散户社区，对同一批跨区美股做情绪对比、共识与分歧分析，最终渲染成一个**纯静态网站**。
+**bSmart** 是面向个人美股投资者的**持仓智能事件助手**。第一版以原生 iOS App 为主，围绕用户手动添加的持仓、成本价和仓位占比，组合 Smart Account 链下观点证据与 Hyperliquid 代币化美股 Smart Money 公开仓位行为，主动发现和解释值得关注的持仓变化。Web 保留为公开页、获客、内部研究和迁移回归工具。
 （注：早期作为 Reddit 单站「redditalpha」起步——抓 Reddit 财经社区帖、逐帖大模型打标、聚合声量/情绪/异动/叙事/简报；该 Reddit 管线仍是后端基础，新增 4 区由 `gr_*` 表承载。）
 
 - 线上地址：**https://www.redditalpha.xyz**（根域名，静态托管）
@@ -40,42 +66,42 @@
 > 1. **最有价值的内容并非「非英语散户对美股的个体看法」本身。** 韩国 Naver、日本 Yahoo 掲示板等本土股吧**单帖信息质量普遍很差**——多数是水帖、情绪宣泄、无意义 shitpost；这类内容**只有靠「量」做聚合分析才有价值**（情绪分布 / 声量异动 / 跨区分歧），逐条看几乎没有信息量。
 > 2. **抓取这些股吧本身不构成技术护城河。** 爬取门槛很低（人人有个 crawling agent 都能爬），技术不是壁垒。
 
-> **🎨 UI 已按 QuiverQuant 风重建（2026-06）**：品牌 = **Prismo**（仓库 `Conor-711/Prismo`）。**设计系统（复刻 QuiverQuant）**：字体 Figtree(UI/标题)+Roboto(数据/数字 tabular)；默认深色底 `#121212`（卡片 `#161616`，靠 `#2a2d2f` 发丝边区分；图表底才用 `#202630`；**仅深色**、已彻底移除白天模式 CSS 回退与主题切换）+ 青绿强调 `#57D7BA`（Tailwind `reddit`/`amber`/`brand`/`bull` token 同值；看跌珊瑚 `#FF5C6C` 全站统一、不随地区红绿翻转；品牌渐变青绿→深松绿、去紫）+ 小圆角(2–4px) + 数据密集卡片/表格 + 等宽数字；侧边栏导航（`globals.css` CSS 变量 + `tailwind.config.ts`）。**完整设计语言宪法见 `DESIGN_LANGUAGE.md`（改 token 前后都要同步）**。
-> **主要页面**（数据多走 `gr_*` → `lib/globalQueries.ts`；投资者/作者页另走 `investorQueries`/`creatorQueries`；Smart Voice 作者详情读 `smartVoice.json` + `smartVoiceInvestorQueries`；叙事页走构建期 JSON）：**落地页**(`/`，无侧栏 chrome) · **总览看板**(`/dashboard`，单视窗三栏工作台：市场信号、跨社区热力/全球热度榜、Smart Voice 精简榜；长列表模块内滚动) · **叙事轮动**(`/narratives` + `/narratives/[slug]`，固定板块叙事的跨社区热度排名/讨论占比/情绪转向；入口在桌面侧栏，移动底栏暂不扩容；只做 zh/en 内容，ja/ko 回退英文) · 标的总览(`/tickers`) · 标的详情(`/tickers/[symbol]`；`MU/NVDA/MSTR` 首批展示历史时点 Top/Bottom SV 聚集、无泄漏回测、SV 加权目标价、观点变化雷达、预期差/拥挤风险、投资逻辑生命周期、作者能力矩阵、三标的组合叙事风险、可解释提醒和个性化仓位匹配，其余标的保留旧 SV 投资者模块；详情页不展示有效广度、平台确认、`n_eff` 和跨平台扩散等低解释度指标) · 投资者榜单(`/investors`) · YouTube 作者页(`/investors/youtube/[channelId]`) · Smart Voice 工作台(`/smart-voice`，借鉴 Nansen Smart Money 的信息架构，单视窗展示高 SV 标的集中方向、高低 SV 分歧、X/YouTube/Reddit/雪球完整平台排名、明确分层的全部已评分作者观察池和近 60 天最新 actionable call；投资者榜可叠加平台、正式/观察/前后分位、优势周期（短/中/长）、赛道、主投资风格、精确周期分数和作者/标的搜索，周期与赛道同时选中时按两类子 SV 的均值形成明确标注的能力分排序，不改写综合 SV 或平台正式名次；标的聚合使用各来源正式平台 rank 成员，支持四平台任意非空组合及 24H/3D/7D/30D/90D 窗口，集中方向至少需要 2 条同向 call 和 2 位独立 Top 10% 作者，右侧按同口径展示净强度、原文证据及原始链接，并独立展示按每位作者最新 call 去重的一人一票净人数/共识度，以及与前一等长窗口比较的作者净人数突变幅度、状态和排名；投资者榜右栏使用更宽但仍窄于左榜单的响应式宽度，前后分位作者以真实收盘价折线 + 历史观点气泡展示主要加分/扣分代表标的；观察池不参与正式分位信号，实时流按来源限额且不声称真实持仓或资金流) · SV 作者详情(`/investors/smart-voice/[investorId]`，正式平台排名作者的分数解释、风格分类与代表性 call) · 追踪/自选(`/tracking`) · 搜索(`/search`) · Profile(`/me`) · 设置(`/account`)。**叙事轮动页**不再使用旧 Reddit-only `narratives` 表，也不把财报/政策/估值等事件或驱动因素作为叙事板块；离线 `make narrative-rotation` 从 `gr_post`、Reddit `posts+item_analysis`、`x_opinion+kol_refined`、`yt_video+yt_analysis` 读取内容，先按最新源日期把时间窗口下推到各平台 SQL，再按固定板块 taxonomy 归入一个主叙事，输出 `web/lib/data/narrativeRotation.json`；Web 端 `lib/narrativeRotation.ts` + `components/prismo/NarrativeRotationCharts.tsx` 渲染顶部三张轮动图、轮动榜与详情页来源/地区/标的分布，暂不展示代表原帖。
-> **Smart Voice 作者预览（2026-07-27）**：投资者榜右栏使用 `380/460/540px` 响应式宽度且始终窄于左榜单；前后分位作者以真实收盘价折线和历史观点气泡展示主要加分/扣分代表标的，替代旧 K 线预览。
-> **Smart Voice 作者证据与组合回测（2026-07-30）**：`/[lang]/investors/smart-voice/[investorId]` 在分数解释和风格画像下提供“观点证据 / 组合回测”双视图；观点证据继续展示真实价格路径、原帖链接和全部已结算战绩，组合回测由该作者真实 `sv_call` / `sv_call_settlement` 与 `price_daily` 在构建期生成，口径为下一交易日复权开盘入场、同标的最新观点覆盖、活跃标的等权、空仓期持有现金、10 bps 往返成本并以 SPY 对照。回测是信号跟随模型，不代表作者真实账户。
-> **Prismo Lab / Private Smart Voice 实验页（2026-07-30）**：桌面侧栏新增 `Lab` 一级入口，`/[lang]/lab` 使用全视口内部滚动工作台展示单个公开 Telegram 频道；`/[lang]/experiments/private-smart-voice` 保留为兼容地址。观点证据页按标的呈现复权收盘价折线、方向气泡和原帖，组合回测页呈现规则化等权跟随组合的累计/年化收益、SPY 对照、年度收益、波动率、Sharpe/Sortino、最大回撤和成本敏感性。该组合不是作者真实账户。
-> **标的页『目标价 × 操作周期』(2026-06-29 新增)**：① **观点检索/正文提炼**——每条观点抽到时在 reader 多显一行「作者明确给出 买入/卖出/目标价 + 周期(原话+档)」(`OpinionExplorer` 的 `JudgmentLine`)；`getKolOpinions` 汇总 Reddit/YouTube/雪球/Toss/Yahoo JP/X。浏览器端观点池是有界展示层，不是原始数据真源：Reddit 按近 370 天时间倒序取最近 350 条，X 仅纳入已进入 `kol_refined` 的观点并按质量、相关性、互动排序取前 120 条，雪球/Toss/Yahoo JP 各取 100 条；全量原帖仍保留在 SQLite 并用于离线日指标，避免 mega-cap 单页把数万条 X 帖文序列化成百 MB HTML。② **整体数据**——`KolModule` 底部通过 `web/features/ticker/components/TargetPricePanel.tsx` 渲染目标价时间线/价格分布/筛选入口，旧 `web/components/prismo/TargetPricePanel.tsx` 只保留兼容导出。抽取层=独立表 `kol_judgment`(reddit/x/雪球/Toss/Yahoo JP，见 §5)+ YouTube 复用 `yt_judgment`；**只抽作者明说、反臆造**，价格在 `kolQueries.judgmentMap` 按**现价 0.2–5× band 剔噪**(penny-pump/假设估值/$1225 这类数量级离谱者置空)。取数 `getKolTargetPrices`(复用 `getKolOpinions` 池，judgment 挂到 `KolOpinion.judgment`)。`make kol-judgment`。
-> Reddit 单站旧页（dashboard/ticker/post/author/leaderboard/cn/onboarding）已删；**后端 pipeline 全保留**。线上 redditalpha.xyz 仍由旧 `reddit_alpha` 仓库部署、不受影响（Prismo 部署需快照含 `gr_*`，否则相关页为空）。
+> **🎨 UI 已按 QuiverQuant 风重建（2026-06）**：品牌 = **bSmart**（仓库 `Conor-711/bSmart`）。**设计系统（复刻 QuiverQuant）**：字体 Figtree(UI/标题)+Roboto(数据/数字 tabular)；默认深色底 `#121212`（卡片 `#161616`，靠 `#2a2d2f` 发丝边区分；图表底才用 `#202630`；**仅深色**、已彻底移除白天模式 CSS 回退与主题切换）+ 青绿强调 `#57D7BA`（Tailwind `reddit`/`amber`/`brand`/`bull` token 同值；看跌珊瑚 `#FF5C6C` 全站统一、不随地区红绿翻转；品牌渐变青绿→深松绿、去紫）+ 小圆角(2–4px) + 数据密集卡片/表格 + 等宽数字；侧边栏导航（`globals.css` CSS 变量 + `tailwind.config.ts`）。**完整设计语言宪法见 `DESIGN_LANGUAGE.md`（改 token 前后都要同步）**。
+> **主要页面**（数据多走 `gr_*` → `lib/globalQueries.ts`；投资者/作者页另走 `investorQueries`/`creatorQueries`；Smart Account 作者详情读 `smartVoice.json` + `smartVoiceInvestorQueries`；叙事页走构建期 JSON）：**落地页**(`/`，无侧栏 chrome) · **总览看板**(`/dashboard`，单视窗三栏工作台：市场信号、跨社区热力/全球热度榜、Smart Account 精简榜；长列表模块内滚动) · **叙事轮动**(`/narratives` + `/narratives/[slug]`，固定板块叙事的跨社区热度排名/讨论占比/情绪转向；入口在桌面侧栏，移动底栏暂不扩容；只做 zh/en 内容，ja/ko 回退英文) · 标的总览(`/tickers`) · 标的详情(`/tickers/[symbol]`；`MU/NVDA/MSTR` 首批展示历史时点 Top/Bottom Score 聚集、无泄漏回测、Score 加权目标价、观点变化雷达、预期差/拥挤风险、投资逻辑生命周期、作者能力矩阵、三标的组合叙事风险、可解释提醒和个性化仓位匹配，其余标的保留旧 Score 投资者模块；详情页不展示有效广度、平台确认、`n_eff` 和跨平台扩散等低解释度指标) · 投资者榜单(`/investors`) · YouTube 作者页(`/investors/youtube/[channelId]`) · Smart Account 工作台(`/smart-account`，借鉴 Nansen Smart Money 的信息架构，单视窗展示高 Score 标的集中方向、高低 Score 分歧、X/YouTube/Reddit/雪球完整平台排名、明确分层的全部已评分作者观察池和近 60 天最新 actionable call；投资者榜可叠加平台、正式/观察/前后分位、优势周期（短/中/长）、赛道、主投资风格、精确周期分数和作者/标的搜索，周期与赛道同时选中时按两类子 Score 的均值形成明确标注的能力分排序，不改写综合 Score 或平台正式名次；标的聚合使用各来源正式平台 rank 成员，支持四平台任意非空组合及 24H/3D/7D/30D/90D 窗口，集中方向至少需要 2 条同向 call 和 2 位独立 Top 10% 作者，右侧按同口径展示净强度、原文证据及原始链接，并独立展示按每位作者最新 call 去重的一人一票净人数/共识度，以及与前一等长窗口比较的作者净人数突变幅度、状态和排名；投资者榜右栏使用更宽但仍窄于左榜单的响应式宽度，前后分位作者以真实收盘价折线 + 历史观点气泡展示主要加分/扣分代表标的；观察池不参与正式分位信号，实时流按来源限额且不声称真实持仓或资金流) · Score 作者详情(`/investors/smart-account/[investorId]`，正式平台排名作者的分数解释、风格分类与代表性 call) · 追踪/自选(`/tracking`) · 搜索(`/search`) · Profile(`/me`) · 设置(`/account`)。**叙事轮动页**不再使用旧 Reddit-only `narratives` 表，也不把财报/政策/估值等事件或驱动因素作为叙事板块；离线 `make narrative-rotation` 从 `gr_post`、Reddit `posts+item_analysis`、`x_opinion+kol_refined`、`yt_video+yt_analysis` 读取内容，先按最新源日期把时间窗口下推到各平台 SQL，再按固定板块 taxonomy 归入一个主叙事，输出 `web/lib/data/narrativeRotation.json`；Web 端 `lib/narrativeRotation.ts` + `components/bsmart/NarrativeRotationCharts.tsx` 渲染顶部三张轮动图、轮动榜与详情页来源/地区/标的分布，暂不展示代表原帖。
+> **Smart Account 公开投资者榜（2026-07-31）**：`/[lang]/smart-account/leaderboard` 位于独立 `(public)` 路由壳，不渲染应用侧边栏且无需登录；应用内 `/smart-account` 只保留标的发现与实时观点，通过明确入口进入公开榜。公开页复用同一份构建期 Score 数据和作者证据，支持来源、正式/观察/前后分位、精确周期、优势周期、赛道、风格和作者/标的搜索的叠加筛选；右侧作者证据栏采用 `360/400/440px` 响应式宽度。榜单状态与列表编排归 `SmartVoiceLeaderboardView.tsx`，作者侧栏归 `SmartVoiceLeaderboardProfile.tsx`，纯筛选与能力分派生归 `leaderboardModel.ts`，不得把 Score 派生逻辑重新写回视图组件。
+> **Smart Account 高 Score 新关注（2026-07-31）**：应用内 `/smart-account` 的标的发现默认展示最近 7D 新覆盖。平台正式 Top 10% 作者在当前窗口首次发布某 ticker 的 actionable call，且该作者此前 180 天未覆盖该 ticker 时计为新增作者；历史期无任何当前 Top 10% 作者覆盖才标记“全新进入”，否则标记“新作者加入”。查询层读取最长 90D 当前窗口加 180D 历史基线，按作者/标的去重，并附原始观点证据；该信号不修改作者 Score，也不在历史时点回测完成前声称有交易收益。查询兼容入口 `smartVoiceQueries.ts` 仅重导出稳定 API，类型、SQL、聚合基础件、榜单构建和概览查询分别落在 `smartVoiceTypes.ts`、`smartVoiceMarketQueries.ts`、`smartVoiceMarketAggregation.ts`、`smartVoiceMarketBuilder.ts`、`smartVoiceOverviewQueries.ts`。
+> **Smart Account 作者证据与组合回测（2026-07-30）**：`/[lang]/investors/smart-account/[investorId]` 在分数解释和风格画像下提供“观点证据 / 组合回测”双视图；观点证据继续展示真实价格路径、原帖链接和全部已结算战绩，组合回测由该作者真实 `sv_call` / `sv_call_settlement` 与 `price_daily` 在构建期生成，口径为下一交易日复权开盘入场、同标的最新观点覆盖、活跃标的等权、空仓期持有现金、10 bps 往返成本并以 SPY 对照。回测是信号跟随模型，不代表作者真实账户。
+> **标的页『目标价 × 操作周期』(2026-06-29 新增)**：① **观点检索/正文提炼**——每条观点抽到时在 reader 多显一行「作者明确给出 买入/卖出/目标价 + 周期(原话+档)」(`OpinionExplorer` 的 `JudgmentLine`)；`getKolOpinions` 汇总 Reddit/YouTube/雪球/Toss/Yahoo JP/X。浏览器端观点池是有界展示层，不是原始数据真源：Reddit 按近 370 天时间倒序取最近 350 条，X 仅纳入已进入 `kol_refined` 的观点并按质量、相关性、互动排序取前 120 条，雪球/Toss/Yahoo JP 各取 100 条；全量原帖仍保留在 SQLite 并用于离线日指标，避免 mega-cap 单页把数万条 X 帖文序列化成百 MB HTML。② **整体数据**——`KolModule` 底部通过 `web/features/ticker/components/TargetPricePanel.tsx` 渲染目标价时间线/价格分布/筛选入口，旧 `web/components/bsmart/TargetPricePanel.tsx` 只保留兼容导出。抽取层=独立表 `kol_judgment`(reddit/x/雪球/Toss/Yahoo JP，见 §5)+ YouTube 复用 `yt_judgment`；**只抽作者明说、反臆造**，价格在 `kolQueries.judgmentMap` 按**现价 0.2–5× band 剔噪**(penny-pump/假设估值/$1225 这类数量级离谱者置空)。取数 `getKolTargetPrices`(复用 `getKolOpinions` 池，judgment 挂到 `KolOpinion.judgment`)。`make kol-judgment`。
+> Reddit 单站旧页（dashboard/ticker/post/author/leaderboard/cn/onboarding）已删；**后端 pipeline 全保留**。线上 redditalpha.xyz 仍由旧 `reddit_alpha` 仓库部署、不受影响（bSmart 部署需快照含 `gr_*`，否则相关页为空）。
 
 ---
 
 ## 2. 三大系统
 
-> **⚠ 两站两套数据、互不干扰（2026-06）**：本仓库 = **prismo.today**（完整多社区），数据真源 = **本地 `data/dev.db`**（含 gr_*/yt_*/kol_* 等云端没有的独有层）；旧站 **redditalpha.xyz** = `Conor-711/reddit_alpha` 仓库（只 Reddit），数据 = 下面的 Supabase 云端。**Prismo 不再 `cloud-pull`**（它会用「只有 Reddit 核心」的云端快照覆盖本地、抹掉独有层 = 之前『数据消失』元凶；已在 Makefile 锁死：`site-cloud`=`make site`、`cloud-pull` 默认拒绝、`clean` 不删 db）。出站 `make site` 读本地 dev.db。
+> **⚠ 两站两套数据、互不干扰（2026-06）**：本仓库 = **bsmart.today**（完整多社区），数据真源 = **本地 `data/dev.db`**（含 gr_*/yt_*/kol_* 等云端没有的独有层）；旧站 **redditalpha.xyz** = `Conor-711/reddit_alpha` 仓库（只 Reddit），数据 = 下面的 Supabase 云端。**bSmart 不再 `cloud-pull`**（它会用「只有 Reddit 核心」的云端快照覆盖本地、抹掉独有层 = 之前『数据消失』元凶；已在 Makefile 锁死：`site-cloud`=`make site`、`cloud-pull` 默认拒绝、`clean` 不删 db）。出站 `make site` 读本地 dev.db。
 
 ```
 ┌─────────────────┐  写本地   ┌──────────────────────┐   读本地   ┌─────────────────────┐
 │ ① Python 数据管线 │ ───────▶ │ ② 本地 data/dev.db       │ ───────▶ │ ③ Next.js 静态网站   │
-│  抓取 + AI 分析   │  (默认)   │  Prismo 唯一真源(gr/yt/kol)│  构建期    │  读 dev.db → 出 HTML │
+│  抓取 + AI 分析   │  (默认)   │  bSmart 唯一真源(gr/yt/kol)│  构建期    │  读 dev.db → 出 HTML │
 └─────────────────┘          └──────────────────────┘          └─────────────────────┘
         │  只读拉 tw_*(X)            ▲ Supabase 云端 = redditalpha 的 Reddit 核心
-        └──────────────────────────┘   + Prismo 的 web 后端(Auth/app_events/收藏)，ref wimipsiwtrqhizgmbxas
+        └──────────────────────────┘   + bSmart 的 web 后端(Auth/app_events/收藏)，ref wimipsiwtrqhizgmbxas
 ```
 
 ### ① Python 数据管线（`pipeline/`）
 抓 Reddit → 抽取 ticker → 大模型逐帖打标 → 聚合（榜单/情绪/异动/叙事/简报）→ 翻译；+ 5 社区 `gr_*`、YouTube `yt_*`、KOL `kol_*` 等扩展层。
-**Prismo 内容写本地 `data/dev.db`**（`DATABASE_URL='sqlite:///./data/dev.db'`）。**X 数据 `tw_*` 从云端只读拉**（`kol_sentiment.py`/`kol_volume.py` 的 `_cloud_url()` 直接读 `.env` 拿云端串）。
+**bSmart 内容写本地 `data/dev.db`**（`DATABASE_URL='sqlite:///./data/dev.db'`）。**X 数据 `tw_*` 从云端只读拉**（`kol_sentiment.py`/`kol_volume.py` 的 `_cloud_url()` 直接读 `.env` 拿云端串）。
 
-### ② 数据真源 = 本地 `data/dev.db`（Prismo）
-- Reddit 核心（14 表）+ **Prismo 独有层** `gr_*`(5 社区)/`yt_*`(YouTube)/`kol_*`/`x_opinion`/`price_daily`/`author_avatar` 等（这些云端**没有**）。
+### ② 数据真源 = 本地 `data/dev.db`（bSmart）
+- Reddit 核心（14 表）+ **bSmart 独有层** `gr_*`(5 社区)/`yt_*`(YouTube)/`kol_*`/`x_opinion`/`price_daily`/`author_avatar` 等（这些云端**没有**）。
 - **推荐部署路径：Cloudflare Pages Direct Upload**。本地用 Node 22 + `node:sqlite` 读取 `data/dev.db` 构建 `web/out/`，再 `make cf-deploy` 上传 zh/en 静态产物；Cloudflare 运行时不需要 Node 服务，也不重新构建。
 - Railway/Dockerfile 仍可作为备用部署路径：用**提交进仓库的压缩数据快照**构建（线上=本地）。原始 `data/dev.db` 被 Git 和 Docker context 忽略，不再走 Git LFS。更新数据后运行 `make snapshot-db`：压缩结果不超过 90MB 时只提交 `data/dev.db.xz`，超过时只提交普通 Git 分片 `data/dev.db.xz.part-*` 和 manifest `data/dev.db.xz.parts`。Docker 按 manifest/单文件顺序还原。改数据前用 `make backup-db` 写项目外轮换备份。
-- **Supabase 云端**（`wimipsiwtrqhizgmbxas`，**不是 Prismo 的内容家**）：① redditalpha.xyz 的 Reddit 核心；② Prismo 的 **web 后端**（`app_events`/`ticker_searches`/`user_collections`/`user_profiles`/Auth，走 `NEXT_PUBLIC_*`）；③ Prismo 只读的 `tw_*`(X)。见 `CLOUD_DB.md`。
+- **Supabase 云端**（`wimipsiwtrqhizgmbxas`，**不是 bSmart 的内容家**）：① redditalpha.xyz 的 Reddit 核心；② bSmart 的 **web 后端**（`app_events`/`ticker_searches`/`user_collections`/`user_profiles`/Auth，走 `NEXT_PUBLIC_*`；`user_collections` 只承接帖子/评论账户收藏，标的/作者/叙事/社区追踪保存在设备 `localStorage`）；③ bSmart 只读的 `tw_*`(X)。见 `CLOUD_DB.md`。
 
 ### ③ Next.js 静态网站（`web/`）
 Next 14 App Router，**静态导出**（`output:"export"` 仅生产）。构建期用 `node:sqlite` 读**本地 `data/dev.db`**
-（Prismo 真源，**不再 cloud-pull**），生成 ~6500 个静态页面到 `web/out/`，可部署到任意静态托管。
+（bSmart 真源，**不再 cloud-pull**），生成 ~6500 个静态页面到 `web/out/`，可部署到任意静态托管。
 **网站运行时不连数据库**（纯静态，无服务端攻击面）。
 
 ---
@@ -99,7 +125,11 @@ pipeline analyze / domain / jobs ──────▶ analysis / rollup tables
                                       Next.js export → web/out/
 ```
 
-**关键：Prismo 内容默认写本地 `data/dev.db`，出站 `make site` 读取本地真源。** Supabase 不再是 Prismo 内容家，只承担 redditalpha 旧站核心、Prismo web 后端、以及部分 `tw_*` 外部数据读取。分析层保持增量：逐帖打标按稳定内容 ID 持久化，只分析新内容；rollup/export 层应可重算。
+**关键：bSmart 内容默认写本地 `data/dev.db`，出站 `make site` 读取本地真源。** Supabase 不再是 bSmart 内容家，只承担 redditalpha 旧站核心、bSmart web 后端、以及部分 `tw_*` 外部数据读取。分析层保持增量：逐帖打标按稳定内容 ID 持久化，只分析新内容；rollup/export 层应可重算。
+
+**国会议员公开交易评分（2026-08-04）**：`make congress-score` 读取 House Clerk / Senate eFD 官方披露的开源归一化快照，保留每笔官方 PDF 链接；`pipeline/platforms/congress` 负责来源规范化，`pipeline/domain/congress_score` 按议员+日期+标的+方向去重、用下一交易日复权收盘和 20D/60D 相对 SPY 超额结算，`pipeline/jobs/congress_score` 编排本地 `price_daily` 与 Yahoo 缺口回补并导出完整榜单、逐事件证据和 manifest 到 `data/exports/congress_score/`。该评分与 Smart Account 作者 Score 隔离，不写 `dev.db`；少于 5 个已结算买入决策日的议员只进入观察/无评分清单。
+
+**本地大体量原始推文归档（2026-08-01）**：已导入的 `roster_tweets_*` 与 `equity_trader_kol_tweets_2025h2` 不再物理存放于仓库目录，统一归档到 `/Users/windz7z/Documents/bsmart-data-archive/twitter/`；仓库根目录保留同名符号链接，因此现有 X/Score 管线默认路径无需修改。归档不是 Git 或部署输入，删除符号链接不会影响 `data/dev.db` 中已经落库的数据，但重新抽取历史 Call 前必须保证归档可访问。
 
 **作者库（优质作者聚合页）** —— `make daily` 内（主分析之后）爬「实力榜」Top 50 作者的 Reddit 历史帖，
 两级模型漏斗控成本：**DeepSeek(LOW) 粗筛质量 → 仅过线帖送千问(HIGH) 深析并入库**。这些帖标记
@@ -114,13 +144,23 @@ TW PTT 综合板抓一遍，用繁中/英文别名从标题+正文**抽取**精�
 用 **Claude-in-Chrome 真实浏览器**（自然过 WAF）在页面内 XHR 拉 `/query/v1/symbol/search/status.json` 导出 JSON，再由 `platforms/global_retail/xueqiu_export.py` 收进 gr_post(region=cn)。
 **打标 = DeepSeek flash 全量（不用千问）**：每帖 sentiment + 派生 stance。
 跨区滚动 → `gr_ticker_region`(每 region×ticker 帖数/多空/情绪)；跨区派生 → `gr_ticker`(共识 all_bull/all_bear、分歧 divergent=某区与其余相反、情绪极差 spread)。
-正式页面消费：总览、标的、区域与追踪页读取 `gr_*`，展示五地区情绪、跨区热力、共识/分歧、全球热度榜与代表帖。
+正式页面消费：总览、标的与区域页读取地区相关 `gr_*`，展示五地区情绪、跨区热力、共识/分歧、全球热度榜与代表帖；追踪页仅消费 `gr_ticker` 聚合，不读取或展示地区维度数据。
 管线：`pipeline/data/global_targets.yml`(40 标的+别名+naver码) → `platforms/global_retail`/legacy ingest 抓取 → `domain/global_retail` 打标与聚合；
 CLI `gr-crawl/gr-tag/gr-rollup/gr-xueqiu/gr-quote`（`gr-quote`=抓各标的最新价(Nasdaq api 主 + Yahoo 兜底) → `gr_quote` 表，实际实现 `platforms/global_retail/quotes.py`，旧 `ingest/gr_quote.py` 为 wrapper），`make gr`（含 gr-quote）/`make gr-quote`；web `lib/globalQueries.ts`。隔离表 `gr_*`（含 `gr_quote`；迁移 `supabase/migrations/…_gr_quote.sql`）。
 
-**雪球 SV 作者池（2026-07-10）**：作者发现样本先写 `xueqiu_author_snapshot`，`domain/authors/xueqiu_pool.py` 按版本把候选写入 `xueqiu_author_pool`；首版门槛为粉丝 ≥500（或认证）且平台历史发帖 ≥300，明显媒体/机构发布者单独标记，正式池取 Top 300 位创作者，其余为 warm reserve。`platforms/xueqiu/author_timeline.py` 为每位候选建立 `xueqiu_author_crawl_job`，通过已登录 Playwright 会话按作者回填一年时间线，正文继续写 `xueqiu_raw_post`，随后统一扩展 `xueqiu_post_ticker`。雪球未登录会话只能读取作者首屏；首次运行 `make xueqiu-author-auth` 由用户本人完成登录，会话仅保存到 gitignore 的 `.xueqiu_storage_state.json`，不保存密码。常用入口：`make xueqiu-author-plan/auth/run/drain/status`；`drain` 以小批次和自适应冷却持续消耗正式作者池：部分成功固定退避 30 分钟，仅整批零成功才指数退避且最长 1 小时；SQLite 写锁、连接重置和浏览器导航超时会自动重试，超过 10 分钟未更新的 `running` 任务会保留游标恢复为 `pending`。`domain/smart_voice/v0_impl.py` 的 `xueqiu` 候选适配器只消费该版本中 `selected=1` 且回填完成的作者，并默认要求正式池全部完成后才放行候选召回；转发内容被排除，粉丝/认证/发现排名不进入 SV 得分。
+**雪球 Score 作者池（2026-07-10）**：作者发现样本先写 `xueqiu_author_snapshot`，`domain/authors/xueqiu_pool.py` 按版本把候选写入 `xueqiu_author_pool`；首版门槛为粉丝 ≥500（或认证）且平台历史发帖 ≥300，明显媒体/机构发布者单独标记，正式池取 Top 300 位创作者，其余为 warm reserve。`platforms/xueqiu/author_timeline.py` 为每位候选建立 `xueqiu_author_crawl_job`，通过已登录 Playwright 会话按作者回填一年时间线，正文继续写 `xueqiu_raw_post`，随后统一扩展 `xueqiu_post_ticker`。雪球未登录会话只能读取作者首屏；首次运行 `make xueqiu-author-auth` 由用户本人完成登录，会话仅保存到 gitignore 的 `.xueqiu_storage_state.json`，不保存密码。常用入口：`make xueqiu-author-plan/auth/run/drain/status`；`drain` 以小批次和自适应冷却持续消耗正式作者池：部分成功固定退避 30 分钟，仅整批零成功才指数退避且最长 1 小时；SQLite 写锁、连接重置和浏览器导航超时会自动重试，超过 10 分钟未更新的 `running` 任务会保留游标恢复为 `pending`。`domain/smart_voice/v0_impl.py` 的 `xueqiu` 候选适配器只消费该版本中 `selected=1` 且回填完成的作者，并默认要求正式池全部完成后才放行候选召回；转发内容被排除，粉丝/认证/发现排名不进入 Score 得分。
 
-**Private Smart Voice Telegram MVP（2026-07-29）**：`platforms/telegram/public_channel.py` 通过无需登录的 `t.me/s/<handle>` 公共预览页完整分页，原始/标准化消息写入独立 `data/private_sv/<handle>.db` 的 `telegram_public_channel` / `telegram_public_message`，不加入私密群、不使用用户凭据；转发保留但不归因给频道主。`domain/smart_voice/private_telegram.py` 把频道主原创消息映射为共享形态候选，复用现有 Call 抽取；`private_audit.py` 二次拒绝促销奖励、教学、第三方、回顾和方向证据不足内容；结算继续使用下一交易日入场、SPY/行业 ETF 双基准积分路径、生命周期和时间衰减。单频道无法形成平台内排名，`private_report.py` 使用当前公域正式合格作者 raw-z 分布校准；`private_portfolio.py` 按下一交易日复权开盘、同标的最新 Call 覆盖、活跃标的等权和 10 bps 成本生成跟随组合净值与风险；`private_report_export.py` 生成 Markdown/JSON/CSV，`private_web_export.py` 生成实验页专用 `web/lib/data/privateSmartVoiceMvp.json`，均不写公域 `smartVoice.json`。一次性入口 `make private-sv-telegram HANDLE=ruiminginvest [STAGE=...] [PROXY=...]`。
+**Hyperdash Smart Money 主源（2026-08-06）**：`platforms/hyperdash` 直接读取 Hyperdash Web 使用的公开 GraphQL `Equities Focused` 系统组、Copy Score、30 天绩效曲线、主要资产和账户仓位快照；bSmart 不再重算默认生产链上评分，只负责标准化、相邻仓位快照差分、30 天裁剪和原子发布。`jobs/smart_voice/hyperdash_live.py` 默认每 10 分钟刷新，失败时先保留最后成功 Hyperdash 快照，超过新鲜度阈值后才允许使用保存的 Hyperliquid 降级快照。`services/smart_money_ingest` 将来源、更新时间和健康状态连同 Read Model 发布到 PostgreSQL；iOS/Web 只经 Client API 消费，不直连第三方。`platforms/hyperliquid` 与原有 `hl_*` 评分管线保留为官方数据审计、诊断及显式应急模式，不是默认生产榜单。正式商业发布前必须确认 Hyperdash API 使用许可。运行见 `docs/operations/smart-money-live.md`。
+
+**Hyperliquid 候选完整性边界（2026-08-06）**：持续成交会发现大量一次性对手方，不能把所有地址作为正式 Smart Money 补数分母。历史补齐限定为达到 5 笔观察成交或 10,000 美元观察成交额后、按观察成交额排序的最近 30 天 top-500 候选账户；活跃 fills、历史候选和画像使用独立后台通道。候选只决定补数优先级，只有可用历史已完整补齐且满足账户资格的地址才能正式评分；未补齐账户标记 `incomplete`。首轮补齐达到 2,000 fills 时已满足算法型排除条件并停止继续下载，`fills_limit_reason` 将该产品策略上限与交易所最近 10,000 fills 来源上限分开记录；受限账户不得进入正式排名和标的方向信号。健康文件同时报告候选池覆盖率、限制原因与全体观察地址审计覆盖率。
+
+**X Smart Account 15 分钟更新（2026-08-06）**：`services/x_ingest` 是独立 webhook/worker 服务。`pipeline/platforms/x/realtime` 只负责 TwitterAPI.io 规则、标准化、补偿查询和实时事实持久化；`pipeline/domain/smart_voice/realtime_x.py` 复用现有 X Call 门禁，从完整原文提取方向、周期、目标价和逐字证据，并生成与摘要严格分离的完整中英文译文；`pipeline/jobs/smart_voice/x_realtime.py` 编排作者池、蓝绿规则、补偿、处理、删除检查和发布。作者池每日从 X 正式榜单动态取 Top 25%，以数字 X user ID 为稳定身份；`BSMART_X_POOL_LIMIT=10` 仅用于首日灰度，`0` 表示完整 Top 25%。Webhook 为主、15 分钟高级搜索补偿为辅；补偿查询在单页结果饱和时由 bSmart 主动二分时间窗口，以有限请求预算换取可审计的完整性。只有 `ready` Call 才进入 `smart-account-updates`，并投影为明确标注“暂无链上资金验证”的 `account_leads` 持仓事件。Client Read Model 使用数据库内 producer 分区事务发布，X、Hyperliquid 和不可变基础快照不能互相覆盖。生产必须使用 PostgreSQL，部署和验收见 `docs/operations/x-smart-account-realtime.md`。
+
+**Smart Account 作者证据读取（2026-08-10）**：`smart-account-updates` 仍只承担 Top 25% 作者的低延迟提醒，不作为作者详情的数据源。离线 Client Read Model 另从 `sv_call`、`sv_call_candidate`、`sv_call_settlement` 与 `price_daily` 生成 `smart-account-evidence`，为所有正式榜单作者按人保留有界的近期、代表性命中和代表性失误 Call。iOS 进入作者详情后通过 `GET /v1/smart-accounts/{accountId}/evidence` 懒加载；页面严格分开结构化解释、原始证据、完整原文/已有完整译文、相对 SPY 与行业 ETF 的历史结算和算法审计信息，不得用摘要伪装译文，也不得把历史结果表述为真实持仓或未来保证。
+
+**iOS Smart Account 代表标的（2026-08-13）**：作者详情的“代表作”不是单条最高收益观点。Client Read Model 只使用已结算且 `contribution > 0` 的 Call，按作者和 ticker 累计 Score 正贡献并选择加分最高的 3 个标的；每个标的保留最多 10 条加分观点及真实日线 OHLC。iOS 以 K 线叠加观点落点，颜色表示原始多空方向、大小表示单条 Score 贡献，并展示标的累计加分和观点数。客户端不得用价格涨跌、命中次数或当前作者排名重算代表标的。
+
+**iOS Smart Money 代表性开仓（2026-08-13）**：Smart Money 详情通过独立 `smart-money-evidence` Read Model 和 `GET /v1/smart-money/{accountId}/evidence` 按需加载代表性开仓，不扩大榜单主载荷。服务端只统计 `opened / increased / flipped`，按账户和实际 Hyperliquid market 累计可观察新增敞口，选出最多 3 个市场并保留最多 10 个开仓点；图表必须使用同一合约的 Hyperliquid `candleSnapshot` 4h OHLC。旧快照缺少价格时只能明确标记为最接近观察时刻的 4 小时收盘价，客户端不得重排市场、替换成股票/ETF 价格或把仓位快照变化称为可保证成交。
 
 ---
 
@@ -128,25 +168,33 @@ CLI `gr-crawl/gr-tag/gr-rollup/gr-xueqiu/gr-quote`（`gr-quote`=抓各标的最�
 
 ```
 crypto_us/
+├── services/                  # ② 对外/常驻服务；不在客户端进程内执行抓取
+│   ├── client_api/            #   iOS / Web 的 /v1 API 与物化 Read Model 读取
+│   ├── smart_money_ingest/    #   Hyperdash 主源、Hyperliquid 降级与 PostgreSQL 发布
+│   └── x_ingest/              #   X webhook、补偿抓取与实时观点发布
 ├── pipeline/                  # ① Python 数据管线
 │   ├── manage.py              #   统一 CLI 入口（被 Makefile 调用的所有子命令）
 │   ├── daily.py               #   每日一次的全量编排（抓取→分析→聚合→翻译）
 │   ├── sync.py                #   ★本地 SQLite ⇄ 云端 Supabase 同步（cloud-push / cloud-pull）
 │   ├── worker.py              #   调度器（APScheduler，定时跑 daily）
 │   ├── cli/                   #   目标边界：CLI 注册与参数解析（迁移期 README，manage.py 后续拆入）
-│   ├── platforms/             #   目标边界：Reddit/X/YouTube/雪球/Toss/Telegram 等平台适配器
+│   ├── platforms/             #   目标边界：Reddit/X/YouTube/雪球/Toss 等平台适配器
 │   │   ├── reddit/            #   Reddit PRAW/Arctic/作者池抓取（旧 ingest/reddit_* 为 wrapper）
 │   │   ├── local/             #   本地样本数据加载（旧 ingest/sample_loader.py 为 wrapper）
 │   │   ├── youtube/           #   YouTube 视频发现、频道刷新（旧 ingest/youtube_* 为 wrapper）
 │   │   ├── toss/              #   Toss 社区抓取（旧 ingest/toss.py 为 wrapper）
 │   │   ├── x/                 #   X 推文↔标的硬匹配、云端 X 拉取、完整 X ticker universe（旧 ingest/twitter_match.py/x_pull.py/load_complete_x_ticker_universe.py 为 wrapper）
-│   │   ├── market_data/       #   SV 价格历史回填、短窗口 price_daily 加载（旧 ingest/sv_price_history.py/price_daily.py 为 wrapper）
+│   │   ├── hyperliquid/       #   Hyperliquid HIP-3 TradFi 只读 Info API、标准化、SQLite 持久化
+│   │   ├── hyperdash/         #   Hyperdash Equities Focused / Copy Score / 仓位 GraphQL 适配器
+│   │   ├── congress/          #   House/Senate STOCK Act 公开披露快照下载与官方证据 URL 规范化
+│   │   ├── market_data/       #   Score 价格历史回填、短窗口 price_daily 加载（旧 ingest/sv_price_history.py/price_daily.py 为 wrapper）
 │   │   ├── author_assets/     #   作者头像等跨平台作者资产刷新（旧 ingest/author_avatars.py 为 wrapper）
 │   │   ├── global_retail/     #   全球散户多区抓取、雪球导入与报价
 │   │   └── xueqiu/            #   雪球 direct crawler 与长期任务管道
-│   ├── domain/                #   目标边界：opinions/authors/tickers/narratives/SV/target_prices 跨平台逻辑；smart_voice/ticker_signal_* 负责标的历史信号，indicator_backtest* 负责发现页四指标回测，segment_backtest* 负责周期/赛道/投资类型子 SV 垂直回测
-│   ├── jobs/                  #   目标边界：完整任务编排（global_retail/ticker_detail/youtube_fulltext/SV）
+│   ├── domain/                #   目标边界：opinions/authors/tickers/narratives/Score/target_prices 跨平台逻辑；congress_score 独立处理议员公开交易评分
+│   ├── jobs/                  #   目标边界：完整任务编排（global_retail/ticker_detail/youtube_fulltext/Score/Hyperliquid/Congress Score）
 │   ├── common/
+│   │   ├── congress.py        #   House/Senate 议员与披露的 platform-neutral 数据契约
 │   │   ├── config.py          #   配置/环境变量（含 normalize_db_url：Supabase 串自动转 psycopg+SSL）
 │   │   ├── db.py              #   SQLAlchemy 引擎/会话（sqlite 开发 / postgres 生产通用）
 │   │   ├── models.py          #   ★数据模型 = schema 单一真源（14 张表）
@@ -197,7 +245,7 @@ crypto_us/
 │   ├── app/
 │   │   ├── layout.tsx         #   根布局（主题防闪烁 + 默认 OG/metadataBase）
 │   │   ├── [lang]/            #   语言段（zh|en|ja|ko）：generateStaticParams（页面数 = locales × 各内页）
-│   │   │   #   layout.tsx 仅 LocaleProvider；(app)/ = 侧栏壳(Sidebar/MobileTabBar)，(marketing)/ = 无侧栏落地页壳
+│   │   │   #   layout.tsx 仅 LocaleProvider；(app)/ = 侧栏壳；(marketing)/ = 落地页壳；(public)/ = 无登录门槛、无侧栏的公开数据页壳
 │   │   │   ├── dashboard/     #     ★总览看板路由（取数后交给 features/dashboard；单视窗三栏、模块内滚动、专用骨架屏）
 │   │   │   ├── narratives/ + narratives/[slug]/ # ★叙事轮动总览 + 详情（构建期 narrativeRotation.json；固定板块、跨社区、暂不展示原帖）
 │   │   │   ├── tickers/ + tickers/[symbol]/   # 标的总览(可排序表 + 上方 **三个 KOL 排行榜** `KolRankBoards`：看多/看空=`getKolBullBearBoards`(kol_sentiment_daily 近14天 net 跨标的聚合、scope gr_ticker、top/bottom 5)、**情绪变化最大**=`getKolSentimentSwings`(同窗口劈前7/后7天，比**看多占比** n_bull/(bull+bear) 的 pp 变化、按 |Δ| top5；用占比非 net 以免被大票声量主导)) + 标的详情(★模块看板:个体观点·KOL[真实] + 异动/跨区视角/独有叙事/多空共识/风险温度/大家在等什么 — mock,多图表；海外信息差/最强反方/独立 YouTube 观点 模块已删)
@@ -213,16 +261,16 @@ crypto_us/
 │   │   ├── globalQueries.ts    #   全球散户正式页面取数（读 gr_* 表 + US 代表帖读现有 Reddit；try/catch 兜底）
 │   │   ├── investorQueries.ts   #   投资者榜单取数（getInvestorBoard：X/YouTube/Reddit/雪球 各按作者聚合互动·播放→排名；缺表返回空）
 │   │   ├── creatorQueries.ts    #   YouTube 作者页取数（getYoutubeCreator：单频道 ①标的判断 tickerJudgments[yt_analysis 立场/观点/论据/目标价 ⋈ price_daily 当时价→现在价+命中,含中性,按标的归组]/②代表性标的/③互动最高视频；getYoutubeChannelIds 供 generateStaticParams）
-│   │   ├── smartVoiceInvestorQueries.ts # SV 作者详情/榜单预览证据取数（结算 call + price_daily；榜单按代表 ticker 共享紧凑收盘价序列）
-│   │   ├── smartVoicePortfolioQueries.ts # SV 作者构建期组合回测（真实已结算 call + 复权价格 + SPY；下一交易日入场/同标的最新观点覆盖/活跃标的等权）
+│   │   ├── smartVoiceInvestorQueries.ts # Score 作者证据兼容入口；实现拆到 smartVoiceInvestorTypes / smartVoiceInvestorEvidenceQueries / smartVoiceRepresentativeQueries
+│   │   ├── smartVoicePortfolioQueries.ts # Score 作者构建期组合回测（真实已结算 call + 复权价格 + SPY；下一交易日入场/同标的最新观点覆盖/活跃标的等权）
 │   │   ├── i18n.ts + dictionaries/{zh,en,ja,ko}.ts # 多语（zh 为源，en/ja/ko 必须镜像同样的 key；UI 译，帖子内容 ja/ko 回退英文原文）
 │   │   ├── supabase.ts / auth.ts / admin.ts    # Supabase 客户端 + 登录 + 管理员判定
 │   │   ├── analytics.ts        # 埋点（写 Supabase）
-│   │   ├── favorites.ts                         # ★账户收藏/追踪：客户端读写 user_collections（RLS）
+│   │   ├── favorites.ts                         # ★帖子/评论账户收藏走 user_collections；标的/作者/叙事/社区追踪走 localStorage
 │   │   ├── profile.ts                           # ★用户投资画像：客户端读写 user_profiles（RLS）+ markOnboarded/isOnboarded（门禁标志走 user_metadata）
 │   │   ├── instruments.ts                       # onboarding 持仓选择器的「广义标的」补集（ETF/杠杆反向/商品/加密/债券；个股来自 gr_ticker）
 │   │   └── site.ts            #   SITE_URL（https://www.redditalpha.xyz）+ OG
-│   ├── features/              #   目标边界：按业务域组织 dashboard/ticker/narrative/investor/region/search/tracking/SV；dashboard 承接总览纯视图模型、单视窗三栏工作台；ticker 承接详情页头、Overview/KolModule、价格/Top-Bottom SV 聚集与回测，以及高低分歧/周期结构/加速反转/目标失效诊断；smart-voice 承接跨页 SV 展示模块、工作台和作者详情；其余 feature 各自承接页面业务
+│   ├── features/              #   目标边界：按业务域组织 dashboard/ticker/narrative/investor/region/search/tracking/smart-account/onboarding；dashboard 承接总览视图模型与工作台；ticker 将目标价编排、分布图和纯模型分离；smart-account 承接跨页 Score 展示与作者详情；onboarding 承接纯步骤 UI
 │   ├── shared/                #   目标边界：跨业务 UI/layout/charts/icons/formatting/i18n/market；已承接 KOL 平台/立场/头像/原文译文、TickerLogo、PriceSparkline、ViewportWorkspace、Bits/DetailBits 展示基础件
 │   ├── server/                #   目标边界：构建期 DB/query 边界（迁移期 lib/db.ts 与 *Queries.ts 继续可用）
 │   ├── components/            #   迁移期旧 UI 组件（Sidebar/FeedCard/MarkdownLite…；复杂新逻辑不要继续堆入）
@@ -230,15 +278,15 @@ crypto_us/
 │   └── public/               #   logo/og/avatars/communities（图片已压缩）
 │
 ├── supabase/migrations/       # ② Supabase SQL 迁移（ticker_searches / analytics / user_collections / user_profiles 的表+RLS+RPC）
-├── data/dev.db                # 本地 SQLite —— **Prismo 唯一真源**（gitignore，不进入 Git/Docker context）
+├── data/dev.db                # 本地 SQLite —— **bSmart 唯一真源**（gitignore，不进入 Git/Docker context）
 ├── data/dev.db.xz             # 小于等于 90MB 时的单文件部署快照（二选一）
 ├── data/dev.db.xz.part-*      # 大于 90MB 时的普通 Git 分片快照（二选一）
 ├── data/dev.db.xz.parts       # 分片 manifest；存在时 Docker 启用分片还原
 ├── data/dev.db.snapshot.json  # 快照时间、体积、SHA-256 与文件清单
 ├── Makefile                   # ★所有常用命令入口
 ├── .env / .env.example        # 凭据与配置（.env gitignore：QWEN/DEEPSEEK/DATABASE_URL…）
-├── docs/architecture/         # 架构专题文档（前端、管线、数据、平台、SV、部署、约定）
-├── docs/contracts/            # 跨平台产品契约（Opinion/Author/Ticker/Judgment/SV/Narrative）
+├── docs/architecture/         # 架构专题文档（前端、管线、数据、平台、Score、部署、约定）
+├── docs/contracts/            # 跨平台产品契约（Opinion/Author/Ticker/Judgment/Score/Narrative）
 └── 文档：README / DEPLOY / CLOUD_DB / SUPABASE_AUTH / STRATEGY / ARCHITECTURE(本文)
 ```
 
@@ -254,11 +302,12 @@ crypto_us/
 | 派生聚合 | `ticker_rollup` `market_mood` `trending` | 声量榜 / 市场情绪 / 异动（每次全量重算，可弃） |
 | 叙事/简报 | `narratives` `narrative_tickers` `narrative_posts` `daily_briefs` | 主导叙事 + 每日简报 |
 | 叙事轮动(构建期 JSON) | `web/lib/data/narrativeRotation.json` | **新 `/narratives` 页面数据源**：固定板块 taxonomy 的跨社区叙事轮动；由 `make narrative-rotation` 从 `gr_post`、Reddit、X、YouTube 聚合生成，记录每日 rank/share/sentiment 与详情来源/地区/标的分布；**不使用旧 Reddit-only `narratives` 表**，不把财报/政策/估值等事件项作为板块 |
-| Smart Voice 指标回测(本地派生) | `sv_investor_score_asof` `sv_indicator_signal_daily` `sv_indicator_event` `sv_indicator_outcome` `sv_indicator_stat` | 历史时点平台正式池 SV/排名 → 发现页四类指标的 1/3/7/30/90D 滚动信号 → 连续同向事件 → 下一交易日开盘后的 1/5/20/60/90D 调整价方向收益、相对 SPY 超额、胜率、Wilson 区间、盈亏比和利润因子；`make sv-indicator-backtest` 全量重建，`make sv-indicator-report` 另导出逐事件、逐原文证据、成本/时间/标的/强度/质量/不重叠持仓细分 CSV 及 40 例原帖证据案例集；`make sv-portfolio-backtest` 在 X 历史时点事件和作者 Call 上构建不重叠等权组合，输出 0/10/25bps 成本下的 CAGR、夏普和回撤，不新增主库日净值表 |
-| Smart Voice 子 SV 垂直回测(本地派生) | `sv_segment_score_asof` `sv_segment_signal_daily` `sv_segment_event` `sv_segment_outcome` `sv_segment_stat` | 仅用每个历史时点之前已结算的 Call 重建周期、赛道和投资类型子 SV，按子类内部 Top 10%/25% 作者生成 3/7/14/30D 集中方向事件，再从下一交易日开盘计算 1/5/20/60/90/180D 调整价方向收益和相对 SPY 超额；默认至少 3 位作者、65% 同向度和 2.5 有效声音，结果与原文证据写入 `data/reports/sv_segment_backtest/`，不修改当前作者分数或页面榜单 |
-| Private Smart Voice Telegram MVP(隔离) | `telegram_public_channel` `telegram_public_message` + 独立库内 `sv_call_*` `private_sv_report` | 单个公开 Telegram 广播频道全历史 → 频道主原创归属 → Call 抽取与二次证据审计 → 双基准结算与 Private SE/SV → 等权跟随组合回测；数据库/完整报告保持隔离，实验页只消费精简 `privateSmartVoiceMvp.json`，不进入公域作者榜或标的信号 |
+| Smart Account 指标回测(本地派生) | `sv_investor_score_asof` `sv_indicator_signal_daily` `sv_indicator_event` `sv_indicator_outcome` `sv_indicator_stat` | 历史时点平台正式池 Score/排名 → 发现页四类指标的 1/3/7/30/90D 滚动信号 → 连续同向事件 → 下一交易日开盘后的 1/5/20/60/90D 调整价方向收益、相对 SPY 超额、胜率、Wilson 区间、盈亏比和利润因子；`make sv-indicator-backtest` 全量重建，`make sv-indicator-report` 另导出逐事件、逐原文证据、成本/时间/标的/强度/质量/不重叠持仓细分 CSV 及 40 例原帖证据案例集；`make sv-portfolio-backtest` 在 X 历史时点事件和作者 Call 上构建不重叠等权组合，输出 0/10/25bps 成本下的 CAGR、夏普和回撤，不新增主库日净值表 |
+| Smart Account 子 Score 垂直回测(本地派生) | `sv_segment_score_asof` `sv_segment_signal_daily` `sv_segment_event` `sv_segment_outcome` `sv_segment_stat` | 仅用每个历史时点之前已结算的 Call 重建周期、赛道和投资类型子 Score，按子类内部 Top 10%/25% 作者生成 3/7/14/30D 集中方向事件，再从下一交易日开盘计算 1/5/20/60/90/180D 调整价方向收益和相对 SPY 超额；默认至少 3 位作者、65% 同向度和 2.5 有效声音，结果与原文证据写入 `data/reports/sv_segment_backtest/`，不修改当前作者分数或页面榜单 |
+| Smart Money（Hyperdash 主源） | `hyperdash-last-good.json`、原子 client manifest；`hl_*` 仅作降级审计 | Hyperdash Equities Focused → Copy Score/30 天绩效/仓位快照 → 快照差分 movement → iOS Read Model；来源和更新时间必须显式，客户端不重算 |
+| X Smart Account 实时事实与观点 | `x_realtime_subscription` `x_realtime_rule` `x_realtime_post` `x_realtime_call` `x_realtime_event_candidate` `x_realtime_run` | 正式 X Top 25% 作者池与规则版本 → webhook/15 分钟补偿幂等原帖 → 完整 Call/翻译门禁 → `smart-account-updates` 和持仓事件；生产只写 PostgreSQL，原始、译文、摘要严格分层，删除检查会撤下对应 Read Model 文档 |
 | 全球散户(隔离) | `gr_post` `gr_ticker_region` `gr_ticker` | 日韩台+中国大陆(雪球)爬精选跨区美股的散户帖(flash 打标 sentiment+stance) + 每 region×ticker 滚动(region `us`/`cn`/`jp`/`kr`/`tw`；**US 不入 gr_post，rollup 只读现有 Reddit**；CN 经浏览器过 WAF 导入) + 每 ticker 跨区派生(共识/分歧)。与 us/cn 主表隔离，供正式页面读取 |
-| YouTube 观点(隔离) | `yt_video` `yt_analysis` `yt_ticker_summary` | 按标的近 24h、浏览量>1000 的**全语种**财经视频(YouTube Data API)→ Gemini **混合分析**(top N 原生看视频[画面+音频] + 其余优先读取 `yt_fulltext` 完整口播/在线字幕，再回退低清原生视频)出 stance/sentiment/双语摘要 → 每标的浏览量加权汇总。**两条分析路径**：① `youtube-tag` Gemini 视频/口播分析，支持 `--since-days`、`--min-subscribers`、`--min-duration-seconds` 精确限制产品候选，`--workers>1` 走并发付费模式；幂等判定同时校验 `yt_analysis.ticker == yt_video.ticker`，同一视频被新 ticker 搜索命中后会自动重分析；② `youtube-tag-text` **无配额兜底**：用**标题+简介**跑 LOW 档出双语观点(mode=`text`)，覆盖 Gemini 没看的长尾、**不占 `analyzed` 旗标**→ 日后 Gemini 仍能升级覆盖。**纳入站外当地分析者**(韩 슈퍼개미/日 testa/美 FinTube)。YouTube 数据经 `kolQueries.youtubeOps` 并入标的页**观点浏览器**(`OpinionExplorer`)；展示口径要求频道 `yt_channel.subscriber_count >= 2000` 且视频 `duration_s > 60`，目标价时间线、YouTube 相关性/质量候选、KOL 情绪/讨论度/新增 KOL 日序列都使用同一口径；详情阅读器按 channel_id 匹配 YouTube 作者 SV 并显示具体 SV 分数。**原独立『YouTube 观点』模块已移除**(与浏览器重复，删 `YouTubeOpinions.tsx`+`youtubeQueries.ts`)；缺 key 回退 mock |
+| YouTube 观点(隔离) | `yt_video` `yt_analysis` `yt_ticker_summary` | 按标的近 24h、浏览量>1000 的**全语种**财经视频(YouTube Data API)→ Gemini **混合分析**(top N 原生看视频[画面+音频] + 其余优先读取 `yt_fulltext` 完整口播/在线字幕，再回退低清原生视频)出 stance/sentiment/双语摘要 → 每标的浏览量加权汇总。**两条分析路径**：① `youtube-tag` Gemini 视频/口播分析，支持 `--since-days`、`--min-subscribers`、`--min-duration-seconds` 精确限制产品候选，`--workers>1` 走并发付费模式；幂等判定同时校验 `yt_analysis.ticker == yt_video.ticker`，同一视频被新 ticker 搜索命中后会自动重分析；② `youtube-tag-text` **无配额兜底**：用**标题+简介**跑 LOW 档出双语观点(mode=`text`)，覆盖 Gemini 没看的长尾、**不占 `analyzed` 旗标**→ 日后 Gemini 仍能升级覆盖。**纳入站外当地分析者**(韩 슈퍼개미/日 testa/美 FinTube)。YouTube 数据经 `kolQueries.youtubeOps` 并入标的页**观点浏览器**(`OpinionExplorer`)；展示口径要求频道 `yt_channel.subscriber_count >= 2000` 且视频 `duration_s > 60`，目标价时间线、YouTube 相关性/质量候选、KOL 情绪/讨论度/新增 KOL 日序列都使用同一口径；详情阅读器按 channel_id 匹配 YouTube 作者 Score 并显示具体 Score 分数。**原独立『YouTube 观点』模块已移除**(与浏览器重复，删 `YouTubeOpinions.tsx`+`youtubeQueries.ts`)；缺 key 回退 mock |
 | YouTube 完整口播(隔离) | `yt_fulltext` | 视频「完整口播」：Gemini 真看视频→**只还原口播**(不描述画面)成有序段落 `{type:speech, speaker, text}`：**按语义分段**(3-6 句/段) + **行内 Markdown 划重点**(`**加粗**`关键结论/数据/标的、`*斜体*`转折，克制)；**多人(访谈/播客)每段标 `speaker`、独白留空**；剔赞助订阅VIP二维码宣传。列 content_zh(扁平**纯文本**,去 Markdown)+segments(JSON 有序带 Markdown)。前端 `YtFullContent.tsx`(被 `YtReader.tsx` 包裹，见 `yt_digest` 行)：行内 Markdown 渲染(`inline`/`RichText`)；单人→限行宽分段长文、多人→按说话人分回合对话排版；传入 chapters 时在对应 speech 段前插**章节标题+锚点 `data-ch`**。`youtube-fulltext --only/--per-ticker/--force/--no-frames`。⚠ 旧档 `visual` 段(关键帧)代码休眠、新提示不产出(下载/OCR 配方备查见 memory `project-youtube-fulltext`) |
 | YouTube 投资者摘要+目录(本地派生) | `yt_digest` | YouTube 正文阅读容器 `YtReader.tsx` 的两个新模块：① **投资者摘要**(`summary_zh/en`：整段口播精华/话题 AI 提成 4-7 分点，放正文上方)；② **内容目录**(`chapters`=有序章节 `{t_zh,t_en,seg}`，seg=起始 **speech 段下标**→`YtFullContent` 据此埋 `data-ch` 锚点 + 章节标题；右侧目录点击→正文平滑滚到该段、折叠时先自动展开)。③ **正文默认折叠到 ~72vh(约一屏)**、`展开更多`/`收起`。`youtube_digest.py`/`make youtube-digest` 读 `yt_fulltext` 口播文本跑 **LOW 档(qwen-flash，不重看视频)**，校验 seg 单调/夹紧；增量、原生 DDL 不入 models.py、写本地；web `ytDigestMap`(kolQueries)→YtReader。需 `QWEN_API_KEY` |
 | YouTube 判断参数(本地派生) | `yt_judgment` | 作者页「① 标的判断」每条判断的结构化 chip：从**已有** `yt_analysis`(summary+key_points+price_target)抽 `horizon_zh/en`(时间周期)·`target`(目标价，规整成 `$X`/`$X–Y`)·`key_levels_zh/en`(关键位置=支撑/阻力/突破位/形态/均线)。`youtube_judgment.py`/`make youtube-judgment` 跑 **LOW 档(qwen-flash，纯文本不重看视频)**，**只抽明说、缺则 null**(776 条 ~105 有值、target 69>price_target 60)；增量、裸 sqlite3 写本地、不入 models.py(同 `yt_digest` 范式)；web creatorQueries `safe` LEFT JOIN(表缺失不影响)、目标价结构化优先于原始 `price_target`。需 `QWEN_API_KEY` |
@@ -313,18 +362,20 @@ crypto_us/
 | `make kol-viewpoint` | KOL 观点视角分类：对已蒸馏观点(`kol_refined`+`yt_analysis`) 跑 LOW 档 → `kol_viewpoint`(7 视角 1-3 个)。供标的页 KOL 模块「按视角」视图。增量；先跑 `kol-refine`；支持 `--only/--source/--since-days/--force` 精确补跑 |
 | `make tw-match` | X 推文 ↔ ticker/topic 硬匹配：重建云端 `tw_tweet_topic`，由 `pipeline.manage tw-match` 调用 X 平台适配器。整表重算，需 `DATABASE_URL` 指向 Supabase Postgres |
 | `make tw-sentiment` | X 推文情绪打分：`tw_tweet_topic` 命中的 ~5.4 万推文 flash 批量打 -1..1 → **云端** `tw_tweet_sentiment`。⚠ 别加 sqlite 覆盖。增量。需 flash key。供 `kol-sentiment` |
-| `make sv-price-history` | SV 结算所需日线价格回填：通过 `pipeline.manage sv-price-history` 写入 `price_daily`，默认从 `2025-06-01` 起，支持 `ONLY=MU,NVDA` 局部回填 |
-| `make sv-v0 / sv-v0-prod` | Smart Voice v0：通过 `pipeline.manage sv-v0` 跑候选召回、LLM 结构化、价格结算、投资者评分和前端 JSON 导出；`sv-v0-prod` 使用作者均衡抽样。YouTube 候选、全文队列、抽取、结算和评分统一要求频道粉丝 `>=2000` 且视频时长 `>60s`，`--only`/`--youtube-since-days` 贯穿候选到抽取；Reddit 的 `--reddit-since-days` 同样贯穿候选与抽取，避免局部补跑吞入历史欠账；继续执行作者池、映射版本与完整口播证据门槛。结构化抽取默认 Qwen LOW → DeepSeek low → Gemini（`SV_EXTRACT_PROVIDERS` 可改顺序），记录实际成功模型 |
-| `make private-sv-telegram` | 单个公开 Telegram 频道 Private SV MVP；默认 `HANDLE=ruiminginvest`，支持 `STAGE=crawl/candidates/prices/extract/audit/settle/report/all`、`WORKERS` 和可选 `PROXY`。全部数据与报告写入隔离目录，不触发公域 Smart Voice 导出 |
-| `make sv-ticker-signals ONLY=MU,NVDA,MSTR` | 标的级 SV：历史时点作者百分位 → 7 日观点聚集 → 下一交易日开盘后的 1/5/20/60/90/180 日相对 SPY 回测；首批详情页只消费 MU/NVDA/MSTR |
-| `make sv-indicator-backtest` | Smart Voice 发现页四指标：历史平台内正式 Top/Bottom 10% → 1/3/7/30/90D 加权净强度、作者净人数、人数突变和高低分歧 → 连续信号事件化 → 1/5/20/60/90D 胜率、盈亏比、利润因子及相对 SPY 超额；CSV 写 `data/reports/sv_indicator_backtest.csv` |
+| `make sv-price-history` | Score 结算所需日线价格回填：通过 `pipeline.manage sv-price-history` 写入 `price_daily`，默认从 `2025-06-01` 起，支持 `ONLY=MU,NVDA` 局部回填 |
+| `make sv-v0 / sv-v0-prod` | Smart Account v0：通过 `pipeline.manage sv-v0` 跑候选召回、LLM 结构化、价格结算、投资者评分和前端 JSON 导出；`sv-v0-prod` 使用作者均衡抽样。YouTube 候选、全文队列、抽取、结算和评分统一要求频道粉丝 `>=2000` 且视频时长 `>60s`，`--only`/`--youtube-since-days` 贯穿候选到抽取；Reddit 的 `--reddit-since-days` 同样贯穿候选与抽取，避免局部补跑吞入历史欠账；继续执行作者池、映射版本与完整口播证据门槛。结构化抽取默认 Qwen LOW → DeepSeek low → Gemini（`SV_EXTRACT_PROVIDERS` 可改顺序），记录实际成功模型 |
+| `make hyperliquid-smart-money` | Hyperliquid HIP-3 TradFi Smart Money：同步 TradFi 合约、主动成交候选地址、fills、账户状态、当前仓位、绩效曲线和资金台账，计算 Onchain Score、Smart/Qualified 分层及标的 1D/3D/7D 仓位/资金流，导出 Web/iOS 数据；支持 `STAGE=markets/wallets/profiles/score/all`、`MARKETS`、`WALLETS` |
+| `make hyperliquid-smart-money-live` | 持续订阅全部活跃 TradFi 成交，后台补 fills/账户画像，默认 30 秒评分、60 秒原子发布并写 `data/runtime/smart-money-live-health.json`；支持 `CANDIDATES`、`WALLETS`、`PROFILES` 和各刷新周期调优 |
+| `make congress-score` | 美国国会两院一年公开交易评分：下载保留 House/Senate 官方 PDF 链接的归一化快照，按同日同标的同方向去重，以次一交易日收盘入场并结算 20D/60D 相对 SPY 超额；至少 5 个已结算买入决策日才进入正式排名，完整 CSV、逐事件证据、Markdown 报告和 manifest 输出到 `data/exports/congress_score/` |
+| `make sv-ticker-signals ONLY=MU,NVDA,MSTR` | 标的级 Score：历史时点作者百分位 → 7 日观点聚集 → 下一交易日开盘后的 1/5/20/60/90/180 日相对 SPY 回测；首批详情页只消费 MU/NVDA/MSTR |
+| `make sv-indicator-backtest` | Smart Account 发现页四指标：历史平台内正式 Top/Bottom 10% → 1/3/7/30/90D 加权净强度、作者净人数、人数突变和高低分歧 → 连续信号事件化 → 1/5/20/60/90D 胜率、盈亏比、利润因子及相对 SPY 超额；CSV 写 `data/reports/sv_indicator_backtest.csv` |
 | `make sv-indicator-report` | 不重算信号，基于现有 `sv_indicator_*` 导出逐事件结果、逐 Call 原文/URL、紧凑证据、稳健性统计和四指标各 5 个成功/5 个失败的原帖证据案例集到 `data/reports/` |
-| `make sv-segment-backtest` | X 作者周期/赛道/投资类型子 SV 垂直回测：历史时点子类排名 → Top 10%/25% 的 3/7/14/30D 集中事件 → 1/5/20/60/90/180D 方向收益、相对 SPY 超额和原帖证据；报告写 `data/reports/sv_segment_backtest/` |
-| `make sv-portfolio-backtest` | 只使用 X：将历史时点 SV 集体信号和逐作者已结算 Call 转成真实资金占用的组合净值，按下一交易日调整开盘、同标的不重叠、活跃持仓等权、空窗持有现金计算多空/只多/只空及 1/5/20/60/90/180D 的总收益、CAGR、年化波动、夏普、最大回撤和成本敏感性；输出 `data/reports/sv_portfolio_backtest/` |
+| `make sv-segment-backtest` | X 作者周期/赛道/投资类型子 Score 垂直回测：历史时点子类排名 → Top 10%/25% 的 3/7/14/30D 集中事件 → 1/5/20/60/90/180D 方向收益、相对 SPY 超额和原帖证据；报告写 `data/reports/sv_segment_backtest/` |
+| `make sv-portfolio-backtest` | 只使用 X：将历史时点 Score 集体信号和逐作者已结算 Call 转成真实资金占用的组合净值，按下一交易日调整开盘、同标的不重叠、活跃持仓等权、空窗持有现金计算多空/只多/只空及 1/5/20/60/90/180D 的总收益、CAGR、年化波动、夏普、最大回撤和成本敏感性；输出 `data/reports/sv_portfolio_backtest/` |
 | `make sv-rank-event-research` | 只使用 X 历史时点排名事件：强度阈值只读信号日前历史，宽参数搜索头部跟随、底部反向和头尾背离，并以前半段 50bps 净收益选参、后半段固定验证，同时做流动性、成本、延迟成交和剔除主要贡献标的压力测试；输出 `data/reports/sv_portfolio_backtest/x_sv_rank_event_*` |
 | `pipeline.manage overall-signals --ticker MU` | 重算标的页整体数据的异常归因与聪明钱/散户分歧：归因优先读显式 JSONL、缺失时读本地 `x_opinion`；聪明钱线缺旧实验缓存时读取 `sv_call` 并按 call 当日 `sv_investor_score_asof` 前 10% 作者加权，避免前视；输出 `web/lib/data/overallData.json` |
-| `make xueqiu-author-plan / xueqiu-author-auth / xueqiu-author-run / xueqiu-author-drain / xueqiu-author-status` | 雪球 SV 作者池：版本化候选池 → 用户登录授权 → 一年作者时间线断点回填（`drain` 为小批次冷却长跑）→ 状态统计；固定写本地 `data/dev.db` |
-| `make xueqiu-sv-full` | 雪球 SV 完整长跑：自适应退避回填正式 300 人作者池 → 校验全部完成 → 扩展标的映射 → 候选召回 → 作者均衡 LLM 抽取 → 结算/评分/导出；作者池不完整则停止在评分前 |
+| `make xueqiu-author-plan / xueqiu-author-auth / xueqiu-author-run / xueqiu-author-drain / xueqiu-author-status` | 雪球 Score 作者池：版本化候选池 → 用户登录授权 → 一年作者时间线断点回填（`drain` 为小批次冷却长跑）→ 状态统计；固定写本地 `data/dev.db` |
+| `make xueqiu-sv-full` | 雪球 Score 完整长跑：自适应退避回填正式 300 人作者池 → 校验全部完成 → 扩展标的映射 → 候选召回 → 作者均衡 LLM 抽取 → 结算/评分/导出；作者池不完整则停止在评分前 |
 | `make kol-sentiment` | KOL 每日净情绪 rollup：跨平台 情绪×ln(1+互动)×相关性 → 本地 `kol_sentiment_daily`(折线图下方绿/红面积)。⚠ **不加** sqlite 覆盖(脚本自 hardcode 本地+从 .env 读云端拿 X)。先跑 `tw-sentiment`。出站 `make site` |
 | `make kol-volume` | KOL 每日讨论度 rollup：跨平台帖子/视频**计数** → 本地 `kol_volume_daily`(折线图下方条状图)。X 默认读本地 `x_opinion`；需要云端 `tw_tweet_ticker` 补充时设置 `KOL_VOLUME_CLOUD_X=1`，并按 `(tweet_id,ticker)` 去重。⚠ **不加** sqlite 覆盖。出站 `make site` |
 | `make retail-sentiment` | 整体散户 每日净情绪 rollup → 本地 `retail_sentiment_daily`(KOL 模块切到「整体散户」时的绿/红面积)。全量散户+本土论坛(Naver/YahooJP/PTT/Toss)、不含 YouTube；X 走 `tw_tweet_ticker`⋈`tw_tweet_sentiment`。⚠ **不加** sqlite 覆盖。先跑 `tw-sentiment`。出站 `make site` |
@@ -338,15 +389,15 @@ crypto_us/
 | `make kol-quality` | KOL **帖子质量打分** 0-100(内容含金量：实质分析/数据/逻辑 vs 口号/喊单/灌水；**与标的无关**，按 source+item 去重) → 隔离表 `kol_quality`。供观点浏览器『只看高质量』开关(≥65)。覆盖 reddit/x/雪球/Toss/Yahoo JP+youtube；增量；`--only/--force/--per-source/--no-youtube`。需 `QWEN_API_KEY` |
 | `make rollup / mood / trending / narratives / brief` | 单独重算各聚合 |
 | `make cloud-init` | 一次性迁移：建表 + 上传本地源数据 + 云端重算派生表 |
-| `make cloud-push` | 把本地源数据增量上传到云端（redditalpha 用；Prismo 一般不需要） |
-| `make cloud-pull` | ⛔ **默认拒绝**（会用「只有 Reddit 核心」的云端覆盖本地、抹掉 Prismo 独有的 gr_*/yt_*/kol_*）。确需重建：`make backup-db && FORCE=1 make cloud-pull` |
+| `make cloud-push` | 把本地源数据增量上传到云端（redditalpha 用；bSmart 一般不需要） |
+| `make cloud-pull` | ⛔ **默认拒绝**（会用「只有 Reddit 核心」的云端覆盖本地、抹掉 bSmart 独有的 gr_*/yt_*/kol_*）。确需重建：`make backup-db && FORCE=1 make cloud-pull` |
 | `make backup-db` | 用 SQLite backup API 备份 `data/dev.db` 到项目外目录；默认只保留最近一份 |
 | `make snapshot-db` | 校验并压缩本地真源（系统 `xz` 多线程优先、Python `lzma` 回退），按 90MB 阈值生成单文件或 24MB 分片部署快照；不提交原始库 |
 | `make restore-db FORCE=1` | 从仓库压缩快照还原本地 `data/dev.db` |
 | `make data-clean` | 清项目内旧备份/抽帧缓存并 checkpoint WAL，不删除主库 |
 | `make site` | 构建静态站 `web/out/`（读**本地 dev.db**；需 **Node 22**） |
-| `make cf-deploy` | Cloudflare Pages Direct Upload：先 `make site`，再把 zh/en 产物复制到 `/tmp/prismo-out-cf` 并上传到 `prismo` 的 `main` production；可用 `PROJECT=xxx` 覆盖项目名 |
-| `make site-cloud` | **现等同 `make site`**（Prismo 以本地为真源、不再 cloud-pull；保留名字防误清） |
+| `make cf-deploy` | Cloudflare Pages Direct Upload：先 `make site`，再把 zh/en 产物复制到 `/tmp/bsmart-out-cf` 并上传到 `bsmart` 的 `main` production；可用 `PROJECT=xxx` 覆盖项目名 |
+| `make site-cloud` | **现等同 `make site`**（bSmart 以本地为真源、不再 cloud-pull；保留名字防误清） |
 | `make clean` | 只清 `web/.next-dev`、`web/.next`、`web/out` 构建缓存；用于修复开发热更新或生产构建残留 chunk，不触碰 `data/dev.db` |
 | `make stats` | 打印库内统计 |
 | `make demo` | 一键离线全流程（样本+mock，无需 key） |

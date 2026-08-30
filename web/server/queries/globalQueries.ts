@@ -1,4 +1,5 @@
 import { all, get } from "@/lib/db";
+import { safeQuery as safe } from "@/server/db/safeQuery";
 
 // 全球散户多区数据取数层。
 // 隔离表 gr_*（pipeline 的 gr-crawl/gr-tag/gr-rollup 产出）；US 区由 rollup 读现有 Reddit。
@@ -6,10 +7,6 @@ import { all, get } from "@/lib/db";
 
 export const GR_REGIONS = ["us", "cn", "jp", "kr", "tw"] as const;
 export type GrRegion = (typeof GR_REGIONS)[number];
-
-function safe<T>(fn: () => T, fallback: T): T {
-  try { return fn(); } catch { return fallback; }
-}
 
 export interface GrTickerRow {
   ticker: string; name_en: string; name_zh: string;

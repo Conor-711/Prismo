@@ -6,7 +6,7 @@ import { isLocale, defaultLocale, type Locale } from "@/lib/i18n";
 
 export function generateMetadata({ params }: { params: { lang: string } }): Metadata {
   const zh = params.lang === "zh";
-  return { title: zh ? "搜索 · Prismo" : "Search · Prismo" };
+  return { title: zh ? "搜索 · bSmart" : "Search · bSmart" };
 }
 
 export default function SearchPage({ params }: { params: { lang: string } }) {
@@ -17,7 +17,7 @@ export default function SearchPage({ params }: { params: { lang: string } }) {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow={zh ? "PRISMO · 搜索" : "PRISMO · Search"}
+        eyebrow={zh ? "bSmart · 搜索" : "bSmart · Search"}
         title={zh ? "搜索" : "Search"}
         subtitle={zh ? "在五社区聚合的跨区美股里查找标的。" : "Find a ticker across the 5-community cross-region universe."}
       />

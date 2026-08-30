@@ -16,6 +16,7 @@ pipeline/
     youtube/
     xueqiu/
     toss/
+    hyperliquid/
     yahoojp/
     naver/
     ptt/
@@ -56,7 +57,7 @@ pipeline/
 - 平台字段到标准字段的基础映射。
 - 平台作者元信息采集。
 
-平台层不应该写 Smart Voice 排名、观点推荐、叙事归类等跨平台业务逻辑。
+平台层不应该写 Smart Account 排名、观点推荐、叙事归类等跨平台业务逻辑。
 
 ## 领域层
 
@@ -66,7 +67,8 @@ pipeline/
 - `authors`：作者标准化、KOL 池、作者画像。
 - `tickers`：标的目录、种子、价格、region/market 归属；基础 ticker 抽取在 `pipeline/common/ticker_extraction.py`，供 platform 和 domain 共用。
 - `narratives`：固定叙事 taxonomy、内容归类、mindshare。
-- `smart_voice`：SV 候选、结算、评分、导出。
+- `smart_voice`：Score 候选、结算、评分、导出。
+- `smart_voice/hyperliquid.py`：独立的链上地址成交评分、当前仓位和 TradFi 标的资金流聚合；不改写社媒作者 Score。
 - `target_prices`：目标价、操作周期、买卖点抽取。
 - `translations`：内容翻译工作流。
 
@@ -107,19 +109,21 @@ CLI 只负责命令注册和参数解析。长期目标是把当前 `pipeline/ma
 - KOL 命令已有 `pipeline/jobs/kol` 工作流，CLI 不再直接调用 domain。
 - KOL 观点提炼、视角分类、论点综合、完整翻译、相关性、质量评分实现已迁到 `pipeline/domain/opinions`。
 - KOL 目标价/操作周期抽取实现已迁到 `pipeline/domain/target_prices`。
-- Smart Voice 的 X 情绪打分、KOL/散户情绪/讨论度/新增参与者 rollup、整体信号导出、SV v0、价格历史回填已有 `pipeline/jobs/smart_voice` 工作流。
+- Smart Account 的 X 情绪打分、KOL/散户情绪/讨论度/新增参与者 rollup、整体信号导出、Score v0、价格历史回填已有 `pipeline/jobs/smart_voice` 工作流。
+- Smart Money 生产主链路为 `platforms/hyperdash` → `jobs/smart_voice/hyperdash_live.py` → `smart_money_publish.py`：直接消费 Hyperdash Equities Focused 与 Copy Score，标准化 30 天数据、差分仓位快照并原子发布。`platforms/hyperliquid`、`domain/smart_voice/hyperliquid.py` 与 `hyperliquid_live.py` 保留为官方数据审计和显式降级，不得在主源健康时覆盖 Hyperdash 分区。
+- X Smart Account 实时更新沿用同一边界：`platforms/x/realtime` 管供应商协议、规则、标准化和事实仓储；`domain/smart_voice/realtime_x.py` 管完整 Call 与忠实翻译；`jobs/smart_voice/x_realtime.py` 管 Top 25% 作者池、蓝绿规则、补偿、处理和删除编排；`services/x_ingest` 只提供进程入口、调度、健康检查和 Client Read Model 发布。不得把供应商 payload 或模型 prompt 写进 Client API。
 - 叙事轮动导出已有 `pipeline/jobs/narrative_rotation` 工作流。
 - 全球散户多区抓取、打标、聚合、报价、Toss、雪球长期管道已有 `pipeline/jobs/global_retail` 工作流。
-- 雪球 SV 作者池通过 `domain/authors/xueqiu_pool.py` 版本化筛选，`platforms/xueqiu/author_timeline.py` 负责已登录作者时间线分页与断点任务，`jobs/global_retail` 只做导入、规划、运行和关联标的扩展编排；长时间回填由 `gr-xueqiu-author-drain` 按小批次、正常冷却、失败指数退避和重试上限持续消耗正式池，并对 SQLite 写锁及中断后遗留的 `running` 游标任务自动恢复。
+- 雪球 Score 作者池通过 `domain/authors/xueqiu_pool.py` 版本化筛选，`platforms/xueqiu/author_timeline.py` 负责已登录作者时间线分页与断点任务，`jobs/global_retail` 只做导入、规划、运行和关联标的扩展编排；长时间回填由 `gr-xueqiu-author-drain` 按小批次、正常冷却、失败指数退避和重试上限持续消耗正式池，并对 SQLite 写锁及中断后遗留的 `running` 游标任务自动恢复。
 - Toss 社区抓取、全球散户多区抓取/浏览器雪球导入/报价、雪球 direct crawler 和雪球长期任务管道实现已迁入 `pipeline/platforms`，对应旧 `pipeline/ingest/*` 文件仅保留兼容 wrapper。
 - 全球散户打标和聚合实现已迁到 `pipeline/domain/global_retail`。
 - 核心历史命令已有 `pipeline/jobs/core` 工作流，覆盖数据库初始化、样本数据、Reddit 抓取、ticker 提取、市场聚合、每日任务、统计和云同步。
 - Reddit / Arctic Shift 抓取、Reddit 近期刷新、作者池抓取实现已迁入 `pipeline/platforms/reddit`，旧 `pipeline/ingest/reddit_*` / `arctic_scrape.py` / `author_crawl.py` / `refresh.py` 仅保留兼容 wrapper。
 - 本地样本数据实现已迁入 `pipeline/platforms/local`，旧 `pipeline/ingest/sample_loader.py` 仅保留兼容 wrapper。
-- SV 价格历史回填与短窗口 `price_daily` 加载实现已迁入 `pipeline/platforms/market_data`，旧 `pipeline/ingest/sv_price_history.py` / `price_daily.py` 仅保留兼容 wrapper。
+- Score 价格历史回填与短窗口 `price_daily` 加载实现已迁入 `pipeline/platforms/market_data`，旧 `pipeline/ingest/sv_price_history.py` / `price_daily.py` 仅保留兼容 wrapper。
 - 作者头像等跨平台作者资产刷新实现已迁入 `pipeline/platforms/author_assets`，旧 `pipeline/ingest/author_avatars.py` 仅保留兼容 wrapper。
 - ticker 种子实现已迁到 `pipeline/domain/tickers`；基础 ticker 抽取实现已下沉到 `pipeline/common/ticker_extraction.py`，旧 `pipeline/domain/tickers/extraction.py` 与 `pipeline/ingest/ticker_extract.py` 仅保留兼容 wrapper。
-- 通用帖文分析、内容翻译、市场信号、叙事聚类、叙事轮动、Smart Voice 信号与 SV v0 实现已迁到 `pipeline/domain`。
+- 通用帖文分析、内容翻译、市场信号、叙事聚类、叙事轮动、Smart Account 信号与 Score v0 实现已迁到 `pipeline/domain`。
 - `scripts/check_architecture.py` 已加入边界检查，`make arch-check` 可直接运行。
 - 旧 `pipeline/analyze` 仅作为兼容 wrapper 保留；domain 禁止重新依赖 `pipeline.analyze`。
 - 旧 `pipeline/ingest` 仅作为兼容区保留；新增平台实现不得回写旧目录。
@@ -127,5 +131,5 @@ CLI 只负责命令注册和参数解析。长期目标是把当前 `pipeline/ma
 ## 迁移优先级
 
 1. Compatibility cleanup：确认无人直接执行 `pipeline.analyze.*` 或旧 `pipeline.ingest.*` 后，再删除对应 wrapper。
-2. Contract tests：为已迁入 domain 的 Smart Voice、KOL、YouTube、narrative 输出补充小样本回归测试。
+2. Contract tests：为已迁入 domain 的 Smart Account、KOL、YouTube、narrative 输出补充小样本回归测试。
 3. Platform/domain coverage：持续补齐平台 wrapper 与 domain contract 的回归测试，避免后续重构破坏旧命令路径。

@@ -4,12 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { staticDataUrl } from "@/lib/site";
 import { KolModule } from "./KolModule";
-import { SmartVoiceTickerModule } from "@/features/smart-voice";
+import { SmartVoiceTickerModule } from "@/features/smart-account";
 import { SmartVoiceTickerSignals } from "./SmartVoiceTickerSignals";
 import type { KolCandle, KolTargetData } from "@/shared/market/mockDetail";
 import type { DailyNet, DailyVol, RetailVol, WindowedArguments } from "@/server/queries/kolQueries";
 import type { OverallData } from "@/server/queries/overallData";
-import type { SvTickerBoard } from "@/features/smart-voice/svMock";
+import type { SvTickerBoard } from "@/features/smart-account/svMock";
 import type { SvTickerSignalData } from "@/server/queries/smartVoiceTickerSignals";
 
 function InfoHint({ text }: { text: string }) {
@@ -86,8 +86,8 @@ export function TickerOverviewPanel({
   const [loadedSignals, setLoadedSignals] = useState<SvTickerSignalData | null | undefined>(smartVoiceSignals);
   const signalsRequestedFor = useRef("");
   const overviewHint = zh
-    ? "通过上方按钮切换市场数据与 SV 数据。市场数据展示近一年净情绪、讨论度、聪明钱与散户差异、目标价和股价；SV 数据专门展示优质投资者观点转向、变化广度、目标修正、价格背离及历史表现。"
-    : "Use the header control to switch between market and SV dashboards. Market covers sentiment, discussion, smart-retail differences, targets and price; SV focuses on high-SV view shifts, breadth, target revisions, price divergence and historical outcomes.";
+    ? "通过上方按钮切换市场数据与 Score 数据。市场数据展示近一年净情绪、讨论度、聪明钱与散户差异、目标价和股价；Score 数据专门展示优质投资者观点转向、变化广度、目标修正、价格背离及历史表现。"
+    : "Use the header control to switch between market and Score dashboards. Market covers sentiment, discussion, smart-retail differences, targets and price; Score focuses on high-Score view shifts, breadth, target revisions, price divergence and historical outcomes.";
 
   useEffect(() => setMounted(true), []);
   useEffect(() => {
@@ -98,11 +98,11 @@ export function TickerOverviewPanel({
     if (dashboard !== "sv" || smartVoiceSignals || signalsRequestedFor.current === symbol) return;
     signalsRequestedFor.current = symbol;
     const controller = new AbortController();
-    fetch(staticDataUrl(`/data/smart-voice-ticker/${encodeURIComponent(symbol.toUpperCase())}`), {
+    fetch(staticDataUrl(`/data/smart-account-ticker/${encodeURIComponent(symbol.toUpperCase())}`), {
       signal: controller.signal,
     })
       .then((response) => {
-        if (!response.ok) throw new Error(`SV ticker export returned ${response.status}`);
+        if (!response.ok) throw new Error(`Score ticker export returned ${response.status}`);
         return response.json();
       })
       .then((payload: { data?: SvTickerSignalData | null }) => {
@@ -110,7 +110,7 @@ export function TickerOverviewPanel({
       })
       .catch((error: unknown) => {
         if (!(error instanceof DOMException && error.name === "AbortError")) {
-          console.error("Failed to load ticker SV signals", error);
+          console.error("Failed to load ticker Score signals", error);
           setLoadedSignals(null);
         }
       });
@@ -162,10 +162,10 @@ export function TickerOverviewPanel({
       <p className="mt-3 border-t border-line/70 pt-2 text-[10.5px] text-neutral-600">
         {dashboard === "sv" && resolvedSignals
           ? (zh
-              ? "SV 转向、变化广度、目标修正、价格-SV 背离和历史验证均来自真实 Call、历史时点 SV 与价格结算；SV 数字描述观点变化，不代表预期收益。"
-              : "SV shift, breadth, target revisions, price-SV divergence and historical validation use real calls, point-in-time SV and price settlements; SV values describe view changes, not expected returns.")
+              ? "Score 转向、变化广度、目标修正、价格-Score 背离和历史验证均来自真实 Call、历史时点 Score 与价格结算；Score 数字描述观点变化，不代表预期收益。"
+              : "Score shift, breadth, target revisions, price-Score divergence and historical validation use real calls, point-in-time Score and price settlements; Score values describe view changes, not expected returns.")
           : dashboard === "sv"
-            ? (zh ? "该标的暂未生成可用于变化分析的 SV 历史数据。" : "No SV history is available for change analysis on this ticker yet.")
+            ? (zh ? "该标的暂未生成可用于变化分析的 Score 历史数据。" : "No Score history is available for change analysis on this ticker yet.")
             : (zh ? "异动 / 信号 / 风险等模块为演示数据（mock），用于展示模块设计；接入真实管线后替换。" : "Modules use mock demo data to showcase the design; to be wired to the real pipeline.")}
       </p>
     </>
@@ -185,7 +185,7 @@ export function TickerOverviewPanel({
             <div className="flex rounded-md bg-elevated/55 p-0.5 ring-1 ring-inset ring-line" role="tablist" aria-label={zh ? "整体数据看板" : "Overview dashboards"}>
               {([
                 ["market", zh ? "市场数据" : "Market"],
-                ["sv", "SV"],
+                ["sv", "Score"],
               ] as const).map(([value, label]) => {
                 const disabled = value === "sv" && !smartVoiceModule;
                 return (
@@ -229,10 +229,10 @@ export function TickerOverviewPanel({
               <div className="grid h-screen min-h-0 grid-rows-[auto_minmax(0,1fr)]">
                 <div className="flex items-center justify-between gap-4 border-b border-line bg-surface px-5 py-3">
                   <div className="min-w-0">
-                    <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-reddit">Prismo</div>
+                    <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-reddit">bSmart</div>
                     <h2 className="mt-0.5 truncate font-display text-[18px] font-extrabold leading-none">
                       {dashboard === "sv"
-                        ? (zh ? "SV 数据看板" : "SV Dashboard")
+                        ? (zh ? "Score 数据看板" : "Score Dashboard")
                         : (zh ? "市场数据看板" : "Market Dashboard")}
                     </h2>
                   </div>
@@ -240,7 +240,7 @@ export function TickerOverviewPanel({
                     <div className="flex rounded-md bg-elevated/55 p-0.5 ring-1 ring-inset ring-line" role="tablist" aria-label={zh ? "整体数据看板" : "Overview dashboards"}>
                       {([
                         ["market", zh ? "市场数据" : "Market"],
-                        ["sv", "SV"],
+                        ["sv", "Score"],
                       ] as const).map(([value, label]) => (
                         <button
                           key={value}
@@ -273,7 +273,7 @@ export function TickerOverviewPanel({
                   <div className="min-h-full min-w-0 rounded-xl bg-card/50 p-4 ring-1 ring-inset ring-line">
                     {dashboard === "sv" && !smartVoiceModule ? (
                       <div className="grid min-h-[420px] place-items-center text-sm text-neutral-600">
-                        {zh ? "暂无 SV 变化数据" : "No SV change data"}
+                        {zh ? "暂无 Score 变化数据" : "No Score change data"}
                       </div>
                     ) : activeModule}
                   </div>

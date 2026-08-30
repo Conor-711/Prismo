@@ -18,7 +18,7 @@ platforms/
   author_assets/
 ```
 
-平台层不实现跨平台业务逻辑。Smart Voice、目标价、观点质量、叙事分类等逻辑应放在 `pipeline/domain` 或 `pipeline/jobs`。
+平台层不实现跨平台业务逻辑。Smart Account、目标价、观点质量、叙事分类等逻辑应放在 `pipeline/domain` 或 `pipeline/jobs`。
 
 ## 当前落点
 
@@ -29,7 +29,22 @@ platforms/
 - `toss/adapter.py`：Toss 股票社区抓取入口。
 - `reddit/adapter.py`：Reddit ingest、Arctic Shift 抓取、评论抓取、作者历史抓取入口。
 - `local/adapter.py`：本地样本数据加载入口。
-- `market_data/adapter.py`：SV 价格结算所需日线价格回填入口；`short_window_prices.py` 承接短窗口 `price_daily` 加载。
+- `market_data/adapter.py`：Score 价格结算所需日线价格回填入口；`short_window_prices.py` 承接短窗口 `price_daily` 加载。
 - `author_assets/avatars.py`：观点作者头像快照刷新入口。
+- `author_assets/x_profiles.py`：X Smart Account 公开资料刷新入口。将真实头像、粉丝数、
+  发帖数、认证、简介和主页链接写入 `author_profile`，并按日写入
+  `author_profile_snapshot`；该资料只用于身份展示与作者池特征，不参与现有 Score。
+
+正式排名池每日刷新：
+
+```bash
+PYTHONPATH=. pipeline/.venv/bin/python -m pipeline.platforms.author_assets.x_profiles
+```
+
+刷新全部 X Score 观察池：
+
+```bash
+PYTHONPATH=. pipeline/.venv/bin/python -m pipeline.platforms.author_assets.x_profiles --all
+```
 
 `pipeline/ingest` 现在仅作为旧命令路径兼容层保留；新增平台实现必须落到 `pipeline/platforms/<platform>/`。

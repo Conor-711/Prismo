@@ -1,4 +1,4 @@
-"""Wide-grid and split-sample research for X SV rank events."""
+"""Wide-grid and split-sample research for X Score rank events."""
 from __future__ import annotations
 
 import bisect
@@ -950,7 +950,7 @@ def _write_report(
             ):
                 best_mode_rows[row["position_mode"]] = row
     lines = [
-        "# X SV 排名事件宽参数研究",
+        "# X Score 排名事件宽参数研究",
         "",
         f"- 全期：{periods['full'][0]} 至 {periods['full'][1]}。",
         f"- 前半段：{periods['early'][0]} 至 {periods['early'][1]}。",

@@ -1,6 +1,6 @@
 # Deployment Architecture
 
-Prismo 的推荐部署路径是静态构建加内容快照。线上页面应该等价于本地 `data/dev.db` 构建结果。
+bSmart 的推荐部署路径是静态构建加内容快照。线上页面应该等价于本地 `data/dev.db` 构建结果。
 
 ## 推荐路径
 
@@ -19,7 +19,7 @@ Prismo 的推荐部署路径是静态构建加内容快照。线上页面应该�
 - 压缩结果不超过 90MB 时只保留 `data/dev.db.xz`；超过时只保留
   `data/dev.db.xz.part-*` 和 `data/dev.db.xz.parts`，避免重复副本。
 - `make backup-db` 使用 SQLite backup API 写到项目外，默认只保留最近一份。
-- 不应使用只含 Reddit 核心表的 cloud-pull 覆盖 Prismo 本地真源。
+- 不应使用只含 Reddit 核心表的 cloud-pull 覆盖 bSmart 本地真源。
 
 ## Railway / Docker
 

@@ -1,4 +1,4 @@
-"""SQLite schema for point-in-time Smart Voice indicator backtests."""
+"""SQLite schema for point-in-time Smart Account indicator backtests."""
 from __future__ import annotations
 
 import sqlite3

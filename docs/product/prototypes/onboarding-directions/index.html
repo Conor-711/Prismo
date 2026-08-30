@@ -1,0 +1,729 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>bSmart Onboarding Directions</title>
+  <meta name="description" content="bSmart 三套三步式 iOS onboarding 交互原型">
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #060808;
+      --canvas: #0a0d0c;
+      --surface: #121514;
+      --elevated: #181c1b;
+      --recessed: #0d100f;
+      --line: #262c2a;
+      --strong-line: #3a4440;
+      --text: #f7f8f9;
+      --muted: #abb3bc;
+      --tertiary: #6b747e;
+      --brand: #59e0be;
+      --pulse: #d4ff44;
+      --electric: #5c76ff;
+      --sky: #68b7ff;
+      --bear: #ff5c6c;
+      --gold: #ffca4b;
+      --radius: 8px;
+      --ease: 220ms cubic-bezier(.2,.75,.2,1);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Helvetica Neue", sans-serif;
+      font-synthesis: none;
+      letter-spacing: 0;
+    }
+
+    * { box-sizing: border-box; }
+    html { min-width: 320px; background: var(--ink); }
+    body { margin: 0; min-height: 100vh; color: var(--text); background: var(--ink); }
+    button { font: inherit; color: inherit; }
+    button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+    .review-shell { min-height: 100vh; }
+
+    .review-header {
+      min-height: 72px;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      border-bottom: 1px solid var(--line);
+      background: #090c0b;
+    }
+    .brand-lockup { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .brand-mark {
+      width: 38px;
+      aspect-ratio: 1;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      background: var(--brand);
+      color: #07110e;
+      font-size: 20px;
+      font-weight: 900;
+    }
+    .brand-copy strong { display: block; font-size: 15px; }
+    .brand-copy span { display: block; margin-top: 3px; color: var(--tertiary); font-size: 12px; }
+    .review-badge {
+      padding: 7px 9px;
+      border: 1px solid var(--strong-line);
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .principles {
+      padding: 12px 24px;
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--line);
+      background: var(--canvas);
+      overflow-x: auto;
+    }
+    .principle {
+      min-width: max-content;
+      padding: 7px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .principle b { color: var(--brand); font-weight: 750; }
+
+    .stage {
+      padding: 28px 22px 48px;
+      background-color: #080a0a;
+      background-image:
+        linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px);
+      background-size: 30px 30px;
+    }
+    .stage-heading { max-width: 1480px; margin: 0 auto 20px; }
+    .stage-heading h1 { margin: 0; font-size: 22px; }
+    .stage-heading p { max-width: 760px; margin: 7px 0 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
+    .directions {
+      max-width: 1480px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(340px, 1fr));
+      gap: 22px;
+      align-items: start;
+    }
+    .direction { min-width: 0; }
+    .direction-meta {
+      min-height: 70px;
+      margin-bottom: 11px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .direction-meta h2 { margin: 0; font-size: 16px; }
+    .direction-meta p { margin: 5px 0 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
+    .direction-tag { color: var(--tertiary); font: 700 11px ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+    .phone {
+      width: min(100%, 410px);
+      aspect-ratio: 390 / 844;
+      margin: 0 auto;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid #333a38;
+      border-radius: 42px;
+      background: var(--ink);
+      box-shadow: 0 22px 70px rgba(0,0,0,.42);
+    }
+    .phone::before {
+      content: "";
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      width: 105px;
+      height: 29px;
+      transform: translateX(-50%);
+      border-radius: 18px;
+      background: #000;
+      z-index: 20;
+    }
+    .statusbar {
+      height: 52px;
+      padding: 17px 23px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      font-size: 11px;
+      font-weight: 750;
+      position: relative;
+      z-index: 22;
+    }
+    .status-icons { display: flex; gap: 4px; align-items: center; }
+    .status-icons i { width: 13px; height: 13px; }
+    .pages { height: calc(100% - 52px); position: relative; }
+    .page {
+      position: absolute;
+      inset: 0;
+      padding: 12px 22px 78px;
+      display: flex;
+      flex-direction: column;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(28px);
+      transition: opacity var(--ease), transform var(--ease);
+      overflow: hidden;
+    }
+    .page.active { opacity: 1; pointer-events: auto; transform: translateX(0); }
+    .page.was-active { transform: translateX(-28px); }
+    .topline { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .wordmark { font-size: 18px; font-weight: 850; }
+    .skip {
+      min-width: 44px;
+      min-height: 32px;
+      border: 0;
+      background: transparent;
+      color: var(--tertiary);
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .eyebrow {
+      margin-top: 27px;
+      color: var(--brand);
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+    .page h3 { margin: 8px 0 0; max-width: 330px; font-size: 30px; line-height: 1.12; }
+    .lead { margin: 12px 0 0; color: var(--muted); font-size: 14px; line-height: 1.52; }
+    .visual { flex: 1; min-height: 0; margin-top: 20px; display: flex; flex-direction: column; justify-content: center; }
+
+    .bottom-nav {
+      position: absolute;
+      left: 22px;
+      right: 22px;
+      bottom: 18px;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 10px;
+      align-items: center;
+      z-index: 25;
+    }
+    .dots { display: flex; gap: 6px; align-items: center; }
+    .dot { width: 5px; height: 5px; border-radius: 50%; background: #313735; transition: all var(--ease); }
+    .dot.active { width: 18px; border-radius: 3px; background: var(--brand); }
+    .next {
+      min-height: 48px;
+      border: 0;
+      border-radius: 8px;
+      background: var(--brand);
+      color: #07110e;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform var(--ease), opacity var(--ease);
+    }
+    .next:hover { transform: translateY(-1px); }
+    .next:disabled { opacity: .35; cursor: default; transform: none; }
+
+    .rank-stage { position: relative; padding: 14px 0 2px; }
+    .rank-line { height: 2px; margin: 34px 4px 0; background: #25302c; }
+    .rank-account {
+      position: absolute;
+      top: 6px;
+      display: grid;
+      justify-items: center;
+      gap: 5px;
+    }
+    .rank-account:nth-of-type(2) { left: 4%; }
+    .rank-account:nth-of-type(3) { left: 38%; }
+    .rank-account:nth-of-type(4) { right: 4%; }
+    .avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: var(--elevated);
+      border: 2px solid var(--brand);
+    }
+    .rank-account small { padding: 3px 6px; border-radius: 4px; background: #13211d; color: var(--brand); font-size: 9px; font-weight: 800; }
+    .rank-copy { margin-top: 64px; display: grid; gap: 7px; }
+    .rank-factor {
+      min-height: 45px;
+      padding: 10px 11px;
+      display: grid;
+      grid-template-columns: 27px 1fr auto;
+      gap: 8px;
+      align-items: center;
+      border-top: 1px solid var(--line);
+      font-size: 12px;
+    }
+    .factor-icon { width: 27px; height: 27px; display: grid; place-items: center; border-radius: 6px; background: #14211d; color: var(--brand); }
+    .factor-icon i { width: 14px; height: 14px; }
+    .rank-factor b { font-size: 11px; }
+    .rank-factor span { color: var(--tertiary); font-size: 10px; }
+    .rank-factor strong { color: var(--brand); font-size: 11px; }
+
+    .product-object { padding: 13px 0; border-top: 1px solid var(--line); }
+    .product-object:first-child { border-top: 0; }
+    .object-head { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+    .object-name { display: flex; gap: 9px; align-items: center; }
+    .object-symbol { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 7px; background: #14211d; color: var(--brand); }
+    .object-symbol.alpha { color: var(--gold); background: #211c10; }
+    .object-symbol i { width: 17px; height: 17px; }
+    .object-name b { display: block; font-size: 14px; }
+    .object-name small { display: block; margin-top: 2px; color: var(--tertiary); font-size: 9px; }
+    .ticker-mark { width: 31px; height: 31px; object-fit: contain; border-radius: 6px; }
+    .object-title { margin: 11px 0 0; font-size: 14px; line-height: 1.35; font-weight: 750; }
+    .faces { margin-top: 11px; display: flex; align-items: center; }
+    .faces img { width: 27px; height: 27px; object-fit: cover; border-radius: 50%; border: 2px solid var(--surface); margin-left: -6px; }
+    .faces img:first-child { margin-left: 0; }
+    .faces span { margin-left: 8px; color: var(--tertiary); font-size: 10px; }
+
+    .choice-label { margin: 0 0 8px; color: var(--tertiary); font-size: 10px; font-weight: 750; text-transform: uppercase; }
+    .ticker-choices { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
+    .ticker-choice, .follow-choice {
+      border: 1px solid var(--line);
+      background: var(--surface);
+      cursor: pointer;
+      transition: border var(--ease), background var(--ease), transform var(--ease);
+    }
+    .ticker-choice { min-height: 60px; padding: 8px 4px; border-radius: 7px; display: grid; justify-items: center; gap: 5px; }
+    .ticker-choice.selected, .follow-choice.selected { border-color: var(--brand); background: #10201b; }
+    .ticker-choice img { width: 26px; height: 26px; object-fit: contain; }
+    .ticker-choice b { font-size: 10px; }
+    .follow-list { display: grid; gap: 6px; }
+    .follow-choice {
+      min-height: 54px;
+      padding: 7px 9px;
+      border-radius: 7px;
+      display: grid;
+      grid-template-columns: 37px 1fr auto;
+      gap: 9px;
+      align-items: center;
+      text-align: left;
+    }
+    .follow-choice img { width: 37px; height: 37px; border-radius: 50%; object-fit: cover; background: var(--elevated); }
+    .follow-choice b { display: block; font-size: 11px; }
+    .follow-choice small { display: block; margin-top: 2px; color: var(--tertiary); font-size: 9px; }
+    .follow-state { min-width: 52px; padding: 5px 7px; border: 1px solid var(--strong-line); border-radius: 5px; color: var(--muted); font-size: 9px; font-weight: 750; text-align: center; }
+    .selected .follow-state { border-color: var(--brand); color: var(--brand); }
+
+    .chart-board { position: relative; min-height: 242px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); overflow: hidden; }
+    .chart-board svg { width: 100%; height: 242px; display: block; }
+    .chart-grid line { stroke: #1f2724; stroke-width: 1; }
+    .chart-line { fill: none; stroke: var(--brand); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+    .signal {
+      position: absolute;
+      width: 48px;
+      height: 48px;
+      padding: 0;
+      border: 2px solid var(--brand);
+      border-radius: 50%;
+      background: var(--surface);
+      cursor: pointer;
+      box-shadow: 0 8px 24px rgba(0,0,0,.45);
+    }
+    .signal img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+    .signal.s1 { left: 16%; top: 103px; }
+    .signal.s2 { left: 56%; top: 65px; }
+    .signal.s3 { right: 7%; top: 32px; border-color: var(--sky); }
+    .signal .mini-rank { position: absolute; right: -6px; bottom: -4px; padding: 3px 4px; border-radius: 4px; background: var(--brand); color: #07110e; font-size: 8px; font-weight: 900; }
+    .signal.s3 .mini-rank { background: var(--sky); }
+    .signal-popover {
+      min-height: 54px;
+      margin-top: 9px;
+      padding: 9px 10px;
+      border-left: 2px solid var(--brand);
+      background: #101513;
+      font-size: 11px;
+      line-height: 1.42;
+    }
+    .signal-popover b { color: var(--brand); }
+
+    .mode-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+    .mode-switch button { min-height: 36px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--muted); font-size: 11px; font-weight: 750; cursor: pointer; }
+    .mode-switch button.active { border-color: var(--brand); color: var(--brand); background: #10201b; }
+    .mode-card { display: none; padding: 15px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+    .mode-card.active { display: block; }
+    .mode-card .kicker { color: var(--brand); font-size: 9px; font-weight: 850; text-transform: uppercase; }
+    .mode-card.alpha .kicker { color: var(--gold); }
+    .mode-card h4 { margin: 8px 0 0; font-size: 17px; line-height: 1.3; }
+    .mode-card p { margin: 9px 0 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
+
+    .score-card { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .score-account { padding: 13px 0; display: flex; gap: 12px; align-items: center; }
+    .score-account .avatar { width: 55px; height: 55px; }
+    .score-copy { min-width: 0; flex: 1; }
+    .score-copy b { display: block; font-size: 15px; }
+    .score-copy span { display: block; margin-top: 3px; color: var(--tertiary); font-size: 10px; }
+    .score-number { color: var(--brand); font-size: 22px; font-weight: 850; }
+    .score-bars { padding: 11px 0 14px; display: grid; gap: 9px; border-top: 1px solid var(--line); }
+    .score-row { display: grid; grid-template-columns: 82px 1fr 30px; gap: 8px; align-items: center; font-size: 10px; color: var(--muted); }
+    .bar { height: 6px; background: #202725; border-radius: 3px; overflow: hidden; }
+    .bar i { display: block; height: 100%; background: var(--brand); border-radius: inherit; }
+    .score-row strong { color: var(--text); text-align: right; }
+    .why-strip { margin-top: 12px; display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .why-item { padding: 11px 7px; text-align: center; border-left: 1px solid var(--line); }
+    .why-item:first-child { border-left: 0; }
+    .why-item i { width: 16px; height: 16px; color: var(--brand); }
+    .why-item b { display: block; margin-top: 5px; font-size: 10px; }
+    .why-item span { display: block; margin-top: 2px; color: var(--tertiary); font-size: 8px; }
+
+    .flow-label { margin: 0 0 8px; color: var(--brand); font-size: 10px; font-weight: 850; text-transform: uppercase; }
+    .flow-row { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; gap: 5px; align-items: center; }
+    .flow-node { min-height: 66px; padding: 8px 5px; display: grid; place-items: center; align-content: center; gap: 5px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); text-align: center; }
+    .flow-node i { width: 18px; height: 18px; color: var(--brand); }
+    .flow-node b { font-size: 9px; }
+    .flow-arrow { color: var(--tertiary); font-size: 12px; }
+    .care-card { margin-top: 12px; padding: 13px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .care-card b { font-size: 14px; }
+    .care-card p { margin: 7px 0 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
+
+    .direction-note { width: min(100%, 410px); margin: 12px auto 0; padding: 11px 12px; border-left: 2px solid var(--line); color: var(--muted); font-size: 11px; line-height: 1.5; }
+    .direction-note b { color: var(--text); }
+
+    @media (max-width: 1120px) {
+      .directions { grid-template-columns: 1fr; max-width: 620px; gap: 42px; }
+      .direction-meta { min-height: auto; }
+    }
+    @media (max-width: 540px) {
+      .review-header { padding: 12px 14px; }
+      .review-badge { display: none; }
+      .principles { justify-content: flex-start; padding-inline: 14px; }
+      .stage { padding: 22px 10px 42px; }
+      .stage-heading { padding-inline: 8px; }
+      .direction-meta { padding-inline: 8px; }
+      .phone { border-radius: 34px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="review-shell">
+    <header class="review-header">
+      <div class="brand-lockup">
+        <div class="brand-mark">b</div>
+        <div class="brand-copy">
+          <strong>bSmart Onboarding</strong>
+          <span>三页内建立理解并完成首次个性化</span>
+        </div>
+      </div>
+      <span class="review-badge">Interactive review prototype</span>
+    </header>
+
+    <section class="principles" aria-label="调研原则">
+      <span class="principle"><b>短</b> · 最多 3 页，可跳过</span>
+      <span class="principle"><b>先价值</b> · 不先讲完整算法</span>
+      <span class="principle"><b>边做边学</b> · 真实选择代替说明图</span>
+      <span class="principle"><b>双重激活</b> · 标的 + 主体</span>
+    </section>
+
+    <section class="stage">
+      <div class="stage-heading">
+        <h1>三种首启教育方向</h1>
+        <p>每台手机都是独立、可点击的三步流程。头像与产品对象来自当前 bSmart 数据语义；最终 CTA 只有在用户同时选中标的和 Smart Account / Smart Money 后才激活。</p>
+      </div>
+
+      <div class="directions">
+        <article class="direction">
+          <div class="direction-meta">
+            <div>
+              <h2>A · 价值先行</h2>
+              <p>先回答“为什么值得关心”，再解释产品对象。最适合首次内测。</p>
+            </div>
+            <span class="direction-tag">RECOMMENDED</span>
+          </div>
+          <div class="phone" data-flow="a">
+            <div class="statusbar"><span>9:41</span><span class="status-icons"><i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i></span></div>
+            <div class="pages">
+              <section class="page active" data-page="0">
+                <div class="topline"><span class="wordmark">bSmart</span><button class="skip">跳过</button></div>
+                <div class="eyebrow">别追随声音，追踪判断</div>
+                <h3>知道谁真正值得你关注</h3>
+                <p class="lead">排名不是人气榜。每次公开判断都要等待市场结算，再根据表现、样本与时间更新。</p>
+                <div class="visual">
+                  <div class="rank-stage">
+                    <div class="rank-line"></div>
+                    <div class="rank-account"><img class="avatar" src="https://pbs.twimg.com/profile_images/2025426736037642240/chKX0Cr2_400x400.jpg" alt="Chartradamus"><small>Top 1%</small></div>
+                    <div class="rank-account"><img class="avatar" src="https://pbs.twimg.com/profile_images/1356963429530152961/nQG0kjzp_400x400.jpg" alt="Smart Account"><small>Top 4%</small></div>
+                    <div class="rank-account"><img class="avatar" src="https://pbs.twimg.com/profile_images/1996176688414367744/LXfA_lIx_400x400.jpg" alt="Smart Account"><small>Top 12%</small></div>
+                  </div>
+                  <div class="rank-copy">
+                    <div class="rank-factor"><span class="factor-icon"><i data-lucide="badge-check"></i></span><b>已结算判断</b><span>不使用未验证观点</span><strong>145</strong></div>
+                    <div class="rank-factor"><span class="factor-icon"><i data-lucide="chart-no-axes-combined"></i></span><b>相对市场表现</b><span>对比标普与行业</span><strong>+18.4%</strong></div>
+                    <div class="rank-factor"><span class="factor-icon"><i data-lucide="clock-3"></i></span><b>样本与时效</b><span>新判断权重更高</span><strong>A</strong></div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="page" data-page="1">
+                <div class="topline"><span class="wordmark">bSmart</span><button class="skip">跳过</button></div>
+                <div class="eyebrow">两种值得打开的变化</div>
+                <h3>共识告诉你多数，阿尔法告诉你谁先看到</h3>
+                <div class="visual">
+                  <div class="product-object">
+                    <div class="object-head">
+                      <div class="object-name"><span class="object-symbol"><i data-lucide="users-round"></i></span><div><b>聪明共识</b><small>SMART CONSENSUS</small></div></div>
+                      <img class="ticker-mark" src="../../../../ios/BSmart/Assets.xcassets/Ticker_NVDA.imageset/NVDA.png" alt="NVDA">
+                    </div>
+                    <p class="object-title">4 位头部账户围绕 NVDA 的推理开始集中</p>
+                    <div class="faces"><img src="https://pbs.twimg.com/profile_images/2025426736037642240/chKX0Cr2_400x400.jpg" alt=""><img src="https://pbs.twimg.com/profile_images/1356963429530152961/nQG0kjzp_400x400.jpg" alt=""><img src="https://pbs.twimg.com/profile_images/1592676082011865088/XRvJLqRc_400x400.jpg" alt=""><span>多个独立判断 · 一个主题</span></div>
+                  </div>
+                  <div class="product-object">
+                    <div class="object-head">
+                      <div class="object-name"><span class="object-symbol alpha"><i data-lucide="sparkles"></i></span><div><b>聪明阿尔法</b><small>SMART ALPHA</small></div></div>
+                      <img class="ticker-mark" src="../../../../ios/BSmart/Assets.xcassets/Ticker_MSTR.imageset/MSTR.png" alt="MSTR">
+                    </div>
+                    <p class="object-title">Top 2% 账户首次提出 MSTR 的新判断</p>
+                    <div class="faces"><img src="https://pbs.twimg.com/profile_images/1996176688414367744/LXfA_lIx_400x400.jpg" alt=""><span>共识形成前的少数高排名来源</span></div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="page setup-page" data-page="2">
+                <div class="topline"><span class="wordmark">bSmart</span><button class="skip">跳过</button></div>
+                <div class="eyebrow">建立你的判断网络</div>
+                <h3>先选标的，再选你愿意追踪的主体</h3>
+                <div class="visual" style="justify-content:flex-start; gap:14px; margin-top:17px">
+                  <div><p class="choice-label">添加持仓或关注</p><div class="ticker-choices">
+                    <button class="ticker-choice"><img src="../../../../ios/BSmart/Assets.xcassets/Ticker_NVDA.imageset/NVDA.png" alt=""><b>NVDA</b></button>
+                    <button class="ticker-choice"><img src="../../../../ios/BSmart/Assets.xcassets/Ticker_MSTR.imageset/MSTR.png" alt=""><b>MSTR</b></button>
+                    <button class="ticker-choice"><img src="../../../../ios/BSmart/Assets.xcassets/Ticker_HOOD.imageset/HOOD.png" alt=""><b>HOOD</b></button>
+                    <button class="ticker-choice"><img src="../../../../ios/BSmart/Assets.xcassets/Ticker_PLTR.imageset/PLTR.png" alt=""><b>PLTR</b></button>
+                  </div></div>
+                  <div><p class="choice-label">追踪 Smart Account / Money</p><div class="follow-list">
+                    <button class="follow-choice"><img src="https://pbs.twimg.com/profile_images/2025426736037642240/chKX0Cr2_400x400.jpg" alt=""><span><b>Chartradamus</b><small>Smart Account · Top 1%</small></span><span class="follow-state">追踪</span></button>
+                    <button class="follow-choice"><img src="../../../../ios/BSmart/Assets.xcassets/SmartMoneyBorderCollieCap.imageset/SmartMoneyBorderCollieCap.png" alt=""><span><b>Micah</b><small>Smart Money · Top 6%</small></span><span class="follow-state">追踪</span></button>
+                  </div></div>
+                </div>
+              </section>
+            </div>
+            <div class="bottom-nav"><div class="dots"><i class="dot active"></i><i class="dot"></i><i class="dot"></i></div><button class="next">继续</button></div>
+          </div>
+          <p class="direction-note"><b>优势：</b>价值主张最直接，算法只解释到用户能建立信任的程度，第三步直接产出个性化首页。</p>
+        </article>
+
+        <article class="direction">
+          <div class="direction-meta">
+            <div>
+              <h2>B · 边做边学</h2>
+              <p>把 onboarding 变成一次安全的产品体验，减少抽象解释。</p>
+            </div>
+            <span class="direction-tag">INTERACTIVE</span>
+          </div>
+          <div class="phone" data-flow="b">
+            <div class="statusbar"><span>9:41</span><span class="status-icons"><i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i></span></div>
+            <div class="pages">
+              <section class="page active" data-page="0">
+                <div class="topline"><span class="wordmark">bSmart</span><button class="skip">跳过</button></div>
+                <div class="eyebrow">点击一个头像</div>
+                <h3>从价格里认识一次真实判断</h3>
+                <p class="lead">头像代表公开发表过判断的人或有可验证仓位的账户。</p>
+                <div class="visual" style="justify-content:flex-start">
+                  <div class="chart-board">
+                    <svg viewBox="0 0 340 242" aria-label="NVDA 价格图">
+                      <g class="chart-grid"><line x1="0" y1="48" x2="340" y2="48"></line><line x1="0" y1="121" x2="340" y2="121"></line><line x1="0" y1="194" x2="340" y2="194"></line></g>
+                      <path class="chart-line" d="M5 187 C28 172 37 190 58 163 S92 125 112 144 S143 173 166 120 S198 89 217 111 S255 139 278 78 S315 52 336 29"></path>
+                    </svg>
+                    <button class="signal s1" data-message="Top 1% · 认为回调是长期仓位的重新定价窗口"><img src="https://pbs.twimg.com/profile_images/2025426736037642240/chKX0Cr2_400x400.jpg" alt="Chartradamus"><span class="mini-rank">1%</span></button>
+                    <button class="signal s2" data-message="Top 4% · 供应链判断从中性转向看多"><img src="https://pbs.twimg.com/profile_images/1356963429530152961/nQG0kjzp_400x400.jpg" alt="Smart Account"><span class="mini-rank">4%</span></button>
+                    <button class="signal s3" data-message="Smart Money Top 6% · 新增 NVDA 多仓 US$143K"><img src="../../../../ios/BSmart/Assets.xcassets/SmartMoneyBorderCollieCap.imageset/SmartMoneyBorderCollieCap.png" alt="Smart Money"><span class="mini-rank">6%</span></button>
+                  </div>
+                  <div class="signal-popover"><b>试着点击头像</b><br>这里会展开该主体当时说了什么或做了什么。</div>
+                </div>
+              </section>
+
+              <section class="page" data-page="1">
+                <div class="topline"><span class="wordmark">bSmart</span><button class="skip">跳过</button></div>
+                <div class="eyebrow">把碎片组织成可用对象</div>
+                <h3>切换看看两种发现方式</h3>
+                <div class="visual" style="justify-content:flex-start; margin-top:24px">
+                  <div class="mode-switch"><button class="active" data-mode="consensus">聪明共识</button><button data-mode="alpha">聪明阿尔法</button></div>
+                  <div class="mode-card active" data-mode-card="consensus"><span class="kicker">Smart Consensus · NVDA</span><h4>高排名账户开始围绕 AI 基建回报形成共同判断</h4><p>把多个独立主体的相关判断合成一个可展开主题，而不是让你阅读几十条帖子。</p><div class="faces"><img src="https://pbs.twimg.com/profile_images/2025426736037642240/chKX0Cr2_400x400.jpg" alt=""><img src="https://pbs.twimg.com/profile_images/1356963429530152961/nQG0kjzp_400x400.jpg" alt=""><img src="https://pbs.twimg.com/profile_images/1592676082011865088/XRvJLqRc_400x400.jpg" alt=""><span>4 位头部来源</span></div></div>
+                  <div class="mode-card alpha" data-mode-card="alpha"><span class="kicker">Smart Alpha · MSTR</span><h4>一个 Top 2% 账户首次提出新的资产负债表判断</h4><p>当高排名主体率先覆盖一个尚未形成共识的主题，bSmart 将其单独呈现。</p><div class="faces"><img src="https://pbs.twimg.com/profile_images/1996176688414367744/LXfA_lIx_400x400.jpg" alt=""><span>1 位早期来源</span></div></div>
+                  <div class="rank-copy" style="margin-top:10px">
+                    <div class="rank-factor"><span class="factor-icon"><i data-lucide="scale"></i></span><b>排名从哪里来</b><span>结算表现 · 基准比较 · 样本置信度</span><strong>动态</strong></div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="page setup-page" data-page="2">
+                <div class="topline"><span class="wordmark">bSmart</span><button class="skip">跳过</button></div>
+                <div class="eyebrow">把刚才的体验变成你的首页</div>
+                <h3>你想先监测谁和什么？</h3>
+                <div class="visual" style="justify-content:flex-start; gap:14px; margin-top:18px">
+                  <div><p class="choice-label">标的</p><div class="ticker-choices">
+                    <button class="ticker-choice"><img src="../../../../ios/BSmart/Assets.xcassets/Ticker_NVDA.imageset/NVDA.png" alt=""><b>NVDA</b></button>
+                    <button class="ticker-choice"><img src="../../../../ios/BSmart/Assets.xcassets/Ticker_MSTR.imageset/MSTR.png" alt=""><b>MSTR</b></button>
+                    <button class="ticker-choice"><img src="../../../../ios/BSmart/Assets.xcassets/Ticker_TSLA.imageset/TSLA.svg" alt=""><b>TSLA</b></button>
+                    <button class="ticker-choice"><img src="../../../../ios/BSmart/Assets.xcassets/Ticker_HOOD.imageset/HOOD.png" alt=""><b>HOOD</b></button>
+                  </div></div>
+                  <div><p class="choice-label">主体</p><div class="follow-list">
+                    <button class="follow-choice"><img src="https://pbs.twimg.com/profile_images/1356963429530152961/nQG0kjzp_400x400.jpg" alt=""><span><b>EBUYUKARSLAN</b><small>Smart Account · Top 4%</small></span><span class="follow-state">追踪</span></button>
+                    <button class="follow-choice"><img src="../../../../ios/BSmart/Assets.xcassets/SmartMoneyBorderCollieBandana.imageset/SmartMoneyBorderCollieBandana.png" alt=""><span><b>Adrian</b><small>Smart Money · Top 9%</small></span><span class="follow-state">追踪</span></button>
+                  </div></div>
+                </div>
+              </section>
+            </div>
+            <div class="bottom-nav"><div class="dots"><i class="dot active"></i><i class="dot"></i><i class="dot"></i></div><button class="next">我来试试</button></div>
+          </div>
+          <p class="direction-note"><b>优势：</b>符合 Apple 的“通过交互教学”，用户在第一页就理解头像、价格与主体证据的关系。</p>
+        </article>
+
+        <article class="direction">
+          <div class="direction-meta">
+            <div>
+              <h2>C · 证据先行</h2>
+              <p>先解决金融产品最难的信任问题，再进入功能与个性化。</p>
+            </div>
+            <span class="direction-tag">TRUST FIRST</span>
+          </div>
+          <div class="phone" data-flow="c">
+            <div class="statusbar"><span>9:41</span><span class="status-icons"><i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i></span></div>
+            <div class="pages">
+              <section class="page active" data-page="0">
+                <div class="topline"><span class="wordmark">bSmart</span><button class="skip">跳过</button></div>
+                <div class="eyebrow">Smart 排名必须被赚得</div>
+                <h3>每个分数都能回到过去的公开判断</h3>
+                <p class="lead">我们不按粉丝数评判聪明，而按已经发生、可以结算的判断持续更新排名。</p>
+                <div class="visual" style="justify-content:flex-start; margin-top:18px">
+                  <div class="score-card">
+                    <div class="score-account"><img class="avatar" src="https://pbs.twimg.com/profile_images/2025426736037642240/chKX0Cr2_400x400.jpg" alt="Chartradamus"><div class="score-copy"><b>Chartradamus</b><span>145 个已结算观点 · 68 个标的</span></div><strong class="score-number">129</strong></div>
+                    <div class="score-bars">
+                      <div class="score-row"><span>相对标普</span><span class="bar"><i style="width:88%"></i></span><strong>92</strong></div>
+                      <div class="score-row"><span>相对行业</span><span class="bar"><i style="width:81%"></i></span><strong>86</strong></div>
+                      <div class="score-row"><span>样本置信度</span><span class="bar"><i style="width:93%"></i></span><strong>A</strong></div>
+                      <div class="score-row"><span>时间权重</span><span class="bar"><i style="width:74%"></i></span><strong>新</strong></div>
+                    </div>
+                  </div>
+                  <div class="why-strip">
+                    <div class="why-item"><i data-lucide="history"></i><b>看历史</b><span>不是自述</span></div>
+                    <div class="why-item"><i data-lucide="landmark"></i><b>看基准</b><span>不是只看涨跌</span></div>
+                    <div class="why-item"><i data-lucide="refresh-cw"></i><b>会更新</b><span>不是永久标签</span></div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="page" data-page="1">
+                <div class="topline"><span class="wordmark">bSmart</span><button class="skip">跳过</button></div>
+                <div class="eyebrow">为什么你要关心他们</div>
+                <h3>用被验证的主体，过滤每天的市场噪音</h3>
+                <div class="visual" style="justify-content:flex-start; margin-top:24px">
+                  <p class="flow-label">从碎片到判断上下文</p>
+                  <div class="flow-row">
+                    <div class="flow-node"><i data-lucide="messages-square"></i><b>公开观点<br>公开仓位</b></div><span class="flow-arrow">→</span>
+                    <div class="flow-node"><i data-lucide="badge-check"></i><b>结算与<br>Smart 排名</b></div><span class="flow-arrow">→</span>
+                    <div class="flow-node"><i data-lucide="scan-search"></i><b>共识与<br>早期阿尔法</b></div>
+                  </div>
+                  <div class="care-card"><b>聪明共识</b><p>多个高排名主体围绕同一标的、同一主题形成可展开的判断集合。</p></div>
+                  <div class="care-card"><b>聪明阿尔法</b><p>少数高排名主体率先覆盖的新标的或新判断，尚未成为多数共识。</p></div>
+                </div>
+              </section>
+
+              <section class="page setup-page" data-page="2">
+                <div class="topline"><span class="wordmark">bSmart</span><button class="skip">跳过</button></div>
+                <div class="eyebrow">只保留与你有关的变化</div>
+                <h3>建立你的标的与主体组合</h3>
+                <div class="visual" style="justify-content:flex-start; gap:14px; margin-top:18px">
+                  <div><p class="choice-label">持仓 / 关注</p><div class="ticker-choices">
+                    <button class="ticker-choice"><img src="../../../../ios/BSmart/Assets.xcassets/Ticker_NVDA.imageset/NVDA.png" alt=""><b>NVDA</b></button>
+                    <button class="ticker-choice"><img src="../../../../ios/BSmart/Assets.xcassets/Ticker_PLTR.imageset/PLTR.png" alt=""><b>PLTR</b></button>
+                    <button class="ticker-choice"><img src="../../../../ios/BSmart/Assets.xcassets/Ticker_MSTR.imageset/MSTR.png" alt=""><b>MSTR</b></button>
+                    <button class="ticker-choice"><img src="../../../../ios/BSmart/Assets.xcassets/Ticker_HOOD.imageset/HOOD.png" alt=""><b>HOOD</b></button>
+                  </div></div>
+                  <div><p class="choice-label">追踪主体</p><div class="follow-list">
+                    <button class="follow-choice"><img src="https://pbs.twimg.com/profile_images/1996176688414367744/LXfA_lIx_400x400.jpg" alt=""><span><b>aleabitoreddit</b><small>Smart Account · Top 7%</small></span><span class="follow-state">追踪</span></button>
+                    <button class="follow-choice"><img src="../../../../ios/BSmart/Assets.xcassets/SmartMoneyBorderCollieBowTie.imageset/SmartMoneyBorderCollieBowTie.png" alt=""><span><b>George</b><small>Smart Money · Top 3%</small></span><span class="follow-state">追踪</span></button>
+                  </div></div>
+                </div>
+              </section>
+            </div>
+            <div class="bottom-nav"><div class="dots"><i class="dot active"></i><i class="dot"></i><i class="dot"></i></div><button class="next">继续</button></div>
+          </div>
+          <p class="direction-note"><b>优势：</b>对谨慎型投资者最有说服力，但首屏认知负担略高，适合把算法透明度作为核心卖点时使用。</p>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const labelMap = {
+      a: ["继续", "建立我的网络", "进入 bSmart"],
+      b: ["我来试试", "建立我的网络", "进入 bSmart"],
+      c: ["继续", "选择我关心的", "进入 bSmart"]
+    };
+
+    document.querySelectorAll('.phone').forEach(phone => {
+      let index = 0;
+      const pages = [...phone.querySelectorAll('.page')];
+      const dots = [...phone.querySelectorAll('.dot')];
+      const next = phone.querySelector('.next');
+      const flow = phone.dataset.flow;
+
+      const update = () => {
+        pages.forEach((page, pageIndex) => {
+          page.classList.toggle('active', pageIndex === index);
+          page.classList.toggle('was-active', pageIndex < index);
+        });
+        dots.forEach((dot, dotIndex) => dot.classList.toggle('active', dotIndex === index));
+        next.textContent = labelMap[flow][index];
+        const setup = pages[index].classList.contains('setup-page');
+        if (setup) {
+          const hasTicker = pages[index].querySelector('.ticker-choice.selected');
+          const hasFollow = pages[index].querySelector('.follow-choice.selected');
+          next.disabled = !(hasTicker && hasFollow);
+        } else {
+          next.disabled = false;
+        }
+      };
+
+      next.addEventListener('click', () => {
+        if (index < pages.length - 1) {
+          index += 1;
+          update();
+        } else {
+          next.textContent = '已建立 · 打开首页';
+        }
+      });
+
+      phone.querySelectorAll('.skip').forEach(button => button.addEventListener('click', () => {
+        index = pages.length - 1;
+        update();
+      }));
+
+      dots.forEach((dot, dotIndex) => dot.addEventListener('click', () => {
+        index = dotIndex;
+        update();
+      }));
+
+      phone.querySelectorAll('.ticker-choice, .follow-choice').forEach(button => {
+        button.addEventListener('click', () => {
+          button.classList.toggle('selected');
+          const state = button.querySelector('.follow-state');
+          if (state) state.textContent = button.classList.contains('selected') ? '已追踪' : '追踪';
+          update();
+        });
+      });
+
+      update();
+    });
+
+    document.querySelectorAll('.signal').forEach(signal => {
+      signal.addEventListener('click', () => {
+        const popover = signal.closest('.page').querySelector('.signal-popover');
+        popover.innerHTML = `<b>${signal.dataset.message.split(' · ')[0]}</b><br>${signal.dataset.message.split(' · ').slice(1).join(' · ')}`;
+      });
+    });
+
+    document.querySelectorAll('.mode-switch').forEach(toggle => {
+      toggle.querySelectorAll('button').forEach(button => {
+        button.addEventListener('click', () => {
+          const page = button.closest('.page');
+          toggle.querySelectorAll('button').forEach(item => item.classList.toggle('active', item === button));
+          page.querySelectorAll('[data-mode-card]').forEach(card => card.classList.toggle('active', card.dataset.modeCard === button.dataset.mode));
+        });
+      });
+    });
+
+    if (window.lucide) lucide.createIcons({ attrs: { 'stroke-width': 1.8 } });
+  </script>
+</body>
+</html>

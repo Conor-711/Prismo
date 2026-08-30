@@ -1,4 +1,4 @@
-"""Build a reproducible YouTube creator candidate pool for Smart Voice."""
+"""Build a reproducible YouTube creator candidate pool for Smart Account."""
 from __future__ import annotations
 
 import datetime as dt

@@ -3,10 +3,10 @@ import { notFound } from "next/navigation";
 import { LocaleLink } from "@/components/i18n/LocaleLink";
 import { SaveButton } from "@/components/favorites/SaveButton";
 import { TickerLogo } from "@/shared/market/TickerLogo";
-import { SentScore } from "@/shared/ui/prismoBits";
+import { SentScore } from "@/shared/ui/bsmartBits";
 import { Counter, Counters, Module, flag } from "@/shared/ui/detailBits";
 import { NarrativeDetailTimeline } from "@/features/narrative";
-import { SmartVoicePortfolioModule } from "@/features/smart-voice";
+import { SmartVoicePortfolioModule } from "@/features/smart-account";
 import { ViewportWorkspace } from "@/shared/layout/ViewportWorkspace";
 import { fmtCompact, fmtPct } from "@/shared/formatting/format";
 import {
@@ -27,9 +27,9 @@ export function generateStaticParams() {
 export function generateMetadata({ params }: { params: { lang: string; slug: string } }): Metadata {
   const lang: Locale = isLocale(params.lang) ? params.lang : defaultLocale;
   const item = getNarrativeBySlug(params.slug);
-  if (!item) return { title: "Narrative · Prismo" };
+  if (!item) return { title: "Narrative · bSmart" };
   return {
-    title: `${narrativeText(item.category.title, lang)} · ${lang === "zh" ? "叙事详情" : "Narrative"} · Prismo`,
+    title: `${narrativeText(item.category.title, lang)} · ${lang === "zh" ? "叙事详情" : "Narrative"} · bSmart`,
   };
 }
 
@@ -171,8 +171,8 @@ export default function NarrativeDetailPage({ params }: { params: { lang: string
             zh={zh}
             titleZh="该叙事该听谁"
             titleEn="Best voices for this narrative"
-            descZh="按该叙事关联标的等权计算，用于模拟叙事场景下的 SV 排名。"
-            descEn="Equal-weighted by linked tickers to simulate narrative-context SV ranking."
+            descZh="按该叙事关联标的等权计算，用于模拟叙事场景下的 Score 排名。"
+            descEn="Equal-weighted by linked tickers to simulate narrative-context Score ranking."
           />
         </aside>
 

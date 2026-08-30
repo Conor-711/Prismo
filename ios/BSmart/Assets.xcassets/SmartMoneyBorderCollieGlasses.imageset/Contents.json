@@ -1,0 +1,23 @@
+{
+  "images" : [
+    {
+      "filename" : "SmartMoneyBorderCollieGlasses.png",
+      "idiom" : "universal",
+      "scale" : "1x"
+    },
+    {
+      "filename" : "SmartMoneyBorderCollieGlasses@2x.png",
+      "idiom" : "universal",
+      "scale" : "2x"
+    },
+    {
+      "filename" : "SmartMoneyBorderCollieGlasses@3x.png",
+      "idiom" : "universal",
+      "scale" : "3x"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

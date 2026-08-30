@@ -11,7 +11,7 @@ import { getDictionary, isLocale, defaultLocale, type Locale } from "@/lib/i18n"
 // 实时看板已移到 /dashboard。本页与静态导出兼容（[lang] 的 generateStaticParams 由 layout 提供）。
 export function generateMetadata({ params }: { params: { lang: string } }): Metadata {
   const h = getDictionary(params.lang).home;
-  return { title: `Prismo · ${h.slogan}`, description: h.lede };
+  return { title: `bSmart · ${h.slogan}`, description: h.lede };
 }
 
 function Stat({ n, l }: { n: string; l: string }) {

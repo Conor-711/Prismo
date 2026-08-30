@@ -1,4 +1,4 @@
-"""Build ticker-level Smart Voice cohorts, clustering events, and backtests."""
+"""Build ticker-level Smart Account cohorts, clustering events, and backtests."""
 from __future__ import annotations
 
 import bisect
@@ -423,7 +423,7 @@ def build_ticker_sv_signals(
     consensus_threshold: float = 0.65,
     effective_voice_threshold: float = 2.5,
 ) -> dict[str, int]:
-    """Build point-in-time cohorts and ticker event backtests from local SV evidence."""
+    """Build point-in-time cohorts and ticker event backtests from local Score evidence."""
     con = sqlite3.connect(str(db_path))
     con.row_factory = sqlite3.Row
     con.execute("PRAGMA busy_timeout=8000")

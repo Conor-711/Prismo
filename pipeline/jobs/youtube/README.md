@@ -9,7 +9,7 @@
 - `pipeline.domain.target_prices.youtube`
 - `pipeline.domain.authors.youtube`
 
-YouTube SV 作者池的正式流程由以下边界组成：
+YouTube Score 作者池的正式流程由以下边界组成：
 
 - `pipeline.domain.authors.youtube_pool`：构建版本化 500 人 creator pool，并隔离媒体号。
 - `pipeline.platforms.youtube.uploads`：按 uploads playlist 回填一年视频、保存 checkpoint，并只补齐相关视频的互动指标。
@@ -49,10 +49,10 @@ python -m pipeline.manage sv-v0 --source youtube --stage extract \
 300 位合格作者门槛，达到门槛后不再提交新视频。
 `TRANSCRIPT_REQUEST_INTERVAL` 默认设置为 3 秒，用于约束付费 API 的进程级请求启动频率；
 遇到 429 时，所有工作线程会共享 Google 返回的冷却窗口，避免并发重试风暴。
-SV 迁移默认使用 `gemini-3-flash-preview`，并优先获取完整 YouTube 字幕后交给 Gemini
+Score 迁移默认使用 `gemini-3-flash-preview`，并优先获取完整 YouTube 字幕后交给 Gemini
 逐段翻译和结构化；字幕不可得时才回退到原生视频理解。其他需要关键画面还原的 YouTube
 任务仍保持原有的视频优先流程。
-脚本使用 PID 锁保证同一时间只有一个 YouTube SV 迁移实例，避免重复请求 Gemini 和并发写入
+脚本使用 PID 锁保证同一时间只有一个 YouTube Score 迁移实例，避免重复请求 Gemini 和并发写入
 SQLite；进程异常退出后，下次执行会自动清理失效锁。
 
 交互式视频配额不足时，使用独立配额的 Gemini Batch API：

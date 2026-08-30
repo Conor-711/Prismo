@@ -1,4 +1,4 @@
-"""Auditable event, evidence, and robustness exports for SV indicator backtests."""
+"""Auditable event, evidence, and robustness exports for Score indicator backtests."""
 from __future__ import annotations
 
 import bisect

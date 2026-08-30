@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { buildDashboardModel, DashboardWorkspace } from "@/features/dashboard";
-import { getSmartVoiceBoard } from "@/features/smart-voice";
+import { getSmartVoiceBoard } from "@/features/smart-account";
 import {
   getGrMeta,
   getGrQuotes,
@@ -12,10 +12,10 @@ import { defaultLocale, isLocale, type Locale } from "@/lib/i18n";
 export function generateMetadata({ params }: { params: { lang: string } }): Metadata {
   const zh = params.lang === "zh";
   return {
-    title: zh ? "总览看板 · Prismo" : "Overview · Prismo",
+    title: zh ? "总览看板 · bSmart" : "Overview · bSmart",
     description: zh
-      ? "跨社区美股舆情、市场信号与 Smart Voice 的统一总览看板。"
-      : "A unified overview of cross-community US-stock sentiment, market signals and Smart Voice.",
+      ? "跨社区美股舆情、市场信号与 Smart Account 的统一总览看板。"
+      : "A unified overview of cross-community US-stock sentiment, market signals and Smart Account.",
   };
 }
 

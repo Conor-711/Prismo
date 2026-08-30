@@ -2,20 +2,46 @@
 
 本文件是后续开发新功能时的入口规则，面向人类开发者和 AI 助手。开始实现前，先用这里的规则判断代码落点；如果规则和现有代码冲突，优先保持现有功能稳定，并同步更新架构文档。
 
+## 产品术语
+
+- 产品域统一称为 `Smart Account`，具体数值统一称为 `Score`。
+- 新增页面路由、导航、metadata、文案和文档只能使用以上两个名称。
+- `smart_voice`、`sv_*`、`smartVoice*` 仅是历史包名、表名、字段名和 adapter 名；没有迁移方案时保持兼容，但不得显示给用户。
+- 提交前运行 `make terminology-check`，避免旧称回流。
+
 ## 先判断需求类型
 
 接到新需求后，先把它拆成以下几类：
 
-- 页面或交互：属于 `web/app` + `web/features` + `web/shared`。
+- iOS MVP 页面或交互：属于 `ios/BSmart/Features` + `ios/BSmart/Core`。
+- Web 公开页或内部研究交互：属于 `web/app` + `web/features` + `web/shared`。
 - 构建期取数或 view model：属于 `web/server`，必要时由 `web/features/<domain>/queries` 做页面级组装。
 - 新平台数据接入：属于 `pipeline/platforms/<platform>`。
 - 跨平台业务逻辑：属于 `pipeline/domain/<domain>`。
 - 完整可运行任务：属于 `pipeline/jobs/<job>`。
 - 命令行入口：属于 `pipeline/cli/commands`，只注册参数并调用 job。
 - 新跨平台对象或字段契约：先更新 `docs/contracts`。
+- 新客户端接口：先更新 `contracts/openapi/bsmart-v1.yaml` 和 fixture，再更新 Swift 模型。
 - 新表、数据流、部署或命令：同步更新 `ARCHITECTURE.md` 和对应专题文档。
 
-## 前端扩展规则
+## iOS 扩展规则
+
+iOS 是第一版 MVP 主客户端：
+
+- App 生命周期和根导航放到 `ios/BSmart/App`。
+- 业务页面放到 `ios/BSmart/Features/<domain>`。
+- API model 放到 `ios/BSmart/Core/Models`。
+- HTTP、fixture、状态和设备持久化放到 `ios/BSmart/Core/Data`。
+- 原生通用控件和 token 放到 `ios/BSmart/Core/DesignSystem`。
+- 先改 `contracts/openapi/bsmart-v1.yaml`，再让客户端消费稳定字段。
+- 不使用 WebView 迁移网页，不直接读取 `data/dev.db`，不在 Swift 里重算 Score。
+- 平台 API、prompt、打标、结算和链上地址评分只能留在后端/管线。
+
+需要修改 Xcode target、scheme 或 build setting 时，修改 `ios/project.yml` 后运行 `make ios-generate`，不要只手工编辑生成的 Xcode project。
+
+## Web 扩展规则
+
+Web 处于保留和简化阶段。只有公开页面、内部研究工具、迁移回归或明确的 Web 用户需求才新增 Web 功能；面向 iOS MVP 的功能不得先做一套 Web-only 实现。
 
 `web/app` 是路由层，只做页面组装：
 
@@ -31,7 +57,7 @@
 - 投资者榜单、作者详情：`web/features/investor`。
 - 搜索页：`web/features/search`。
 - 追踪页：`web/features/tracking`。
-- Smart Voice 展示：`web/features/smart-voice`。
+- Smart Account 展示：`web/features/smart-account`。
 
 跨业务复用能力放到 `web/shared`：
 
@@ -49,7 +75,7 @@
 
 不要新增复杂实现到：
 
-- `web/components/prismo`：只保留旧 import 的兼容导出。
+- `web/components/bsmart`：只保留旧 import 的兼容导出。
 - `web/lib/*Queries.ts`：只保留旧查询兼容导出或薄封装。
 - 单个大页面文件：页面不能承载复杂筛选、排序、图表配置或状态机。
 
@@ -64,7 +90,7 @@
 
 平台层不能写：
 
-- Smart Voice 排名。
+- Smart Account 排名。
 - 个性化推荐。
 - 观点质量、相关性、目标价、叙事分类。
 - 跨平台聚合规则。
@@ -73,7 +99,7 @@
 
 - `opinions`：观点清洗、AI 提炼、翻译、质量、相关性、视角、摘要。
 - `target_prices`：目标价、买入/卖出价、操作周期。
-- `smart_voice`：SV 候选、结构化 call、结算、评分、导出、整体信号。
+- `smart_voice`：Score 候选、结构化 call、结算、评分、导出、整体信号。
 - `narratives`：固定叙事 taxonomy、内容归类、mindshare。
 - `global_retail`：全球散户打标、region/ticker 聚合。
 - `tickers`：ticker 种子、目录、基础提及抽取。
@@ -108,7 +134,7 @@ CLI 放到 `pipeline/cli/commands`：
 - 作者和投资者：`docs/contracts/author.md`。
 - 标的：`docs/contracts/ticker.md`。
 - 目标价和操作周期：`docs/contracts/judgment.md`。
-- Smart Voice：`docs/contracts/smart_voice.md`。
+- Smart Account：`docs/contracts/smart_account.md`。
 - 叙事：`docs/contracts/narrative.md`。
 
 如果新功能需要新增稳定字段，先更新 contract，再实现 pipeline 和前端消费。平台私有 payload 不应直接进入前端功能。
@@ -132,12 +158,12 @@ CLI 放到 `pipeline/cli/commands`：
 4. 如涉及新 AI 标签，pipeline 实现放到 `pipeline/domain`，任务放到 `pipeline/jobs`。
 5. 不扩大 `web/app/[lang]/(app)/tickers/[symbol]/page.tsx` 的复杂度。
 
-新增 Smart Voice 功能：
+新增 Smart Account 功能：
 
-1. 先更新 `docs/contracts/smart_voice.md` 或 `docs/architecture/05-smart-voice.md`。
+1. 先更新 `docs/contracts/smart_account.md` 或 `docs/architecture/05-smart-account.md`。
 2. 算法和口径放到 `pipeline/domain/smart_voice`。
 3. 任务编排放到 `pipeline/jobs/smart_voice`。
-4. 前端展示放到 `web/features/smart-voice` 或消费方 feature。
+4. 前端展示放到 `web/features/smart-account` 或消费方 feature。
 5. 构建期查询放到 `web/server/queries`。
 
 新增叙事功能：
@@ -180,6 +206,13 @@ git diff --check
 cd web && npx tsc --noEmit
 ```
 
+iOS 改动运行：
+
+```bash
+make ios-build
+make ios-test
+```
+
 Python 管线改动运行：
 
 ```bash
@@ -197,5 +230,7 @@ AI 在新对话中开始复杂开发前，应先阅读：
 2. 本文件
 3. 相关专题文档，例如 `01-frontend.md`、`02-pipeline.md`、`04-platform-adapters.md`
 4. 相关 contract
+
+如果需求属于 iOS MVP，还必须阅读 `09-ios.md` 和 `contracts/openapi/bsmart-v1.yaml`。
 
 实现时必须说明新代码落到哪个边界。如果发现旧文件更方便，也不能直接把新实现写进去；应新增目标边界文件，并让旧文件只做兼容导出。

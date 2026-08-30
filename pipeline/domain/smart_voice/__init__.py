@@ -1,4 +1,4 @@
-"""Smart Voice domain workflows."""
+"""Smart Account domain workflows."""
 
 from .signals import (
     build_overall_signals,

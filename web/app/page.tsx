@@ -11,7 +11,7 @@ export default function RootRedirect() {
     // 2) 否则按浏览器首选语言顺序匹配公开语言（zh/en），都不匹配 → en。
     let lang = "";
     try {
-      const saved = localStorage.getItem("prismo:lang");
+      const saved = localStorage.getItem("bsmart:lang");
       if (saved && isPublishedLocale(saved)) lang = saved;
     } catch {
       /* ignore */
@@ -38,11 +38,11 @@ export default function RootRedirect() {
     <main style={{ display: "grid", placeItems: "center", minHeight: "70vh", color: "#8A8A99" }}>
       <noscript>
         <a href={`/${defaultLocale}/`} style={{ color: "#FC3E02" }}>
-          进入 Prismo / Enter
+          进入 bSmart / Enter
         </a>
       </noscript>
       <span style={{ fontFamily: "system-ui", letterSpacing: ".3px" }}>
-        <span style={{ color: "#FC3E02" }}>Prismo</span> …
+        <span style={{ color: "#FC3E02" }}>bSmart</span> …
       </span>
     </main>
   );

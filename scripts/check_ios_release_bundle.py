@@ -25,9 +25,33 @@ def main() -> int:
         raise SystemExit(f"Release app bundle not found: {bundle}")
 
     fixture_files = sorted(bundle.rglob("*.json"))
-    if fixture_files:
-        leaked = ", ".join(str(path.relative_to(bundle)) for path in fixture_files)
-        raise SystemExit(f"Release bundle contains JSON fixtures: {leaked}")
+    required_snapshots = {
+        "portfolio.json",
+        "portfolio-history.json",
+        "portfolio-signals.json",
+        "smart-account-updates.json",
+        "smart-money-movements.json",
+        "ticker-intelligence.json",
+        "smart-accounts.json",
+        "smart-account-evidence.json",
+        "smart-money.json",
+        "smart-money-evidence.json",
+        "events.json",
+        "research.json",
+    }
+    bundled_snapshots = {path.name for path in fixture_files}
+    missing_snapshots = sorted(required_snapshots - bundled_snapshots)
+    unexpected_snapshots = sorted(bundled_snapshots - required_snapshots)
+    if missing_snapshots:
+        raise SystemExit(
+            "Release bundle is missing offline bootstrap snapshots: "
+            + ", ".join(missing_snapshots)
+        )
+    if unexpected_snapshots:
+        raise SystemExit(
+            "Release bundle contains unexpected JSON resources: "
+            + ", ".join(unexpected_snapshots)
+        )
 
     manifest_path = bundle / "PrivacyInfo.xcprivacy"
     if not manifest_path.is_file():
@@ -85,7 +109,8 @@ def main() -> int:
         raise SystemExit("Release bundle does not declare a primary App Icon")
 
     print(f"Release bundle check passed: {bundle}")
-    print("- fixture JSON: 0")
+    print(f"- offline bootstrap snapshots: {len(required_snapshots)}")
+    print("- unexpected JSON resources: 0")
     print("- privacy manifest: present")
     print("- tracking: disabled")
     print("- UserDefaults reason: CA92.1")

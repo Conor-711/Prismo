@@ -22,7 +22,7 @@ export function SmartVoiceThesisLifecycle({ items, zh }: { items: SvThesisLifecy
     <section className="min-w-0 border-b border-line">
       <div className="border-b border-line/70 px-4 py-2.5">
         <h4 className="text-[10px] font-semibold text-neutral-300">{zh ? "投资逻辑生命周期" : "Investment thesis lifecycle"}</h4>
-        <p className="mt-0.5 text-[8.5px] text-neutral-600">{zh ? "按观点视角比较最近 7 日与前 7 日的 SV 加权多空结构" : "SV-weighted thesis lenses, latest 7 days vs prior 7"}</p>
+        <p className="mt-0.5 text-[8.5px] text-neutral-600">{zh ? "按观点视角比较最近 7 日与前 7 日的 Score 加权多空结构" : "Score-weighted thesis lenses, latest 7 days vs prior 7"}</p>
       </div>
       <div className="divide-y divide-line/60">
         {items.map((item) => {

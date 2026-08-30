@@ -129,9 +129,9 @@ function SvRankBadge({ meta, zh }: { meta: SvRankMeta; zh: boolean }) {
   return (
     <span
       className="shrink-0 rounded bg-[#57D7BA]/10 px-1.5 py-0.5 font-mono tabular text-[11px] text-[#57D7BA] ring-1 ring-inset ring-[#57D7BA]/35"
-      title={zh ? `SV 排名 #${rank}/${count}，百分位 ${Math.round(meta.percentile)}%，分数 ${score}` : `SV rank #${rank}/${count}, percentile ${Math.round(meta.percentile)}%, score ${score}`}
+      title={zh ? `Score 排名 #${rank}/${count}，百分位 ${Math.round(meta.percentile)}%，分数 ${score}` : `Score rank #${rank}/${count}, percentile ${Math.round(meta.percentile)}%, score ${score}`}
     >
-      {zh ? `SV ${score} · 前 ${topPct}%` : `SV ${score} · top ${topPct}%`}
+      {zh ? `Score ${score} · 前 ${topPct}%` : `Score ${score} · top ${topPct}%`}
     </span>
   );
 }

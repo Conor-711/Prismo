@@ -5,7 +5,7 @@ import { staticDataUrl } from "@/lib/site";
 import type { KolCandle, KolTargetData } from "@/shared/market/mockDetail";
 import type { DailyNet, DailyVol, RetailVol, WindowedArguments } from "@/server/queries/kolQueries";
 import type { OverallData } from "@/server/queries/overallData";
-import type { SvTickerBoard } from "@/features/smart-voice/svMock";
+import type { SvTickerBoard } from "@/features/smart-account/svMock";
 import { TickerOverviewPanel } from "./TickerOverviewPanel";
 
 type OverviewPayload = {

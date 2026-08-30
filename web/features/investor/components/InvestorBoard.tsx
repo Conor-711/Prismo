@@ -8,11 +8,11 @@ import { useLocale } from "@/components/i18n/LocaleProvider";
 import { SaveButton } from "@/components/favorites/SaveButton";
 import { Panel } from "@/components/ui";
 import { fmtCompact } from "@/shared/formatting/format";
-import { SmartVoiceLeaderboard } from "@/features/smart-voice";
+import { SmartVoiceLeaderboard } from "@/features/smart-account";
 import { Avatar, SOURCE, SOURCE_ORDER } from "@/shared/market/kolPresentation";
 import type { Investor, InvestorBoard as Board } from "@/server/queries/investorQueries";
 import type { KolSource } from "@/shared/market/mockDetail";
-import type { SvBoard } from "@/features/smart-voice/svMock";
+import type { SvBoard } from "@/features/smart-account/svMock";
 
 const PREVIEW = 6; // 「全部」视图下每平台预览名额
 

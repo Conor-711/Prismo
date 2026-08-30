@@ -35,7 +35,7 @@ export function SmartVoicePersonalAssistant({
   fallbackHorizon: SvSignalHorizon;
   zh: boolean;
 }) {
-  const storageKey = `prismo:opinion-personal:${data.ticker}`;
+  const storageKey = `bsmart:opinion-personal:${data.ticker}`;
   const [prefs, setPrefs] = useState<PersonalPrefs>(EMPTY_PERSONAL_PREFS);
   const [saved, setSaved] = useState(false);
   useEffect(() => {
@@ -62,7 +62,7 @@ export function SmartVoicePersonalAssistant({
       const configured = Object.values(prefs).some(Boolean);
       if (configured) window.localStorage.setItem(storageKey, JSON.stringify(prefs));
       else window.localStorage.removeItem(storageKey);
-      window.dispatchEvent(new CustomEvent("prismo:opinion-personal-update", { detail: { symbol: data.ticker, prefs } }));
+      window.dispatchEvent(new CustomEvent("bsmart:opinion-personal-update", { detail: { symbol: data.ticker, prefs } }));
     } catch { /* local state remains usable */ }
     setSaved(true);
   };
@@ -126,7 +126,7 @@ export function SmartVoicePersonalAssistant({
           <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[.05]"><span className={`block h-full ${decision.state === "supportive" ? "bg-bull" : decision.state === "conflicted" ? "bg-bear" : "bg-gold"}`} style={{ width: `${decision.score}%` }} /></div>
           <div className="mt-2 space-y-1.5">
             {(zh ? decision.reasonsZh : decision.reasonsEn).slice(0, 4).map((reason) => <div key={reason} className="flex gap-2 text-[9px] leading-snug text-neutral-400"><span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-reddit" /><span>{reason}</span></div>)}
-            {decision.state === "unconfigured" && <div className="text-[9px] leading-relaxed text-neutral-600">{zh ? "填写任意字段后，系统会把真实 SV 信号、目标价和仓位风险组合成个性化判断。" : "Enter any field to combine real SV signals, targets and position risk."}</div>}
+            {decision.state === "unconfigured" && <div className="text-[9px] leading-relaxed text-neutral-600">{zh ? "填写任意字段后，系统会把真实 Score 信号、目标价和仓位风险组合成个性化判断。" : "Enter any field to combine real Score signals, targets and position risk."}</div>}
           </div>
         </div>
       </div>
