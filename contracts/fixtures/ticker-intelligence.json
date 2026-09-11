@@ -4,17 +4,17 @@
     "companyName": "NVIDIA",
     "currentPrice": 0.0,
     "dayChangePercent": 0.0,
-    "dataAsOf": "2026-08-14T07:56:37Z",
+    "dataAsOf": "2026-09-05T14:45:37+00:00",
     "relationship": "smart_money_movement",
     "direction": "bullish",
     "conclusion": "Onchain capital changed before a matching qualified social consensus formed.",
     "latestSignalId": "3e2ac6af-044c-57ad-bdcc-376402b973ce",
     "smartAccount": {
-      "direction": "neutral",
-      "headline": "No recent qualified Smart Account view",
-      "detail": "No database-backed view is inside the current monitoring window.",
-      "qualifiedAuthorCount": 187,
-      "latestUpdateAt": null
+      "direction": "bullish",
+      "headline": "Author explicitly states holding NVDA for ultimate multiple expansions in a portfolio update, a bullish position statement without specific target or timeframe.",
+      "detail": "Holding $NVDA for the ultimate multiple expansions.",
+      "qualifiedAuthorCount": 13,
+      "latestUpdateAt": "2026-09-05T00:21:25.000Z"
     },
     "smartMoney": {
       "coverage": "available",

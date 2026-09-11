@@ -1,0 +1,247 @@
+{
+  "CLMT": {
+    "name": "Calumet",
+    "category": "Specialty products & fuels",
+    "english": "Calumet manufactures specialty products for consumer and industrial markets and produces renewable fuels through Montana Renewables.",
+    "chinese": "Calumet 为消费与工业市场制造特种产品，并通过 Montana Renewables 生产可再生燃料。",
+    "website": "https://calumet.com/about/"
+  },
+  "META": {
+    "name": "Meta Platforms",
+    "category": "Social platforms",
+    "english": "Meta operates Facebook, Instagram and WhatsApp and develops technologies for social connection and digital experiences.",
+    "chinese": "Meta 运营 Facebook、Instagram 和 WhatsApp，并开发用于社交连接与数字体验的技术。",
+    "website": "https://investor.atmeta.com/investor-news/press-release-details/2025/Meta-Reports-Third-Quarter-2025-Results/"
+  },
+  "GME": {
+    "name": "GameStop",
+    "category": "Specialty retail",
+    "english": "GameStop sells video games, consoles, accessories and collectibles through stores and online channels, including pre-owned products and trade-ins.",
+    "chinese": "GameStop 通过门店和线上渠道销售电子游戏、游戏机、配件与收藏品，并提供二手商品及回收换购服务。",
+    "website": "https://www.gamestop.com/"
+  },
+  "GOOGL": {
+    "name": "Alphabet",
+    "category": "Internet services",
+    "english": "Alphabet is the parent of Google. Its businesses include internet services, advertising, YouTube, cloud computing and other technology ventures.",
+    "chinese": "Alphabet 是谷歌的母公司，业务包括互联网服务、广告、YouTube、云计算及其他科技业务。",
+    "website": "https://abc.xyz/"
+  },
+  "GOOG": {
+    "name": "Alphabet",
+    "category": "Internet services",
+    "english": "Alphabet is the parent of Google. Its businesses include internet services, advertising, YouTube, cloud computing and other technology ventures.",
+    "chinese": "Alphabet 是谷歌的母公司，业务包括互联网服务、广告、YouTube、云计算及其他科技业务。",
+    "website": "https://abc.xyz/"
+  },
+  "NBIS": {
+    "name": "Nebius",
+    "category": "AI cloud",
+    "english": "Nebius provides cloud infrastructure for AI development, training and inference.",
+    "chinese": "Nebius 提供面向人工智能开发、训练与推理的云基础设施。",
+    "website": "https://nebius.com/about"
+  },
+  "IREN": {
+    "name": "IREN",
+    "category": "Data centers",
+    "english": "IREN develops and operates data centers and supplies cloud computing infrastructure for AI and high-performance workloads.",
+    "chinese": "IREN 开发与运营数据中心，并为人工智能和高性能计算提供云计算基础设施。",
+    "website": "https://www.iren.com/"
+  },
+  "MRNA": {
+    "name": "Moderna",
+    "category": "Biotechnology",
+    "english": "Moderna develops messenger RNA medicines and vaccines for disease prevention and treatment.",
+    "chinese": "Moderna 开发用于疾病预防与治疗的信使 RNA 药物及疫苗。",
+    "website": "https://www.modernatx.com/"
+  },
+  "FCEL": {
+    "name": "FuelCell Energy",
+    "category": "Clean energy",
+    "english": "FuelCell Energy develops fuel-cell platforms for power generation, combined heat and power, hydrogen and carbon capture.",
+    "chinese": "FuelCell Energy 开发燃料电池平台，应用于发电、热电联产、制氢及碳捕集。",
+    "website": "https://www.fuelcellenergy.com/"
+  },
+  "MRVL": {
+    "name": "Marvell Technology",
+    "category": "Semiconductors",
+    "english": "Marvell develops data infrastructure semiconductors for computing, networking and storage.",
+    "chinese": "Marvell 开发用于计算、网络及存储的数据基础设施半导体产品。",
+    "website": "https://www.marvell.com/company.html"
+  },
+  "SNOW": {
+    "name": "Snowflake",
+    "category": "Software & cloud",
+    "english": "Snowflake provides a cloud data platform for data engineering, analytics, AI applications and collaboration.",
+    "chinese": "Snowflake 提供云数据平台，支持数据工程、分析、人工智能应用及数据协作。",
+    "website": "https://investors.snowflake.com/overview/default.aspx"
+  },
+  "TEM": {
+    "name": "Tempus AI",
+    "category": "Healthcare technology",
+    "english": "Tempus uses AI and clinical and molecular data to support precision medicine, diagnostics and research.",
+    "chinese": "Tempus 利用人工智能、临床与分子数据，支持精准医疗、诊断及研究。",
+    "website": "https://www.tempus.com/about-us/"
+  },
+  "AVGO": {
+    "name": "Broadcom",
+    "category": "Semiconductors",
+    "english": "Broadcom designs and supplies semiconductor products and infrastructure software for networking, connectivity and enterprise computing.",
+    "chinese": "博通设计与提供用于网络、连接和企业计算的半导体产品及基础设施软件。",
+    "website": "https://investors.broadcom.com/static-files/752e631c-b5f3-46af-9d67-bdeb658f5fa2"
+  },
+  "CIFR": {
+    "name": "Cipher Digital",
+    "category": "Data centers",
+    "english": "Cipher Digital develops and operates industrial-scale data centers for high-performance computing workloads.",
+    "chinese": "Cipher Digital 开发与运营面向高性能计算工作负载的大规模数据中心。",
+    "website": "https://cipherdigital.com/"
+  },
+  "INTC": {
+    "name": "Intel",
+    "category": "Semiconductors",
+    "english": "Intel designs and manufactures processors and computing platforms and provides semiconductor foundry and packaging services.",
+    "chinese": "英特尔设计与制造处理器和计算平台，并提供半导体代工及封装服务。",
+    "website": "https://www.intel.com/content/www/us/en/company-overview/company-overview.html"
+  },
+  "IONQ": {
+    "name": "IonQ",
+    "category": "Quantum computing",
+    "english": "IonQ develops quantum computing systems and related technology for commercial and research applications.",
+    "chinese": "IonQ 开发量子计算系统及相关技术，面向商业和科研应用。",
+    "website": "https://www.ionq.com/"
+  },
+  "AAOI": {
+    "name": "Applied Optoelectronics",
+    "category": "Optical communications",
+    "english": "Applied Optoelectronics develops lasers, optical transceivers and broadband access products for communications networks.",
+    "chinese": "Applied Optoelectronics 开发用于通信网络的激光器、光收发模块和宽带接入产品。",
+    "website": "https://ao-inc.com/"
+  },
+  "HROW": {
+    "name": "Harrow",
+    "category": "Pharmaceuticals",
+    "english": "Harrow develops and commercializes ophthalmic pharmaceuticals for eye-care professionals and their patients.",
+    "chinese": "Harrow 开发与商业化眼科药品，服务眼科医疗专业人员及患者。",
+    "website": "https://www.harrow.com/about/"
+  },
+  "QQQ": {
+    "name": "Invesco QQQ ETF",
+    "category": "ETF",
+    "english": "Invesco QQQ tracks the Nasdaq-100 Index, which includes large non-financial companies listed on Nasdaq. It is a fund, not an operating company.",
+    "chinese": "Invesco QQQ 跟踪纳斯达克 100 指数，覆盖在纳斯达克上市的大型非金融公司。它是基金，而非经营性公司。",
+    "website": "https://www.invesco.com/qqq-etf/en/about.html"
+  },
+  "TQQQ": {
+    "name": "ProShares UltraPro QQQ",
+    "category": "Leveraged ETF",
+    "english": "TQQQ seeks three times the daily performance of the Nasdaq-100 Index before fees and expenses. Compounding means returns over longer periods can differ substantially from three times the index return.",
+    "chinese": "TQQQ 力求在扣除费用前实现纳斯达克 100 指数每日表现的三倍。由于复利效应，更长时间的回报可能明显偏离指数同期回报的三倍。",
+    "website": "https://www.proshares.com/our-etfs/leveraged-and-inverse/tqqq"
+  },
+  "XLK": {
+    "name": "Technology Select Sector SPDR ETF",
+    "category": "ETF",
+    "english": "XLK seeks to track the Technology Select Sector Index, providing exposure to the technology sector of the S&P 500.",
+    "chinese": "XLK 力求跟踪科技精选行业指数，提供对标普 500 科技行业公司的投资敞口。",
+    "website": "https://www.ssga.com/mainfund/XLK"
+  },
+  "NFLX": {
+    "name": "Netflix",
+    "category": "Entertainment",
+    "english": "Netflix provides entertainment services including television series, films and games.",
+    "chinese": "Netflix 提供包括剧集、电影及游戏在内的娱乐服务。",
+    "website": "https://about.netflix.com/en"
+  },
+  "COIN": {
+    "name": "Coinbase",
+    "category": "Financial services",
+    "english": "Coinbase provides cryptocurrency trading and related financial infrastructure for individuals and institutions.",
+    "chinese": "Coinbase 为个人及机构提供加密货币交易和相关金融基础设施。",
+    "website": "https://www.coinbase.com/about"
+  },
+  "CRCL": {
+    "name": "Circle Internet Group",
+    "category": "Financial infrastructure",
+    "english": "Circle provides stablecoins, including USDC and EURC, and infrastructure for digital payments and financial applications.",
+    "chinese": "Circle 提供 USDC、EURC 等稳定币，以及数字支付与金融应用基础设施。",
+    "website": "https://www.circle.com/about-circle"
+  },
+  "CRWV": {
+    "name": "CoreWeave",
+    "category": "AI cloud",
+    "english": "CoreWeave provides cloud infrastructure designed for AI workloads, including GPU computing, storage and orchestration.",
+    "chinese": "CoreWeave 提供面向人工智能工作负载的云基础设施，包括 GPU 计算、存储及编排服务。",
+    "website": "https://www.coreweave.com/about-us"
+  },
+  "APP": {
+    "name": "AppLovin",
+    "category": "Advertising technology",
+    "english": "AppLovin provides advertising technology to help businesses acquire customers and monetize digital products.",
+    "chinese": "AppLovin 提供广告技术，帮助企业获取客户并实现数字产品的商业化。",
+    "website": "https://www.applovin.com/en"
+  },
+  "ARM": {
+    "name": "Arm Holdings",
+    "category": "Semiconductors",
+    "english": "Arm develops processor architectures, intellectual property and computing platforms used across mobile devices, data centers and embedded systems.",
+    "chinese": "Arm 开发处理器架构、知识产权及计算平台，应用于移动设备、数据中心及嵌入式系统。",
+    "website": "https://www.arm.com/company"
+  },
+  "CRWD": {
+    "name": "CrowdStrike",
+    "category": "Cybersecurity",
+    "english": "CrowdStrike provides the cloud-native Falcon cybersecurity platform for endpoint, cloud and identity protection.",
+    "chinese": "CrowdStrike 提供云原生 Falcon 网络安全平台，用于终端、云及身份防护。",
+    "website": "https://www.crowdstrike.com/en-us/about-us/"
+  },
+  "LITE": {
+    "name": "Lumentum",
+    "category": "Optical communications",
+    "english": "Lumentum develops optical and photonic products for communications networks and commercial laser applications.",
+    "chinese": "Lumentum 开发用于通信网络及商业激光应用的光学和光子产品。",
+    "website": "https://www.lumentum.com/en/company"
+  },
+  "ORCL": {
+    "name": "Oracle",
+    "category": "Software & cloud",
+    "english": "Oracle supplies database technology, cloud infrastructure and enterprise applications.",
+    "chinese": "甲骨文提供数据库技术、云基础设施及企业应用软件。",
+    "website": "https://www.oracle.com/corporate/"
+  },
+  "SMCI": {
+    "name": "Super Micro Computer",
+    "category": "Computing hardware",
+    "english": "Supermicro develops server, storage and computing systems for data centers, AI and cloud applications.",
+    "chinese": "Supermicro 开发面向数据中心、人工智能和云应用的服务器、存储及计算系统。",
+    "website": "https://www.supermicro.com/en/about"
+  },
+  "SOFI": {
+    "name": "SoFi Technologies",
+    "category": "Financial services",
+    "english": "SoFi provides financial services including lending, banking and investing through a digital platform.",
+    "chinese": "SoFi 通过数字平台提供贷款、银行及投资等金融服务。",
+    "website": "https://www.sofi.com/our-story/"
+  },
+  "RDDT": {
+    "name": "Reddit",
+    "category": "Social platforms",
+    "english": "Reddit is a platform of online communities organized around interests, discussions and shared content.",
+    "chinese": "Reddit 是由线上社区组成的平台，围绕不同兴趣开展讨论与内容分享。",
+    "website": "https://redditinc.com/"
+  },
+  "TSM": {
+    "name": "Taiwan Semiconductor Manufacturing",
+    "category": "Semiconductors",
+    "english": "TSMC provides dedicated semiconductor foundry services, manufacturing chips designed by its customers.",
+    "chinese": "台积电提供专业半导体代工服务，为客户制造其设计的芯片。",
+    "website": "https://www.tsmc.com/english/aboutTSMC"
+  },
+  "SMH": {
+    "name": "VanEck Semiconductor ETF",
+    "category": "ETF",
+    "english": "SMH seeks to track an index of semiconductor and semiconductor equipment companies.",
+    "chinese": "SMH 力求跟踪由半导体及半导体设备公司构成的指数。",
+    "website": "https://www.vaneck.com/us/en/investments/semiconductor-etf-smh/overview/"
+  }
+}

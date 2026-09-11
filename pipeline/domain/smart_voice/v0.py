@@ -26,6 +26,7 @@ def run_sv_v0(
     xueqiu_since_days: int,
     xueqiu_allow_partial: bool,
     force: bool,
+    created_since: str | None = None,
 ) -> None:
     """Run the legacy Smart Account v0 scorer through the domain boundary."""
     from .v0_impl import run
@@ -52,5 +53,6 @@ def run_sv_v0(
             xueqiu_since_days=xueqiu_since_days,
             xueqiu_allow_partial=xueqiu_allow_partial,
             force=force,
+            created_since=created_since,
         )
     )

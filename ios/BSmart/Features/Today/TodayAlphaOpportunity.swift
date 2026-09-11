@@ -36,42 +36,33 @@ struct TodayAlphaOpportunity: Identifiable, Hashable {
         }
     }
 
-    var localizedHeadline: String {
+    var headlineLabel: String {
+        kind == .smartAccount ? "Source view" : "Position change"
+    }
+
+    var sourceHeadlines: [TodaySourceHeadline] {
         switch source {
         case let .account(updates):
-            guard let update = updates.first else { return ticker }
-            let thesis = conciseAlphaText(localizedAlphaText(update), limit: 66)
-            if updates.count > 1 {
-                return "%d top Smart Accounts independently surfaced %@: %@"
-                    .bSmartLocalized(updates.count, ticker, thesis)
-            }
-            return "%@ surfaced %@: %@".bSmartLocalized(update.authorName, ticker, thesis)
+            return updates.prefix(2).map(TodaySourceHeadline.account)
         case let .money(movements):
-            guard let movement = movements.first else { return ticker }
-            if movements.count > 1 {
-                return "%d high-score public accounts acted on %@ before it became crowded"
-                    .bSmartLocalized(movements.count, ticker)
-            }
-            return "%@ %@ %@ %@ exposure"
-                .bSmartLocalized(
-                    movement.publicIdentity.displayName,
-                    movement.action.label.lowercased(),
-                    movement.direction.label.lowercased(),
-                    ticker
+            return movements.prefix(2).map { movement in
+                TodaySourceHeadline(
+                    id: movement.id,
+                    text: "%@ · %@ · notional %@ → %@".bSmartLocalized(
+                        movement.action.label.bSmartLocalized,
+                        movement.direction.label.bSmartLocalized,
+                        alphaCurrency(movement.notionalBefore),
+                        alphaCurrency(movement.notionalAfter)
+                    ),
+                    sourceName: movement.publicIdentity.displayName,
+                    date: movement.observedAt
                 )
+            }
         }
     }
 
-    var localizedSummary: String {
-        switch source {
-        case .account:
-            return "Only %d top-ranked source(s) covered %@ in the last %d days. It has not entered Smart Consensus."
-                .bSmartLocalized(sourceCount, ticker, lookbackDays)
-        case let .money(movements):
-            let change = movements.reduce(0) { $0 + abs($1.notionalChange) }
-            return "Observed exposure changed by %@ across %d qualified public account(s); no broader Smart Money cluster yet."
-                .bSmartLocalized(alphaCurrency(change), sourceCount)
-        }
+    var localizedHeadline: String {
+        ticker + " · " + sourceHeadlines.map(\.text).joined(separator: " / ")
     }
 
     var localizedDiscoveryType: String {
@@ -79,7 +70,7 @@ struct TodayAlphaOpportunity: Identifiable, Hashable {
         case let .account(updates):
             guard let lifecycle = updates.first?.lifecycle else { return "New research lead".bSmartLocalized }
             switch lifecycle {
-            case .new: return "First coverage".bSmartLocalized
+            case .new: return "Source view".bSmartLocalized
             case .reversed: return "Direction reversed".bSmartLocalized
             case .strengthened: return "View strengthened".bSmartLocalized
             case .weakened: return "View weakened".bSmartLocalized
@@ -384,22 +375,26 @@ struct TodayAlphaOpportunityRail: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: BSmartSpacing.medium) {
                     ForEach(opportunities) { opportunity in
-                        NavigationLink {
-                            TodayAlphaOpportunityDetailView(opportunity: opportunity)
-                                .bSmartZoomNavigationTransition(
-                                    sourceID: opportunity.id,
-                                    in: alphaTransition
-                                )
-                        } label: {
-                            TodayAlphaOpportunityCard(opportunity: opportunity)
-                                .bSmartMatchedTransitionSource(
-                                    id: opportunity.id,
-                                    in: alphaTransition
-                                )
+                        ZStack(alignment: .bottom) {
+                            NavigationLink {
+                                TodayAlphaOpportunityDetailView(opportunity: opportunity)
+                                    .bSmartZoomNavigationTransition(
+                                        sourceID: opportunity.id,
+                                        in: alphaTransition
+                                    )
+                            } label: {
+                                TodayAlphaOpportunityCard(opportunity: opportunity)
+                                    .bSmartMatchedTransitionSource(
+                                        id: opportunity.id,
+                                        in: alphaTransition
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("today.smart-alpha.\(opportunity.kind.rawValue).\(opportunity.ticker.lowercased())")
+
                         }
+                        .clipShape(RoundedRectangle(cornerRadius: BSmartRadius.card, style: .continuous))
                         .id(opportunity.id)
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("today.smart-alpha.\(opportunity.kind.rawValue).\(opportunity.ticker.lowercased())")
                     }
                 }
                 .scrollTargetLayout()
@@ -421,8 +416,9 @@ struct TodayAlphaOpportunityRail: View {
     }
 }
 
-private struct TodayAlphaOpportunityCard: View {
+struct TodayAlphaOpportunityCard: View {
     let opportunity: TodayAlphaOpportunity
+    var width: CGFloat? = 344
 
     private var accent: Color {
         opportunity.kind == .smartAccount ? BSmartColor.pulse : BSmartColor.sky
@@ -439,50 +435,20 @@ private struct TodayAlphaOpportunityCard: View {
             identityBand
 
             VStack(alignment: .leading, spacing: 0) {
-                HStack {
-                    Text("SMART ALPHA")
-                        .font(.system(size: 9, weight: .black))
-                        .tracking(0.7)
-                        .foregroundStyle(accent)
-                    Spacer(minLength: 4)
-                    Image(systemName: "arrow.up.right")
-                        .font(.caption2.weight(.black))
-                        .foregroundStyle(BSmartColor.secondaryText)
-                }
-
-                Text(opportunity.localizedHeadline)
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
-                    .foregroundStyle(BSmartColor.primaryText)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
+                TodaySourceHeadlineList(label: opportunity.headlineLabel, headlines: opportunity.sourceHeadlines)
                     .padding(.top, 8)
 
-                Text(opportunity.localizedSummary)
-                    .font(.caption)
-                    .foregroundStyle(BSmartColor.secondaryText)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-                    .padding(.top, 5)
-
-                Spacer(minLength: 6)
-
                 subjectEvidenceStrip
-
-                HStack(spacing: 0) {
-                    alphaMetric("Discovery", opportunity.localizedDiscoveryType)
-                    alphaMetric("Coverage", opportunity.localizedCoverageMetric)
-                    alphaMetric("Updated", opportunity.occurredAt.bSmartRelativeTimestamp)
-                }
-                .padding(.top, 10)
-                .overlay(alignment: .top) {
-                    Rectangle().fill(BSmartColor.line).frame(height: 0.5)
-                }
+                    .padding(.top, 12)
             }
             .padding(BSmartSpacing.large)
-            .frame(maxHeight: .infinity, alignment: .top)
+
         }
-        .frame(width: 344, height: 300, alignment: .topLeading)
+        .frame(width: width, alignment: .topLeading)
+        .frame(maxWidth: width == nil ? .infinity : nil, alignment: .topLeading)
+        .frame(minHeight: 272, alignment: .topLeading)
         .background(fill)
+        .background(BSmartColor.tintedCardBase)
         .clipShape(RoundedRectangle(cornerRadius: BSmartRadius.card, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: BSmartRadius.card, style: .continuous)
@@ -494,6 +460,7 @@ private struct TodayAlphaOpportunityCard: View {
     private var identityBand: some View {
         HStack(spacing: BSmartSpacing.small) {
             BSmartAssetMark(ticker: opportunity.ticker, size: 36)
+                .bSmartTickerDestination(opportunity.ticker)
                 .frame(width: 40, height: 40)
 
             VStack(alignment: .leading, spacing: 2) {
@@ -530,6 +497,7 @@ private struct TodayAlphaOpportunityCard: View {
                             fallbackColor: update.direction.color
                         )
                         .overlay { Circle().stroke(accent, lineWidth: 1.1) }
+                        .bSmartSubjectDestination(update)
                         Text(opportunity.sourceRankLabels[update.authorId.lowercased()] ?? opportunity.localizedRankMetric)
                             .font(.system(size: 7, weight: .black).monospacedDigit())
                             .foregroundStyle(accent)
@@ -541,6 +509,7 @@ private struct TodayAlphaOpportunityCard: View {
                     VStack(spacing: 2) {
                         BSmartSmartMoneyAvatar(identity: movement.publicIdentity, size: 28)
                             .overlay { Circle().stroke(accent, lineWidth: 1.1) }
+                            .bSmartSubjectDestination(movement)
                         Text(opportunity.sourceRankLabels[movement.accountId.lowercased()] ?? opportunity.localizedRankMetric)
                             .font(.system(size: 7, weight: .black).monospacedDigit())
                             .foregroundStyle(accent)
@@ -592,6 +561,7 @@ private struct TodayAlphaOpportunityCard: View {
         .frame(maxWidth: .infinity, minHeight: 38, alignment: .leading)
         .background(accent.opacity(0.07))
         .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+        .bSmartSubjectDestination(update)
     }
 
     private func moneyEvidence(_ movement: SmartMoneyMovement) -> some View {
@@ -617,21 +587,9 @@ private struct TodayAlphaOpportunityCard: View {
         .frame(maxWidth: .infinity, minHeight: 38, alignment: .leading)
         .background(accent.opacity(0.07))
         .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+        .bSmartSubjectDestination(movement)
     }
 
-    private func alphaMetric(_ label: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(label.bSmartLocalized)
-                .font(.system(size: 8, weight: .semibold))
-                .foregroundStyle(BSmartColor.tertiaryText)
-            Text(value)
-                .font(.system(size: 9, weight: .black))
-                .foregroundStyle(BSmartColor.primaryText)
-                .lineLimit(1)
-                .minimumScaleFactor(0.72)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
 }
 
 struct TodayAlphaOpportunityDetailView: View {
@@ -669,6 +627,7 @@ struct TodayAlphaOpportunityDetailView: View {
         .toolbar(.hidden, for: .navigationBar)
         .bSmartDetailPage()
         .bSmartPage()
+        .bSmartTradeDock(symbol: opportunity.ticker)
     }
 
     private var detailNavigationBar: some View {
@@ -715,10 +674,11 @@ struct TodayAlphaOpportunityDetailView: View {
         VStack(alignment: .leading, spacing: BSmartSpacing.large) {
             HStack(spacing: BSmartSpacing.medium) {
                 BSmartAssetMark(ticker: opportunity.ticker, size: 48)
+                    .bSmartTickerDestination(opportunity.ticker)
                     .frame(width: 52, height: 52)
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("SMART ALPHA")
+                    Text("ALPHA TICKERS")
                         .font(.system(size: 9, weight: .black))
                         .tracking(0.8)
                         .foregroundStyle(accent)
@@ -740,10 +700,7 @@ struct TodayAlphaOpportunityDetailView: View {
                 .foregroundStyle(BSmartColor.secondaryText)
             }
 
-            Text(opportunity.localizedHeadline)
-                .font(.system(size: 24, weight: .bold, design: .rounded))
-                .lineSpacing(2)
-                .fixedSize(horizontal: false, vertical: true)
+            TodaySourceHeadlineList(label: opportunity.headlineLabel, headlines: opportunity.sourceHeadlines)
 
             Text("Research candidate · not a recommendation".bSmartLocalized)
                 .font(.caption.weight(.bold))
@@ -830,8 +787,10 @@ struct TodayAlphaOpportunityDetailView: View {
                 size: 42,
                 fallbackColor: update.direction.color
             )
+            .bSmartSubjectDestination(update)
             VStack(alignment: .leading, spacing: 4) {
                 Text(update.authorName)
+                    .bSmartSubjectDestination(update)
                     .font(.subheadline.weight(.bold))
                     .lineLimit(1)
                 Text("%@ · %@ · %@".bSmartLocalized(
@@ -860,8 +819,10 @@ struct TodayAlphaOpportunityDetailView: View {
     private func alphaMoneyRow(_ movement: SmartMoneyMovement) -> some View {
         HStack(spacing: BSmartSpacing.medium) {
             BSmartSmartMoneyAvatar(identity: movement.publicIdentity, size: 42)
+                .bSmartSubjectDestination(movement)
             VStack(alignment: .leading, spacing: 4) {
                 Text(movement.publicIdentity.displayName)
+                    .bSmartSubjectDestination(movement)
                     .font(.subheadline.weight(.bold))
                     .lineLimit(1)
                 Text("%@ · %@ · %@".bSmartLocalized(
@@ -1019,27 +980,9 @@ private func isSpecifiedAlphaHorizon(_ value: String) -> Bool {
     return !normalized.isEmpty && !["unknown", "unspecified", "n/a", "—"].contains(normalized)
 }
 
-private func localizedAlphaText(_ update: SmartAccountUpdate) -> String {
-    if BSmartLocalization.isSimplifiedChinese {
-        return update.activityTitleZH
-            ?? update.translatedTextZH
-            ?? update.translatedText
-            ?? update.thesis
-    }
-    return update.activityTitleEN
-        ?? update.translatedTextEN
-        ?? update.translatedText
-        ?? update.thesis
-}
 
-private func conciseAlphaText(_ value: String, limit: Int) -> String {
-    let compact = value
-        .replacingOccurrences(of: "\n", with: " ")
-        .split(whereSeparator: \.isWhitespace)
-        .joined(separator: " ")
-    guard compact.count > limit else { return compact }
-    return String(compact.prefix(limit)).trimmingCharacters(in: .whitespacesAndNewlines) + "…"
-}
+
+
 
 private func alphaCurrency(_ value: Double) -> String {
     let absolute = abs(value)
@@ -1051,7 +994,7 @@ private func alphaCurrency(_ value: Double) -> String {
     case 1_000...:
         formatted = "$\((absolute / 1_000).formatted(.number.precision(.fractionLength(1))))K"
     default:
-        formatted = absolute.formatted(.currency(code: "USD").precision(.fractionLength(0)))
+        formatted = absolute.formatted(.bSmartDollars.precision(.fractionLength(0)))
     }
     return sign + formatted
 }

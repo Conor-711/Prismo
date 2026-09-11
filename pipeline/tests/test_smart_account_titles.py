@@ -31,3 +31,17 @@ def test_activity_title_makes_reversal_explicit() -> None:
 
     assert titles["activityTitleZH"].startswith("MSTR 观点反转：")
     assert titles["activityTitleEN"].startswith("MSTR view reversed:")
+
+
+def test_activity_title_preserves_later_sentence_and_long_term_qualification() -> None:
+    zh = "作者预计短期价格回补缺口并反弹至240至260美元，已经部分平掉空头仓位。长期仍然看空，若回到阻力位会考虑再次增加空头仓位。"
+    en = "Author expects a short-term rebound to $240-$260 and has covered part of the short. Still bearish longer term; may add short exposure again at resistance."
+    titles = build_smart_account_activity_titles(
+        ticker="NBIS", direction="bull", lifecycle="open_call", horizon="20D",
+        target_price=260, thesis_zh=zh, thesis_en=en,
+    )
+    assert "长期仍然看空" in titles["activityTitleZH"]
+    assert "若回到阻力位" in titles["activityTitleZH"]
+    assert "Still bearish longer term" in titles["activityTitleEN"]
+    assert "…" not in titles["activityTitleZH"]
+    assert "…" not in titles["activityTitleEN"]

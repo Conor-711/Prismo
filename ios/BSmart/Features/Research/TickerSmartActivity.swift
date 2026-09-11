@@ -464,7 +464,7 @@ struct TickerPriceSmartActivityPanel: View {
                     } label: {
                         Text(option.label)
                             .font(.caption2.weight(.bold))
-                            .foregroundStyle(range == option ? BSmartColor.pulseInk : BSmartColor.secondaryText)
+                            .foregroundStyle(range == option ? BSmartColor.onAccent : BSmartColor.secondaryText)
                             .frame(maxWidth: .infinity, minHeight: 30)
                             .background(range == option ? BSmartColor.brand : BSmartColor.recessed)
                     }
@@ -487,7 +487,7 @@ struct TickerPriceSmartActivityPanel: View {
             chartMetric(
                 "Return".bSmartLocalized,
                 value: periodReturn?.formatted(.percent.precision(.fractionLength(1)).sign(strategy: .always())) ?? "—",
-                color: (periodReturn ?? 0) >= 0 ? BSmartColor.brand : BSmartColor.bear
+                color: (periodReturn ?? 0) >= 0 ? BSmartColor.bull : BSmartColor.bear
             )
             Divider().frame(height: 30).overlay(BSmartColor.line)
             chartMetric(
@@ -656,6 +656,7 @@ struct TickerSmartActivityFeed: View {
     var title: String = "Smart Activity"
     var maximumItems: Int? = nil
     var showsFilter = true
+    var framed = true
 
     @State private var source: TickerSmartActivitySource = .all
 
@@ -666,6 +667,14 @@ struct TickerSmartActivityFeed: View {
     }
 
     var body: some View {
+        Group {
+            if framed { content.bSmartSurface() } else { content }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("ticker-intelligence.smart-activity")
+    }
+
+    @ViewBuilder private var content: some View {
         let displayedActivities = filteredActivities
 
         VStack(alignment: .leading, spacing: BSmartSpacing.medium) {
@@ -686,7 +695,7 @@ struct TickerSmartActivityFeed: View {
                         } label: {
                             Label(option.label, systemImage: option.symbol)
                                 .font(.caption2.weight(.bold))
-                                .foregroundStyle(source == option ? BSmartColor.pulseInk : BSmartColor.secondaryText)
+                                .foregroundStyle(source == option ? BSmartColor.onAccent : BSmartColor.secondaryText)
                                 .frame(maxWidth: .infinity, minHeight: 32)
                                 .background(source == option ? BSmartColor.brand : BSmartColor.recessed)
                         }
@@ -706,8 +715,13 @@ struct TickerSmartActivityFeed: View {
             } else {
                 LazyVStack(spacing: 0) {
                     ForEach(displayedActivities) { activity in
-                        TickerSmartActivityRow(activity: activity)
-                            .padding(.vertical, BSmartSpacing.small)
+                        BSmartDetailNavigationLink(id: "ticker-activity-\(activity.id)") {
+                            TickerActivityDestination(activity: activity)
+                        } label: {
+                            TickerSmartActivityRow(activity: activity)
+                                .padding(.vertical, BSmartSpacing.small)
+                        }
+                        .buttonStyle(.plain)
                         if activity.id != displayedActivities.last?.id {
                             Divider().overlay(BSmartColor.line)
                         }
@@ -715,8 +729,6 @@ struct TickerSmartActivityFeed: View {
                 }
             }
         }
-        .bSmartSurface()
-        .accessibilityIdentifier("ticker-intelligence.smart-activity")
     }
 }
 
@@ -726,15 +738,20 @@ private struct TickerSmartActivityRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: BSmartSpacing.medium) {
             TickerActivityAvatar(activity: activity, size: 38)
+                .bSmartSubjectDestination(activity)
 
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: BSmartSpacing.small) {
-                    Label(activity.source.label, systemImage: activity.source.symbol)
-                        .font(.caption2.weight(.black))
-                        .foregroundStyle(activity.source == .smartAccount ? BSmartColor.brand : BSmartColor.sky)
-                    Text(activity.actorName)
-                        .font(.caption.weight(.semibold))
-                        .lineLimit(1)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(activity.actorName)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(BSmartColor.primaryText)
+                            .lineLimit(1)
+                        Text(activity.source.label)
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(activity.source == .smartAccount ? BSmartColor.brand : BSmartColor.sky)
+                    }
+                    .bSmartSubjectDestination(activity)
                     Spacer(minLength: BSmartSpacing.small)
                     Text(activity.occurredAt.bSmartRelativeTimestamp)
                         .font(.caption2)
@@ -752,7 +769,7 @@ private struct TickerSmartActivityRow: View {
                     .lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)
 
-                metadata
+                ScrollView(.horizontal, showsIndicators: false) { metadata }
             }
         }
         .accessibilityIdentifier("ticker-intelligence.activity.\(activity.id)")
@@ -805,7 +822,7 @@ private struct TickerActivityBubble: View {
     }
 }
 
-private struct TickerActivityAvatar: View {
+struct TickerActivityAvatar: View {
     let activity: TickerSmartActivityItem
     let size: CGFloat
 
@@ -836,13 +853,13 @@ private func compactTickerActivityUSD(_ value: Double) -> String {
     case 1_000...:
         return String(format: "%@$%.1fK", sign, abs(value) / 1_000)
     default:
-        return sign + abs(value).formatted(.currency(code: "USD").precision(.fractionLength(0)))
+        return sign + abs(value).formatted(.bSmartDollars.precision(.fractionLength(0)))
     }
 }
 
 private extension Double {
     var tickerActivityCurrency: String {
-        formatted(.currency(code: "USD").precision(.fractionLength(self < 100 ? 2 : 0)))
+        formatted(.bSmartDollars.precision(.fractionLength(self < 100 ? 2 : 0)))
     }
 
     var tickerActivityCompactCurrency: String {

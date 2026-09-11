@@ -5,8 +5,13 @@ from datetime import UTC, datetime
 from typing import Any, Annotated
 from uuid import UUID
 
+import httpx
+
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.exceptions import RequestValidationError
+from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.responses import JSONResponse
 
 from services.client_api.config import ClientAPISettings
 from services.client_api.read_models import (
@@ -39,6 +44,14 @@ from services.client_api.schemas import (
     SignalUserStateInput,
 )
 from services.client_api.state_store import AuthenticatedInstallation, ClientStateStore
+from services.client_api.accounts.settings import AccountAuthSettings
+from services.client_api.accounts.repository import AccountRepository
+from services.client_api.accounts.router import make_account_router
+from services.client_api.accounts.deletion_worker import deletion_worker_lifecycle
+from services.client_api.opinion_trades.router import make_opinion_trade_router
+from services.client_api.opinion_trades.repository import OpinionTradeRepository
+from services.client_api.opinion_trades.feed import TradeFeedRepository
+from services.client_api.opinion_trades.feed_router import make_trade_feed_router
 
 
 bearer = HTTPBearer(auto_error=False)
@@ -78,6 +91,7 @@ def _document_datetime(value: Any) -> datetime | None:
 def create_app(
     settings: ClientAPISettings | None = None,
     mr_collie_service: MrCollieService | None = None,
+    opinion_trade_repository: OpinionTradeRepository | None = None,
 ) -> FastAPI:
     resolved_settings = settings or ClientAPISettings.from_environment()
     read_models: ReadModelRepository
@@ -99,13 +113,21 @@ def create_app(
         timeout_seconds=resolved_settings.mr_collie_timeout_seconds,
     ))
     collie_rate_limiter = MrCollieRateLimiter(resolved_settings.mr_collie_requests_per_minute)
+    account_settings = AccountAuthSettings.from_environment(resolved_settings.environment)
+    account_repository = AccountRepository(resolved_settings.database_url)
+    account_http = httpx.AsyncClient(follow_redirects=False)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
-        yield
-        await collie.close()
-        read_models.dispose()
-        state_store.dispose()
+        try:
+            async with deletion_worker_lifecycle(account_settings, account_repository, account_http):
+                yield
+        finally:
+            await collie.close()
+            await account_http.aclose()
+            account_repository.engine.dispose()
+            read_models.dispose()
+            state_store.dispose()
 
     app = FastAPI(
         title="bSmart Client API",
@@ -116,6 +138,27 @@ def create_app(
     app.state.read_models = read_models
     app.state.state_store = state_store
     app.state.mr_collie = collie
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_error(request: Request, error: RequestValidationError):
+        if request.url.path.startswith("/v1/auth/"):
+            # Default validation responses can echo raw identity tokens from input.
+            return JSONResponse(status_code=422, content={"detail": "Invalid account request."},
+                                headers={"Cache-Control": "no-store"})
+        return await request_validation_exception_handler(request, error)
+
+    @app.middleware("http")
+    async def account_cache_policy(request: Request, call_next):
+        response = await call_next(request)
+        if request.url.path.startswith("/v1/auth/"):
+            response.headers["Cache-Control"] = "no-store"
+        return response
+    app.include_router(make_account_router(account_settings, account_repository,
+                                          account_http, require_installation))
+    # Opt-in only after real reconciliation + profile/consent release gates pass.
+    app.include_router(make_opinion_trade_router(require_installation, opinion_trade_repository))
+    app.include_router(make_trade_feed_router(require_installation,
+        TradeFeedRepository(opinion_trade_repository, read_models) if opinion_trade_repository else None))
 
     @app.get("/health", response_model=HealthResponse)
     def health() -> HealthResponse:
@@ -162,9 +205,13 @@ def create_app(
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     @app.get("/v1/feed", response_model=list[dict[str, Any]])
-    def get_feed(response: Response, _: InstallationDependency) -> list[dict[str, Any]]:
-        set_read_model_headers(response, "portfolio-signals")
-        return read_models.portfolio_signals()
+    def get_feed(request: Request, response: Response, _: InstallationDependency) -> list[dict[str, Any]]:
+        etag, cached = conditional_collection(request, "portfolio-signals")
+        if cached is not None:
+            return cached
+        result = read_models.portfolio_signals()
+        set_read_model_headers(response, "portfolio-signals", expected_etag=etag)
+        return result
 
     @app.get("/v1/signals/{signal_id}", response_model=dict[str, Any])
     def get_signal(
@@ -274,30 +321,40 @@ def create_app(
 
     @app.get("/v1/smart-account-updates", response_model=list[dict[str, Any]])
     def get_smart_account_updates(
+        request: Request,
         response: Response,
         _: InstallationDependency,
     ) -> list[dict[str, Any]]:
+        etag, cached = conditional_collection(request, "smart-account-updates")
+        if cached is not None:
+            return cached
         result = read_models.smart_account_updates()
         set_read_model_headers(
             response,
             "smart-account-updates",
             items=result,
             content_timestamp_fields=("publishedAt",),
+            expected_etag=etag,
         )
         return result
 
     @app.get("/v1/smart-accounts/{account_id}/evidence", response_model=list[dict[str, Any]])
     def get_smart_account_evidence(
         account_id: str,
+        request: Request,
         response: Response,
         _: InstallationDependency,
     ) -> list[dict[str, Any]]:
+        etag, cached = conditional_collection(request, "smart-account-evidence")
+        if cached is not None:
+            return cached
         result = read_models.smart_account_evidence(account_id)
         set_read_model_headers(
             response,
             "smart-account-evidence",
             items=result,
             content_timestamp_fields=("publishedAt", "authorScoreAsOf"),
+            expected_etag=etag,
         )
         return result
 
@@ -366,9 +423,13 @@ def create_app(
         return result
 
     @app.get("/v1/smart-accounts", response_model=list[dict[str, Any]])
-    def get_smart_accounts(response: Response, _: InstallationDependency) -> list[dict[str, Any]]:
-        set_read_model_headers(response, "smart-accounts")
-        return read_models.smart_accounts()
+    def get_smart_accounts(request: Request, response: Response, _: InstallationDependency) -> list[dict[str, Any]]:
+        etag, cached = conditional_collection(request, "smart-accounts")
+        if cached is not None:
+            return cached
+        result = read_models.smart_accounts()
+        set_read_model_headers(response, "smart-accounts", expected_etag=etag)
+        return result
 
     @app.get("/v1/smart-money", response_model=list[dict[str, Any]])
     def get_smart_money(response: Response, _: InstallationDependency) -> list[dict[str, Any]]:
@@ -428,14 +489,25 @@ def create_app(
             portfolioWeight=record.portfolio_weight,
         )
 
+    def conditional_collection(request: Request, collection: str) -> tuple[str, Response | None]:
+        etag = f'"{read_models.etag(collection)}"'
+        if request.headers.get("if-none-match") == etag:
+            return etag, Response(status_code=304, headers={
+                "ETag": etag, "Cache-Control": "private, max-age=0, must-revalidate",
+            })
+        return etag, None
+
     def set_read_model_headers(
         response: Response,
         collection: str,
         *,
         items: list[dict[str, Any]] | None = None,
         content_timestamp_fields: tuple[str, ...] = (),
+        expected_etag: str | None = None,
     ) -> None:
         response.headers["ETag"] = f'"{read_models.etag(collection)}"'
+        if expected_etag is not None and response.headers["ETag"] != expected_etag:
+            raise HTTPException(status_code=503, detail="Data publication in progress; retry shortly.")
         response.headers["Cache-Control"] = "private, max-age=0, must-revalidate"
         updated_at = read_models.updated_at(collection)
         if updated_at is not None:

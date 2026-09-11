@@ -3,6 +3,10 @@
 > 状态：第一阶段产品决策真源
 > 最近确认：2026-08-04
 > 适用范围：MVP 产品、iOS、Web 保留面、API 契约、数据与算法输出
+>
+> 交易范围更新：2026-09-01 起，本文中“不提供交易执行”的旧边界由
+> `docs/product/hyperliquid-trading-pivot-2026-09.md` 取代。Smart Account / Smart Money 双源与 iOS 三 Tab
+> 边界仍以 `ARCHITECTURE.md`、`docs/architecture/09-ios.md` 的最新决策为准。
 
 本文用于让产品、设计、工程和新对话中的 AI 对 bSmart 第一阶段保持同一理解。若精益画布、旧 PRD、
 历史页面或代码命名与本文冲突，以本文和后续明确决策为准；技术事实仍以 `ARCHITECTURE.md` 为准。

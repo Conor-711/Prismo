@@ -10,13 +10,13 @@ SV_SEGMENT_BANDS := top10,top25
 
 .PHONY: install venv db-init migrate seed seed-cn sample ingest refresh extract analyze analyze-mock \
         rollup narratives narrative-rotation brief worker daily daily-build cn-backfill demo stats test web-install web-dev clean help \
-        arch-check terminology-check sv-price-history sv-v0-candidates sv-v0 sv-v0-prod hyperliquid-smart-money hyperliquid-smart-money-live export-smart-account-read-model sv-ticker-signals sv-indicator-backtest sv-indicator-report sv-segment-backtest sv-portfolio-backtest sv-rank-event-research reddit-sv-authors sv-v0-reddit-candidates sv-v0-reddit-prod tw-match cf-deploy \
+        arch-check terminology-check sv-price-history sv-v0-candidates sv-v0 sv-v0-prod hyperliquid-smart-money hyperliquid-smart-money-live export-smart-account-read-model sv-ticker-signals sv-indicator-backtest sv-indicator-report sv-segment-backtest sv-portfolio-backtest sv-rank-event-research smart-product-signal-backtest smart-account-follow-backtest reddit-sv-authors sv-v0-reddit-candidates sv-v0-reddit-prod tw-match cf-deploy \
         backup-db snapshot-db restore-db data-clean data-status xueqiu-author-auth xueqiu-author-plan xueqiu-author-run xueqiu-author-drain xueqiu-author-status xueqiu-sv-full \
-        ios-generate ios-build ios-test ios-live-seed ios-live-unified-seed ios-live-api ios-live-smart-money ios-local-check ios-alpha-check ios-alpha-archive ios-release-check contract-check mvp-coverage-audit congress-score \
+        ios-generate ios-resolve ios-build ios-test ios-live-seed ios-live-unified-seed ios-live-api ios-live-smart-money ios-local-check ios-alpha-check ios-alpha-archive ios-release-check contract-check mvp-coverage-audit congress-score \
         client-api-install client-api-dev client-api-test client-api-seed-mock client-api-alpha-seed client-api-alpha-dev client-api-plan-notifications client-api-notification-worker \
         client-api-alpha-image client-api-alpha-smoke client-api-alpha-plan-digests client-api-plan-digests client-api-dispatch-notifications client-api-publish-read-models client-api-publish-live-smart-money \
         x-ingest-install x-ingest-bootstrap x-ingest-api x-ingest-worker x-ingest-test x-ingest-audit x-local-config x-local-up x-local-down x-local-status x-local-logs \
-        smart-money-ingest-install smart-money-ingest-api smart-money-ingest-test
+        smart-money-ingest-install smart-money-ingest-api smart-money-ingest-test x-daily client-api-publish-daily-x
 
 help:
 	@echo "Reddit 版 Kaito Pro — 常用命令"
@@ -32,6 +32,7 @@ help:
 	@echo "  make narrative-rotation  跨社区固定叙事轮动 JSON（新叙事页）"
 	@echo "  make daily         分析过去 24 小时（一天一次；UTC+8 08:00 跑）"
 	@echo "  make daily-build   分析过去 24h 并重建静态站点（web/out）"
+	@echo "  make x-daily PACKAGE=... 检查每日 X 包；APPLY=1 处理，PUBLISH=1 发布"
 	@echo "  make migrate       已有库迁移到带 market 维度（幂等）"
 	@echo "  make seed-cn       seed 中概/港股/A 股字典"
 	@echo "  make cn-backfill   回填中概·港股语料（爬30天+AI打标+双market聚合+翻译）"
@@ -49,6 +50,8 @@ help:
 	@echo "  make sv-segment-backtest    按周期、赛道和投资类型子 Score 做垂直集中回测"
 	@echo "  make sv-portfolio-backtest  计算 X Score 集体信号及逐作者组合年化"
 	@echo "  make sv-rank-event-research 扩展 X Score 头尾事件参数并做前后半段验证"
+	@echo "  make smart-product-signal-backtest  无前视回测聪明共识与聪明阿尔法产品信号"
+	@echo "  make smart-account-follow-backtest  计算每个正式 Smart Account 的跟单总收益与年化"
 	@echo "  make xueqiu-author-plan   导入雪球候选池并创建一年作者时间线任务"
 	@echo "  make xueqiu-author-auth   由用户登录雪球并保存本地会话（不保存密码）"
 	@echo "  make xueqiu-author-run    断点运行雪球作者时间线任务"
@@ -60,6 +63,7 @@ help:
 	@echo "  make web-install   安装前端依赖    make web-dev  启动 Next.js"
 	@echo "  --- iOS（MVP 主客户端）---"
 	@echo "  make ios-generate  从 ios/project.yml 生成 Xcode 工程"
+	@echo "  make ios-resolve   解析并恢复 iOS Swift Package 依赖"
 	@echo "  make ios-build     构建 SwiftUI App（iOS Simulator）"
 	@echo "  make ios-test      运行 Swift 单元测试"
 	@echo "  make ios-local-check 验证本地数据库数据并构建 bSmart Local"
@@ -495,6 +499,14 @@ sv-portfolio-backtest:
 sv-rank-event-research:
 	$(MANAGE) sv-rank-event-research --report-dir $(or $(REPORT_DIR),data/reports/sv_portfolio_backtest)
 
+# 当前 iOS 产品规则：30 天历史时点 Top 25% 共识与 Top 10% 阿尔法。
+smart-product-signal-backtest:
+	$(PY) -m pipeline.jobs.smart_voice.product_signal_backtest --db $(or $(DB),data/dev.db) --start-day $(or $(START),2025-07-28) --end-day $(or $(END),2026-07-27) --output-dir $(or $(REPORT_DIR),data/reports/smart_signal_backtest)
+
+# 当前正式作者逐账户跟单：历史时点资格、生命周期覆盖、跨平台净值与逐笔证据。
+smart-account-follow-backtest:
+	$(PY) -m pipeline.jobs.smart_voice.account_follow_backtest --db $(or $(DB),data/dev.db) --output-dir $(or $(REPORT_DIR),data/reports/smart_account_follow_backtest)
+
 # ---------- iOS（MVP 主客户端）----------
 IOS_PROJECT := ios/bSmart.xcodeproj
 IOS_SCHEME := bSmart
@@ -503,6 +515,9 @@ IOS_TEST_OS ?=
 
 ios-generate:
 	cd ios && xcodegen generate
+
+ios-resolve: ios-generate
+	xcodebuild -resolvePackageDependencies -project $(IOS_PROJECT) -scheme $(IOS_SCHEME)
 
 ios-build: ios-generate
 	xcodebuild -project $(IOS_PROJECT) -scheme $(IOS_SCHEME) -configuration Debug -sdk iphonesimulator CODE_SIGNING_ALLOWED=NO build
@@ -601,6 +616,12 @@ client-api-publish-read-models:
 
 client-api-publish-live-smart-money:
 	BSMART_ENV=development BSMART_READ_MODEL_MODE=database $(CLIENT_API_PY) -m services.client_api.publish_realtime_smart_money --input-dir '$(or $(INPUT_DIR),data/runtime/smart-money-live)' $(if $(ONCE),--once,)
+
+x-daily:
+	$(MANAGE) x-daily --package '$(PACKAGE)' --workers $(or $(WORKERS),2) --max-calls $(or $(MAX_CALLS),1000) $(if $(filter 1,$(APPLY)),--apply,) $(if $(filter 1,$(PUBLISH)),--publish,)
+
+client-api-publish-daily-x:
+	$(CLIENT_API_PY) -m services.client_api.publish_daily_x --input-dir '$(INPUT_DIR)' $(if $(filter 1,$(APPLY)),--apply,) $(if $(filter 1,$(ROLLBACK)),--rollback,) $(if $(filter 1,$(ALLOW_DROP)),--allow-drop,)
 
 X_INGEST_VENV := services/x_ingest/.venv
 X_INGEST_PY := $(X_INGEST_VENV)/bin/python

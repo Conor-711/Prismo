@@ -7,6 +7,7 @@ message.content，本封装只取 content（忽略思维链）。服务端自带
 from __future__ import annotations
 
 import json
+import os
 import re
 import time
 
@@ -57,6 +58,13 @@ def chat(
         "max_tokens": max_tokens,
         "temperature": temperature,
     }
+    # V4 defaults to thinking; short extraction budgets can be exhausted before
+    # any JSON is emitted. Batch jobs may explicitly opt into non-thinking mode.
+    thinking = os.environ.get("DEEPSEEK_THINKING", "").strip().lower()
+    if thinking:
+        if thinking not in {"enabled", "disabled"}:
+            raise ValueError("DEEPSEEK_THINKING must be enabled or disabled")
+        body["thinking"] = {"type": thinking}
     last = ""
     for i in range(retries):
         try:

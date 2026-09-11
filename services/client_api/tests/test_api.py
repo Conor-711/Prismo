@@ -401,16 +401,18 @@ def test_service_covers_every_contract_operation() -> None:
         for method in path_item
         if method in methods
     }
-    actual = {
-        (normalize_path(route.path), method)
-        for route in create_app(ClientAPISettings(
+    application = create_app(ClientAPISettings(
             environment="test",
             database_url="sqlite:///:memory:",
             read_model_mode="fixture",
             fixture_root=REPO_ROOT / "contracts" / "fixtures",
-        )).routes
-        for method in (route.methods or set())
-        if route.path.startswith("/v1/")
+        ))
+    # Resolve included routers as well as routes registered on the app itself.
+    actual = {
+        (normalize_path(path), method.upper())
+        for path, path_item in application.openapi()["paths"].items()
+        for method in path_item
+        if path.startswith("/v1/") and method in methods
     }
 
     assert actual == expected

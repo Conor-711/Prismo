@@ -5,7 +5,7 @@ enum AppSection: String, Hashable {
     case today
     case smart
     case portfolio
-    case ai
+    case feed
 }
 
 enum TodayRoute: Hashable {

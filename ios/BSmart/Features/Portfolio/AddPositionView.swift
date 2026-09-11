@@ -149,6 +149,7 @@ struct AddPositionView: View {
                         .foregroundStyle(BSmartColor.secondaryText)
                 }
                 TextField(placeholder, text: text)
+                    .accessibilityIdentifier("position-editor.field.\(title)")
                     .keyboardType(keyboard)
                     .textInputAutocapitalization(capitalization)
                     .autocorrectionDisabled()

@@ -32,7 +32,7 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
-from ...common import deepseek, gemini, llm
+from ...common import deepseek, gemini, kimi, llm
 from ...common.config import ROOT as PROJECT_ROOT, RUNTIME_DATA_DIR, settings
 from ...common.ticker_extraction import ALIASES
 from ...common.youtube_filters import (
@@ -723,7 +723,7 @@ def sv_extract_provider_order() -> list[str]:
     providers: list[str] = []
     for item in raw.split(","):
         provider = item.strip().lower()
-        if provider in {"qwen", "deepseek", "gemini"} and provider not in providers:
+        if provider in {"qwen", "deepseek", "gemini", "kimi"} and provider not in providers:
             providers.append(provider)
     return providers or ["qwen", "deepseek", "gemini"]
 
@@ -736,12 +736,14 @@ def sv_audit_provider_order() -> list[str]:
     providers: list[str] = []
     for item in raw.split(","):
         provider = item.strip().lower()
-        if provider in {"qwen", "deepseek", "gemini"} and provider not in providers:
+        if provider in {"qwen", "deepseek", "gemini", "kimi"} and provider not in providers:
             providers.append(provider)
     return providers or ["qwen", "deepseek", "gemini"]
 
 
 def sv_extract_provider_available(provider: str) -> bool:
+    if provider == "kimi":
+        return kimi.available()
     if provider == "qwen":
         return llm.available(llm.LOW)
     if provider == "deepseek":
@@ -752,6 +754,8 @@ def sv_extract_provider_available(provider: str) -> bool:
 
 
 def sv_extract_model_label(provider: str) -> str:
+    if provider == "kimi":
+        return kimi.model_label()
     if provider == "qwen":
         return llm.model_label(llm.LOW)
     if provider == "deepseek":
@@ -766,6 +770,8 @@ def sv_extract_messages_json(
     max_tokens: int,
 ) -> dict[str, Any] | None:
     try:
+        if provider == "kimi":
+            return kimi.messages_json(system, prompt, max_tokens=max_tokens)
         if provider == "qwen":
             return llm.messages_json(llm.LOW, system, prompt, max_tokens=max_tokens)
         if provider == "deepseek":
@@ -1699,8 +1705,9 @@ def insert_candidates(con: sqlite3.Connection, rows: list[tuple]) -> int:
     return con.total_changes
 
 
-def build_candidates(con: sqlite3.Connection, tweet_dirs: list[Path], limit: int, min_score: float, only: set[str] | None) -> int:
-    ensure_tables(con)
+def build_candidates(con: sqlite3.Connection, tweet_dirs: list[Path], limit: int, min_score: float, only: set[str] | None, *, initialize_schema: bool = True) -> int:
+    if initialize_schema:
+        ensure_tables(con)
     valid = price_tickers(con) - NON_CALL_TAGS
     if only:
         valid &= only
@@ -2031,6 +2038,7 @@ def ranked_candidate_rows(
     tickers: set[str] | None = None,
     youtube_created_since: str | None = None,
     reddit_created_since: str | None = None,
+    created_since: str | None = None,
 ) -> list[sqlite3.Row]:
     clauses: list[str] = []
     params: list[Any] = []
@@ -2090,6 +2098,9 @@ def ranked_candidate_rows(
     if reddit_created_since:
         clauses.append("(cc.source<>'reddit' OR cc.created_at>=?)")
         params.append(reddit_created_since)
+    if created_since:
+        clauses.append("cc.created_at>=?")
+        params.append(created_since)
     where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
     sql = f"""
         SELECT cc.*
@@ -2115,6 +2126,7 @@ def author_balanced_candidate_rows(
     tickers: set[str] | None = None,
     youtube_created_since: str | None = None,
     reddit_created_since: str | None = None,
+    created_since: str | None = None,
 ) -> list[sqlite3.Row]:
     rows = ranked_candidate_rows(
         con,
@@ -2125,6 +2137,7 @@ def author_balanced_candidate_rows(
         tickers=tickers,
         youtube_created_since=youtube_created_since,
         reddit_created_since=reddit_created_since,
+        created_since=created_since,
     )
     if not rows:
         return []
@@ -2537,8 +2550,12 @@ def extract_calls(
     tickers: set[str] | None = None,
     youtube_created_since: str | None = None,
     reddit_created_since: str | None = None,
+    created_since: str | None = None,
+    candidate_ids: set[str] | None = None,
+    initialize_schema: bool = True,
 ) -> int:
-    ensure_tables(con)
+    if initialize_schema:
+        ensure_tables(con)
     providers = [
         provider
         for provider in sv_extract_provider_order()
@@ -2560,6 +2577,7 @@ def extract_calls(
             tickers=tickers,
             youtube_created_since=youtube_created_since,
             reddit_created_since=reddit_created_since,
+            created_since=created_since,
         )
     else:
         rows = ranked_candidate_rows(
@@ -2571,7 +2589,10 @@ def extract_calls(
             tickers=tickers,
             youtube_created_since=youtube_created_since,
             reddit_created_since=reddit_created_since,
+            created_since=created_since,
         )
+    if candidate_ids is not None:
+        rows = [row for row in rows if row["candidate_id"] in candidate_ids]
     if not rows:
         print("[sv-v0] no candidates need extraction.", flush=True)
         return 0
@@ -3721,9 +3742,11 @@ def _settle_calls_endpoint_legacy(con: sqlite3.Connection) -> int:
 def settle_calls(
     con: sqlite3.Connection,
     sources: set[str] | None = None,
+    *, initialize_schema: bool = True,
 ) -> int:
     """Settle calls as prefix integrals against SPY and an industry ETF."""
-    ensure_tables(con)
+    if initialize_schema:
+        ensure_tables(con)
     price_bars = load_price_bars(con)
     market_bars = price_bars.get("SPY") or []
     if not market_bars:
@@ -4440,8 +4463,10 @@ def score_investors(
     allow_partial_xueqiu: bool = False,
     xueqiu_pool_version: str = "",
     sources: set[str] | None = None,
+    *, initialize_schema: bool = True,
 ) -> int:
-    ensure_tables(con)
+    if initialize_schema:
+        ensure_tables(con)
     scoring_as_of = dt.datetime.now(dt.timezone.utc).date()
     selected_sources = sorted(sources or [])
     source_filter = ""
@@ -5276,6 +5301,7 @@ def run(args: argparse.Namespace) -> None:
             tickers=only,
             youtube_created_since=youtube_created_since,
             reddit_created_since=reddit_created_since,
+            created_since=getattr(args, "created_since", None),
         )
     if "audit" in stages:
         audit_x_calls(

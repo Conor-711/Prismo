@@ -71,6 +71,7 @@ struct EventDetailView: View {
             model.trackSignalOpened(signal)
         }
         .bSmartDetailPage()
+        .bSmartTradeDock(symbol: signal.ticker)
         .bSmartPage()
         .accessibilityIdentifier("event-detail.screen")
     }
@@ -79,6 +80,7 @@ struct EventDetailView: View {
         VStack(alignment: .leading, spacing: BSmartSpacing.medium) {
             HStack(spacing: BSmartSpacing.medium) {
                 BSmartAssetMark(ticker: signal.ticker, size: 46)
+                    .bSmartTickerDestination(signal.ticker)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("\(signal.ticker) · \(signal.companyName)")
                         .font(.headline.weight(.bold))
@@ -583,13 +585,13 @@ struct EventDetailView: View {
 
     private var averageCostLabel: String {
         guard let position, position.averageCost > 0 else { return "Not entered" }
-        return position.averageCost.formatted(.currency(code: "USD").precision(.fractionLength(2)))
+        return position.averageCost.formatted(.bSmartDollars.precision(.fractionLength(2)))
     }
 
     private var currentPriceLabel: String {
         let price = position?.currentPrice ?? model.intelligence(for: signal.ticker)?.currentPrice
         guard let price else { return "Unavailable".bSmartLocalized }
-        return price.formatted(.currency(code: "USD").precision(.fractionLength(2)))
+        return price.formatted(.bSmartDollars.precision(.fractionLength(2)))
     }
 
     private var relationshipLabel: String {

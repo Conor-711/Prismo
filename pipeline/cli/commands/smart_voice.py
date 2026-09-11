@@ -72,6 +72,7 @@ def cmd_sv_v0(args):
         xueqiu_since_days=args.xueqiu_since_days,
         xueqiu_allow_partial=args.xueqiu_allow_partial,
         force=args.force,
+        created_since=args.created_since,
     )
 
 
@@ -289,6 +290,7 @@ def register_commands(sub, root) -> None:
     sp.add_argument("--xueqiu-since-days", type=int, default=365, help="Xueqiu candidate lookback window.")
     sp.add_argument("--xueqiu-allow-partial", action="store_true", help="Allow candidate recall before every selected Xueqiu author job is done; disabled by default.")
     sp.add_argument("--force", action="store_true", help="Re-extract candidates already in sv_call.")
+    sp.add_argument("--created-since", default=None, help="Extract candidates on/after this ISO date; historical calls remain unchanged.")
     sp.set_defaults(func=cmd_sv_v0)
 
     sp = sub.add_parser("hyperliquid-smart-money")

@@ -98,13 +98,17 @@ struct TodayConsensusCollectionView: View {
                         .frame(maxWidth: .infinity, minHeight: 300)
                 } else {
                     ForEach(Array(filteredPackages.enumerated()), id: \.element.id) { index, package in
-                        BSmartDetailNavigationLink(id: "consensus-library-\(package.id)") {
-                            TodayViewpointPackageDetailView(package: package, style: index % 2)
-                        } label: {
-                            TodayConsensusCollectionCard(package: package)
+                        ZStack(alignment: .bottom) {
+                            BSmartDetailNavigationLink(id: "consensus-library-\(package.id)") {
+                                TodayViewpointPackageDetailView(package: package, style: index % 2)
+                            } label: {
+                                TodayViewpointPackageCard(package: package, style: index % 2, width: nil)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("today.consensus-library.\(package.ticker.lowercased())")
+
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("today.consensus-library.\(package.ticker.lowercased())")
+                        .clipShape(RoundedRectangle(cornerRadius: BSmartRadius.card, style: .continuous))
                     }
                 }
             }
@@ -112,7 +116,7 @@ struct TodayConsensusCollectionView: View {
             .padding(.bottom, BSmartSpacing.xxxLarge)
         }
         .background(BSmartColor.ink)
-        .navigationTitle("Smart Consensus".bSmartLocalized)
+        .navigationTitle("Trending Tickers".bSmartLocalized)
         .navigationBarTitleDisplayMode(.inline)
         .bSmartDetailPage()
         .bSmartPage()
@@ -162,93 +166,6 @@ struct TodayConsensusCollectionView: View {
     }
 }
 
-private struct TodayConsensusCollectionCard: View {
-    let package: TodayViewpointPackage
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: BSmartSpacing.medium) {
-            HStack(spacing: BSmartSpacing.medium) {
-                BSmartAssetMark(ticker: package.ticker, size: 42)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(package.ticker)
-                        .font(.headline.weight(.black))
-                    Text(package.companyName)
-                        .font(.caption)
-                        .foregroundStyle(BSmartColor.tertiaryText)
-                        .lineLimit(1)
-                }
-                Spacer(minLength: BSmartSpacing.small)
-                consensusActors
-            }
-
-            Text(package.localizedHeadline)
-                .font(.system(size: 19, weight: .bold, design: .rounded))
-                .foregroundStyle(BSmartColor.primaryText)
-                .lineLimit(3)
-                .multilineTextAlignment(.leading)
-
-            stanceBar
-
-            HStack {
-                Text("%d accounts".bSmartLocalized(package.accountCount))
-                Spacer()
-                Text(package.latestAt.formatted(.relative(presentation: .named)))
-                Image(systemName: "chevron.right")
-                    .font(.caption2.weight(.bold))
-            }
-            .font(.caption.weight(.bold))
-            .foregroundStyle(BSmartColor.tertiaryText)
-        }
-        .padding(BSmartSpacing.large)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(BSmartColor.surface)
-        .clipShape(RoundedRectangle(cornerRadius: BSmartRadius.card, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: BSmartRadius.card, style: .continuous)
-                .stroke(BSmartColor.line, lineWidth: 0.6)
-        }
-        .contentShape(Rectangle())
-    }
-
-    private var consensusActors: some View {
-        HStack(spacing: -7) {
-            ForEach(package.leadingUpdates) { update in
-                VStack(spacing: 2) {
-                    BSmartAvatar(
-                        url: update.authorAvatarURL,
-                        name: update.authorName,
-                        size: 32,
-                        fallbackColor: update.direction.color
-                    )
-                    .overlay { Circle().stroke(BSmartColor.brand, lineWidth: 1.3) }
-                    Text(consensusRankLabel(update))
-                        .font(.system(size: 7, weight: .black).monospacedDigit())
-                        .foregroundStyle(BSmartColor.brand)
-                        .padding(.horizontal, 3)
-                        .background(BSmartColor.surface, in: Capsule())
-                }
-                .frame(width: 38)
-            }
-        }
-    }
-
-    private var stanceBar: some View {
-        GeometryReader { proxy in
-            HStack(spacing: 2) {
-                Rectangle()
-                    .fill(BSmartColor.brand)
-                    .frame(width: proxy.size.width * CGFloat(package.bullishCount) / CGFloat(max(package.updates.count, 1)))
-                Rectangle()
-                    .fill(BSmartColor.tertiaryText)
-                    .frame(width: proxy.size.width * CGFloat(package.neutralCount) / CGFloat(max(package.updates.count, 1)))
-                Rectangle()
-                    .fill(BSmartColor.bear)
-            }
-            .clipShape(Capsule())
-        }
-        .frame(height: 7)
-    }
-}
 
 private enum TodayAlphaSourceFilter: String, CaseIterable, Identifiable {
     case all
@@ -296,7 +213,8 @@ struct TodayAlphaCollectionView: View {
     private var filtered: [TodayAlphaOpportunity] {
         opportunities
             .filter { opportunity in
-                let tickerMatches = selectedTicker == "ALL" || opportunity.ticker.caseInsensitiveCompare(selectedTicker) == .orderedSame
+                let tickerMatches = selectedTicker == "ALL"
+                    || opportunity.ticker.caseInsensitiveCompare(selectedTicker) == .orderedSame
                 let sourceMatches = source == .all
                     || (source == .smartAccount && opportunity.kind == .smartAccount)
                     || (source == .smartMoney && opportunity.kind == .smartMoney)
@@ -328,12 +246,16 @@ struct TodayAlphaCollectionView: View {
                         .frame(maxWidth: .infinity, minHeight: 300)
                 } else {
                     ForEach(filtered) { opportunity in
-                        BSmartDetailNavigationLink(id: "alpha-library-\(opportunity.id)") {
-                            TodayAlphaOpportunityDetailView(opportunity: opportunity)
-                        } label: {
-                            TodayAlphaCollectionCard(opportunity: opportunity)
+                        ZStack(alignment: .bottom) {
+                            BSmartDetailNavigationLink(id: "alpha-library-\(opportunity.id)") {
+                                TodayAlphaOpportunityDetailView(opportunity: opportunity)
+                            } label: {
+                                TodayAlphaCollectionCard(opportunity: opportunity)
+                            }
+                            .buttonStyle(.plain)
+
                         }
-                        .buttonStyle(.plain)
+                        .clipShape(RoundedRectangle(cornerRadius: BSmartRadius.card, style: .continuous))
                     }
                 }
             }
@@ -341,7 +263,7 @@ struct TodayAlphaCollectionView: View {
             .padding(.bottom, BSmartSpacing.xxxLarge)
         }
         .background(BSmartColor.ink)
-        .navigationTitle("Smart Alpha".bSmartLocalized)
+        .navigationTitle("Alpha Tickers".bSmartLocalized)
         .navigationBarTitleDisplayMode(.inline)
         .bSmartDetailPage()
         .bSmartPage()
@@ -383,6 +305,7 @@ private struct TodayAlphaCollectionCard: View {
         VStack(alignment: .leading, spacing: BSmartSpacing.medium) {
             HStack(spacing: BSmartSpacing.medium) {
                 BSmartAssetMark(ticker: opportunity.ticker, size: 40)
+                    .bSmartTickerDestination(opportunity.ticker)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(opportunity.ticker)
                         .font(.headline.weight(.black))
@@ -396,17 +319,12 @@ private struct TodayAlphaCollectionCard: View {
                     .foregroundStyle(accent)
             }
 
-            Text(opportunity.localizedHeadline)
-                .font(.system(size: 19, weight: .bold, design: .rounded))
-                .foregroundStyle(BSmartColor.primaryText)
-                .lineLimit(3)
+            TodaySourceHeadlineList(label: opportunity.headlineLabel, headlines: opportunity.sourceHeadlines)
 
             HStack {
                 Text(opportunity.localizedDiscoveryType)
-                Spacer()
                 Text(opportunity.localizedCoverageMetric)
-                Image(systemName: "chevron.right")
-                    .font(.caption2.weight(.bold))
+                Spacer()
             }
             .font(.caption.weight(.bold))
             .foregroundStyle(BSmartColor.tertiaryText)
@@ -569,7 +487,7 @@ private struct TodayMoneyCollectionCard: View {
                     .lineLimit(2)
                 HStack {
                     Text(signedCollectionCurrency(movement.notionalChange))
-                        .foregroundStyle(movement.notionalChange >= 0 ? BSmartColor.brand : BSmartColor.bear)
+                        .foregroundStyle(movement.notionalChange >= 0 ? BSmartColor.bull : BSmartColor.bear)
                     Text(movement.observedAt.formatted(.relative(presentation: .named)))
                         .foregroundStyle(BSmartColor.tertiaryText)
                 }
@@ -626,11 +544,6 @@ private func bestConsensusRank(_ package: TodayViewpointPackage) -> Double {
         .min() ?? 1
 }
 
-private func consensusRankLabel(_ update: SmartAccountUpdate) -> String {
-    let normalized = update.platformPercentile > 1 ? update.platformPercentile / 100 : update.platformPercentile
-    return "Top \(max(1, Int(ceil(normalized * 100))))%"
-}
-
 private func signedCollectionCurrency(_ value: Double) -> String {
     let sign = value > 0 ? "+" : value < 0 ? "−" : ""
     let absolute = abs(value)
@@ -641,7 +554,7 @@ private func signedCollectionCurrency(_ value: Double) -> String {
     case 1_000...:
         valueText = "$\((absolute / 1_000).formatted(.number.precision(.fractionLength(1))))K"
     default:
-        valueText = absolute.formatted(.currency(code: "USD").precision(.fractionLength(0)))
+        valueText = absolute.formatted(.bSmartDollars.precision(.fractionLength(0)))
     }
     return sign + valueText
 }

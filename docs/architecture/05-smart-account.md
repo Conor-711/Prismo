@@ -44,6 +44,11 @@ pipeline/domain/smart_voice/
   portfolio_backtest_engine.py   # 组合净值、成本、CAGR、夏普和回撤纯计算
   portfolio_backtest.py          # X 集体 Score 信号与逐作者年化编排
   portfolio_backtest_reporting.py # 集体场景、逐作者 CSV 和研究报告
+  account_follow_backtest_types.py # 逐账户跟单 Call、交易和统计值对象
+  account_follow_backtest_state.py # 同一开盘观点净化与持仓生命周期状态转换
+  account_follow_backtest_engine.py # 生命周期覆盖、翻仓、退出和等权净值纯计算
+  account_follow_backtest.py      # 当前正式跨平台账户与历史资格编排
+  account_follow_backtest_reporting.py # 逐账户收益、交易证据和报告
   rank_event_backtest.py         # 历史头部跟随、底部反向和头尾背离事件
   rank_event_research.py         # 排名事件宽参数、分段、流动性与压力测试
   segment_backtest_schema.py      # 子 Score 历史排名/信号/事件/收益/统计表
@@ -127,6 +132,8 @@ Bottom 分组不是反向策略：其作者原始方向同样按“说多后涨�
 `pipeline.manage sv-portfolio-backtest` 把事件收益扩展为可比较的账户净值。第一版只读取 X：集体策略消费 `sv_indicator_event(source_scope='x')`，因此作者排名和 Top/Bottom 分组均来自观点发布当日的 `sv_investor_score_asof`；逐作者策略消费 `sv_call_settlement`，同时输出全部 actionable 帖子的描述性口径，以及作者当日已进入正式平台池之后才允许跟随的可执行口径。
 
 统一组合规则为下一交易日调整开盘入场、同策略同标的不重叠加仓、活跃持仓等权、无信号持有现金。报告覆盖 1/5/20/60/90/180 个交易日持有期，多空/只做多/只做空，以及 0/10/25bps 完整往返成本，输出总收益、CAGR、年化波动、夏普、最大回撤、命中率和利润因子。逐作者另有代表口径：每条帖子使用自己的 `horizon_bucket`，未知周期统一按 20 个交易日。结果只写 `data/reports/sv_portfolio_backtest/`，不增加主库派生表，避免重复保存日净值。
+
+`make smart-account-follow-backtest` 是面向当前正式作者清单的逐账户主口径，覆盖当前 `sv_investor_score` 中合格的 X、YouTube 和 Reddit 作者。可执行结果只纳入 Call 发布日前最后一个 `sv_investor_score_asof.platform_qualified=1` 快照；下一交易日复权开盘执行，同一作者同一标的的同向判断延长周期、反向判断翻仓、`close/invalidate` 退出，未知周期按 20 个交易日，活跃标的每日等权并计 10bps 往返成本。任务同时输出只做多对照和当前作者池完整历史描述，但后者带当前池选择的幸存者偏差，不得当作历史可实现收益。产物仅写 `data/reports/smart_account_follow_backtest/`，不回写 Score 或数据库。
 
 同一命令另生成三类显式排名事件：`top_follow` 跟随历史时点头部作者共识，`bottom_contrarian` 交易底部作者共识的反方向，`top_bottom_divergence` 仅在头部与底部均达标且方向相反时跟随头部。每组至少要求 2 位独立作者和 65% 同向度，同时比较 Top/Bottom 10% 与 25%。事件使用每位作者在滚动窗口内的最新 Call，一位作者只投一票。
 

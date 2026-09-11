@@ -2,182 +2,86 @@ import SwiftUI
 
 struct AllTickersView: View {
     @EnvironmentObject private var model: AppModel
+    @EnvironmentObject private var trading: HyperliquidTradingStore
     @State private var query = ""
-
-    private var filteredIntelligence: [TickerIntelligence] {
-        let source = model.intelligence.sorted { lhs, rhs in
-            if lhs.ticker != rhs.ticker { return lhs.ticker < rhs.ticker }
-            return lhs.companyName < rhs.companyName
-        }
-        guard !query.isEmpty else { return source }
-        return source.filter {
-            $0.ticker.localizedCaseInsensitiveContains(query)
-                || $0.companyName.localizedCaseInsensitiveContains(query)
-        }
-    }
+    @FocusState private var searchFocused: Bool
+    var isActive: Bool = true
+    var onSearchFocusChanged: (Bool) -> Void = { _ in }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: BSmartSpacing.medium) {
-                searchField
-
-                BSmartSectionTitle(
-                    title: query.isEmpty ? "All supported tickers" : "Search results",
-                    detail: "%d of %d supported tickers".bSmartLocalized(
-                        filteredIntelligence.count,
-                        model.intelligence.count
-                    )
-                )
-
-                if filteredIntelligence.isEmpty {
-                    ContentUnavailableView.search(text: query)
-                        .frame(maxWidth: .infinity)
-                        .padding(.top, BSmartSpacing.xxxLarge)
-                } else {
-                    LazyVStack(spacing: 0) {
-                        ForEach(Array(filteredIntelligence.enumerated()), id: \.element.id) { index, ticker in
-                            BSmartDetailNavigationLink(id: "ticker-\(ticker.ticker)") {
-                                TickerIntelligenceView(ticker: ticker)
-                            } label: {
-                                tickerRow(ticker)
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityIdentifier("portfolio.ticker.\(ticker.ticker)")
-
-                            if index < filteredIntelligence.count - 1 {
-                                Divider()
-                                    .overlay(BSmartColor.line)
-                            }
-                        }
+        let catalog = model.tickerCatalog(markets: trading.marketCatalog)
+        let search = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        let sections = TickerDirectorySections(
+            catalog: catalog,
+            trendingSymbols: TodayViewpointPackage.packages(from: model.smartAccountUpdates, maximumPackages: 10).map(\.ticker),
+            query: search
+        )
+        LazyVStack(alignment: .leading, spacing: 16) {
+            searchField
+            if !sections.trending.isEmpty {
+                Text("Trending Tickers".bSmartLocalized)
+                    .font(.headline)
+                    .accessibilityIdentifier("portfolio.trending.title")
+                tickerRows(sections.trending)
+            }
+            HStack {
+                Text("All tickers".bSmartLocalized).font(.headline)
+                Spacer()
+                Text("\(sections.matchCount) / \(catalog.count)")
+                    .font(.caption).monospacedDigit().foregroundStyle(BSmartColor.secondaryText)
+                if trading.isLoadingCatalog { ProgressView().tint(BSmartColor.brand) }
+            }
+            if let error = trading.errorMessage, !trading.isLoadingCatalog {
+                HStack {
+                    Text(error).font(.caption).foregroundStyle(BSmartColor.secondaryText)
+                    Spacer()
+                    Button { Task { await trading.loadFullCatalog() } } label: {
+                        Image(systemName: "arrow.clockwise").frame(width: 44, height: 44)
                     }
-                    .background(BSmartColor.surface)
-                    .clipShape(RoundedRectangle(cornerRadius: BSmartRadius.card, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: BSmartRadius.card, style: .continuous)
-                            .stroke(BSmartColor.line, lineWidth: 0.6)
-                    }
+                    .accessibilityLabel("Retry".bSmartLocalized)
                 }
             }
-            .padding(.horizontal, BSmartSpacing.large)
-            .padding(.vertical, BSmartSpacing.medium)
+            if sections.matchCount == 0 && !trading.isLoadingCatalog {
+                ContentUnavailableView.search(text: search)
+            }
+            tickerRows(sections.remaining)
         }
         .background(BSmartColor.ink)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("portfolio.all-tickers")
+        .onChange(of: searchFocused) { _, focused in onSearchFocusChanged(focused) }
+        .onChange(of: isActive) { _, active in if !active { searchFocused = false } }
+        .onDisappear { searchFocused = false; onSearchFocusChanged(false) }
+        .task { if trading.marketCatalog.isEmpty { await trading.loadFullCatalog() } }
     }
 
     private var searchField: some View {
-        HStack(spacing: BSmartSpacing.small) {
-            Image(systemName: "magnifyingglass")
-                .foregroundStyle(BSmartColor.tertiaryText)
-
-            TextField("Ticker or company", text: $query)
-                .textInputAutocapitalization(.characters)
-                .autocorrectionDisabled()
-
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass").foregroundStyle(BSmartColor.tertiaryText)
+            TextField("Ticker or company".bSmartLocalized, text: $query)
+                .focused($searchFocused)
+                .textInputAutocapitalization(.characters).autocorrectionDisabled()
+                .accessibilityIdentifier("portfolio.ticker-search")
             if !query.isEmpty {
-                Button {
-                    query = ""
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(BSmartColor.tertiaryText)
-                }
-                .accessibilityLabel("Clear")
+                Button { query = "" } label: { Image(systemName: "xmark.circle.fill") }
+                    .accessibilityLabel("Clear".bSmartLocalized)
             }
         }
-        .font(.subheadline)
-        .padding(.horizontal, BSmartSpacing.medium)
+        .padding(.horizontal, 12)
         .frame(height: 44)
-        .background(BSmartColor.recessed)
-        .clipShape(RoundedRectangle(cornerRadius: BSmartRadius.control, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: BSmartRadius.control, style: .continuous)
-                .stroke(BSmartColor.line, lineWidth: 0.6)
-        }
+        .background(BSmartColor.recessed, in: RoundedRectangle(cornerRadius: 8))
     }
 
-    private func tickerRow(_ ticker: TickerIntelligence) -> some View {
-        let latestAccount = model.accountUpdates(for: ticker.ticker)
-            .max { $0.publishedAt < $1.publishedAt }
-        let latestMoney = model.moneyMovements(for: ticker.ticker)
-            .max { $0.observedAt < $1.observedAt }
-
-        return HStack(alignment: .top, spacing: BSmartSpacing.medium) {
-            BSmartAssetMark(ticker: ticker.ticker, size: 40)
-
-            VStack(alignment: .leading, spacing: 5) {
-                HStack(spacing: 6) {
-                    Text(ticker.ticker)
-                        .font(.subheadline.weight(.black))
-                    Text(ticker.companyName)
-                        .font(.caption)
-                        .foregroundStyle(BSmartColor.tertiaryText)
-                        .lineLimit(1)
-                }
-
-                Text(tickerSummary(ticker, account: latestAccount, money: latestMoney))
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(BSmartColor.primaryText)
-                    .lineLimit(2)
-
-                HStack(spacing: BSmartSpacing.small) {
-                    Label("\(ticker.smartAccount.qualifiedAuthorCount)", systemImage: "person.wave.2")
-                    Label("\(ticker.smartMoney.qualifiedAccountCount)", systemImage: "wallet.bifold")
-                }
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(BSmartColor.tertiaryText)
+    @ViewBuilder private func tickerRows(_ entries: [AppTickerCatalogEntry]) -> some View {
+        ForEach(entries) { entry in
+            BSmartDetailNavigationLink(id: "ticker-\(entry.symbol)") {
+                TickerDestinationView(symbol: entry.symbol)
+            } label: {
+                BSmartMarketRow(entry: entry)
             }
-
-            Spacer(minLength: BSmartSpacing.xSmall)
-
-            VStack(alignment: .trailing, spacing: 4) {
-                Text(ticker.currentPrice.formatted(.currency(code: "USD").precision(.fractionLength(2))))
-                    .font(.subheadline.weight(.bold))
-                    .monospacedDigit()
-                Text(ticker.dayChangePercent.formatted(.percent.precision(.fractionLength(1)).sign(strategy: .always())))
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(ticker.dayChangePercent >= 0 ? BSmartColor.brand : BSmartColor.bear)
-                    .monospacedDigit()
-                Image(systemName: "chevron.right")
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(BSmartColor.tertiaryText)
-                    .padding(.top, 4)
-            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("portfolio.ticker.\(entry.symbol)")
+            Divider().overlay(BSmartColor.line)
         }
-        .padding(BSmartSpacing.medium)
-        .contentShape(Rectangle())
-    }
-
-    private func tickerSummary(
-        _ ticker: TickerIntelligence,
-        account: SmartAccountUpdate?,
-        money: SmartMoneyMovement?
-    ) -> String {
-        switch (account, money) {
-        case let (account?, money?) where account.publishedAt >= money.observedAt:
-            return accountTitle(account)
-        case let (_, money?):
-            return "%@ %@ %@".bSmartLocalized(
-                money.publicIdentity.displayName,
-                money.action.label,
-                ticker.ticker
-            )
-        case let (account?, nil):
-            return accountTitle(account)
-        case (nil, nil):
-            return "No recent Smart Account or Smart Money update".bSmartLocalized
-        }
-    }
-
-    private func accountTitle(_ update: SmartAccountUpdate) -> String {
-        let value = BSmartLocalization.isSimplifiedChinese
-            ? (nonBlank(update.activityTitleZH) ?? nonBlank(update.activityTitle))
-            : (nonBlank(update.activityTitleEN) ?? nonBlank(update.activityTitle))
-        return value ?? update.thesis
-    }
-
-    private func nonBlank(_ value: String?) -> String? {
-        guard let value else { return nil }
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
     }
 }

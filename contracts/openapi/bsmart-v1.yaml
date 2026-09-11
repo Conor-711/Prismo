@@ -1,13 +1,395 @@
 openapi: 3.1.0
 info:
   title: bSmart Client API
-  version: 1.6.0
-  description: Versioned client contract shared by the native iOS client and retained web surfaces.
+  version: 1.8.0
+  description: Versioned research and legacy account contract. Current native Google/Apple login uses Supabase Auth directly; wallet registry is specified in supabase-wallet.yaml and docs/contracts/supabase_account.md.
 servers:
   - url: https://api.bsmart.today
 security:
   - installationBearer: []
 paths:
+  /v1/auth/account/deletions:
+    post:
+      operationId: requestAccountDeletion
+      security: [{ accountBearer: [] }]
+      description: Pre-production. Requires interactive authentication within five minutes. Revokes every app session on durable acceptance; never deletes device wallet keys. No-store.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [id, statusToken, confirmDeletion, walletRecoveryConfirmed]
+              properties:
+                id: { type: string, format: uuid }
+                statusToken: { type: string, minLength: 32, maxLength: 256, pattern: '^[A-Za-z0-9_-]+$', writeOnly: true }
+                confirmDeletion: { type: boolean, const: true }
+                walletRecoveryConfirmed: { type: boolean, const: true }
+      responses:
+        "202":
+          description: Durably accepted. Use the pre-persisted ticket to confirm completion, including after a lost response.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AccountDeletionStatus' }
+        "401": { description: Account deletion not authorized. }
+        "409": { description: Fresh provider sign-in required. }
+        "422": { description: Invalid or unconfirmed request. }
+        "503": { description: Unavailable or acceptance uncertain; query the saved ticket, do not start another request. }
+  /v1/auth/account/deletions/{identifier}/status:
+    post:
+      operationId: getAccountDeletionStatus
+      security: [{ installationBearer: [] }]
+      description: No-store. Ticket grants status access only and can resume previously accepted work after backoff. Retained 30 days after completion.
+      parameters:
+        - { in: path, name: identifier, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [statusToken]
+              properties:
+                statusToken: { type: string, minLength: 32, maxLength: 256, pattern: '^[A-Za-z0-9_-]+$', writeOnly: true }
+      responses:
+        "200":
+          description: Durable request state, not Google client disconnect or an on-chain withdrawal receipt.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AccountDeletionStatus' }
+        "401": { description: Installation authentication required. }
+        "404": { description: Unknown, expired or mismatched ticket. }
+        "422": { description: Invalid status request. }
+        "503": { description: Status unavailable; not confirmation of deletion. }
+  /v1/auth/security-events/apple:
+    post:
+      operationId: receiveAppleSecurityEvent
+      security: []
+      description: Provider-signed notification, not an installation-authenticated client endpoint. No-store.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [payload]
+              properties:
+                payload: { type: string, minLength: 32, maxLength: 16384, writeOnly: true }
+      responses:
+        "200": { description: Committed or already processed. }
+        "400": { description: Invalid provider event. }
+        "413": { description: Request too large. }
+        "415": { description: Unsupported media or compression. }
+        "503": { description: Receiver or verification unavailable; not acknowledged. }
+  /v1/auth/security-events/google:
+    post:
+      operationId: receiveGoogleSecurityEvent
+      security: []
+      description: Signed RISC SET; no app bearer can authorize revocation. No-store.
+      requestBody:
+        required: true
+        content:
+          application/secevent+jwt:
+            schema: { type: string, minLength: 32, maxLength: 16384, writeOnly: true }
+      responses:
+        "202": { description: Empty durable acknowledgement, including duplicates and ignored events. }
+        "400": { description: Invalid provider event. }
+        "413": { description: Request too large. }
+        "415": { description: Unsupported media or compression. }
+        "503": { description: Receiver or verification unavailable; not acknowledged. }
+  /v1/trade-feed:
+    get:
+      operationId: getTradeFeed
+      description: No-store. Verified opinion-attributed orders with explicit public amount-sharing consent. Source-off returns 503. Partial fills aggregate per order; live pagination.
+      parameters:
+        - { in: query, name: offset, schema: { type: integer, minimum: 0, default: 0 } }
+        - { in: query, name: limit, schema: { type: integer, minimum: 1, maximum: 50, default: 30 } }
+        - { in: query, name: profileId, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Newest-first public executions; no wallet or account identifiers.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TradeFeedPage' }
+        "401": { description: Installation authentication required. }
+        "503": { description: Verified Feed unavailable; not zero trades. }
+  /v1/public-traders/{profileId}:
+    get:
+      operationId: getPublicTrader
+      description: No-store. Rechecks current public Feed consent.
+      parameters:
+        - { in: path, name: profileId, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Current public profile.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FeedPublicProfile' }
+        "401": { description: Installation authentication required. }
+        "404": { description: Unknown or private profile. }
+        "503": { description: Public profiles unavailable. }
+  /v1/opinions/{opinionId}/traders:
+    get:
+      operationId: getOpinionTraders
+      description: Distinct real traders attributed before order submission. No-store. Private users count but are not listed. Disabled until independently verified real execution is connected.
+      parameters:
+        - { in: path, name: opinionId, required: true, schema: { type: string, format: uuid } }
+        - { in: query, name: offset, schema: { type: integer, minimum: 0, default: 0 } }
+        - { in: query, name: limit, schema: { type: integer, minimum: 1, maximum: 50, default: 30 } }
+      responses:
+        "200":
+          description: Verified count and consented public profiles ordered by latest fill descending.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [totalTraders, publicTraders, traders, nextOffset]
+                properties:
+                  totalTraders: { type: integer, minimum: 0 }
+                  publicTraders: { type: integer, minimum: 0 }
+                  nextOffset: { type: [integer, 'null'], minimum: 0 }
+                  traders:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, nickname, avatarURL, side, tradedAt]
+                      properties:
+                        id: { type: string, format: uuid }
+                        nickname: { type: string, maxLength: 28 }
+                        avatarURL: { type: [string, 'null'], format: uri }
+                        side: { type: string, enum: [long, short] }
+                        tradedAt: { type: string, format: date-time }
+        "401": { description: Installation authentication required. }
+        "503": { description: Real execution statistics unavailable; do not display zero. }
+  /v1/auth/wallet:
+    get:
+      operationId: getTradingWallet
+      security: [{ accountBearer: [] }]
+      responses:
+        "200":
+          description: Authoritative owner-address registration; null means unbound. No-store.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TradingWalletRegistration" }
+        "401": { description: Account sign-in required. }
+        "503": { description: Wallet service unavailable. }
+    put:
+      operationId: bindTradingWallet
+      security: [{ accountBearer: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [challengeId, signature]
+              properties:
+                challengeId: { type: string, format: uuid }
+                signature: { type: string, minLength: 132, maxLength: 132, pattern: '^0x[0-9a-fA-F]{130}$', writeOnly: true }
+      responses:
+        "200":
+          description: Wallet linked; no authority to transfer or trade. No-store.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TradingWalletRegistration" }
+        "401": { description: Invalid, expired or replayed proof. }
+        "409": { description: Account or wallet already has a different binding. }
+        "503": { description: Wallet service unavailable. }
+  /v1/auth/wallet/challenges:
+    post:
+      operationId: createTradingWalletChallenge
+      security: [{ accountBearer: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [address]
+              properties:
+                address: { type: string, minLength: 42, maxLength: 42, pattern: '^0x[0-9a-f]{40}$' }
+      responses:
+        "200":
+          description: Session-bound, five-minute EIP-191 proof challenge. No-store.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TradingWalletChallenge" }
+        "401": { description: Account sign-in required. }
+        "409": { description: Conflicting wallet binding. }
+        "429": { description: Too many active challenges. }
+        "503": { description: Wallet service unavailable. }
+  /v1/auth/configuration:
+    get:
+      operationId: getAccountAuthConfiguration
+      security: []
+      responses:
+        "200":
+          description: No-store account capabilities; deposits and trading remain disabled.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountAuthConfiguration"
+  /v1/auth/challenges:
+    post:
+      operationId: createAccountAuthChallenge
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [provider]
+              properties:
+                provider:
+                  $ref: "#/components/schemas/AccountIdentityProvider"
+      responses:
+        "200":
+          description: Single-use installation-bound challenge, valid five minutes.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountAuthChallenge"
+        "401":
+          description: Installation authentication required.
+        "429":
+          description: Too many active challenges.
+        "503":
+          description: Provider or account service unavailable.
+  /v1/auth/sessions:
+    post:
+      operationId: exchangeAccountIdentityToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [challengeId, provider, idToken]
+              properties:
+                challengeId:
+                  type: string
+                  format: uuid
+                expectedAccountId:
+                  type: string
+                  format: uuid
+                  description: Reauthentication only. Must match an existing verified provider identity; never creates or recreates an account. Omit for normal sign-in.
+                provider:
+                  $ref: "#/components/schemas/AccountIdentityProvider"
+                idToken:
+                  type: string
+                  minLength: 32
+                  maxLength: 16384
+                  writeOnly: true
+                authorizationCode:
+                  type: string
+                  minLength: 32
+                  maxLength: 2048
+                  pattern: '^[!-~]+$'
+                  writeOnly: true
+                  description: Required for Apple native authorization; forbidden for Google. Single-use and never persisted.
+                nonce:
+                  type: string
+                  minLength: 32
+                  maxLength: 128
+                  pattern: '^[A-Za-z0-9_-]+$'
+                  writeOnly: true
+                  description: Original challenge nonce, required when providerNonce is present (Supabase Google). Otherwise omit.
+              oneOf:
+                - properties:
+                    provider:
+                      enum: [apple]
+                  required: [authorizationCode]
+                - properties:
+                    provider:
+                      enum: [google]
+                  not:
+                    required: [authorizationCode]
+      responses:
+        "200":
+          description: No-store short-lived account session, not a wallet or trading authorization.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TradingAccountSession"
+        "401":
+          description: Invalid, expired or replayed identity assertion.
+        "503":
+          description: Account service unavailable.
+  /v1/auth/sessions/refresh:
+    post:
+      operationId: refreshTradingAccountSession
+      security:
+        - installationBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountRefreshInput"
+      responses:
+        "200":
+          description: No-store single-use rotation for the same account and installation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TradingAccountSession"
+        "401":
+          description: Expired, replayed or invalid renewal credential. Do not retry.
+        "429":
+          description: Too early to rotate an unused credential; Retry-After is 60 seconds.
+        "503":
+          description: Account service unavailable. An uncertain request requires interactive sign-in.
+  /v1/auth/sessions/revoke:
+    post:
+      operationId: revokeTradingAccountSessionFamily
+      security:
+        - installationBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountRefreshInput"
+      responses:
+        "204":
+          description: No-store idempotent revocation; unknown and foreign credentials have no effect.
+        "503":
+          description: Account service unavailable.
+  /v1/auth/account:
+    get:
+      operationId: getTradingAccount
+      security:
+        - accountBearer: []
+      responses:
+        "200":
+          description: Current verified account, no-store.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TradingAccount"
+        "401":
+          description: Account sign-in required.
+        "503":
+          description: Account service unavailable.
+  /v1/auth/sessions/current:
+    delete:
+      operationId: revokeCurrentAccountSession
+      security:
+        - accountBearer: []
+      responses:
+        "204":
+          description: Session revoked. Device wallet keys are not deleted.
+        "401":
+          description: Account sign-in required.
+        "503":
+          description: Account service unavailable.
   /v1/installations:
     post:
       operationId: createAnonymousInstallation
@@ -198,7 +580,13 @@ paths:
     get:
       operationId: getPortfolioSignals
       summary: Return decision-ready Smart Account and Smart Money signals for the current portfolio.
+      parameters:
+        - { name: If-None-Match, in: header, schema: { type: string } }
       responses:
+        "304":
+          description: Authenticated read model is unchanged; reuse the cached response body.
+        "503":
+          description: Publication changed during this read; retry shortly.
         "200":
           description: Portfolio signals
           headers:
@@ -255,7 +643,13 @@ paths:
     get:
       operationId: getSmartAccountUpdates
       summary: Return material view updates from ranked offchain investment creators.
+      parameters:
+        - { name: If-None-Match, in: header, schema: { type: string } }
       responses:
+        "304":
+          description: Authenticated read model is unchanged; reuse the cached response body.
+        "503":
+          description: Publication changed during this read; retry shortly.
         "200":
           description: Smart Account updates
           headers:
@@ -276,7 +670,13 @@ paths:
     get:
       operationId: getSmartAccountEvidence
       summary: Return bounded historical Call evidence for one formally ranked Smart Account.
+      parameters:
+        - { name: If-None-Match, in: header, schema: { type: string } }
       responses:
+        "304":
+          description: Authenticated evidence is unchanged; reuse this URL's cached response body.
+        "503":
+          description: Publication changed during this read; retry shortly.
         "200":
           description: Recent, representative successful, and representative missed calls.
           headers:
@@ -421,7 +821,13 @@ paths:
     get:
       operationId: getSmartAccounts
       summary: Return ranked offchain investment creators.
+      parameters:
+        - { name: If-None-Match, in: header, schema: { type: string } }
       responses:
+        "304":
+          description: Authenticated read model is unchanged; reuse the cached response body.
+        "503":
+          description: Publication changed during this read; retry shortly.
         "200":
           description: Smart Account profiles
           headers:
@@ -456,11 +862,146 @@ components:
       schema:
         type: string
   securitySchemes:
+    accountBearer:
+      type: http
+      scheme: bearer
+      description: Opaque verified account session, distinct from installation authentication.
     installationBearer:
       type: http
       scheme: bearer
       bearerFormat: opaque-installation-token
   schemas:
+    FeedPublicProfile:
+      type: object
+      additionalProperties: false
+      required: [id, nickname, avatarURL]
+      properties:
+        id: { type: string, format: uuid }
+        nickname: { type: string, minLength: 1, maxLength: 28 }
+        avatarURL: { type: [string, 'null'], format: uri }
+    TradeFeedPage:
+      type: object
+      additionalProperties: false
+      required: [items, nextOffset]
+      properties:
+        nextOffset: { type: [integer, 'null'], minimum: 0 }
+        items:
+          type: array
+          maxItems: 50
+          items: { $ref: '#/components/schemas/TradeFeedItem' }
+    TradeFeedItem:
+      type: object
+      additionalProperties: false
+      required: [id, trader, opinion, side, notionalUSD, marketCoin, executedAt]
+      properties:
+        id: { type: string, format: uuid }
+        trader: { $ref: '#/components/schemas/FeedPublicProfile' }
+        opinion: { $ref: '#/components/schemas/SmartAccountUpdate' }
+        side: { type: string, enum: [long, short] }
+        notionalUSD: { type: string, maxLength: 64, pattern: '^[0-9]+(\.[0-9]+)?$' }
+        marketCoin: { type: string, minLength: 1, maxLength: 64 }
+        executedAt: { type: string, format: date-time }
+    AccountDeletionStatus:
+      type: object
+      additionalProperties: false
+      required: [id, status, requestedAt, completedAt, retryAfterSeconds]
+      properties:
+        id: { type: string, format: uuid }
+        status: { type: string, enum: [pending, completed] }
+        requestedAt: { type: string, format: date-time }
+        completedAt: { type: [string, 'null'], format: date-time }
+        retryAfterSeconds: { type: integer, minimum: 0, maximum: 3600 }
+    TradingWalletRegistration:
+      type: object
+      additionalProperties: false
+      required: [accountId, address]
+      properties:
+        accountId: { type: string, format: uuid }
+        address:
+          type: [string, "null"]
+          minLength: 42
+          maxLength: 42
+          pattern: '^0x[0-9a-f]{40}$'
+    TradingWalletChallenge:
+      type: object
+      additionalProperties: false
+      required: [id, accountId, address, nonce, issuedAt, expiresAt]
+      properties:
+        id: { type: string, format: uuid }
+        accountId: { type: string, format: uuid }
+        address: { type: string, minLength: 42, maxLength: 42, pattern: '^0x[0-9a-f]{40}$' }
+        nonce: { type: string, minLength: 64, maxLength: 64, pattern: '^[0-9a-f]{64}$' }
+        issuedAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time }
+    AccountIdentityProvider:
+      type: string
+      enum: [apple, google]
+    AccountAuthConfiguration:
+      type: object
+      required: [providers, depositsEnabled, tradingEnabled]
+      properties:
+        providers:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccountIdentityProvider"
+        depositsEnabled:
+          type: boolean
+          const: false
+        tradingEnabled:
+          type: boolean
+          const: false
+    AccountAuthChallenge:
+      type: object
+      required: [id, nonce, expiresAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        nonce:
+          type: string
+        providerNonce:
+          type: [string, 'null']
+          description: SHA-256 hex of nonce for native Supabase Google sign-in. Missing/null uses the legacy raw nonce.
+        expiresAt:
+          type: string
+          format: date-time
+    TradingAccount:
+      type: object
+      required: [id, provider]
+      properties:
+        id:
+          type: string
+          format: uuid
+        provider:
+          $ref: "#/components/schemas/AccountIdentityProvider"
+    AccountRefreshInput:
+      type: object
+      additionalProperties: false
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+          minLength: 32
+          maxLength: 256
+          pattern: '^[A-Za-z0-9_-]+$'
+          writeOnly: true
+    TradingAccountSession:
+      type: object
+      required: [account, accessToken, expiresAt, refreshToken, refreshExpiresAt]
+      properties:
+        account:
+          $ref: "#/components/schemas/TradingAccount"
+        refreshToken:
+          type: string
+          description: Opaque single-use bSmart credential, not an Apple or Google token.
+        refreshExpiresAt:
+          type: string
+          format: date-time
+        accessToken:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
     InstallationRegistration:
       type: object
       required: [installationId, platform, appVersion, locale, timeZone]
@@ -612,7 +1153,7 @@ components:
             $ref: "#/components/schemas/PriceCandle"
         opinionMarkers:
           type: array
-          description: Score-positive author views for the representative ticker, ordered by contribution.
+          description: Up to ten Score-positive views; the earliest positive anchor first, then the highest-contributing remaining views.
           items:
             $ref: "#/components/schemas/SmartAccountOpinionMarker"
     SmartAccountOpinionMarker:
@@ -632,6 +1173,36 @@ components:
         horizon: { type: string }
         thesis: { type: string }
         evidenceURL: { type: [string, "null"], format: uri }
+    SmartAccountFirstOpinion:
+      type: object
+      description: Earliest settled Score-positive view for this platform, author and representative ticker, not a lifetime-first claim. Price is a completed daily close known before publication, never a later entry price.
+      required: [publishedAt, direction, priceBasis]
+      properties:
+        publishedAt: { type: string, format: date-time }
+        direction: { type: string, enum: [bullish, bearish] }
+        price: { type: [number, "null"], exclusiveMinimum: 0 }
+        priceDay: { type: [string, "null"], format: date }
+        priceSource: { type: [string, "null"] }
+        priceBasis: { type: string, enum: [last_completed_daily_close] }
+        sourcePostId: { type: [string, "null"] }
+        evidenceURL: { type: [string, "null"], format: uri }
+    SmartAccountRepresentativeIntro:
+      type: object
+      description: Lightweight first-ranked representative ticker and its earliest Score-positive call, without candles or full text. Publication, direction and stock return belong to that same call; ticker contribution ranking is unchanged.
+      required: [evidenceId, authorId, platform, ticker, direction, publishedAt, horizon]
+      properties:
+        evidenceId: { type: string, format: uuid }
+        authorId: { type: string }
+        platform: { type: string }
+        ticker: { type: string }
+        direction: { type: string, enum: [bullish, bearish] }
+        publishedAt: { type: string, format: date-time }
+        horizon: { type: string }
+        stockReturnPercent: { type: [number, "null"] }
+        firstOpinion: { $ref: "#/components/schemas/SmartAccountFirstOpinion" }
+        entryDay: { type: [string, "null"], format: date }
+        entryPrice: { type: [number, "null"], exclusiveMinimum: 0 }
+        exitDay: { type: [string, "null"], format: date }
     SmartAccountSettlementEvidence:
       type: object
       description: Direction-aware historical settlement against both the S&P 500 and the mapped industry ETF.
@@ -653,6 +1224,35 @@ components:
         industryExcessReturnPercent: { type: [number, "null"] }
         industryActualHit: { type: [boolean, "null"] }
         settlementVersion: { type: [string, "null"] }
+    OpinionSupportingSource:
+      type: object
+      required: [id, eventId, ticker, publisher, sourceType, relationship, status, title, summary, publishedAt, sourceURL, claim, excerpt, locator]
+      properties:
+        id: { type: string }
+        eventId: { type: string }
+        ticker: { type: string }
+        publisher: { type: string }
+        sourceType:
+          type: string
+          enum: [company, regulatory, news, research, data, other]
+        relationship:
+          type: string
+          enum: [cited, related, follow_up]
+        status:
+          type: string
+          enum: [ready, withdrawn]
+        title: { type: string }
+        titleZH: { type: [string, "null"] }
+        summary: { type: string }
+        summaryZH: { type: [string, "null"] }
+        publishedAt: { type: string, format: date-time }
+        sourceURL: { type: string, format: uri, pattern: '^https://' }
+        claim: { type: string }
+        excerpt: { type: string }
+        locator: { type: string }
+        contextNote: { type: [string, "null"] }
+        contextNoteZH: { type: [string, "null"] }
+        updatedAt: { type: [string, "null"], format: date-time }
     SmartAccountUpdate:
       type: object
       required:
@@ -698,12 +1298,18 @@ components:
         activityTitle: { type: [string, "null"] }
         activityTitleZH: { type: [string, "null"] }
         activityTitleEN: { type: [string, "null"] }
+        supportingSources:
+          description: Factual context only; absent or empty means no module. Does not affect Score.
+          type: [array, "null"]
+          items:
+            $ref: "#/components/schemas/OpinionSupportingSource"
         evidenceRole:
           type: [string, "null"]
           enum: [latest, strongest, counterexample, representative, null]
         representativeTickerContribution: { type: [number, "null"] }
         representativeCallCount: { type: [integer, "null"], minimum: 1 }
         representativeTickerRank: { type: [integer, "null"], minimum: 1, maximum: 3 }
+        firstOpinion: { $ref: "#/components/schemas/SmartAccountFirstOpinion" }
         settlement:
           anyOf:
             - $ref: "#/components/schemas/SmartAccountSettlementEvidence"
@@ -1109,6 +1715,7 @@ components:
         postsCount: { type: [integer, "null"], minimum: 0 }
         verified: { type: [boolean, "null"] }
         description: { type: [string, "null"] }
+        representativeWork: { $ref: "#/components/schemas/SmartAccountRepresentativeIntro" }
     SmartMoneyMetricPoint:
       type: object
       required: [timestamp, value]

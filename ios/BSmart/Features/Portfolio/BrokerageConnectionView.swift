@@ -104,7 +104,7 @@ struct BrokerageConnectionView: View {
                         .font(.subheadline.weight(.bold))
                     Text("PROTOTYPE".bSmartLocalized)
                         .font(.system(size: 8, weight: .black))
-                        .foregroundStyle(BSmartColor.pulseInk)
+                        .foregroundStyle(BSmartColor.onAccent)
                         .padding(.horizontal, 5)
                         .padding(.vertical, 3)
                         .background(BSmartColor.pulse)
@@ -256,7 +256,7 @@ private struct BrokerageProviderSetupView: View {
                 HStack {
                     if isAuthorizing {
                         ProgressView()
-                            .tint(BSmartColor.pulseInk)
+                            .tint(BSmartColor.onAccent)
                     } else {
                         Image(systemName: "lock.open.fill")
                     }
@@ -267,7 +267,7 @@ private struct BrokerageProviderSetupView: View {
                     }
                 }
                 .font(.headline)
-                .foregroundStyle(BSmartColor.pulseInk)
+                .foregroundStyle(BSmartColor.onAccent)
                 .padding(.horizontal, BSmartSpacing.large)
                 .frame(maxWidth: .infinity, minHeight: 52)
                 .background(BSmartColor.brand)
@@ -315,7 +315,7 @@ private struct BrokerageProviderSetupView: View {
                     Image(systemName: "checkmark")
                 }
                 .font(.headline)
-                .foregroundStyle(BSmartColor.pulseInk)
+                .foregroundStyle(BSmartColor.onAccent)
                 .padding(.horizontal, BSmartSpacing.large)
                 .frame(maxWidth: .infinity, minHeight: 52)
                 .background(BSmartColor.brand)
@@ -341,7 +341,7 @@ private struct BrokerageProviderSetupView: View {
                     Spacer()
                     Text("PROTOTYPE".bSmartLocalized)
                         .font(.system(size: 8, weight: .black))
-                        .foregroundStyle(BSmartColor.pulseInk)
+                        .foregroundStyle(BSmartColor.onAccent)
                         .padding(.horizontal, 5)
                         .padding(.vertical, 3)
                         .background(BSmartColor.pulse)
@@ -405,14 +405,14 @@ private struct BrokerageProviderSetupView: View {
                     }
                     Text("%@ units · avg %@".bSmartLocalized(
                         holding.quantity.formatted(.number.precision(.fractionLength(0...4))),
-                        holding.averageCost.formatted(.currency(code: "USD").precision(.fractionLength(0...2)))
+                        holding.averageCost.formatted(.bSmartDollars.precision(.fractionLength(0...2)))
                     ))
                         .font(.caption2)
                         .foregroundStyle(BSmartColor.secondaryText)
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 3) {
-                    Text(holding.estimatedValue.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                    Text(holding.estimatedValue.formatted(.bSmartDollars.precision(.fractionLength(0))))
                         .font(.subheadline.weight(.semibold))
                         .monospacedDigit()
                     if holding.isSupported {

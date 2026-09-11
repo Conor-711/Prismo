@@ -28,8 +28,8 @@ struct AppRootView: View {
                         PortfolioView()
                     }
 
-                    tabLayer(.ai) {
-                        AIAssistantView()
+                    tabLayer(.feed) {
+                        TradeFeedView()
                     }
                 }
                 .overlay(alignment: .bottom) {
@@ -74,22 +74,22 @@ private struct BSmartTabBar: View {
                 selectedSymbol: "house.fill"
             ),
             BSmartTabItem(
-                section: .portfolio,
-                label: language.localized("Portfolio"),
-                symbol: "chart.pie",
-                selectedSymbol: "chart.pie.fill"
-            ),
-            BSmartTabItem(
                 section: .smart,
                 label: language.localized("Smart"),
                 symbol: "bolt.horizontal.circle",
                 selectedSymbol: "bolt.horizontal.circle.fill"
             ),
             BSmartTabItem(
-                section: .ai,
-                label: "Mr Collie",
-                symbol: "sparkles",
-                selectedSymbol: "sparkles"
+                section: .feed,
+                label: "Feed",
+                symbol: "text.bubble",
+                selectedSymbol: "text.bubble.fill"
+            ),
+            BSmartTabItem(
+                section: .portfolio,
+                label: language.localized("My profile"),
+                symbol: "person.crop.circle",
+                selectedSymbol: "person.crop.circle.fill"
             ),
         ]
     }
@@ -174,7 +174,7 @@ private struct BSmartTabBar: View {
                     .symbolRenderingMode(.monochrome)
                     .frame(width: 31, height: 31)
             }
-            .foregroundStyle(isSelected ? BSmartColor.tabSelectedForeground : BSmartColor.secondaryText.opacity(0.74))
+            .foregroundStyle(isSelected ? BSmartColor.tabSelectedForeground : BSmartColor.tabInactiveForeground)
             .frame(maxWidth: .infinity)
             .frame(height: 56)
             .contentShape(Capsule())

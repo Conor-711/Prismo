@@ -1,6 +1,9 @@
 import Foundation
 
 protocol BSmartAPIClient {
+    func fetchTradeFeed(offset: Int, profileID: UUID?) async throws -> TradeFeedPage
+    func fetchPublicTrader(profileID: UUID) async throws -> FeedPublicProfile
+    func fetchOpinionTraders(opinionID: UUID, offset: Int) async throws -> OpinionTradersPage
     func fetchPortfolio() async throws -> [PortfolioPosition]
     func fetchPortfolioHistory() async throws -> [PortfolioValuePoint]
     func fetchSignals() async throws -> [PortfolioSignal]
@@ -21,6 +24,15 @@ protocol BSmartDataFreshnessProviding: Sendable {
 }
 
 extension BSmartAPIClient {
+    func fetchTradeFeed(offset: Int, profileID: UUID?) async throws -> TradeFeedPage {
+        throw BSmartAPIError.tradeStatisticsUnavailable
+    }
+    func fetchPublicTrader(profileID: UUID) async throws -> FeedPublicProfile {
+        throw BSmartAPIError.tradeStatisticsUnavailable
+    }
+    func fetchOpinionTraders(opinionID: UUID, offset: Int) async throws -> OpinionTradersPage {
+        throw BSmartAPIError.tradeStatisticsUnavailable
+    }
     func fetchDailyDigest() async throws -> DailyDigestSnapshot? { nil }
 
     func fetchPortfolioHistory() async throws -> [PortfolioValuePoint] { [] }
@@ -43,6 +55,7 @@ enum BSmartAPIError: LocalizedError {
     case secureStorage(Int32)
     case unverifiedSmartMoney(String)
     case mrCollieUnavailable
+    case tradeStatisticsUnavailable
 
     var errorDescription: String? {
         switch self {
@@ -52,6 +65,7 @@ enum BSmartAPIError: LocalizedError {
         case .secureStorage: "bSmart could not access the secure installation session."
         case let .unverifiedSmartMoney(reason): "bSmart rejected unverified Smart Money data: \(reason)"
         case .mrCollieUnavailable: "Mr Collie is unavailable for this data source."
+        case .tradeStatisticsUnavailable: "Real trade statistics are not available yet."
         }
     }
 }
@@ -86,6 +100,31 @@ final class HTTPBSmartAPIClient: BSmartAPIClient, BSmartRemoteSyncing, BSmartDat
 
     func fetchPortfolio() async throws -> [PortfolioPosition] {
         try await get("v1/portfolio")
+    }
+
+    func fetchTradeFeed(offset: Int, profileID: UUID?) async throws -> TradeFeedPage {
+        guard offset >= 0 else { throw BSmartAPIError.invalidResponse }
+        var query = [URLQueryItem(name: "offset", value: String(offset))]
+        if let profileID { query.append(.init(name: "profileId", value: profileID.uuidString)) }
+        let data = try await request("v1/trade-feed", queryItems: query)
+        let page = try decoder.decode(TradeFeedPage.self, from: data)
+        try page.validate(offset: offset)
+        return page
+    }
+
+    func fetchPublicTrader(profileID: UUID) async throws -> FeedPublicProfile {
+        let profile: FeedPublicProfile = try await get("v1/public-traders/\(profileID.uuidString)")
+        guard profile.id == profileID, profile.isValid else { throw BSmartAPIError.invalidResponse }
+        return profile
+    }
+
+    func fetchOpinionTraders(opinionID: UUID, offset: Int) async throws -> OpinionTradersPage {
+        guard offset >= 0 else { throw BSmartAPIError.invalidResponse }
+        let data = try await request("v1/opinions/\(opinionID.uuidString)/traders",
+                                     queryItems: [URLQueryItem(name: "offset", value: String(offset))])
+        let page = try decoder.decode(OpinionTradersPage.self, from: data)
+        try page.validate(offset: offset)
+        return page
     }
 
     func fetchPortfolioHistory() async throws -> [PortfolioValuePoint] {
@@ -213,10 +252,12 @@ final class HTTPBSmartAPIClient: BSmartAPIClient, BSmartRemoteSyncing, BSmartDat
         _ path: String,
         method: String = "GET",
         body: Data? = nil,
-        timeoutInterval: TimeInterval? = nil
+        timeoutInterval: TimeInterval? = nil,
+        queryItems: [URLQueryItem] = []
     ) async throws -> Data {
         for attempt in 0..<2 {
-            var request = URLRequest(url: baseURL.appending(path: path))
+            var request = URLRequest(url: baseURL.appending(path: path).appending(queryItems: queryItems))
+            request.cachePolicy = .reloadRevalidatingCacheData
             request.httpMethod = method
             if let timeoutInterval {
                 request.timeoutInterval = timeoutInterval

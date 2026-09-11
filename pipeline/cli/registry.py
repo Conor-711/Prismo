@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from .commands import congress, core, global_retail, kol, narratives, smart_voice, youtube
+from .commands import congress, core, global_retail, kol, narratives, smart_voice, x_archive, x_daily, youtube
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -12,7 +12,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="pipeline.manage")
     subparsers = parser.add_subparsers(dest="cmd", required=True)
 
-    for module in (core, global_retail, youtube, kol, smart_voice, narratives, congress):
+    for module in (core, global_retail, youtube, kol, smart_voice, narratives, congress, x_archive, x_daily):
         module.register_commands(subparsers, ROOT)
 
     return parser

@@ -171,7 +171,10 @@ def test_existing_rankings_project_into_client_contracts() -> None:
 
     profiles = result["smart-accounts"]
     assert len(profiles) == 4
-    assert profiles[0] == {
+    intro = profiles[0]["representativeWork"]
+    assert intro["ticker"] == "NVDA"
+    assert intro["firstOpinion"]["publishedAt"] == "2026-08-04T12:00:00Z"
+    assert {key: value for key, value in profiles[0].items() if key != "representativeWork"} == {
         "id": "author-1",
         "name": "Author 1",
         "handle": "@author1",

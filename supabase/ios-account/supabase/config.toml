@@ -1,0 +1,7 @@
+# Isolated from the legacy content Supabase project at ../../config.toml.
+project_id = "dzyitinagewdfkzjkuiz"
+
+[functions.bsmart-wallet]
+# The handler validates every user JWT with Supabase Auth getUser.
+# The legacy gateway JWT check does not support all new signing keys.
+verify_jwt = false

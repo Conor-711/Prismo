@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <link rel="icon" href="data:,">
+  <title>bSmart · The Smart Crowd</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="review-bar">
+    <div class="wordmark"><span>b</span>Smart <small>DESIGN STUDY / 03</small></div>
+    <div class="review-actions"><span>投资者发现 · 表达版</span><a href="../investor-discovery-unified/bsmart-discovery-unified.html">对比上一版 <i data-lucide="arrow-up-right"></i></a></div>
+  </header>
+  <main class="workbench">
+    <section class="device" aria-label="bSmart 首页交互原型">
+      <div class="statusbar"><span>9:41</span><div><i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i></div></div>
+      <div class="app-scroll" id="app-scroll">
+        <header class="app-header"><div class="wordmark"><span>b</span>Smart</div><div><button class="icon-button" data-action="search" aria-label="搜索投资者" title="搜索投资者"><i data-lucide="search"></i></button><button class="icon-button" data-action="directory" aria-label="查看已追踪投资者" title="我的追踪"><i data-lucide="users-round"></i><span id="follow-count">0</span></button></div></header>
+        <section class="discovery">
+          <div class="discovery-heading"><div><span class="eyebrow">MEET YOUR NEXT PERSPECTIVE</span><h1>THE SMART<br><span>CROWD.</span></h1></div><div class="pool-count"><b id="pool-count">28</b><span>投资者</span></div></div>
+          <nav class="modes" aria-label="发现投资者的方式">
+            <button data-mode="pool" aria-pressed="true"><i data-lucide="orbit"></i>发现池</button>
+            <button data-mode="profile" aria-pressed="false"><i data-lucide="contact-round"></i>人物卡</button>
+            <button data-mode="sectors" aria-pressed="false"><i data-lucide="layers-2"></i>赛道</button>
+            <button data-mode="opinions" aria-pressed="false"><i data-lucide="quote"></i>观点</button>
+          </nav>
+          <div id="filter-bar" class="filter-bar"></div>
+          <div id="discovery-body"></div>
+        </section>
+        <section class="perspectives" id="perspectives">
+          <div class="section-heading"><div><span class="eyebrow">FROM PEOPLE TO PERSPECTIVES</span><h2>他们正在看什么</h2></div><button class="icon-button" data-action="feed-filter" aria-label="只看已追踪作者的观点" aria-pressed="false" title="只看已追踪"><i data-lucide="list-filter"></i></button></div>
+          <div id="feed"></div>
+          <p class="data-note">本地数据快照 · 2026.09.09<br>观点为结构化摘要，并非作者逐字原文。历史评分不保证未来表现。</p>
+        </section>
+      </div>
+      <div class="lineup-dock"><button data-action="directory" class="lineup-open"><span id="dock-faces" class="dock-faces"></span><span>我的研究阵容<small id="dock-count">0 位已追踪</small></span><i data-lucide="chevron-right"></i></button><button class="dock-share icon-button" data-action="share-lineup" aria-label="分享我的研究阵容" title="分享我的研究阵容"><i data-lucide="arrow-up-from-line"></i></button></div>
+      <div class="home-indicator"></div>
+      <div class="overlay" id="overlay" hidden><section class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title"><header><button class="icon-button" data-action="close" aria-label="关闭弹窗"><i data-lucide="arrow-left"></i></button><h2 id="sheet-title"></h2><button class="icon-button" data-action="close" aria-label="关闭"><i data-lucide="x"></i></button></header><div class="sheet-body" id="sheet-body"></div></section></div>
+      <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+    </section>
+    <aside class="share-studio" aria-label="分享卡片工作台">
+      <div class="studio-heading"><span class="eyebrow">BUILT TO BE DISCOVERED. MADE TO BE SHARED.</span><h2>发现一个人。<br>带走一种投资视角。</h2><p>头像群像 → 人物深读 → 追踪阵容 → 社交分享。<br>四种发现方式，同一个投资者池。</p></div>
+      <div class="share-panel" id="share-panel">
+        <div class="share-modes" aria-label="分享卡片类型"><button data-share-kind="person" aria-pressed="true">人物名片</button><button data-share-kind="lineup" aria-pressed="false">我的阵容</button><button data-share-kind="opinion" aria-pressed="false">观点卡</button></div>
+        <div class="poster-frame"><canvas id="poster" width="1080" height="1440" role="img" aria-label="投资者分享卡预览"></canvas></div>
+        <div class="share-tools"><div class="swatches" aria-label="卡片配色"><button data-theme="mint" style="--swatch:#d5ffd6" aria-label="薄荷绿" aria-pressed="true" title="薄荷绿"></button><button data-theme="ice" style="--swatch:#d7e6ff" aria-label="冰川蓝" aria-pressed="false" title="冰川蓝"></button><button data-theme="lilac" style="--swatch:#eee1f9" aria-label="浅丁香" aria-pressed="false" title="浅丁香"></button></div><div id="share-pages"></div><span class="export-size">1080 × 1440</span></div>
+        <div class="share-actions"><button class="primary" data-action="download"><i data-lucide="download"></i>导出图片</button><button class="secondary" data-action="copy"><i data-lucide="copy"></i>复制文案</button></div>
+        <p class="studio-note">沿用 28 位 X 作者和真实观点快照。追踪仅保存于本原型；不修改 App，不发布到社交平台。</p>
+      </div>
+      <div class="design-points"><div><span>01</span><p><b>先认人，不先读报表。</b>用可点选群像建立第一眼记忆，保留专业判断依据。</p></div><div><span>02</span><p><b>分享的是自己的选择。</b>研究阵容表达关注偏好，不暗示作者合作或投资背书。</p></div></div>
+    </aside>
+  </main>
+  <script src="../investor-discovery/lucide.min.js"></script>
+  <script src="../investor-discovery/data.js"></script>
+  <script src="../investor-discovery-unified/evidence.js"></script>
+  <script src="share.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

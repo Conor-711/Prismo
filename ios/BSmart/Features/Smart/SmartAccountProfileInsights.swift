@@ -113,6 +113,7 @@ struct SmartAccountInvestorProfileSection: View {
                             ForEach(account.resolvedTopTickers, id: \.self) { ticker in
                                 HStack(spacing: 6) {
                                     BSmartAssetMark(ticker: ticker, size: 24)
+                                        .bSmartTickerDestination(ticker)
                                     Text(ticker)
                                         .font(.caption.weight(.black))
                                         .foregroundStyle(BSmartColor.primaryText)
@@ -182,7 +183,7 @@ struct SmartAccountCurrentViewsSection: View {
                     directionMetric(
                         label: "Bullish",
                         count: insights.bullishTickerViews.count,
-                        color: BSmartColor.brand
+                        color: BSmartColor.bull
                     )
                     Divider().overlay(BSmartColor.line)
                     directionMetric(
@@ -203,7 +204,7 @@ struct SmartAccountCurrentViewsSection: View {
                 tickerStrip(
                     title: "Bullish tickers",
                     views: insights.bullishTickerViews,
-                    color: BSmartColor.brand
+                    color: BSmartColor.bull
                 )
                 tickerStrip(
                     title: "Bearish tickers",
@@ -256,6 +257,7 @@ struct SmartAccountCurrentViewsSection: View {
                         ForEach(views) { view in
                             HStack(spacing: 6) {
                                 BSmartAssetMark(ticker: view.update.ticker, size: 24)
+                                    .bSmartTickerDestination(view.update.ticker)
                                 Text(view.update.ticker)
                                     .font(.caption.weight(.black))
                                 if let target = view.update.targetPrice {
@@ -324,7 +326,7 @@ struct SmartAccountLatestViewsSection: View {
                         Text("View all %@ views".bSmartLocalized(updates.count.formatted()))
                             .font(.caption.weight(.bold))
                         Spacer()
-                        Image(systemName: "arrow.right")
+                        Image(systemName: "chevron.down")
                             .font(.caption.weight(.black))
                     }
                     .foregroundStyle(BSmartColor.brand)
@@ -341,6 +343,7 @@ struct SmartAccountLatestViewsSection: View {
         VStack(alignment: .leading, spacing: BSmartSpacing.small) {
             HStack(spacing: BSmartSpacing.small) {
                 BSmartAssetMark(ticker: update.ticker, size: 30)
+                    .bSmartTickerDestination(update.ticker)
                 Text(update.ticker)
                     .font(.subheadline.weight(.black))
                     .foregroundStyle(BSmartColor.primaryText)
@@ -407,6 +410,6 @@ private extension Optional where Wrapped == String {
 
 private extension Double {
     var smartAccountProfileCurrency: String {
-        formatted(.currency(code: "USD").precision(.fractionLength(self >= 100 ? 0 : 2)))
+        formatted(.bSmartDollars.precision(.fractionLength(self >= 100 ? 0 : 2)))
     }
 }

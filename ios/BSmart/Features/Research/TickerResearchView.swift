@@ -3,236 +3,139 @@ import SwiftUI
 private enum TickerIntelligenceSection: String, CaseIterable, Identifiable {
     case overview = "Overview"
     case activity = "Smart Activity"
-
+    case trade = "Trade"
     var id: Self { self }
 }
 
 struct TickerIntelligenceView: View {
     @EnvironmentObject private var model: AppModel
-    let ticker: TickerIntelligence
-    @State private var editingPosition: PortfolioPosition?
-    @State private var isAddingTicker = false
+    @EnvironmentObject private var trading: HyperliquidTradingStore
+    let symbol: String
+    @State private var showsPositionEditor = false
+    @State private var showsMarketPicker = false
     @State private var selection: TickerIntelligenceSection = .overview
-    @State private var activitySnapshot: TickerSmartActivitySnapshot?
 
-    private struct ActivityRevision: Hashable {
-        let ticker: String
-        let accountCount: Int
-        let firstAccountID: UUID?
-        let lastAccountID: UUID?
-        let moneyCount: Int
-        let firstMoneyID: UUID?
-        let lastMoneyID: UUID?
-        let price: Double
-        let dataAsOf: Date
+    init(symbol: String) { self.symbol = symbol.uppercased() }
+    init(ticker: TickerIntelligence) { self.init(symbol: ticker.ticker) }
+
+    private var activeSymbol: String { trading.activeMarket?.symbol ?? symbol }
+    private var profile: TickerProfile? { TickerProfile.lookup(activeSymbol) }
+    private var companyName: String {
+        profile?.name ?? model.intelligence(for: activeSymbol)?.companyName
+            ?? model.position(for: activeSymbol)?.companyName
+            ?? model.accountUpdates(for: activeSymbol).first?.companyName ?? activeSymbol
     }
-
-    private var activityRevision: ActivityRevision {
-        ActivityRevision(
-            ticker: ticker.ticker,
-            accountCount: model.smartAccountUpdates.count,
-            firstAccountID: model.smartAccountUpdates.first?.id,
-            lastAccountID: model.smartAccountUpdates.last?.id,
-            moneyCount: model.smartMoneyMovements.count,
-            firstMoneyID: model.smartMoneyMovements.first?.id,
-            lastMoneyID: model.smartMoneyMovements.last?.id,
-            price: ticker.currentPrice,
-            dataAsOf: ticker.dataAsOf
-        )
+    private var activities: [TickerSmartActivityItem] {
+        TickerSmartActivityItem.items(ticker: activeSymbol,
+            accountUpdates: model.accountUpdates(for: activeSymbol),
+            moneyMovements: model.moneyMovements(for: activeSymbol))
     }
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: BSmartSpacing.large) {
-                quoteHeader
+            VStack(alignment: .leading, spacing: 24) {
+                HyperliquidTradingView(symbol: symbol, activities: activities)
+                TickerOwnHoldingsSection(symbol: activeSymbol)
                 sectionPicker
-
                 switch selection {
                 case .overview:
-                    if let activitySnapshot {
-                        overview(snapshot: activitySnapshot)
-                    } else {
-                        activityLoadingPlaceholder
-                    }
+                    TickerAboutSection(symbol: activeSymbol, companyName: companyName,
+                                       profile: profile, market: trading.activeMarket)
                 case .activity:
-                    if let activitySnapshot {
-                        TickerSmartActivityFeed(activities: activitySnapshot.activities)
-                    } else {
-                        activityLoadingPlaceholder
-                    }
+                    TickerSmartActivityFeed(activities: activities, framed: false)
+                        .id(activeSymbol)
+                case .trade:
+                    HyperliquidTradingDetails()
                 }
             }
-            .padding(BSmartSpacing.large)
+            .padding(16)
         }
         .background(BSmartColor.ink)
-        .accessibilityIdentifier("ticker-intelligence.\(ticker.ticker)")
-        .navigationTitle(ticker.ticker)
+        .accessibilityIdentifier("ticker-intelligence.\(activeSymbol)")
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .principal) { assetNavigationHeader }
             ToolbarItem(placement: .topBarTrailing) {
-                if let position = model.position(for: ticker.ticker) {
-                    Button {
-                        editingPosition = position
-                    } label: {
-                        Image(systemName: "pencil")
-                    }
-                    .accessibilityLabel("Edit tracked ticker")
-                    .accessibilityIdentifier("ticker-intelligence.edit")
-                } else {
-                    Button {
-                        isAddingTicker = true
-                    } label: {
-                        Image(systemName: "plus.circle")
-                    }
-                    .accessibilityLabel("Add to portfolio or watchlist")
-                    .accessibilityIdentifier("ticker-intelligence.track")
+                Button {
+                    model.setTickerFollowed(model.position(for: activeSymbol) == nil,
+                                            ticker: activeSymbol, companyName: companyName)
+                } label: {
+                    Image(systemName: model.position(for: activeSymbol) == nil ? "star" : "star.fill")
+                        .foregroundStyle(model.position(for: activeSymbol) == nil
+                            ? BSmartColor.secondaryText : BSmartColor.brand)
                 }
+                .disabled(model.position(for: activeSymbol)?.isPosition == true)
+                .accessibilityLabel((model.position(for: activeSymbol)?.isPosition == true
+                    ? "In portfolio" : model.position(for: activeSymbol) == nil
+                        ? "Follow ticker" : "Unfollow ticker").bSmartLocalized)
+                .accessibilityIdentifier("ticker.follow")
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { showsPositionEditor = true } label: {
+                    Image(systemName: model.position(for: activeSymbol) == nil ? "plus.circle" : "pencil")
+                }
+                .accessibilityLabel((model.position(for: activeSymbol) == nil
+                    ? "Add to portfolio or watchlist" : "Edit tracked ticker").bSmartLocalized)
+                .accessibilityIdentifier(model.position(for: activeSymbol) == nil
+                    ? "ticker-intelligence.track" : "ticker-intelligence.edit")
             }
         }
-        .sheet(item: $editingPosition) { position in
-            AddPositionView(position: position)
+        .sheet(isPresented: $showsMarketPicker) {
+            HyperliquidMarketPickerView().environmentObject(trading)
+        }
+        .sheet(isPresented: $showsPositionEditor) {
+            AddPositionView(position: model.position(for: activeSymbol), prefilledTicker: activeSymbol,
+                            prefilledCompanyName: companyName, initialKind: .watchlist)
                 .environmentObject(model)
         }
-        .sheet(isPresented: $isAddingTicker) {
-            AddPositionView(
-                prefilledTicker: ticker.ticker,
-                prefilledCompanyName: ticker.companyName,
-                initialKind: .watchlist
-            )
-            .environmentObject(model)
-        }
-        .task(id: activityRevision) {
-            await rebuildActivitySnapshot(for: activityRevision)
-        }
         .bSmartDetailPage()
+        .bSmartTradeDock(symbol: activeSymbol)
         .bSmartPage()
-    }
-
-    private func overview(snapshot: TickerSmartActivitySnapshot) -> some View {
-        VStack(alignment: .leading, spacing: BSmartSpacing.large) {
-            TickerPriceSmartActivityPanel(
-                ticker: ticker,
-                model: snapshot.priceModel
-            )
-
-            TickerSmartActivityFeed(
-                activities: snapshot.activities,
-                title: "Recent Smart Activity",
-                maximumItems: 4,
-                showsFilter: false
-            )
-
-            Button {
-                selection = .activity
-            } label: {
-                HStack {
-                    Text("View all Smart Activity".bSmartLocalized)
-                        .font(.subheadline.weight(.bold))
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.black))
-                }
-                .foregroundStyle(BSmartColor.brand)
-                .padding(.horizontal, BSmartSpacing.medium)
-                .frame(minHeight: 44)
-                .background(BSmartColor.brand.opacity(0.08))
-                .clipShape(RoundedRectangle(cornerRadius: BSmartRadius.control, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: BSmartRadius.control, style: .continuous)
-                        .stroke(BSmartColor.brand.opacity(0.35), lineWidth: 0.6)
-                }
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("ticker-intelligence.view-all-activity")
-        }
     }
 
     private var sectionPicker: some View {
         HStack(spacing: 0) {
             ForEach(TickerIntelligenceSection.allCases) { section in
-                Button {
-                    selection = section
-                } label: {
+                Button { selection = section } label: {
                     Text(section.rawValue.bSmartLocalized)
-                        .font(.caption.weight(.bold))
+                        .font(.subheadline.weight(.semibold))
                         .foregroundStyle(selection == section ? BSmartColor.primaryText : BSmartColor.tertiaryText)
-                        .frame(maxWidth: .infinity, minHeight: 38)
-                        .background(selection == section ? BSmartColor.pulse.opacity(0.09) : Color.clear)
+                        .frame(maxWidth: .infinity, minHeight: 44)
                         .overlay(alignment: .bottom) {
-                            Rectangle()
-                                .fill(selection == section ? BSmartColor.pulse : Color.clear)
-                                .frame(height: 2)
+                            Rectangle().fill(selection == section ? BSmartColor.brand : BSmartColor.line)
+                                .frame(height: selection == section ? 2 : 0.5)
                         }
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(selection == section ? .isSelected : [])
-            }
-        }
-        .background(BSmartColor.recessed)
-        .clipShape(RoundedRectangle(cornerRadius: BSmartRadius.card, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: BSmartRadius.card, style: .continuous)
-                .stroke(BSmartColor.line, lineWidth: 0.6)
-        }
-    }
-
-    private var quoteHeader: some View {
-        HStack(alignment: .center, spacing: BSmartSpacing.medium) {
-            BSmartAssetMark(ticker: ticker.ticker, size: 52)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(ticker.companyName)
-                    .font(.headline)
-                Text(
-                    "Data as of %@".bSmartLocalized(
-                        ticker.dataAsOf.bSmartDataTimestamp
-                    )
-                )
-                    .font(.caption2)
-                    .foregroundStyle(BSmartColor.tertiaryText)
-            }
-
-            Spacer()
-
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(ticker.currentPrice.formatted(.currency(code: "USD")))
-                    .font(.headline)
-                    .monospacedDigit()
-                Text(ticker.dayChangePercent.formatted(.percent.precision(.fractionLength(1)).sign(strategy: .always())))
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(ticker.dayChangePercent >= 0 ? BSmartColor.brand : BSmartColor.bear)
-                    .monospacedDigit()
+                .accessibilityIdentifier("ticker.section.\(section.id)")
             }
         }
     }
 
-    private var activityLoadingPlaceholder: some View {
-        VStack(spacing: BSmartSpacing.medium) {
-            ProgressView()
-                .tint(BSmartColor.brand)
-            Text("Preparing Smart Activity".bSmartLocalized)
-                .font(.subheadline)
-                .foregroundStyle(BSmartColor.secondaryText)
+    private var assetNavigationHeader: some View {
+        Button { showsMarketPicker = true } label: {
+            HStack(spacing: 9) {
+                BSmartAssetMark(ticker: activeSymbol, size: 34)
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 5) {
+                        Text(activeSymbol).font(.system(size: 16, weight: .semibold))
+                        if let market = trading.activeMarket {
+                            Text("\(market.maxLeverage)x")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(BSmartColor.sky)
+                        }
+                        Image(systemName: "chevron.down").font(.system(size: 8, weight: .bold))
+                    }
+                    Text(companyName).font(.caption2).foregroundStyle(BSmartColor.secondaryText)
+                }
+                .lineLimit(1)
+            }
+            .foregroundStyle(BSmartColor.primaryText)
+            .frame(maxWidth: 230, minHeight: 44, alignment: .leading)
         }
-        .frame(maxWidth: .infinity, minHeight: 280)
-        .bSmartSurface()
-        .accessibilityIdentifier("ticker-intelligence.activity-loading")
-    }
-
-    private func rebuildActivitySnapshot(for revision: ActivityRevision) async {
-        let accountUpdates = model.accountUpdates(for: ticker.ticker)
-        let moneyMovements = model.moneyMovements(for: ticker.ticker)
-        let ticker = ticker
-
-        let snapshot = await Task.detached(priority: .userInitiated) {
-            TickerSmartActivitySnapshot(
-                ticker: ticker,
-                accountUpdates: accountUpdates,
-                moneyMovements: moneyMovements
-            )
-        }.value
-
-        guard !Task.isCancelled, activityRevision == revision else { return }
-        activitySnapshot = snapshot
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("trade.market-picker")
     }
 }

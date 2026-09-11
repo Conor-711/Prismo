@@ -54,6 +54,17 @@
 - 链上交易平台：Hyperliquid。使用公开只读 Info API 获取 HIP-3 市场、成交和地址 fills；链上地址不是社媒作者，必须使用独立的身份、评分和产品契约。
 - 受限平台：需要浏览器、登录态或 WAF 绕行的平台，必须把 crawl、raw 保存、sync 分离，避免失败时污染产品表。
 
+## Public supporting documents
+
+`pipeline/platforms/source_documents/web.py` reads public HTML for a small local
+opinion-source experiment. It discovers same-host newsroom links, obeys robots,
+limits requests/body size/time, pins validated public IPs while preserving TLS
+hostname verification, and caches extracted documents under the ignored
+`data/runtime/opinion-source-crawl/cache` directory. No login, paywall bypass,
+database writes, scoring or factual association belongs in this adapter.
+The domain verifies curated claim/date rules; the job owns the bounded manifest
+and optional local fixture export. See `docs/product/opinion-supporting-sources.md`.
+
 ## X realtime adapter
 
 `pipeline/platforms/x/realtime` 以 `TweetProvider` 协议隔离供应商。当前

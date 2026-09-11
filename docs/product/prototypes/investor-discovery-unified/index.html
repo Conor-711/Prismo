@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>bSmart · 投资者发现融合方案</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="review-header"><span class="wordmark">b<span>Smart</span></span><span>首页探索 / 融合方案</span><button id="reset" title="重置本原型的追踪与筛选">重置预览<i data-lucide="rotate-ccw"></i></button></header>
+  <main class="review-stage">
+    <section class="device" aria-label="bSmart 首页交互原型">
+      <div class="statusbar" aria-hidden="true"><b>9:41</b><span><i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i></span></div>
+      <div id="home" class="home-screen">
+        <header class="app-header"><span class="app-brand">b<span>Smart</span></span><div><button class="icon-button" data-action="search" aria-label="搜索投资者" title="搜索投资者"><i data-lucide="search"></i></button><button class="icon-button" data-action="following" aria-label="我的追踪" title="我的追踪"><i data-lucide="bookmark"></i><b id="follow-count"></b></button></div></header>
+        <section class="discovery">
+          <div class="discovery-heading"><h1>发现值得追踪的人</h1><span id="candidate-count"></span></div>
+          <nav class="entry-tabs" aria-label="发现方式"><button data-action="mode" data-mode="people" aria-pressed="true"><i data-lucide="users-round"></i>看人</button><button data-action="mode" data-mode="views" aria-pressed="false"><i data-lucide="message-square-text"></i>看观点</button></nav>
+          <nav id="sectors" class="sectors" aria-label="投资者研究领域"></nav>
+          <div id="discovery-body"></div>
+        </section>
+        <section class="market-section"><header><div><span class="overline">SMART PERSPECTIVES</span><h2>市场正在被如何看待</h2></div><i data-lucide="chart-no-axes-combined"></i></header><nav id="feed-tabs" class="feed-tabs" aria-label="市场观点范围"></nav><div id="market-feed"></div></section>
+      </div>
+      <section id="profile-screen" class="profile-screen" aria-label="投资者档案" hidden></section>
+      <nav class="bottom-nav" aria-label="原型底部导航"><button class="active" data-action="home"><i data-lucide="house"></i><span>今日</span></button><button data-action="portfolio"><i data-lucide="wallet"></i><span>持仓</span></button><button data-action="directory"><i data-lucide="users-round"></i><span>Smart</span></button><button data-action="collie"><i data-lucide="message-circle"></i><span>Mr Collie</span></button></nav>
+      <div class="home-indicator" aria-hidden="true"></div>
+      <div id="toast" role="status" aria-live="polite"></div>
+      <div id="sheet" class="sheet-overlay" hidden><section class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title"><header><h3 id="sheet-title"></h3><button class="icon-button" data-action="close-sheet" aria-label="关闭弹窗"><i data-lucide="x"></i></button></header><div id="sheet-body"></div></section></div>
+    </section>
+    <aside class="review-notes">
+      <div class="review-kicker">ONE EXPERIENCE / FOUR PATHS</div><h2>四种发现方式，<br>一段连续的体验。</h2><p class="review-lead">不再先挑一种方案。先随意探索，再顺着兴趣深入了解。</p>
+      <ol class="journey"><li><span>01</span><div><h3>从头像开始</h3><p>点选人物，快速浏览能力与研究标的。</p></div></li><li><span>02</span><div><h3>用赛道缩小范围</h3><p>切到看观点时，仍保留当前研究领域。</p></div></li><li><span>03</span><div><h3>沿着兴趣深入</h3><p>所有入口进入同一份档案，在候选人之间连续浏览。</p></div></li><li><span>04</span><div><h3>留下值得追踪的人</h3><p>追踪状态同步；下方「我的追踪」聚合他们的市场观点。</p></div></li></ol>
+      <div class="review-state"><div><span>当前路径</span><b id="state-route"></b></div><div><span>研究领域</span><b id="state-sector"></b></div><div><span>已追踪</span><b id="state-followed"></b></div></div>
+      <p class="data-note">设计预览，不是实时推荐。人物、Score、风格与观点来自本地快照。赛道沿用作者画像，不代表其每条观点的所属行业；代表判断展示原有结算，不是作者账户收益。持仓示例为 NVDA、MU、MSTR。所有操作仅在本 HTML 内生效。</p>
+    </aside>
+  </main>
+  <script src="../investor-discovery/lucide.min.js"></script><script src="../investor-discovery/data.js"></script><script src="evidence.js"></script><script src="app.js"></script>
+</body>
+</html>

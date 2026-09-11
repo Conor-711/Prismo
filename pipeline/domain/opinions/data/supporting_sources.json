@@ -1,0 +1,58 @@
+[
+  {
+    "platform": "X",
+    "authorId": "1080667206902411265",
+    "sourcePostId": "2038681685907431850",
+    "ticker": "NVDA",
+    "reviewed": true,
+    "reviewedOn": "2026-09-09",
+    "source": {
+      "id": "aws-nvidia-20260316-gpu-capacity",
+      "eventId": "aws-nvidia-gtc-2026",
+      "ticker": "NVDA",
+      "publisher": "Amazon Web Services",
+      "sourceType": "company",
+      "relationship": "related",
+      "status": "ready",
+      "title": "AWS plans to add over one million NVIDIA GPUs",
+      "titleZH": "AWS 计划新增超过 100 万颗 NVIDIA GPU",
+      "summary": "AWS announced an expansion starting in 2026, covering Blackwell and Rubin GPUs as well as networking collaboration.",
+      "summaryZH": "AWS 宣布从 2026 年起扩大部署，覆盖 Blackwell、Rubin GPU，并开展网络基础设施合作。",
+      "publishedAt": "2026-03-16T23:59:59Z",
+      "sourceURL": "https://aws.amazon.com/blogs/machine-learning/aws-and-nvidia-deepen-strategic-collaboration-to-accelerate-ai-from-pilot-to-production/",
+      "claim": "AWS and Nvidia just signed one of the largest cloud deals in history. This 1 million chip agreement spans through 2027, covering the full stack from Blackwell to Rubin and Spectrum networking.",
+      "excerpt": "AWS will add more than 1 million NVIDIA GPUs including Blackwell and Rubin GPU architectures",
+      "locator": "Accelerating compute capacity in the agentic AI era",
+      "contextNote": "This is AWS's deployment announcement, not NVIDIA's revenue recognition. This document does not establish the author's 2027 completion date or long-term investment conclusion.",
+      "contextNoteZH": "这是 AWS 的部署公告，不等于 NVIDIA 已确认收入；本文件未确定作者所说的 2027 年完成时间，也不证明其长期投资结论。"
+    }
+  },
+  {
+    "platform": "X",
+    "authorId": "1018427617",
+    "sourcePostId": "2028805215793643701",
+    "ticker": "NBIS",
+    "reviewed": true,
+    "reviewedOn": "2026-09-09",
+    "source": {
+      "id": "nebius-microsoft-20250908-6k",
+      "eventId": "nebius-microsoft-20250908",
+      "ticker": "NBIS",
+      "publisher": "Nebius Group · SEC EDGAR",
+      "sourceType": "regulatory",
+      "relationship": "related",
+      "status": "ready",
+      "title": "Nebius discloses the Microsoft infrastructure agreement",
+      "titleZH": "Nebius 披露与 Microsoft 的基础设施协议",
+      "summary": "The filing specifies about $17.4B of conditional contract value through 2031; additional capacity could lift it to about $19.4B.",
+      "summaryZH": "申报文件披露，截至 2031 年的合同价值约 174 亿美元，取决于部署及服务可用性；额外容量可使其增至约 194 亿美元。",
+      "publishedAt": "2025-09-08T23:59:59Z",
+      "sourceURL": "https://www.sec.gov/Archives/edgar/data/1513845/000110465925088312/tm2525580d1_6k.htm",
+      "claim": "$17–19B multi-year Microsoft deal",
+      "excerpt": "the total contract value is about $17.4 billion through 2031.",
+      "locator": "Form 6-K · Commercial Agreement with Microsoft",
+      "contextNote": "Contract value is not revenue already earned. This document does not establish Cursor's current revenue or its contribution to Nebius.",
+      "contextNoteZH": "合同价值不等于已实现收入。本文件不证明 Cursor 当前的收入规模或其对 Nebius 的收入贡献。"
+    }
+  }
+]

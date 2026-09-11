@@ -284,6 +284,31 @@ final class TodayActivityTests: XCTestCase {
         XCTAssertTrue(package.localizedHeadline.contains("MSTR"))
     }
 
+    func testPackagePreviewUsesLatestHighRankedAuthorWithoutDiscardingOtherEvidence() throws {
+        let updates = [
+            makeAccountUpdate(ticker: "NVDA", author: "Highest", percentile: 0.01, timestamp: 100),
+            makeAccountUpdate(ticker: "NVDA", author: "Latest qualified", percentile: 0.20, timestamp: 200),
+            makeAccountUpdate(ticker: "NVDA", author: "Latest unqualified", percentile: 0.80, timestamp: 300),
+        ]
+        let package = try XCTUnwrap(TodayViewpointPackage.packages(from: updates).first)
+        XCTAssertEqual(package.previewUpdate?.authorId, "Latest qualified")
+        XCTAssertEqual(package.updates.count, 3)
+        XCTAssertEqual(package.rankedUpdates.first?.authorId, "Highest")
+        XCTAssertEqual(package.latestPreviewAuthors.map(\.authorId), ["Latest unqualified", "Latest qualified", "Highest"])
+    }
+
+    func testPackagePreviewAcceptsPercentageRanksAndFallsBackToBestAvailableAuthor() {
+        let older = makeAccountUpdate(ticker: "NVDA", author: "Older", percentile: 8, timestamp: 100)
+        let latest = makeAccountUpdate(ticker: "NVDA", author: "Latest", percentile: 25, timestamp: 200)
+        let package = TodayViewpointPackage(ticker: "NVDA", companyName: "NVIDIA", updates: [older, latest])
+        XCTAssertEqual(package.previewUpdate?.id, latest.id)
+
+        let fallback = makeAccountUpdate(ticker: "NVDA", author: "Fallback", percentile: 0.30)
+        let empty = TodayViewpointPackage(ticker: "NVDA", companyName: "NVIDIA", updates: [])
+        XCTAssertNil(empty.previewUpdate)
+        XCTAssertEqual(TodayViewpointPackage(ticker: "NVDA", companyName: "NVIDIA", updates: [fallback]).previewUpdate?.id, fallback.id)
+    }
+
     func testSmartAlphaExcludesTrackedAndCrowdedTickers() throws {
         let updates = [
             makeAccountUpdate(ticker: "NVDA", author: "Tracked", percentile: 0.02, timestamp: 400, hasEvidence: true),
@@ -316,6 +341,73 @@ final class TodayActivityTests: XCTestCase {
 
         XCTAssertEqual(Set(opportunities.map(\.ticker)), ["NBIS", "CRCL"])
         XCTAssertEqual(Set(opportunities.map(\.kind)), [.smartAccount, .smartMoney])
+    }
+
+    func testSourceHeadlinesPreserveConditionsAndSeparateAuthors() throws {
+        let previous = BSmartLocalization.language
+        BSmartLocalization.configure(.simplifiedChinese)
+        defer { BSmartLocalization.configure(previous) }
+        var bull = makeAccountUpdate(ticker: "META", author: "Unknown A", timestamp: 300)
+        bull.activityTitleZH = "META：关注事件前上涨机会。"
+        var bear = makeAccountUpdate(ticker: "META", author: "Unknown B", direction: .bearish, timestamp: 100)
+        bear.activityTitleZH = "META：担忧诉讼拖累近期表现。"
+        let package = try XCTUnwrap(TodayViewpointPackage.packages(from: [bull, bear]).first)
+        XCTAssertEqual(package.sourceHeadlines.map(\.sourceName), ["Unknown A", "Unknown B"])
+        XCTAssertTrue(package.localizedHeadline.contains("诉讼"))
+        XCTAssertTrue(package.localizedHeadline.contains("事件前"))
+        XCTAssertFalse(package.localizedHeadline.contains("Unknown"))
+        XCTAssertFalse(package.localizedHeadline.contains("核心判断分化"))
+    }
+
+    func testSourceHeadlineKeepsShortAndLongTermQualifiers() {
+        let previous = BSmartLocalization.language
+        BSmartLocalization.configure(.simplifiedChinese)
+        defer { BSmartLocalization.configure(previous) }
+        var update = makeAccountUpdate(ticker: "NBIS", author: "Unknown")
+        update.activityTitleZH = "加强 NBIS 判断：作者预计短期反弹至240–260美元，但长期仍看空。若重回阻力位，再考虑增加空头。"
+        let headline = TodaySourceHeadline.account(update)
+        XCTAssertTrue(headline.text.hasPrefix("预计"))
+        XCTAssertTrue(headline.text.contains("长期仍看空"))
+        XCTAssertTrue(headline.text.contains("若重回阻力位"))
+        XCTAssertFalse(headline.text.contains("加强 NBIS 判断"))
+    }
+
+    func testSourceHeadlineAvoidsLegacyTruncationAndBlankTranslation() {
+        let previous = BSmartLocalization.language
+        BSmartLocalization.configure(.simplifiedChinese)
+        defer { BSmartLocalization.configure(previous) }
+        var update = makeAccountUpdate(ticker: "NBIS", author: "Unknown")
+        update.activityTitleZH = "短期反弹，但…"
+        update.translatedTextZH = "  "
+        update.activityTitleEN = "Short-term rebound, but remains bearish longer term."
+        XCTAssertEqual(TodaySourceHeadline.account(update).text, update.activityTitleEN)
+    }
+
+    func testAlphaMoneyHeadlinesKeepIndividualPositionsInsteadOfCrowdingClaim() throws {
+        let opportunities = TodayAlphaOpportunity.opportunities(accountUpdates: [], moneyMovements: [
+            makeMoneyMovement(ticker: "NVDA", account: "One", amount: 50000, timestamp: 300, hasEvidence: true),
+            makeMoneyMovement(ticker: "NVDA", account: "Two", amount: 90000, timestamp: 200, hasEvidence: true)
+        ], excluding: [])
+        let alpha = try XCTUnwrap(opportunities.first)
+        XCTAssertEqual(alpha.sourceHeadlines.count, 2)
+        XCTAssertEqual(Set(alpha.sourceHeadlines.map(\.sourceName)).count, 2)
+        XCTAssertTrue(alpha.localizedHeadline.contains("50.0K"))
+        XCTAssertTrue(alpha.localizedHeadline.contains("90.0K"))
+        XCTAssertFalse(alpha.localizedHeadline.contains("crowded"))
+    }
+
+    func testTrendingPagesPairCardsWithoutDroppingOrDuplicatingTickers() {
+        let packages = ["NVDA", "MU", "MSTR", "HOOD", "PLTR"].map {
+            TodayViewpointPackage(ticker: $0, companyName: $0, updates: [makeAccountUpdate(ticker: $0, author: "Author")])
+        }
+        let pages = TodayViewpointPage.pages(from: packages)
+        XCTAssertEqual(pages.map { $0.packages.count }, [2, 2, 1])
+        XCTAssertEqual(pages.map(\.index), [0, 1, 2])
+        XCTAssertEqual(pages.map(\.id), ["NVDA", "MSTR", "PLTR"])
+        XCTAssertEqual(pages.flatMap(\.packages), packages)
+        XCTAssertTrue(TodayViewpointPage.pages(from: []).isEmpty)
+        XCTAssertEqual(TodayViewpointPage.pages(from: Array(packages.prefix(1))).first?.packages.count, 1)
+        XCTAssertEqual(TodayViewpointPage.pages(from: Array(packages.prefix(4))).map { $0.packages.count }, [2, 2])
     }
 
     private func makePosition(ticker: String, weight: Double) -> PortfolioPosition {

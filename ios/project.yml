@@ -12,13 +12,25 @@ configs:
   InternalAlpha: release
   Release: release
 
+packages:
+  MessagePack:
+    path: Packages/MessagePack
+  BigInt:
+    url: https://github.com/attaswift/BigInt
+    exactVersion: 5.7.0
+  WalletCore:
+    path: Packages/WalletCore
+  GoogleSignIn:
+    url: https://github.com/google/GoogleSignIn-iOS
+    exactVersion: 9.2.0
+
 settings:
   base:
     SWIFT_VERSION: "5.0"
     DEVELOPMENT_TEAM: ""
     CODE_SIGN_STYLE: Automatic
     MARKETING_VERSION: "1.0"
-    CURRENT_PROJECT_VERSION: "5"
+    CURRENT_PROJECT_VERSION: "6"
 
 targets:
   BSmart:
@@ -35,6 +47,17 @@ targets:
             CFBundleURLName: today.bsmart.signal
             CFBundleURLSchemes:
               - bsmart
+          - CFBundleTypeRole: Editor
+            CFBundleURLName: today.bsmart.google-signin
+            CFBundleURLSchemes:
+              - $(BSMART_GOOGLE_REVERSED_CLIENT_ID)
+        BSMART_GOOGLE_IOS_CLIENT_ID: $(BSMART_GOOGLE_IOS_CLIENT_ID)
+        BSMART_GOOGLE_SERVER_CLIENT_ID: $(BSMART_GOOGLE_SERVER_CLIENT_ID)
+        BSMART_APPLE_SIGN_IN_ENABLED: $(BSMART_APPLE_SIGN_IN_ENABLED)
+        BSMART_INTERNAL_OPTIONAL_WALLET_BACKUP: $(BSMART_INTERNAL_OPTIONAL_WALLET_BACKUP)
+        BSMART_SUPABASE_URL: $(BSMART_SUPABASE_URL)
+        BSMART_SUPABASE_PUBLISHABLE_KEY: $(BSMART_SUPABASE_PUBLISHABLE_KEY)
+        NSFaceIDUsageDescription: Unlock your wallet and protect your recovery phrase.
         BSMART_API_BASE_URL: $(BSMART_ENDPOINT_URL)
         BSMART_DATA_ENVIRONMENT: $(BSMART_DATA_ENVIRONMENT)
         BSMART_DEEPSEEK_API_KEY: $(BSMART_DEEPSEEK_API_KEY)
@@ -46,15 +69,37 @@ targets:
         UILaunchScreen: {}
     sources:
       - path: BSmart
+      - path: Packages/MessagePack/LICENSE
+        buildPhase: resources
       - path: ../contracts/fixtures
         buildPhase: resources
+    dependencies:
+      - package: MessagePack
+        product: MessagePack
+      - package: BigInt
+        product: BigInt
+      - package: WalletCore
+        product: WalletCore
+      - package: WalletCore
+        product: WalletCoreSwiftProtobuf
+      - package: GoogleSignIn
+        product: GoogleSignIn
+      - package: GoogleSignIn
+        product: GoogleSignInSwift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: today.bsmart.ios
         PRODUCT_NAME: BSmart
         PRODUCT_MODULE_NAME: BSmart
+        BSMART_GOOGLE_IOS_CLIENT_ID: 1063849277830-g10kodb6nu1s29k9sfi3ije6arfegckj.apps.googleusercontent.com
+        BSMART_GOOGLE_SERVER_CLIENT_ID: 1063849277830-6iqp8kf99tbmlhvfakh081f6no2gafuk.apps.googleusercontent.com
+        BSMART_GOOGLE_REVERSED_CLIENT_ID: com.googleusercontent.apps.1063849277830-g10kodb6nu1s29k9sfi3ije6arfegckj
+        BSMART_APPLE_SIGN_IN_ENABLED: "NO"
+        # This build is internal-only. Set NO before public distribution.
+        BSMART_INTERNAL_OPTIONAL_WALLET_BACKUP: "YES"
+        BSMART_SUPABASE_URL: https://dzyitinagewdfkzjkuiz.supabase.co
         MARKETING_VERSION: 1.0
-        CURRENT_PROJECT_VERSION: 5
+        CURRENT_PROJECT_VERSION: 6
         APS_ENVIRONMENT: development
         BSMART_ENDPOINT_URL: https://api.bsmart.today
         BSMART_DATA_ENVIRONMENT: production

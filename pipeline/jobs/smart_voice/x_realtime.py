@@ -6,6 +6,7 @@ from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any, Callable
 
+from ...domain.opinions.supporting_sources import enrich_collection
 from ...domain.smart_voice.realtime_x import RealtimePostInput, RealtimeXAnalyzer
 from ...platforms.x.realtime.normalizer import normalize_delivery
 from ...platforms.x.realtime.provider import TweetProvider
@@ -350,6 +351,7 @@ class XRealtimeJobs:
         limit: int = 500,
     ) -> int:
         updates = self.repository.ready_updates(days=days, limit=limit)
+        updates = enrich_collection("smart-account-updates", updates)
         publisher({"smart-account-updates": updates}, "x-realtime-v1")
         return len(updates)
 

@@ -29,6 +29,8 @@ final class AppModel: ObservableObject {
     @Published private(set) var intelligence: [TickerIntelligence] = []
     @Published private(set) var smartAccounts: [SmartAccountProfile] = []
     @Published private(set) var smartAccountEvidenceByAuthor: [String: [SmartAccountUpdate]] = [:]
+    private var accountEvidenceRequests: [String: UUID] = [:]
+    private var lastAccountEvidenceRefreshAt: Date?
     @Published private(set) var loadingSmartAccountEvidenceIDs: Set<String> = []
     @Published private(set) var smartMoney: [SmartMoneySignal] = []
     @Published private(set) var smartMoneyEvidenceByAccount: [String: [SmartMoneyRepresentativeEvidence]] = [:]
@@ -51,6 +53,15 @@ final class AppModel: ObservableObject {
     let isUsingDemoData: Bool
 
     private let client: BSmartAPIClient
+    func fetchTradeFeed(offset: Int, profileID: UUID? = nil) async throws -> TradeFeedPage {
+        try await client.fetchTradeFeed(offset: offset, profileID: profileID)
+    }
+    func fetchPublicTrader(profileID: UUID) async throws -> FeedPublicProfile {
+        try await client.fetchPublicTrader(profileID: profileID)
+    }
+    func fetchOpinionTraders(opinionID: UUID, offset: Int) async throws -> OpinionTradersPage {
+        try await client.fetchOpinionTraders(opinionID: opinionID, offset: offset)
+    }
     private let bootstrapFallbackClient: BSmartAPIClient?
     private let directMrCollieClient: DirectMrCollieAnswering?
     private let syncCoordinator: BSmartSyncCoordinator?
@@ -64,6 +75,8 @@ final class AppModel: ObservableObject {
     private let followedSmartAccountsKey = "bsmart.followed-smart-accounts.v1"
     private let followedSmartMoneyKey = "bsmart.followed-smart-money.v1"
     private let linkedBrokerageAccountsKey = "bsmart.linked-brokerages.v1"
+    private let valuationHistoryKey = "bsmart.portfolio-valuations.v1"
+    private var remotePortfolioContext: String?
     private var hasLoaded = false
 
     init(
@@ -287,11 +300,13 @@ final class AppModel: ObservableObject {
         async let loadedDigest = fetchDailyDigestIfAvailable(from: source)
 
         let remotePortfolio = try await loadedPortfolio
+        remotePortfolioContext = PortfolioValuationHistory.context(for: remotePortfolio)
         positions = localPortfolio
             ?? (portfolioBootstrapStrategy == .remoteFallback ? remotePortfolio : [])
         hasCompletedPortfolioSetup = defaults.bool(forKey: completedPortfolioSetupKey)
             || !positions.isEmpty
-        portfolioHistory = (await loadedPortfolioHistory).sorted { $0.timestamp < $1.timestamp }
+        let history = await loadedPortfolioHistory
+        portfolioHistory = PortfolioValuationHistory.context(for: positions) == remotePortfolioContext ? history : []
         signals = (try await loadedSignals).sorted { $0.occurredAt > $1.occurredAt }
         smartAccountUpdates = (try await loadedAccountUpdates).sorted { $0.publishedAt > $1.publishedAt }
         smartMoneyMovements = (try await loadedMoneyMovements).sorted { $0.observedAt > $1.observedAt }
@@ -325,25 +340,45 @@ final class AppModel: ObservableObject {
             async let loadedMoneyMovements = client.fetchSmartMoneyMovements()
             async let loadedIntelligence = client.fetchTickerIntelligence()
             async let loadedMoney = client.fetchSmartMoney()
+            async let loadedAccounts = client.fetchSmartAccounts()
 
             let refreshed = try await (
                 loadedSignals,
                 loadedAccountUpdates,
                 loadedMoneyMovements,
                 loadedIntelligence,
-                loadedMoney
+                loadedMoney,
+                loadedAccounts
             )
+            let accountsChanged = Set(smartAccounts) != Set(refreshed.5)
+                || Set(smartAccountUpdates) != Set(refreshed.1)
             signals = refreshed.0.sorted { $0.occurredAt > $1.occurredAt }
             smartAccountUpdates = refreshed.1.sorted { $0.publishedAt > $1.publishedAt }
             smartMoneyMovements = refreshed.2.sorted { $0.observedAt > $1.observedAt }
             intelligence = refreshed.3.sorted { $0.ticker < $1.ticker }
             smartMoney = refreshed.4.sorted { $0.changedAt > $1.changedAt }
-            portfolioHistory = (await loadedPortfolioHistory).sorted { $0.timestamp < $1.timestamp }
+            smartAccounts = refreshed.5.sorted { $0.score > $1.score }
+            let history = await loadedPortfolioHistory
+            if PortfolioValuationHistory.context(for: positions) == remotePortfolioContext {
+                portfolioHistory = history
+            }
             refreshSourceFreshness()
             refreshCurrentPrices()
             lastDataRefreshAt = resolvedLatestDataAsOf()
             errorMessage = nil
             persistClientCache()
+            // A newly published ranking may also change historical representative works.
+            if accountsChanged || lastAccountEvidenceRefreshAt.map({ Date().timeIntervalSince($0) >= 300 }) != false {
+                lastAccountEvidenceRefreshAt = Date()
+                let activeIDs = Set(smartAccounts.map(\.id))
+                smartAccountEvidenceByAuthor = smartAccountEvidenceByAuthor.filter { activeIDs.contains($0.key) }
+                accountEvidenceRequests = accountEvidenceRequests.filter { activeIDs.contains($0.key) }
+                loadingSmartAccountEvidenceIDs.formIntersection(activeIDs)
+                for account in smartAccounts where smartAccountEvidenceByAuthor[account.id] != nil
+                    || loadingSmartAccountEvidenceIDs.contains(account.id) {
+                    await loadSmartAccountEvidence(for: account, refresh: true)
+                }
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -394,6 +429,7 @@ final class AppModel: ObservableObject {
 
         let existingIndex = id.flatMap { entryId in positions.firstIndex { $0.id == entryId } }
             ?? positions.firstIndex { $0.ticker == normalizedTicker }
+        let changesHoldings = kind == .position || existingIndex.map { positions[$0].isPosition } == true
         let normalizedCompanyName = companyName.trimmingCharacters(in: .whitespacesAndNewlines)
         let knownCompanyName = intelligence.first { $0.ticker == normalizedTicker }?.companyName
         let knownPrice = intelligence.first { $0.ticker == normalizedTicker }?.currentPrice
@@ -416,10 +452,27 @@ final class AppModel: ObservableObject {
         } else {
             positions.append(position)
         }
-        portfolioHistory = []
+        if changesHoldings { portfolioHistory = [] }
         persistPortfolio()
         enqueuePortfolioUpsert(position)
         return true
+    }
+
+    /// Holdings are already tracked; following must never overwrite their cost or quantity.
+    func setTickerFollowed(_ followed: Bool, ticker: String, companyName: String) {
+        let symbol = ticker.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        guard !symbol.isEmpty else { return }
+        let existing = position(for: symbol)
+        guard existing?.isPosition != true else { return }
+        if followed {
+            guard existing == nil else { return }
+            _ = savePortfolioEntry(id: nil, ticker: symbol, companyName: companyName,
+                                   kind: .watchlist, shares: nil, averageCost: nil, portfolioWeight: nil)
+        } else if let existing {
+            positions.removeAll { $0.id == existing.id }
+            persistPortfolio()
+            enqueuePortfolioDelete(existing.id)
+        }
     }
 
     func deletePositions(at offsets: IndexSet) {
@@ -458,6 +511,7 @@ final class AppModel: ObservableObject {
             followedSmartMoneyKey,
             linkedBrokerageAccountsKey
         ].forEach(defaults.removeObject(forKey:))
+        defaults.removeObject(forKey: valuationHistoryKey)
 
         await syncCoordinator?.clearPendingOperations()
     }
@@ -731,25 +785,38 @@ final class AppModel: ObservableObject {
         loadingSmartAccountEvidenceIDs.contains(account.id)
     }
 
-    func loadSmartAccountEvidence(for account: SmartAccountProfile) async {
-        guard smartAccountEvidenceByAuthor[account.id] == nil,
-              !loadingSmartAccountEvidenceIDs.contains(account.id)
-        else { return }
+    func loadSmartAccountEvidence(for account: SmartAccountProfile, refresh: Bool = false) async {
+        if !refresh {
+            guard smartAccountEvidenceByAuthor[account.id] == nil,
+                  !loadingSmartAccountEvidenceIDs.contains(account.id) else { return }
+        }
+
+        let requestID = UUID()
+        accountEvidenceRequests[account.id] = requestID
 
         loadingSmartAccountEvidenceIDs.insert(account.id)
-        defer { loadingSmartAccountEvidenceIDs.remove(account.id) }
+        defer {
+            if accountEvidenceRequests[account.id] == requestID {
+                loadingSmartAccountEvidenceIDs.remove(account.id)
+                accountEvidenceRequests.removeValue(forKey: account.id)
+            }
+        }
         do {
             var evidence = try await client.fetchSmartAccountEvidence(accountID: account.id)
-            if evidence.isEmpty, let bootstrapFallbackClient {
+            if evidence.isEmpty, isUsingDemoData, !refresh, let bootstrapFallbackClient {
                 evidence = try await bootstrapFallbackClient.fetchSmartAccountEvidence(accountID: account.id)
             }
+            guard accountEvidenceRequests[account.id] == requestID else { return }
             smartAccountEvidenceByAuthor[account.id] = evidence.sorted { $0.publishedAt > $1.publishedAt }
         } catch {
+            guard !Task.isCancelled, !refresh, accountEvidenceRequests[account.id] == requestID else { return }
             let bundledEvidence = try? await bootstrapFallbackClient?.fetchSmartAccountEvidence(
                 accountID: account.id
             )
-            smartAccountEvidenceByAuthor[account.id] = (bundledEvidence ?? accountUpdates(for: account))
-                .sorted { $0.publishedAt > $1.publishedAt }
+            // A transport failure is not evidence of an empty history. Permit a later retry.
+            if let bundledEvidence, !bundledEvidence.isEmpty, accountEvidenceRequests[account.id] == requestID {
+                smartAccountEvidenceByAuthor[account.id] = bundledEvidence.sorted { $0.publishedAt > $1.publishedAt }
+            }
         }
     }
 
@@ -859,6 +926,25 @@ final class AppModel: ObservableObject {
     private func persistPortfolio() {
         guard let data = try? JSONEncoder().encode(positions) else { return }
         defaults.set(data, forKey: savedPortfolioKey)
+        recordPortfolioValuation()
+    }
+
+    private func recordPortfolioValuation() {
+        let context = PortfolioValuationHistory.context(for: positions)
+        let saved = defaults.data(forKey: valuationHistoryKey).flatMap {
+            try? JSONDecoder().decode(PortfolioValuationHistory.self, from: $0)
+        }
+        let prior = saved?.context == context ? saved?.points ?? [] : []
+        // Server history belongs to its portfolio, never to a user's different manual basket.
+        let imported = context == remotePortfolioContext ? portfolioHistory : []
+        let now = Date()
+        let combined = PortfolioValuationHistory.normalized(imported + prior, now: now)
+        let values = hasCompletePortfolioValuation
+            ? PortfolioValuationHistory.recording(portfolioValue, at: now, in: combined)
+            : combined
+        portfolioHistory = values
+        let snapshot = PortfolioValuationHistory(context: context, points: values)
+        if let data = try? JSONEncoder().encode(snapshot) { defaults.set(data, forKey: valuationHistoryKey) }
     }
 
     private func restoredPortfolio() -> [PortfolioPosition]? {

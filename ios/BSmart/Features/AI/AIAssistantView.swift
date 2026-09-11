@@ -30,6 +30,7 @@ private struct AIAssistantChatMessage: Identifiable {
 }
 
 struct AIAssistantView: View {
+    var onClose: (() -> Void)? = nil
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var language: AppLanguageStore
     @State private var query = ""
@@ -38,15 +39,12 @@ struct AIAssistantView: View {
     @State private var generationTask: Task<Void, Never>?
     @FocusState private var isComposerFocused: Bool
 
-    private let floatingTabBarClearance: CGFloat = 82
-
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 chatHeader
                 messageTimeline
                 composer
-                    .padding(.bottom, isComposerFocused ? 0 : floatingTabBarClearance)
             }
             .background(BSmartColor.ink)
             .toolbar(.hidden, for: .navigationBar)
@@ -69,6 +67,16 @@ struct AIAssistantView: View {
 
     private var chatHeader: some View {
         HStack(spacing: BSmartSpacing.medium) {
+            if let onClose {
+                Button(action: onClose) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 18, weight: .semibold))
+                        .frame(width: 44, height: 44)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Back".bSmartLocalized)
+                .accessibilityIdentifier("ai.back")
+            }
             collieAvatar(size: 42)
                 .overlay(alignment: .bottomTrailing) {
                     Circle()
@@ -116,8 +124,7 @@ struct AIAssistantView: View {
         .overlay(alignment: .bottom) {
             Rectangle().fill(BSmartColor.line).frame(height: 0.5)
         }
-        .contentShape(Rectangle())
-        .onTapGesture(perform: dismissKeyboard)
+        .accessibilityElement(children: .contain)
     }
 
     private var messageTimeline: some View {
@@ -244,7 +251,7 @@ struct AIAssistantView: View {
                 Spacer(minLength: 52)
                 Text(message.text ?? "")
                     .font(.subheadline)
-                    .foregroundStyle(BSmartColor.pulseInk)
+                    .foregroundStyle(BSmartColor.onAccent)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, BSmartSpacing.medium)
                     .padding(.vertical, 11)
@@ -467,7 +474,7 @@ struct AIAssistantView: View {
             Button(action: submitQuery) {
                 Image(systemName: "arrow.up")
                     .font(.subheadline.weight(.black))
-                    .foregroundStyle(canSubmit ? BSmartColor.pulseInk : BSmartColor.tertiaryText)
+                    .foregroundStyle(canSubmit ? BSmartColor.onAccent : BSmartColor.tertiaryText)
                     .frame(width: 36, height: 36)
                     .background(canSubmit ? BSmartColor.pulse : BSmartColor.recessed)
                     .clipShape(Circle())
@@ -640,7 +647,7 @@ private extension View {
 
     func chatActionStyle() -> some View {
         font(.caption.weight(.bold))
-            .foregroundStyle(BSmartColor.pulseInk)
+            .foregroundStyle(BSmartColor.onAccent)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 9)
             .background(BSmartColor.pulse)

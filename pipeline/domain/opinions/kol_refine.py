@@ -21,7 +21,7 @@ import os
 
 from sqlalchemy import bindparam, text
 
-from ...common import deepseek, gemini, llm
+from ...common import deepseek, gemini, kimi, llm
 from ...common.config import settings
 from ...common.db import engine, session_scope
 from ...common.models import KolRefined
@@ -59,12 +59,14 @@ def _provider_order() -> list[str]:
     order: list[str] = []
     for provider in raw.split(","):
         name = provider.strip().lower()
-        if name in {"qwen", "deepseek", "gemini"} and name not in order:
+        if name in {"qwen", "deepseek", "gemini", "kimi"} and name not in order:
             order.append(name)
     return order or ["qwen", "deepseek", "gemini"]
 
 
 def _provider_available(provider: str) -> bool:
+    if provider == "kimi":
+        return kimi.available()
     if provider == "qwen":
         return llm.available(llm.LOW)
     if provider == "deepseek":
@@ -75,6 +77,8 @@ def _provider_available(provider: str) -> bool:
 
 
 def _provider_label(provider: str) -> str:
+    if provider == "kimi":
+        return kimi.model_label()
     if provider == "qwen":
         return llm.model_label(llm.LOW)
     if provider == "deepseek":
@@ -86,6 +90,8 @@ def _provider_label(provider: str) -> str:
 
 def _messages_json_with(provider: str, user: str) -> dict | None:
     try:
+        if provider == "kimi":
+            return kimi.messages_json(SYSTEM, user, max_tokens=800)
         if provider == "qwen":
             return llm.messages_json(llm.LOW, SYSTEM, user, max_tokens=800)
         if provider == "deepseek":
@@ -206,8 +212,25 @@ def _load(source: str, per_source: int, only: set[str] | None, since_days: int) 
         """
     else:
         return []
+    params = {}
+    statement = text(sql)
+    if source == "x":
+        # Apply the existing display scope before loading potentially millions
+        # of raw posts. Top-N bucketing still happens after date/ticker filters.
+        clauses = []
+        if only:
+            clauses.append("upper(ticker) IN :tickers")
+            params["tickers"] = sorted(only)
+        if since_days > 0:
+            clauses.append("created >= :cutoff")
+            params["cutoff"] = (dt.date.today() - dt.timedelta(days=since_days)).isoformat()
+        if clauses:
+            sql = sql.replace("ORDER BY ticker, metric DESC", "WHERE " + " AND ".join(clauses) + " ORDER BY ticker, metric DESC")
+            statement = text(sql)
+            if only:
+                statement = statement.bindparams(bindparam("tickers", expanding=True))
     with session_scope() as s:
-        rows = [dict(r._mapping) for r in s.execute(text(sql))]
+        rows = [dict(r._mapping) for r in s.execute(statement, params)]
     if only:
         rows = [r for r in rows if (r["ticker"] or "").upper() in only]
     if since_days > 0:  # 只留近 N 天（匹配前端展示窗口）→ top-N 在窗口内取，预算不浪费在旧帖
@@ -222,8 +245,9 @@ def _load(source: str, per_source: int, only: set[str] | None, since_days: int) 
     return [r for r in rows if len(r["txt"]) >= 8]
 
 
-def _existing_keys(sources: list[str]) -> set[tuple[str, str, str]]:
-    stmt = text("SELECT source, item_id, ticker FROM kol_refined WHERE source IN :ss").bindparams(
+def _existing_keys(sources: list[str], *, complete: bool = False) -> set[tuple[str, str, str]]:
+    extra = " AND TRIM(COALESCE(reason_zh,''))<>'' AND TRIM(COALESCE(reason_en,''))<>''" if complete else ""
+    stmt = text("SELECT source, item_id, ticker FROM kol_refined WHERE source IN :ss" + extra).bindparams(
         bindparam("ss", expanding=True)
     )
     with session_scope() as s:
@@ -235,8 +259,10 @@ def _existing_keys(sources: list[str]) -> set[tuple[str, str, str]]:
 
 def refine(sources: list[str] | None = None, per_source: int = DEFAULT_PER_SOURCE,
            only: list[str] | None = None, force: bool = False, workers: int = 6,
-           since_days: int = DEFAULT_SINCE_DAYS) -> int:
-    _ensure_table()
+           since_days: int = DEFAULT_SINCE_DAYS, *, rows: list[dict] | None = None,
+           initialize_schema: bool = True) -> int:
+    if initialize_schema:
+        _ensure_table()
     providers = [provider for provider in _provider_order() if _provider_available(provider)]
     if not providers:
         print("[kol-refine] 无可用 provider(Qwen/DeepSeek/Gemini)，跳过。", flush=True)
@@ -244,11 +270,12 @@ def refine(sources: list[str] | None = None, per_source: int = DEFAULT_PER_SOURC
     srcs = [s for s in (sources or list(TEXT_SOURCES)) if s in TEXT_SOURCES]
     only_set = {t.strip().upper() for t in only} if only else None
 
-    plan: list[dict] = []
-    for src in srcs:
-        plan += _load(src, per_source, only_set, since_days)
+    plan: list[dict] = list(rows) if rows is not None else []
+    if rows is None:
+        for src in srcs:
+            plan += _load(src, per_source, only_set, since_days)
     if not force:
-        have = _existing_keys(srcs)
+        have = _existing_keys(srcs, complete=rows is not None)
         plan = [r for r in plan
                 if (r["source"], str(r["item_id"]), (r["ticker"] or "").upper()) not in have]
 

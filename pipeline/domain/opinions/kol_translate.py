@@ -24,7 +24,7 @@ import re
 
 from sqlalchemy import bindparam, text, update
 
-from ...common import deepseek, gemini, llm
+from ...common import deepseek, gemini, kimi, llm
 from ...common.config import settings
 from ...common.db import engine, session_scope
 from ...common.models import KolRefined
@@ -86,12 +86,14 @@ def _provider_order() -> list[str]:
     order: list[str] = []
     for p in raw.split(","):
         name = p.strip().lower()
-        if name in {"qwen", "deepseek", "gemini"} and name not in order:
+        if name in {"qwen", "deepseek", "gemini", "kimi"} and name not in order:
             order.append(name)
     return order or ["qwen", "deepseek", "gemini"]
 
 
 def _provider_available(provider: str) -> bool:
+    if provider == "kimi":
+        return kimi.available()
     if provider == "qwen":
         return llm.available(llm.LOW)
     if provider == "deepseek":
@@ -102,6 +104,8 @@ def _provider_available(provider: str) -> bool:
 
 
 def _provider_label(provider: str) -> str:
+    if provider == "kimi":
+        return kimi.model_label()
     if provider == "qwen":
         return llm.model_label(llm.LOW)
     if provider == "deepseek":
@@ -115,6 +119,8 @@ def _messages_json_with(provider: str, system: str, user: str, *, max_tokens: in
     if not _provider_available(provider):
         return None
     try:
+        if provider == "kimi":
+            return kimi.messages_json(system, user, max_tokens=max_tokens)
         if provider == "qwen":
             return llm.messages_json(llm.LOW, system, user, max_tokens=max_tokens)
         if provider == "deepseek":
@@ -130,6 +136,8 @@ def _chat_with(provider: str, system: str, user: str, *, max_tokens: int, temper
     if not _provider_available(provider):
         return ""
     try:
+        if provider == "kimi":
+            return kimi.chat(system, user, max_tokens=max_tokens)
         if provider == "qwen":
             return llm.chat(llm.LOW, system, user, max_tokens=max_tokens, temperature=temperature)
         if provider == "deepseek":
@@ -153,7 +161,8 @@ def _chat_with(provider: str, system: str, user: str, *, max_tokens: int, temper
     return ""
 
 
-def _refined_state(sources: list[str], only: set[str] | None) -> dict[tuple[str, str, str], bool]:
+def _refined_state(sources: list[str], only: set[str] | None,
+                   originals: dict[tuple[str, str, str], str] | None = None) -> dict[tuple[str, str, str], bool]:
     """已在 kol_refined(=已展示)的键 → 是否已译。只译已提炼项，避免浪费在不展示的帖上。"""
     stmt = text(
         "SELECT source, item_id, ticker, COALESCE(trans_zh,'') AS tz, COALESCE(trans_en,'') AS te "
@@ -166,9 +175,13 @@ def _refined_state(sources: list[str], only: set[str] | None) -> dict[tuple[str,
         tk = str(r[2])
         if only and tk.upper() not in only:
             continue
-        out[(r[0], str(r[1]), tk.upper())] = bool(
+        key = (r[0], str(r[1]), tk.upper())
+        out[key] = bool(
             str(r[3] or "").strip() and str(r[4] or "").strip()
         )
+        if originals is not None and key in originals:
+            from .translation_completeness import validate_translation
+            out[key] = validate_translation(originals[key], {"zh": str(r[3] or ""), "en": str(r[4] or "")})
     return out
 
 
@@ -214,8 +227,10 @@ def _write_translations(items: list[tuple[dict, dict]]) -> int:
 
 def translate(sources: list[str] | None = None, per_source: int = DEFAULT_PER_SOURCE,
               only: list[str] | None = None, force: bool = False, workers: int = 6,
-              since_days: int = DEFAULT_SINCE_DAYS) -> int:
-    _ensure_table()
+              since_days: int = DEFAULT_SINCE_DAYS, *, rows: list[dict] | None = None,
+              initialize_schema: bool = True, complete_text: bool = False) -> int:
+    if initialize_schema:
+        _ensure_table()
     providers = [p for p in _provider_order() if _provider_available(p)]
     if not providers:
         print("[kol-translate] 无可用翻译 provider(Qwen/DeepSeek/Gemini)，跳过。", flush=True)
@@ -223,18 +238,25 @@ def translate(sources: list[str] | None = None, per_source: int = DEFAULT_PER_SO
     srcs = [s for s in (sources or list(TEXT_SOURCES)) if s in TEXT_SOURCES]
     only_set = {t.strip().upper() for t in only} if only else None
 
-    have = _refined_state(srcs, only_set)  # 已展示项 → 是否已译
+    originals = {(r["source"], str(r["item_id"]), r["ticker"].upper()): r["txt"] for r in rows} if complete_text and rows is not None else None
+    have = _refined_state(srcs, only_set, originals)  # 已展示项 → 是否已译
     known_by_item = {} if force else _translation_by_item(srcs)
     reusable: list[tuple[dict, dict]] = []
     grouped: dict[tuple[str, str], dict] = {}
     for src in srcs:
-        for r in _load(src, per_source, only_set, since_days):
+        for r in ([r for r in rows if r["source"] == src] if rows is not None
+                  else _load(src, per_source, only_set, since_days)):
             key = (r["source"], str(r["item_id"]), (r["ticker"] or "").upper())
+            item_key = (r["source"], str(r["item_id"]))
+            if complete_text and item_key in known_by_item:
+                from .translation_completeness import validate_translation
+                if not validate_translation(r["txt"], known_by_item[item_key]):
+                    known_by_item.pop(item_key)
+                    have[key] = False
             if key not in have:          # 只译已被提炼/展示的原帖
                 continue
             if not force and have[key]:  # 已译 → 增量跳过
                 continue
-            item_key = (r["source"], str(r["item_id"]))
             ticker = (r["ticker"] or "").upper()
             if item_key in known_by_item:
                 copy = dict(r)
@@ -271,6 +293,16 @@ def translate(sources: list[str] | None = None, per_source: int = DEFAULT_PER_SO
 
     def _work(r: dict) -> tuple[dict, dict | None]:
         src = str(r["txt"] or "").strip()
+        if complete_text:
+            # Daily publication must never silently truncate a long source post.
+            for provider in providers:
+                data = _messages_json_with(provider, TRANS_SYSTEM, src, max_tokens=16000)
+                if isinstance(data, dict) and all(isinstance(data.get(k), str) and data[k].strip() for k in ("zh", "en")):
+                    from .translation_completeness import validate_translation
+                    norm = {key: data[key].strip() for key in ("zh", "en")}
+                    if validate_translation(src, norm):
+                        return r, norm
+            return r, None
         user_full = f"把下面这条帖子原文完整翻译成中文和英文(不要压缩)：\n\n{src[:2000]}"
         for provider in providers:
             norm = _norm(_messages_json_with(provider, TRANS_SYSTEM, user_full, max_tokens=2000))

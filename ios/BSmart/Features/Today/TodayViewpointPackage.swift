@@ -26,8 +26,28 @@ struct TodayViewpointPackage: Identifiable, Hashable {
         Array(rankedUpdates.prefix(3))
     }
 
+    var latestPreviewAuthors: [SmartAccountUpdate] {
+        Array(updates.sorted {
+            if $0.publishedAt != $1.publishedAt { return $0.publishedAt > $1.publishedAt }
+            if $0.score != $1.score { return $0.score > $1.score }
+            return $0.id.uuidString < $1.id.uuidString
+        }.prefix(3))
+    }
+
     var latestAt: Date {
         updates.map(\.publishedAt).max() ?? .distantPast
+    }
+
+    var previewUpdate: SmartAccountUpdate? {
+        let highRanked = updates.filter {
+            let percentile = $0.platformPercentile > 1 ? $0.platformPercentile / 100 : $0.platformPercentile
+            return percentile.isFinite && percentile >= 0 && percentile <= 0.25
+        }
+        return highRanked.sorted {
+            if $0.publishedAt != $1.publishedAt { return $0.publishedAt > $1.publishedAt }
+            if $0.score != $1.score { return $0.score > $1.score }
+            return $0.id.uuidString < $1.id.uuidString
+        }.first ?? rankedUpdates.first
     }
 
     var dominantDirection: SignalDirection {
@@ -42,68 +62,23 @@ struct TodayViewpointPackage: Identifiable, Hashable {
     var bearishCount: Int { updates.filter { $0.direction == .bearish }.count }
     var neutralCount: Int { updates.count - bullishCount - bearishCount }
 
+    var headlineUpdates: [SmartAccountUpdate] {
+        let ordered = updates.sorted {
+            if $0.publishedAt != $1.publishedAt { return $0.publishedAt > $1.publishedAt }
+            return $0.id.uuidString < $1.id.uuidString
+        }
+        guard let first = ordered.first else { return [] }
+        let other = ordered.dropFirst().first { $0.direction != first.direction }
+            ?? ordered.dropFirst().first
+        return [first] + (other.map { [$0] } ?? [])
+    }
+
+    var sourceHeadlines: [TodaySourceHeadline] {
+        headlineUpdates.map(TodaySourceHeadline.account)
+    }
+
     var localizedHeadline: String {
-        if bullishCount > 0, bearishCount > 0 {
-            if BSmartLocalization.isSimplifiedChinese {
-                return "\(ticker) 核心判断分化：\(bullishCount) 位看多，\(bearishCount) 位看空"
-            }
-            return "The \(ticker) thesis is split: \(bullishCount) bullish, \(bearishCount) bearish"
-        }
-
-        let direction = dominantDirection.label.bSmartLocalized
-        let reason = concisePackageText(localizedText(for: representativeUpdate), limit: 46)
-        if BSmartLocalization.isSimplifiedChinese {
-            return "\(accountCount) 位 Smart Account \(direction) \(ticker)：\(reason)"
-        }
-        return "\(accountCount) Smart Accounts are \(direction.lowercased()) on \(ticker): \(reason)"
-    }
-
-    var localizedSummary: String {
-        let reason = concisePackageText(localizedText(for: representativeUpdate), limit: 104)
-        if BSmartLocalization.isSimplifiedChinese {
-            return "汇总最近 \(updates.count) 条高分观点。共同关注点是：\(reason)"
-        }
-        return "A synthesis of \(updates.count) recent high-ranked views. The shared focus: \(reason)"
-    }
-
-    var localizedCommonThread: String {
-        let reason = concisePackageText(localizedText(for: representativeUpdate), limit: 150)
-        if BSmartLocalization.isSimplifiedChinese {
-            return "多数观点围绕同一核心判断展开：\(reason)"
-        }
-        return "Most views build around the same central thesis: \(reason)"
-    }
-
-    var localizedDifference: String {
-        let directions = Set(updates.map(\.direction))
-        if directions.count > 1 {
-            if BSmartLocalization.isSimplifiedChinese {
-                return "方向尚未形成一致判断：\(bullishCount) 条看多、\(bearishCount) 条看空、\(neutralCount) 条中性或混合。"
-            }
-            return "Direction remains contested: \(bullishCount) bullish, \(bearishCount) bearish and \(neutralCount) neutral or mixed."
-        }
-
-        let horizons = Array(Set(updates.map(\.horizon).filter(isSpecifiedPackageHorizon))).sorted()
-        if horizons.count > 1 {
-            if BSmartLocalization.isSimplifiedChinese {
-                return "方向一致，但操作周期不同，覆盖 \(horizons.joined(separator: "、"))。"
-            }
-            return "Direction is aligned, but the stated horizons range across \(horizons.joined(separator: ", "))."
-        }
-
-        let targets = updates.compactMap(\.targetPrice)
-        if targets.count > 1, let low = targets.min(), let high = targets.max(), low != high {
-            let range = "\(packageCurrency(low))–\(packageCurrency(high))"
-            if BSmartLocalization.isSimplifiedChinese {
-                return "方向一致，但目标价与确认条件不同；已明确的目标区间为 \(range)。"
-            }
-            return "Direction is aligned, but target levels and confirmation conditions differ. Stated targets span \(range)."
-        }
-
-        if BSmartLocalization.isSimplifiedChinese {
-            return "方向和周期较为一致，差异主要在入场位置、确认条件与失效条件。"
-        }
-        return "Direction and horizon are broadly aligned; differences center on entry, confirmation and invalidation levels."
+        ticker + " · " + sourceHeadlines.map(\.text).joined(separator: " / ")
     }
 
     var representativeUpdate: SmartAccountUpdate {
@@ -154,14 +129,37 @@ struct TodayViewpointPackage: Identifiable, Hashable {
     }
 }
 
+struct TodayViewpointPage: Identifiable {
+    let index: Int
+    let packages: [TodayViewpointPackage]
+    var id: String { packages[0].id }
+
+    static func pages(from packages: [TodayViewpointPackage]) -> [Self] {
+        stride(from: 0, to: packages.count, by: 2).map { start in
+            Self(index: start / 2, packages: Array(packages[start..<min(start + 2, packages.count)]))
+        }
+    }
+}
+
+private enum TodayViewpointCardMetrics {
+    static let stackedHeight = 232.0
+    static let rowSpacing = 12.0
+}
+
 struct TodayViewpointPackageRail: View {
     let packages: [TodayViewpointPackage]
     @Namespace private var consensusTransition
-    @State private var visiblePackageID: String?
+    @State private var visiblePageID: String?
+    @ScaledMetric(relativeTo: .body) private var cardHeight = TodayViewpointCardMetrics.stackedHeight
+
+    private var pages: [TodayViewpointPage] { TodayViewpointPage.pages(from: packages) }
+    private var pageHeight: CGFloat {
+        cardHeight * CGFloat(min(packages.count, 2)) + (packages.count > 1 ? TodayViewpointCardMetrics.rowSpacing : 0)
+    }
 
     private var selectedIndex: Int {
-        guard let visiblePackageID,
-              let index = packages.firstIndex(where: { $0.id == visiblePackageID })
+        guard let visiblePageID,
+              let index = pages.firstIndex(where: { $0.id == visiblePageID })
         else { return 0 }
         return index
     }
@@ -169,118 +167,105 @@ struct TodayViewpointPackageRail: View {
     var body: some View {
         VStack(spacing: BSmartSpacing.medium) {
             ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: BSmartSpacing.medium) {
-                    ForEach(Array(packages.enumerated()), id: \.element.id) { index, package in
-                        NavigationLink {
-                            TodayViewpointPackageDetailView(package: package, style: index % 2)
-                                .bSmartZoomNavigationTransition(
-                                    sourceID: package.id,
-                                    in: consensusTransition
-                                )
-                        } label: {
-                            TodayViewpointPackageCard(package: package, style: index % 2)
-                                .bSmartMatchedTransitionSource(
-                                    id: package.id,
-                                    in: consensusTransition
-                                )
+                LazyHStack(alignment: .top, spacing: 12) {
+                    ForEach(pages) { page in
+                        VStack(spacing: TodayViewpointCardMetrics.rowSpacing) {
+                            ForEach(Array(page.packages.enumerated()), id: \.element.id) { row, package in
+                                NavigationLink {
+                                    TodayViewpointPackageDetailView(package: package, style: row % 2)
+                                        .bSmartZoomNavigationTransition(sourceID: package.id, in: consensusTransition)
+                                } label: {
+                                    TodayViewpointPackageCard(package: package, style: row % 2, width: nil, isStacked: true)
+                                        .bSmartMatchedTransitionSource(id: package.id, in: consensusTransition)
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityIdentifier("today.viewpoint-package.\(package.ticker.lowercased())")
+                            }
                         }
-                        .id(package.id)
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("today.viewpoint-package.\(package.ticker.lowercased())")
+                        .frame(height: pageHeight, alignment: .top)
+                        .containerRelativeFrame(.horizontal) { width, _ in max(0, width - 20) }
+                        .accessibilityElement(children: .contain)
+                        .accessibilityIdentifier("today.viewpoint-page.\(page.index)")
+                        .id(page.id)
                     }
                 }
                 .scrollTargetLayout()
-                .padding(.trailing, BSmartSpacing.large)
+                .padding(.trailing, 20)
             }
-            .scrollTargetBehavior(.viewAligned)
-            .scrollPosition(id: $visiblePackageID)
+            .frame(height: pageHeight)
+            .scrollTargetBehavior(.viewAligned(limitBehavior: .always))
+            .scrollPosition(id: $visiblePageID)
+            .accessibilityIdentifier("today.viewpoint-pages")
 
-            TodayCarouselProgress(count: packages.count, selectedIndex: selectedIndex)
+            TodayCarouselProgress(count: pages.count, selectedIndex: selectedIndex)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Trending Tickers".bSmartLocalized)
+                .accessibilityValue("\(selectedIndex + 1)/\(pages.count)")
+                .accessibilityIdentifier("today.viewpoint-page-progress")
         }
         .onAppear {
-            if visiblePackageID == nil { visiblePackageID = packages.first?.id }
+            if visiblePageID == nil { visiblePageID = pages.first?.id }
         }
-        .onChange(of: packages.map(\.id)) { _, ids in
-            if visiblePackageID.map({ ids.contains($0) }) != true {
-                visiblePackageID = ids.first
+        .onChange(of: pages.map(\.id)) { _, ids in
+            if visiblePageID.map({ ids.contains($0) }) != true {
+                visiblePageID = ids.first
             }
         }
     }
 }
 
-private struct TodayViewpointPackageCard: View {
+struct TodayViewpointPackageCard: View {
     let package: TodayViewpointPackage
     let style: Int
+    var width: CGFloat? = 344
+    var isStacked = false
+    @ScaledMetric(relativeTo: .body) private var cardHeight = 264.0
+    @ScaledMetric(relativeTo: .body) private var stackedHeight = TodayViewpointCardMetrics.stackedHeight
+    @ScaledMetric(relativeTo: .body) private var summarySize = 18.0
+    @ScaledMetric(relativeTo: .body) private var stackedSummarySize = 17.0
 
     private var fill: Color {
         style == 0
-            ? Color(red: 233 / 255, green: 238 / 255, blue: 235 / 255)
-            : Color(red: 51 / 255, green: 47 / 255, blue: 82 / 255)
+            ? BSmartColor.consensusSurface
+            : BSmartColor.consensusAlternateSurface
     }
 
     private var foreground: Color {
-        style == 0 ? BSmartColor.pulseInk : .white
-    }
-
-    private var secondary: Color {
-        style == 0 ? BSmartColor.pulseInk.opacity(0.62) : BSmartColor.secondaryText
+        BSmartColor.pulseInk
     }
 
     private var bandFill: Color {
-        style == 0 ? BSmartColor.pulseInk.opacity(0.055) : Color.black.opacity(0.16)
+        BSmartColor.pulseInk.opacity(0.04)
     }
 
     private var rankAccent: Color {
-        style == 0
-            ? Color(red: 0 / 255, green: 104 / 255, blue: 78 / 255)
-            : BSmartColor.brand
+        Color(red: 0 / 255, green: 104 / 255, blue: 78 / 255)
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             identityBand
 
-            VStack(alignment: .leading, spacing: 0) {
-                HStack(alignment: .center, spacing: BSmartSpacing.small) {
-                    Text("SMART CONSENSUS".bSmartLocalized)
-                        .font(.system(size: 9, weight: .black))
-                        .tracking(0.7)
-                        .foregroundStyle(BSmartColor.brand)
+            if let update = package.previewUpdate {
+                VStack(alignment: .leading, spacing: isStacked ? 8 : 12) {
+                    Text(TodaySourceHeadline.account(update).text)
+                        .font(.system(size: isStacked ? stackedSummarySize : summarySize, weight: .semibold))
+                        .foregroundStyle(foreground)
+                        .multilineTextAlignment(.leading)
+                        .lineSpacing(2)
+                        .lineLimit(4)
+                        .truncationMode(.tail)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                        .accessibilityIdentifier("today.consensus-card.summary")
 
-                    Spacer(minLength: 4)
-
-                    Image(systemName: "arrow.up.right")
-                        .font(.caption2.weight(.black))
-                        .foregroundStyle(foreground.opacity(0.68))
+                    sourceFooter(update)
                 }
-
-                Text(package.localizedHeadline)
-                    .font(.system(size: 21, weight: .bold, design: .rounded))
-                    .foregroundStyle(foreground)
-                    .lineLimit(3)
-                    .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 8)
-
-                Text(package.localizedSummary)
-                    .font(.caption)
-                    .foregroundStyle(secondary)
-                    .lineLimit(3)
-                    .multilineTextAlignment(.leading)
-                    .padding(.top, 6)
-
-                HStack(spacing: BSmartSpacing.small) {
-                    PackageStanceBar(package: package, foreground: foreground)
-                    Text(package.latestAt.bSmartRelativeTimestamp)
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(secondary)
-                        .lineLimit(1)
-                }
-                .padding(.top, 12)
+                .padding(isStacked ? 14 : 16)
             }
-            .padding(BSmartSpacing.large)
         }
-        .frame(width: 344, height: 300, alignment: .topLeading)
+        .frame(width: width, alignment: .topLeading)
+        .frame(maxWidth: width == nil ? .infinity : nil, alignment: .topLeading)
+        .frame(height: isStacked ? stackedHeight : cardHeight, alignment: .topLeading)
         .background(fill)
         .clipShape(RoundedRectangle(cornerRadius: BSmartRadius.card, style: .continuous))
         .overlay {
@@ -290,40 +275,78 @@ private struct TodayViewpointPackageCard: View {
         .contentShape(RoundedRectangle(cornerRadius: BSmartRadius.card, style: .continuous))
     }
 
+    private func sourceFooter(_ update: SmartAccountUpdate) -> some View {
+        HStack(spacing: 10) {
+            ZStack(alignment: .bottomTrailing) {
+                BSmartAvatar(url: update.authorAvatarURL, name: update.authorName, size: 30,
+                             fallbackColor: update.direction.color)
+                SmartPlatformMark(platform: update.platform, size: 13)
+                    .offset(x: 3, y: 3)
+            }
+            .accessibilityLabel(update.authorName)
+            .accessibilityIdentifier("today.consensus-card.summary-author")
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(update.authorName)
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(foreground)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .accessibilityIdentifier("today.consensus-card.author-name")
+                Text(update.publishedAt.bSmartRelativeTimestamp)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(foreground.opacity(0.6))
+                    .lineLimit(1)
+                    .accessibilityIdentifier("today.consensus-card.published-at")
+            }
+
+            Spacer(minLength: 0)
+
+            Text(packageRank(update))
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundStyle(rankAccent)
+                .fixedSize()
+        }
+        .frame(height: 34)
+        .bSmartSubjectDestination(update)
+        .padding(.top, 10)
+        .overlay(alignment: .top) {
+            Rectangle().fill(foreground.opacity(0.12)).frame(height: 0.5)
+        }
+    }
+
     private var identityBand: some View {
         HStack(spacing: 10) {
             HStack(spacing: 8) {
                 BSmartAssetMark(ticker: package.ticker, size: 34)
+                    .bSmartTickerDestination(package.ticker)
                     .frame(width: 38, height: 38)
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(package.ticker)
-                        .font(.system(size: 16, weight: .black, design: .rounded))
-                        .foregroundStyle(foreground)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                    Text("%d views".bSmartLocalized(package.updates.count))
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(secondary)
-                        .lineLimit(1)
-                }
+                Text(package.ticker)
+                    .font(.system(size: 16, weight: .black, design: .rounded))
+                    .foregroundStyle(foreground)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
             .frame(width: 98, alignment: .leading)
 
-            HStack(spacing: 6) {
-                ForEach(Array(package.leadingUpdates.enumerated()), id: \.element.id) { index, update in
+            Spacer(minLength: 8)
+
+            HStack(spacing: 7) {
+                ForEach(Array(package.latestPreviewAuthors.enumerated()), id: \.element.id) { index, update in
                     TodayConsensusAccountChip(
                         update: update,
                         foreground: foreground,
-                        accent: rankAccent
+                        accent: rankAccent,
+                        compact: true
                     )
                     .accessibilityIdentifier("today.consensus-card.account.\(index)")
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .trailing)
         }
+        .frame(height: 54)
         .padding(.horizontal, 13)
-        .padding(.vertical, 11)
+        .padding(.vertical, isStacked ? 8 : 11)
         .background(bandFill)
         .overlay(alignment: .bottom) {
             Rectangle().fill(foreground.opacity(0.14)).frame(height: 0.5)
@@ -335,57 +358,61 @@ private struct TodayConsensusAccountChip: View {
     let update: SmartAccountUpdate
     let foreground: Color
     let accent: Color
+    var compact = false
 
     var body: some View {
-        VStack(spacing: 4) {
-            BSmartAvatar(
-                url: update.authorAvatarURL,
-                name: update.authorName,
-                size: 29,
-                fallbackColor: update.direction.color
-            )
-            .overlay { Circle().stroke(accent, lineWidth: 1.5) }
+        let layout = compact ? AnyLayout(VStackLayout(spacing: 5)) : AnyLayout(HStackLayout(spacing: 9))
+        layout {
+            ZStack(alignment: .bottomTrailing) {
+                BSmartAvatar(
+                    url: update.authorAvatarURL,
+                    name: update.authorName,
+                    size: compact ? 28 : 36,
+                    fallbackColor: update.direction.color
+                )
+                .overlay { Circle().stroke(accent, lineWidth: 1.5) }
+
+                SmartPlatformMark(platform: update.platform, size: compact ? 12 : 15)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 4).stroke(foreground.opacity(0.25), lineWidth: 0.5)
+                    }
+                    .offset(x: 3, y: 3)
+            }
 
             Text(packageRank(update))
-                .font(.system(size: 8, weight: .black, design: .rounded))
+                .font(.system(size: compact ? 9 : 12, weight: .black, design: .rounded))
                 .foregroundStyle(accent)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
-                .padding(.horizontal, 4)
-                .frame(minHeight: 14)
-                .background(accent.opacity(0.1), in: Capsule())
         }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, 3)
-        .padding(.vertical, 6)
-        .background(foreground.opacity(0.055))
-        .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 9, style: .continuous)
-                .stroke(foreground.opacity(0.14), lineWidth: 0.6)
-        }
+        .frame(width: compact ? 49 : nil)
+        .padding(.vertical, 5)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("%@, %@".bSmartLocalized(update.authorName, packageRank(update)))
+        .bSmartSubjectDestination(update)
     }
 }
 
 private struct PackageStanceBar: View {
     let package: TodayViewpointPackage
     let foreground: Color
+    var showsLabels = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text("%d%% bullish".bSmartLocalized(bullishPercentage))
-                Spacer()
-                Text("%d neutral · %d bearish".bSmartLocalized(package.neutralCount, package.bearishCount))
+            if showsLabels {
+                HStack {
+                    Text("%d%% bullish".bSmartLocalized(bullishPercentage))
+                    Spacer()
+                    Text("%d neutral · %d bearish".bSmartLocalized(package.neutralCount, package.bearishCount))
+                }
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(foreground.opacity(0.62))
             }
-            .font(.caption2.weight(.bold))
-            .foregroundStyle(foreground.opacity(0.62))
 
             GeometryReader { proxy in
                 HStack(spacing: 1) {
-                    segment(count: package.bullishCount, total: package.updates.count, color: BSmartColor.brand, width: proxy.size.width)
+                    segment(count: package.bullishCount, total: package.updates.count, color: BSmartColor.bull, width: proxy.size.width)
                     segment(count: package.neutralCount, total: package.updates.count, color: BSmartColor.gold, width: proxy.size.width)
                     segment(count: package.bearishCount, total: package.updates.count, color: BSmartColor.bear, width: proxy.size.width)
                 }
@@ -424,7 +451,6 @@ struct TodayViewpointPackageDetailView: View {
 
                     consensusPanel
 
-                    thesisSection
 
                     if let evidence = package.chartEvidence, !evidence.candles.isEmpty {
                         BSmartSectionHeader(
@@ -450,6 +476,7 @@ struct TodayViewpointPackageDetailView: View {
         .toolbar(.hidden, for: .navigationBar)
         .bSmartDetailPage()
         .bSmartPage()
+        .bSmartTradeDock(symbol: package.ticker)
     }
 
     private var detailNavigationBar: some View {
@@ -503,6 +530,7 @@ struct TodayViewpointPackageDetailView: View {
     private var hero: some View {
         HStack(spacing: BSmartSpacing.medium) {
             BSmartAssetMark(ticker: package.ticker, size: 48)
+                .bSmartTickerDestination(package.ticker)
                 .frame(width: 52, height: 52)
 
             VStack(alignment: .leading, spacing: 3) {
@@ -558,21 +586,12 @@ struct TodayViewpointPackageDetailView: View {
 
     private var consensusPanel: some View {
         VStack(alignment: .leading, spacing: BSmartSpacing.medium) {
-            Text("SMART CONSENSUS".bSmartLocalized)
+            Text("TRENDING TICKERS".bSmartLocalized)
                 .font(.system(size: 9, weight: .black))
                 .tracking(0.8)
                 .foregroundStyle(BSmartColor.brand)
 
-            Text(package.localizedHeadline)
-                .font(.system(size: 24, weight: .bold, design: .rounded))
-                .foregroundStyle(BSmartColor.primaryText)
-                .lineSpacing(2)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Text(package.localizedSummary)
-                .font(.subheadline)
-                .foregroundStyle(BSmartColor.secondaryText)
-                .lineSpacing(3)
+            TodaySourceHeadlineList(label: "Collected views", headlines: package.sourceHeadlines)
 
             PackageStanceBar(package: package, foreground: BSmartColor.primaryText)
         }
@@ -592,45 +611,9 @@ struct TodayViewpointPackageDetailView: View {
         .padding(.horizontal, BSmartSpacing.large)
     }
 
-    private var thesisSection: some View {
-        VStack(alignment: .leading, spacing: BSmartSpacing.medium) {
-            BSmartSectionHeader(
-                title: "Consensus breakdown",
-                detail: nil
-            )
 
-            thesisBlock(
-                label: "Shared thesis",
-                text: package.localizedCommonThread,
-                color: BSmartColor.brand
-            )
-            thesisBlock(
-                label: "Where views differ",
-                text: package.localizedDifference,
-                color: BSmartColor.gold
-            )
-        }
-        .padding(.horizontal, BSmartSpacing.large)
-    }
 
-    private func thesisBlock(label: String, text: String, color: Color) -> some View {
-        VStack(alignment: .leading, spacing: BSmartSpacing.small) {
-            Text(label.bSmartLocalized.uppercased())
-                .font(.system(size: 9, weight: .black))
-                .tracking(0.7)
-                .foregroundStyle(color)
-            Text(text)
-                .font(.subheadline)
-                .foregroundStyle(BSmartColor.secondaryText)
-                .lineSpacing(3)
-        }
-        .padding(BSmartSpacing.medium)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(BSmartColor.surface)
-        .overlay(alignment: .leading) {
-            Rectangle().fill(color).frame(width: 2)
-        }
-    }
+
 
     private var accountSection: some View {
         VStack(alignment: .leading, spacing: BSmartSpacing.medium) {
@@ -694,9 +677,11 @@ private struct TodayConsensusLeadingAccountRow: View {
                 fallbackColor: update.direction.color
             )
             .overlay { Circle().stroke(BSmartColor.brand.opacity(0.8), lineWidth: 1.5) }
+            .bSmartSubjectDestination(update)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(update.authorName)
+                    .bSmartSubjectDestination(update)
                     .font(.subheadline.weight(.bold))
                     .foregroundStyle(BSmartColor.primaryText)
                     .lineLimit(1)
@@ -750,6 +735,7 @@ private struct TodayViewpointPackageAccountRow: View {
         HStack(alignment: .top, spacing: BSmartSpacing.medium) {
             ZStack(alignment: .bottomTrailing) {
                 BSmartAvatar(url: update.authorAvatarURL, name: update.authorName, size: 42)
+                    .bSmartSubjectDestination(update)
                 Text("\(index)")
                     .font(.system(size: 8, weight: .black, design: .rounded))
                     .foregroundStyle(BSmartColor.pulseInk)
@@ -762,6 +748,7 @@ private struct TodayViewpointPackageAccountRow: View {
             VStack(alignment: .leading, spacing: 5) {
                 HStack(spacing: 5) {
                     Text(update.authorName)
+                        .bSmartSubjectDestination(update)
                         .font(.subheadline.weight(.bold))
                         .foregroundStyle(BSmartColor.primaryText)
                         .lineLimit(1)
@@ -801,18 +788,7 @@ private struct TodayViewpointPackageAccountRow: View {
     }
 }
 
-private func localizedText(for update: SmartAccountUpdate) -> String {
-    if BSmartLocalization.isSimplifiedChinese {
-        return update.activityTitleZH?.packageNonBlank
-            ?? update.translatedTextZH?.packageNonBlank
-            ?? update.translatedText?.packageNonBlank
-            ?? update.thesis
-    }
-    return update.activityTitleEN?.packageNonBlank
-        ?? update.translatedTextEN?.packageNonBlank
-        ?? update.activityTitle?.packageNonBlank
-        ?? update.thesis
-}
+
 
 private func packageLocalizedText(_ update: SmartAccountUpdate) -> String {
     if BSmartLocalization.isSimplifiedChinese {
@@ -825,14 +801,7 @@ private func packageLocalizedText(_ update: SmartAccountUpdate) -> String {
         ?? update.thesis
 }
 
-private func concisePackageText(_ text: String, limit: Int) -> String {
-    let normalized = text
-        .replacingOccurrences(of: "\n", with: " ")
-        .split(whereSeparator: \.isWhitespace)
-        .joined(separator: " ")
-    guard normalized.count > limit else { return normalized }
-    return String(normalized.prefix(limit)).trimmingCharacters(in: .whitespacesAndNewlines) + "…"
-}
+
 
 private func directionPriority(_ direction: SignalDirection) -> Int {
     switch direction {
@@ -849,11 +818,13 @@ private func isSpecifiedPackageHorizon(_ horizon: String) -> Bool {
 }
 
 private func packageRank(_ update: SmartAccountUpdate) -> String {
-    "Top \(max(1, Int(ceil(update.platformPercentile * 100))))%"
+    let percentile = update.platformPercentile > 1 ? update.platformPercentile / 100 : update.platformPercentile
+    guard percentile.isFinite else { return "—" }
+    return "Top \(min(100, max(1, Int(ceil(percentile * 100)))))%"
 }
 
 private func packageCurrency(_ value: Double) -> String {
-    value.formatted(.currency(code: "USD").precision(.fractionLength(value < 100 ? 2 : 0)))
+    value.formatted(.bSmartDollars.precision(.fractionLength(value < 100 ? 2 : 0)))
 }
 
 private extension String {

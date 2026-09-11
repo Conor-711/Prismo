@@ -12,6 +12,7 @@
 - Score 价格历史回填。
 - Smart Account v0 候选召回、LLM 结构化、结算、评分、导出；雪球候选默认等待版本化正式作者池一年回填全部完成。
 - 标的级历史时点 Score 百分位、观点聚集事件与无未来数据回测；首批详情页消费 `MU`、`NVDA`、`MSTR`。
+- 当前正式 X、YouTube、Reddit 作者逐账户跟单回测：发布日前历史资格、下一交易日开盘、观点生命周期覆盖、活跃标的等权、10bps 成本，并输出可执行/完整历史双口径和逐笔证据。
 - Client API Smart Account 投影：直接读取 Web 排名真源 `sv_investor_score` 与观点真源 `sv_call`，生成
   `smart-accounts.json`、Top 25% 实时池使用的 `smart-account-updates.json`，以及全体正式作者详情使用的
   `smart-account-evidence.json`；每位作者按标的汇总已结算正向 Score 贡献，保留累计加分最高的 3 个代表标的，

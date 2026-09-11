@@ -1,0 +1,313 @@
+{
+  "implementation": "eth-account==0.14.0",
+  "source": "https://developers.circle.com/cctp/howtos/withdraw-usdc-from-hypercore-to-evm",
+  "notice": "Offline vectors only. No wallet secrets, RPC or exchange writes.",
+  "vectors": [
+    {
+      "owner": "0x7e5f4552091a69125d5dfcb7b8c2659029395bdf",
+      "typedData": {
+        "domain": {
+          "name": "HyperliquidSignTransaction",
+          "version": "1",
+          "chainId": 42161,
+          "verifyingContract": "0x0000000000000000000000000000000000000000"
+        },
+        "types": {
+          "EIP712Domain": [
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "version",
+              "type": "string"
+            },
+            {
+              "name": "chainId",
+              "type": "uint256"
+            },
+            {
+              "name": "verifyingContract",
+              "type": "address"
+            }
+          ],
+          "HyperliquidTransaction:SendToEvmWithData": [
+            {
+              "name": "hyperliquidChain",
+              "type": "string"
+            },
+            {
+              "name": "token",
+              "type": "string"
+            },
+            {
+              "name": "amount",
+              "type": "string"
+            },
+            {
+              "name": "sourceDex",
+              "type": "string"
+            },
+            {
+              "name": "destinationRecipient",
+              "type": "string"
+            },
+            {
+              "name": "addressEncoding",
+              "type": "string"
+            },
+            {
+              "name": "destinationChainId",
+              "type": "uint32"
+            },
+            {
+              "name": "gasLimit",
+              "type": "uint64"
+            },
+            {
+              "name": "data",
+              "type": "bytes"
+            },
+            {
+              "name": "nonce",
+              "type": "uint64"
+            }
+          ]
+        },
+        "primaryType": "HyperliquidTransaction:SendToEvmWithData",
+        "message": {
+          "hyperliquidChain": "Mainnet",
+          "token": "USDC",
+          "amount": "10",
+          "sourceDex": "spot",
+          "destinationRecipient": "0x2b5ad5c4795c026514f8317c7a215e218dccd6cf",
+          "addressEncoding": "hex",
+          "destinationChainId": 3,
+          "gasLimit": 200000,
+          "data": "0x",
+          "nonce": 1789084800000
+        }
+      },
+      "digest": "0x00f3bdadf2048d312e6083d8a131d8afa6d1005b8631ef568cf940dac2711f10",
+      "signature": "0xad66f8e4d364e6b1a4fc370dcf9b9824c6b9e7dd75b615991187b79dca8e0dcb61b2f0a16777b11cdbd5642a5aed73826adfbbe5089eb87efb583c3acd86a6691c",
+      "action": {
+        "hyperliquidChain": "Mainnet",
+        "token": "USDC",
+        "amount": "10",
+        "sourceDex": "spot",
+        "destinationRecipient": "0x2b5ad5c4795c026514f8317c7a215e218dccd6cf",
+        "addressEncoding": "hex",
+        "destinationChainId": 3,
+        "gasLimit": 200000,
+        "data": "0x",
+        "nonce": 1789084800000,
+        "type": "sendToEvmWithData",
+        "signatureChainId": "0xa4b1"
+      }
+    },
+    {
+      "owner": "0x7e5f4552091a69125d5dfcb7b8c2659029395bdf",
+      "typedData": {
+        "domain": {
+          "name": "HyperliquidSignTransaction",
+          "version": "1",
+          "chainId": 42161,
+          "verifyingContract": "0x0000000000000000000000000000000000000000"
+        },
+        "types": {
+          "EIP712Domain": [
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "version",
+              "type": "string"
+            },
+            {
+              "name": "chainId",
+              "type": "uint256"
+            },
+            {
+              "name": "verifyingContract",
+              "type": "address"
+            }
+          ],
+          "HyperliquidTransaction:SendToEvmWithData": [
+            {
+              "name": "hyperliquidChain",
+              "type": "string"
+            },
+            {
+              "name": "token",
+              "type": "string"
+            },
+            {
+              "name": "amount",
+              "type": "string"
+            },
+            {
+              "name": "sourceDex",
+              "type": "string"
+            },
+            {
+              "name": "destinationRecipient",
+              "type": "string"
+            },
+            {
+              "name": "addressEncoding",
+              "type": "string"
+            },
+            {
+              "name": "destinationChainId",
+              "type": "uint32"
+            },
+            {
+              "name": "gasLimit",
+              "type": "uint64"
+            },
+            {
+              "name": "data",
+              "type": "bytes"
+            },
+            {
+              "name": "nonce",
+              "type": "uint64"
+            }
+          ]
+        },
+        "primaryType": "HyperliquidTransaction:SendToEvmWithData",
+        "message": {
+          "hyperliquidChain": "Mainnet",
+          "token": "USDC",
+          "amount": "10.123456",
+          "sourceDex": "",
+          "destinationRecipient": "0x2b5ad5c4795c026514f8317c7a215e218dccd6cf",
+          "addressEncoding": "hex",
+          "destinationChainId": 3,
+          "gasLimit": 200000,
+          "data": "0x",
+          "nonce": 1789084800001
+        }
+      },
+      "digest": "0xd867fe3e32cfbe0bc08b90b2ab8cd5de38471e5abca89e1edd1253b3166bed38",
+      "signature": "0x5752bebf056431cb81c2494bfa3e2c9d802ac0ae6f79831f367d09a5b754eed67640cf69c5ff742c3ee3589c432fee77e39fc04cc81d9984135fbb5ea077a3dc1c",
+      "action": {
+        "hyperliquidChain": "Mainnet",
+        "token": "USDC",
+        "amount": "10.123456",
+        "sourceDex": "",
+        "destinationRecipient": "0x2b5ad5c4795c026514f8317c7a215e218dccd6cf",
+        "addressEncoding": "hex",
+        "destinationChainId": 3,
+        "gasLimit": 200000,
+        "data": "0x",
+        "nonce": 1789084800001,
+        "type": "sendToEvmWithData",
+        "signatureChainId": "0xa4b1"
+      }
+    },
+    {
+      "owner": "0x7e5f4552091a69125d5dfcb7b8c2659029395bdf",
+      "typedData": {
+        "domain": {
+          "name": "HyperliquidSignTransaction",
+          "version": "1",
+          "chainId": 42161,
+          "verifyingContract": "0x0000000000000000000000000000000000000000"
+        },
+        "types": {
+          "EIP712Domain": [
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "version",
+              "type": "string"
+            },
+            {
+              "name": "chainId",
+              "type": "uint256"
+            },
+            {
+              "name": "verifyingContract",
+              "type": "address"
+            }
+          ],
+          "HyperliquidTransaction:SendToEvmWithData": [
+            {
+              "name": "hyperliquidChain",
+              "type": "string"
+            },
+            {
+              "name": "token",
+              "type": "string"
+            },
+            {
+              "name": "amount",
+              "type": "string"
+            },
+            {
+              "name": "sourceDex",
+              "type": "string"
+            },
+            {
+              "name": "destinationRecipient",
+              "type": "string"
+            },
+            {
+              "name": "addressEncoding",
+              "type": "string"
+            },
+            {
+              "name": "destinationChainId",
+              "type": "uint32"
+            },
+            {
+              "name": "gasLimit",
+              "type": "uint64"
+            },
+            {
+              "name": "data",
+              "type": "bytes"
+            },
+            {
+              "name": "nonce",
+              "type": "uint64"
+            }
+          ]
+        },
+        "primaryType": "HyperliquidTransaction:SendToEvmWithData",
+        "message": {
+          "hyperliquidChain": "Mainnet",
+          "token": "USDC",
+          "amount": "0.000001",
+          "sourceDex": "spot",
+          "destinationRecipient": "0x2b5ad5c4795c026514f8317c7a215e218dccd6cf",
+          "addressEncoding": "hex",
+          "destinationChainId": 3,
+          "gasLimit": 200000,
+          "data": "0x",
+          "nonce": 1789084800002
+        }
+      },
+      "digest": "0xa8a20a4d03ea571a27bb84cf4c848f09de6fb62c255a31a3c382808fe799e435",
+      "signature": "0x3765521b0edea3625ec875f1ac059e33a897f1801513102cfa3d0bf1c5ed854b4543fcd3b14a1008e3b40050d8db3211f11421b8bd367a4483aa3e8b496b016b1b",
+      "action": {
+        "hyperliquidChain": "Mainnet",
+        "token": "USDC",
+        "amount": "0.000001",
+        "sourceDex": "spot",
+        "destinationRecipient": "0x2b5ad5c4795c026514f8317c7a215e218dccd6cf",
+        "addressEncoding": "hex",
+        "destinationChainId": 3,
+        "gasLimit": 200000,
+        "data": "0x",
+        "nonce": 1789084800002,
+        "type": "sendToEvmWithData",
+        "signatureChainId": "0xa4b1"
+      }
+    }
+  ]
+}

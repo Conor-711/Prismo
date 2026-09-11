@@ -140,6 +140,7 @@ def run_sv_v0(
     xueqiu_since_days: int,
     xueqiu_allow_partial: bool,
     force: bool,
+    created_since: str | None = None,
 ) -> None:
     """Run Smart Account v0 scoring through the job boundary."""
     run_sv_v0_domain(
@@ -163,6 +164,7 @@ def run_sv_v0(
         xueqiu_since_days=xueqiu_since_days,
         xueqiu_allow_partial=xueqiu_allow_partial,
         force=force,
+        created_since=created_since,
     )
 
 

@@ -2,15 +2,153 @@
 
 > **维护约定**：本文件是项目的「活地图」。**每次对项目结构或功能有实质改动后，必须同步更新本文件对应章节**
 > （新增/删除模块、改数据流、改命令、改部署方式、改 schema 等）。详见根目录 `CLAUDE.md`。
-> 最近更新：2026-08-11。
+> 最近更新：2026-09-12。
+
+**真实交易面板样式恢复（2026-09-12）**：`LiveMarketOrderView` 恢复大金额、快捷金额、数字键盘/K 线切换和底部滑动确认；复用 `TradeLeveragePicker`/`TradeSlideToConfirm`，不重新接入 `PaperTradingEngine`。`LiveOrderAmountPanel/EntrySummary` 仅组装显示；真实账户余额、杠杆和费率来自 `HyperliquidMarketOrderStore.loadEntry` 的只读查询。输入金额仍是 USDC 名义仓位价值，MAX 只预填保守估值，提交仍重新验证完整订单。杠杆显示真实值且只读，未实现真实调整时不允许模拟滑动修改。行情图使用独立会话；钱包、入金路径和签名/日志不变。
+
+**入金日志路径兼容修复（2026-09-12）**：`FundingJournalFiles.databasePath` 在 SQLite 打开前使用 POSIX `realpath` 规范化父目录，解决系统 `/var` 别名与 `SQLITE_OPEN_NOFOLLOW` 冲突导致日志无法创建的问题；数据库文件本身仍拒绝符号链接，Keychain 锚点、防回滚、签名和提交门槛不变。不删除或重置已有记录，不修改钱包密钥、地址或注册信息。
+
+**内测钱包免强制备份（2026-09-12）**：`DeviceWalletBackupPolicy` 统一控制入金、交易、出金和签名的备份门槛；当前 1.0(6) 在 `ios/project.yml` 显式设置 `BSMART_INTERNAL_OPTIONAL_WALLET_BACKUP=YES`，包含内测使用的 Release 归档。钱包页备份入口折叠为可选，不改 `recoveryVerified`、密钥、地址或注册绑定；Google 登录、设备解锁、确认、资金开关与预检仍保留。密钥仍仅本机保存，Google 不能恢复遗失密钥；缺失已有钱包的本机密钥仍阻止资金操作，不能创建新地址覆盖。缺失/非 YES 开关恢复备份要求，公开发布前必须设 NO；本次不接入第三方钱包服务。见 `docs/contracts/native_perpetual_mvp.md`。
+
+**保守代码清理（2026-09-12）**：移除 `TodayEditorialSections.swift` 中五个无调用的旧首页组件及其专用辅助代码，保留当前 `TodayEvidenceTimeline` 和共享图表类型；不改交易、钱包、账户、算法或数据契约。通过既有 `make clean` 清除可重建的网页导出，保留主库、部署快照、依赖和 iOS 发布归档。清理范围及保护边界见 `docs/operations/repository-cleanup-2026-09-12.md`。
+
+**Google 登录后基础交易路径（2026-09-12）**：用户已在真机确认 Google 登录成功；`TradingAccountView` 仍只管登录，“继续”进入独立 `TradingWalletView`，个人主页和下单缺钱包时也进入此处。面板复用设备钱包备份、Arbitrum USDC 收款、CCTP 转入、出金；`TradingMarketsView` 展示真实合约目录，`TradingPositionsStore/View` 有界读取全部 perpetual DEX 持仓并进入 reduce-only 平仓，不使用研究持仓或 demo 余额。`UnifiedAccountSetupStore/Codec` 在用户明确确认且无持仓/挂单时签名固定 `userSetAbstraction(unifiedAccount)`，与订单/出金共用持久化 nonce，读回协议状态才显示启用；统一账户出金仅在全部仓位/挂单清空且 USDC hold 为零时从 spot 余额进行，不支持 portfolio margin。已接受出金不代表到账，但允许基于新余额另行确认；未知请求仍禁止重发。合约交易不带未配置的 builder；高级历史/报表继续后置。契约见 `docs/contracts/native_perpetual_mvp.md`，真实资金验收需由用户在 App 中执行。
+
+**iOS 直连 Supabase 账号（2026-09-12）**：`Core/Data/SupabaseAccountAuthClient` + `SupabaseAccountTransport` 独立于研究 API/安装会话，直接处理 provider ID token、nonce、用户验证、刷新与退出；`auth.users.id` 是新账户 ID，项目独立的 device-only Keychain 保存会话。`AccountIdentityAuthorizer` 使用哈希 nonce；旧 `HTTPAccountAuthClient` / backend `accounts/supabase_identity` 只保留兼容，不再是 iOS 登录依赖，不需 Vultr。公开 publishable key 位于 gitignored `ios/Config/Supabase.xcconfig.local`。`supabase/ios-account` 是新账号项目的独立部署根，包含公开钱包地址 RLS、一次性签名挑战及 `bsmart-wallet` Edge Function；EIP-191 使用 viem 验证，私钥/助记词继续只在设备端，不上传、不从登录信息派生。用户报告钱包 SQL 已执行，Edge Function 已部署；未认证访问实测 401。注册响应以独立 capabilities 控制入金、交易、出金，缺字段/缺地址/验证失败关闭，不因 Google 登录而自动开放。旧钱包不覆盖、不按 email 自动迁移；缺失函数/表显示错误而非未绑定。Apple 和账号删除仍后置，公开发布前须完成。操作步骤见 `supabase/ios-account/README.md`，契约见 `docs/contracts/supabase_account.md`。
+
+当前内测开关：`BSMART_DEPOSITS_ENABLED`、`BSMART_TRADING_ENABLED`、`BSMART_WITHDRAWALS_ENABLED` 已设为 `true`，仍要求当次注册身份、本机已核验钱包、明确确认及签名前后预检；备份门槛见上方内测策略。上阶段 197 项 iOS 回归通过，含 4 项主网只读检查；另 4 项界面回归、11 项 Edge Function 测试及架构/术语检查通过。未执行真实资金操作、未上传 TestFlight，不代表公开发布就绪。
+
+Google 上阶段自动验收：43 项账号逻辑测试、3 项 UI 测试通过（模拟器 ad-hoc 签名），SDK 测试停在官方邮箱/手机号输入页，不代填凭据；随后用户提供真机登录成功截图。早期后端路径验证不作为当前直连登录的验收结论。
+
+**观点交易人数 Demo（2026-09-11）**：观点详情无已核验人数时直接展示带「演示数据」标记的本地预览；`Core/Data/OpinionTraderDemoData` 提供六位虚构昵称、不同本地头像、方向、开仓价、仓位金额、杠杆和时间，两位模拟匿名用户仅计示例总数。`OpinionTradersDemoView` 支持展开与加载更多；真实接口成功后切回正式列表，真实零人数亦不替换成示例。演示模型与成交 API 隔离，不改真实账户、订单、公开同意或统计账本，无需 Debug 参数，未上传 TestFlight。
+
+**Feed 显式 Demo（2026-09-11）**：Feed 右上角增加 Demo/实时动态切换，无需测试启动参数；`TradeFeedDemoData` 从独立 `trade-feed-demo.json` 加载六条虚构交易，引用既有真实观点。Feed、卡片和示例用户页标记 Demo，分页及用户跳转均本地完成；快捷块只进入 `FeedDemoTradePreview`，不调用订单、签名或余额逻辑。实时接口失败保持原错误态，用户主动切换后才显示示例，不发布虚构成交。
+
+**iOS 构建依赖恢复（2026-09-11）**：新增 `make ios-resolve`，从 `ios/project.yml` 重新生成工程后，在 Xcode 默认工作区解析固定的 Swift Package 依赖。`WalletCore/WalletCoreSwiftProtobuf` 缺失需先检查依赖图最早的下载错误；本次日志根因为 GoogleSignIn 的 GitHub 连接超时，不是钱包模块被删除。保留官方二进制版本、校验和、已有缓存及钱包数据，恢复流程见 `ios/README.md`。
+
+**基础交易收敛（2026-09-11，预生产）**：按用户最新要求，只推进 Arbitrum USDC 入金、合约市价单和出金。`HyperliquidMarketOrderStore` 提交后直接返回订单回执，不再等待逐笔成交查询；`LiveMarketOrderView` 暂不展示历史及逐笔费用。既有查询代码、持久化防重复提交及不确定状态保护保留，不继续扩展历史功能。
+
+**原生出金确认（2026-09-11，预生产）**：钱包新增 `Features/Account/HyperliquidWithdrawalView`；`Core/Trading/Funding/HyperliquidWithdrawalPreview/Store/Permits` 接入默认合约 USDC 可提余额、CCTP 费用检查、显式地址确认、受保护设备签名与一次性提交，复用原订单 HTTP 传输与加密日志。`Core/Wallet/HyperliquidWithdrawalSigner` 固定 Arbitrum 自动转发，不引入私钥上传。首版不从统一/组合保证金的 spot 总额推算可提余额；API 接受只显示处理中，未知请求不重发。完整协议费用、目的链到账确认、真实登录和小额资金验收仍未完成，生产开关不变；不能把这次界面及编译完成视为已开放真实出金。
+
+基础路径验证：模拟器构建通过；`CCTPTransferTests`、`HyperliquidMarketOrderStoreTests`、出金 codec/journal/store 共 55 项测试通过。测试使用临时日志、公开测试密钥与模拟传输，未执行真实资金操作。
+
+**仅合约交易与减仓入口（2026-09-11，预生产）**：用户确认仅支持永续合约，不做现货交易。`HyperliquidExecutionMarket/OrderIntent` 校验合约资产命名空间，资金链路仍保留共享/spot USDC 读取及回退核验，不把它们当现货交易功能。`HyperliquidMarketOrderPlan/Store` 与 `LiveMarketOrderView` 加入按真实仓位比例减仓/平仓，自动决定方向、固定 reduce-only，确认及签名后仓位变化需重新预览；保留完整费用、真实成交与出入金验收边界，生产开关不变。决策见 `docs/product/hyperliquid-trading-pivot-2026-09.md`。
+
+**出金持久记录与共享序号（2026-09-11，预生产）**：`Core/Trading/Funding/HyperliquidWithdrawalRecord/Journal` 将出金阶段写入既有加密、Keychain 防回滚日志；`HyperliquidOwnerNonce` 统一订单与出金的 owner nonce 高水位，预约在同一文件锁内检查。只有未签名审核可取消/本地过期；签名开始后不因超时或重启释放，未知回执不可重发，API 接受不等于到账。记录层不直接发放设备签名或广播许可，新接入的独立许可层见上方「原生出金确认」，生产开关不变。
+
+**基本资金与交易优先（2026-09-11，预生产）**：先完成 Arbitrum USDC 入金、出金与真实 IOC 市价交易；builder 地址/费率未定，首阶段订单明确不携带 builder。`Core/Trading/Execution/HyperliquidMarketOrderStore` 接入真实确认、设备签名、前后重检、一次性提交与持久化订单记录，复用加密 SQLite 及 Keychain 防回滚锚点；`HyperliquidOrderStatus` 按 cloid 校验终态，不虚构成交价/费用，未知结果不重试。`Features/Trading/LiveMarketOrderView` 替代普通下单及 Feed 快捷入口的模拟执行，个人主页应用账户不再显示虚拟余额/仓位。`Core/Trading/Funding/HyperliquidWithdrawalIntent/CCTPWithdrawalFeeReader` 与 `Core/Wallet/HyperliquidWithdrawalCodec` 准备出金协议和只读 CCTP 费用检查，尚无出金签名入口；完整费用、可提额、共用 nonce 日志和目的链到账仍须接入。生产开关、版本和真实资金验收边界不变，见 `docs/contracts/hyperliquid_execution.md`。
+
+**Builder code 产品边界（2026-09-11）**：bSmart 仅作为 Hyperliquid 交易前端，不部署交易所或 HIP-3 市场。现有市场费用与 bSmart builder fee 分开；`HyperliquidBuilderFee` 固定订单收款地址/费率并参与订单签名编码，预览通过 `maxBuilderFee` 检查当前用户授权上限。未配置真实收款地址或费率，未授权、未收费、未下单；授权确认、签名提交与生产资格核验仍待完成。详见交易协议契约。
+
+**真实委托深度预览（2026-09-11，预生产）**：`Core/Trading/Execution` 使用现有账户检查、原始市场费率及真实 `l2Book/userFees`，按 IOC 限价遍历深度，输出预计成交数量、未覆盖数量、均价、价格冲击和预计手续费。计算使用 BigInt 精确值，订单簿额外限制双时钟 5 秒。不代表足额保证金、签名授权或实际成交，交易开关不变。
+
+**真实交易账户检查（2026-09-11，预生产）**：`Core/Trading/Execution/HyperliquidExecutionReader` 只查询固定主网 info 接口；`HyperliquidTradingSnapshotProvider/Snapshot` 保存原始市场、保证金限制、真实杠杆、仓位和逐方向容量，双时钟限制 15 秒，仓位服务端时间可进一步缩短有效期；读取前后核对模式、杠杆与仓位。订单约束检查不代替完整资金预检、用户许可、订单日志或成交对账，不启用真实下单。
+
+**Feed 与个人主页 AI 入口（2026-09-11）**：根导航为「今日 / Smart / Feed / 个人主页」；`ProfileAssistantLauncher` 在个人主页右下角展开现有 AI 页，全屏期间用独立令牌隐藏 Tab，退出后释放。`Features/Feed` 展示按成交时间倒序的用户、作者、原观点及标的跳转；`TradeFeedStore` 管理分页与失效。`opinion_trades/feed` 从已核验订单聚合部分成交，新增 `/v1/trade-feed` 与公开用户页，只展示 Top 25% 作者和单独同意公开金额的账户。四个快捷块按红 100/500、绿 500/100 排列，只预填真实确认页，不自动成交或写真实 Feed。真实核验及公开金额同意服务未启用时返回 503；`feed_migration.sql` 仅准备，未执行或部署。契约见 `docs/contracts/trade_feed.md`。
+
+**Hyperliquid 真实订单协议层（2026-09-11，预生产）**：`Core/Trading/Execution` 保存原始 DEX/资产索引、抵押币和精确十进制 IOC 委托；`Core/Wallet/HyperliquidOrderCodec` 用固定 MessagePack 依赖及既有 Wallet Core 编码 L1 action、校验签名。回执区分拒单、完整/部分成交与未知状态。协议编码本身不构成下单许可；设备签名及提交只能经上述日志许可进入。实际成交费用/fills 对账、真实仓位展示和完整退出链路仍须验收。契约见 `docs/contracts/hyperliquid_execution.md`。
+
+**CCTP 原生转入确认（2026-09-11，预生产）**：钱包面板的 `CCTPTransferView/Content` 接入现有报价、设备签名、日志及一次性广播；`CCTPTransferStore` 编排金额审核，`CCTPTransferDisplay` 只投影金额、地址、费用、期限与公开哈希。授权、网络费签名、提交逐步确认，过期/不确定结果进入原入金记录；核心操作默认禁止，使用实时开关和当前钱包检查。账户维护不因暂时 inactive（系统认证提示）重新恢复，真正退后台仍作废权限。未开放生产资金，未改变记账/真实交易的验收边界。
+
+**Arbitrum 原生收款页（2026-09-11，预生产）**：`Features/Account/ArbitrumReceiveView/Content` 从钱包面板进入；`ArbitrumReceiveStore` 核验当前账户、已备份设备钱包与最新注册地址，并要求网络确认。`WalletReceiveAddress` 用既有 Wallet Core 生成校验地址，二维码由本机 Core Image 生成；复制限定本机、五分钟过期。地址检查受双时钟 60 秒限制，切账户/退后台/取消确认清除，迟到响应不恢复旧地址。不新建密钥、不转账、不将钱包收款计为 HyperCore 入账。生产开关仍关闭，完整入金、真实订单与退出链路仍待验收；契约见 `docs/contracts/trading_account.md`。
+
+**账户删除与授权撤回（2026-09-11，预生产）**：`accounts/deletion_routes/repository/work/service` 先持久化请求、撤销全部会话，再以固定 Apple 端点撤权和事务清理账户数据。iOS `AccountDeletionRecord/Storage/Coordinator` 以独立 device-only Keychain 保存进度；`Features/Account/AccountDeletionView` 提供钱包风险确认、原账户重新认证、状态恢复及 Google 撤权。`GoogleAccountDisconnect` 隔离超时与迟到回调，`DeviceAccountDeletionCleanup` 清理个人资料并阻止旧编辑器写回，不碰私钥/入金日志。删除用 `/sessions.expectedAccountId` 只认证现有匹配账户、不重建已删除账户；存储异常和重新认证废止旧签名许可。后台 worker 只在开发/测试显式开启，不自动迁移。真实 provider、过期/遗失查询凭据恢复、真机、完整资金链路和生产运维仍须验收；契约见 `docs/contracts/account_deletion.md`。
+
+**Apple 原生凭据检查（2026-09-11，预生产）**：`Core/Data/AppleCredentialStateClient` 以 10 秒超时、取消及迟到回调隔离封装系统检查；`AppleCredentialMonitor` 合并进行中的请求。`AccountAccessStore` 在恢复、钱包访问与前台维护时校验，原生撤销通知经主队列废止检查与签名许可；错误保留凭据但禁止资金操作，明确失效清除应用会话并尽力撤销会话族，不删除钱包。版本 3 Keychain envelope 原子保存本地 Apple 标识、精确时间与续期状态，不新增 HTTP 身份字段。检查和 `FundingSigningLease` 同时受系统日期与 `ContinuousClock` 最多 60 秒约束，续期/延迟签发/设备调时不能延长旧许可。契约及 iOS 专题已同步；真实 provider/真机验收、账户删除与完整资金链路仍未完成，生产开关不变。
+
+**身份安全事件（2026-09-11，预生产）**：`accounts/security_event_routes/verifier/repository` 接收 Apple JWS 与 Google RISC SET，以固定来源公钥验证签名、audience、issuer 和事件时间；`provider_http` 隔离继承认证并限制 JSON 大小。哈希回执、subject 撤销时间屏障、受影响会话和 Apple grant 撤销原子提交；保留初次 provider 认证时间，迟到事件不撤销更新的交互登录，禁用身份阻止新登录。iOS `AccountAccessStore` 收到当前账户/钱包请求的 401 后清除应用会话、取消续期和签名许可，不删除钱包；旧响应不能退出新账户。`security_event_migration.sql` 仅供人工审核，本次未执行；真实通知流注册/验收、应用账户删除和生产运维仍待完成，原生检查见上。契约见 `docs/contracts/account_security_events.md`，生产资金开关不变。
+
+**账户会话续期（2026-09-11，预生产）**：`accounts/session_renewal` 增加安装绑定的一次性凭据轮换，访问会话 30 分钟、闲置 24 小时和会话族绝对 7 天上限；重放先提交整族撤销再返回 401。同账户同安装重新登录替换旧族，其他设备不受影响。iOS `AccountSessionRenewal` 合并并发请求，`AccountSessionStore` 在 Keychain 先持久化续期中状态；丢失响应/重启不重放旧凭据，退出用整族撤销且不删除钱包。前台恢复和钱包读取前续期，恢复/续期期间禁止资金授权并废止旧签名许可。`session_renewal_migration.sql` 仅供人工审核，本次未执行；provider 撤销/删除、生产数据库并发和真机验收仍待完成，真实资金开关不变。契约与 iOS 专题已同步。
+
+**Apple 授权码交换（2026-09-11，预生产）**：iOS `AccountIdentityAssertion` 将系统 ID token 与一次性授权码传到独立账户 API；Google 请求仍只带 ID token。`accounts/apple_oauth` 固定 Apple HTTPS 端点、短时 ES256 客户端凭据、不重试；`apple_repository` 在外部请求前原子消费 challenge，二次校验返回身份后把会话与加密授权凭据一起提交。`credential_cipher` 使用 AES-256-GCM 与账户/subject/client/key 上下文绑定，密钥由运维通过受保护文件提供；不接收钱包私钥。新增 `apple_grant_migration.sql` 仅供人工审核执行，本次未迁移。退出原生账户页取消登录，晚返回不发布身份。授权撤销/删除、真机与生产凭据仍待完成；应用会话续期见上，真实资金开关不变。部署要求见 `services/client_api/accounts/README.md`，契约与 iOS 专题已同步。
+
+**HyperCore 真实余额查询（2026-09-11，预生产）**：`Core/Trading/Funding/HyperCoreBalanceClient/Provider/Snapshot/Store` 仅向固定主网 `/info` 查询已注册 owner 的账户模式、USDC 和默认永续余额；统一账户与组合保证金读取 spot，其他模式分项展示，不相加、不推导下单额度。钱包页 `Features/Account/HyperCoreBalanceView` 提供显式刷新，30 秒失效并隔离过期会话、账户切换与迟到响应。金额精确处理至 8 位，失败显示未核实而非零；不写模拟资金、不签名/转账。原生公开地址只读检查已通过；余额不是单笔入金凭据，HyperCore 系统 nonce 与目标 EVM 交易映射、真实订单和生产验收仍待闭环。详见入金研究与 iOS 专题。
+
+**观点交易人数（2026-09-11，未开放真实成交）**：`Features/Smart/OpinionTradersSection` 在观点详情展示去重人数及可展开、分页的公开交易者；`TradeAccessView` 仅向该观点自身的交易 sheet 传递 `OpinionTradeSource`，关闭后重读统计，不本地加数。`services/client_api/opinion_trades` 提供已核验成交只读接口、去重账本与公开资料/撤回边界，同账户同观点计一次，按最近成交排序。默认服务返回 503，不以模拟成交或历史 fixture 冒充真实人数。真实执行核验、公开资料/同意服务和人工迁移尚待接入，未部署、未执行 DDL；契约、上线闸门见 `docs/contracts/opinion_trades.md`。
+
+**iOS 个人主页（2026-09-11）**：根导航调整为「今日 / Smart / Feed / 个人主页」，保留 `portfolio` 内部路由与原有资产、持仓、关注及全部标的内容。`Features/Portfolio/UserProfileHeader/UserProfileEditor` 提供头像、昵称、简介和地址展示；`Core/Data/LocalUserProfileStore` 按账户 UUID/访客隔离本地资料，头像缩略存储。地址仅取当前账户匹配的已验证设备钱包；否则明确展示不可复制的示例地址与禁止转账提示，不自动创建钱包、不修改身份认证及资金链路。详见 iOS 专题。
+
+**入金目标链转发回执（2026-09-11，预生产）**：`Core/Wallet/CCTPForwardEventCodec` 核对固定合约的消息、USDC 转移、HyperCore 路由和金额事件；`Core/Trading/Funding/CCTPForwardReceipt/Observer` 在批量转发中按认证 nonce 隔离单笔证据，复查 HyperEVM canonical block、receipt 和 nonce。`CCTPForwardObservation` 写入原加密日志，关联当前源链及认证观察；已接纳回执不能被空响应或另一笔交易替换。历史页显示永续转发、现货回退、实际转发请求金额及合约开户扣费，不记入可用余额。CCTP 净额预览不再承诺最低 HyperCore 到账；开户费文档差异、实际逐笔 HyperCore 记账和真实交易仍须验收。无实际广播、转账、生产入口开放或私钥上传。
+
+**浅色模式可读性（2026-09-11）**：`BSmartTokens` 区分页面/卡片/内凹背景、深色文字强调色、实心控件 `onAccent` 和浅色编辑卡片专用底色；页面不得再把固定 `pulseInk` 放到会变深的品牌/涨跌背景上。共识、阿尔法、Smart Money、导航与统一价格图消费对应角色，仅调整显示，不改布局、数据或交易逻辑。`BSmartAppearanceContrastTests` 回归浅色文字、徽章、图表和深色原配色，详见 iOS 专题。
+
+**入金 CCTP 认证核对（2026-09-11，预生产）**：`Core/Wallet/CCTPAttestedMessage` 将 Circle 签名消息与已验证的源链消息逐字节比对；`Core/Trading/Funding/CCTPMessageClient` 只查询固定源链交易哈希，`HyperEVMAttesterReader` 按 HyperEVM 合约的实际签名门槛与启用账户校验。默认 RPC 仅支持 latest 状态，前后链头必须一致且新鲜。`CCTPAttestationObservation` 独立加密留档并关联本次源链证据，保留上次有效认证以拒绝回退；迟到结果不得覆盖新证据。历史页增加显式跨链查询及认证/过期/暂停状态，不把签名、转发哈希或 nonce 已使用当作 HyperCore 到账。生产入口仍关闭，目标链转发回执、逐笔到账、真实交易及完整安全验收尚未完成。
+
+**入金源链回执与查询（2026-09-11，预生产）**：`Core/Trading/Funding/ArbitrumSourceObserver` 只按日志中的已签名哈希查询固定 Arbitrum RPC；`FundingReceiptCodec` 核对完整交易、回执与日志，`Core/Wallet/CCTPSourceMessage` 验证固定金额/路径/owner hook 的源链消息。`FundingSourceObservation` 关联 canonical/finalized 区块、nonce 与授权状态，以独立事件写入原加密日志；迟到查询不能覆盖新记录，失败或重组不释放原交易。`FundingHistoryStore` 显式查询前复核注册账户，返回的已验证证据先归档再处理旧 UI；历史页展示源链执行、实际网络费和 RPC 最终性，均不表示 HyperCore 到账。无自动查询/重发、不接入模拟余额；逐笔跨链到账、终态释放、生产确认/提现/交易与真机安全验收仍待完成。离线回归与协议来源见 `docs/product/arbitrum-usdc-funding.md`。
+
+**原生 K 线统一（2026-09-10）**：`Core/DesignSystem/BSmartPriceChart` / `BSmartCandlestick` 统一交易页、下单面板、观点证据、作者代表作、Smart Money 开仓图及 Today 历史时间线；`BSmartPriceChartData` 管理只读绘制数据与有界视窗，`BSmartChartGestures` 管理缩放、平移与查价，标记布局也归设计系统。业务页面只适配原有数据和证据跳转，不再自行绘制蜡烛或复制坐标轴；市场/股票数据源、原始观点和 Score 均不变。扩展规则与回归口径见 `docs/operations/ios-market-charts.md`。
+
+**设备入金授权、提交与恢复（2026-09-10，预生产）**：`Core/Trading/Funding/FundingTransactionJournal` 在独立加密 SQLite 中保存前置确认、USDC 授权、源交易与提交状态；`FundingConsentRecord/JournalEvent` 保留旧事件并以同一 ID 原子关联授权和交易。`Core/Wallet/FundingDeviceSigner` 只签固定授权与源交易；`CCTPDepositPreparation` 先核对账户/源链余额，再分别确认授权和网络费，签名产生后先留档再处理取消。最多 60 秒的权限在退出/重载账户、退后台或设备锁定时撤销。新增 `ArbitrumSourceSubmissionCheck` 以原签名、gas/费用上限再次核对源链状态；10 秒检查不延长原确认。日志提交后的一次性引用许可才能启动 `ArbitrumFundingBroadcaster` 的固定 `eth_sendRawTransaction` 请求，无自动重试；超时/错误保留不确定记录，取消后的已观察响应也先归档。`FundingHistoryEntry/Store` 向钱包面板提供不含签名和可广播字节的投影；未签名确认可经日志复核后取消，已签名/提交记录不因超时释放。仅离线提交测试通过，尚未真实广播；真机文件保护、receipt/重组/跨链对账、资金确认页接入、退出路径及生产审核仍待完成，不代表已到账或可交易。契约和证据见 `docs/contracts/trading_account.md`、`docs/product/arbitrum-usdc-funding.md`。
+
+**X 数据包日更（2026-09-10）**：`pipeline/jobs/x_daily` / `x-daily` 将用户上传的 JSONL/ZIP 串成检查、幂等导入、限定本包抽取、行情补充、既有结算/Score、完整翻译和 read-model 导出，保留按内容哈希的续跑记录；不执行 DDL、不改算法或正式 Top 25% 观点范围。`services/client_api/publish_daily_x` 校验 manifest、客户端必需字段和版本，备份后原子替换三个 Smart Account 集合及既有事件投影的 X 分区，保留其他平台和用户状态。通用 X 事件投影迁入 `client_api/smart_account_signals`，实时服务保留兼容导出。iOS 前台刷新补上作者榜单及代表作更新，条件请求支持鉴权后的 304，网络失败保留缓存。操作与首次上线闸门见 `docs/operations/x-daily-package.md`；本轮未上传真实新包、未完成 Vultr 发布，不将本地准备视为已上线。
+
+导出链路中的 Reddit 已验证头像目录读取器收敛到 `pipeline/common/reddit_profile_avatars.py`；平台目录保留兼容导出与原 JSON 目录，避免 domain 反向导入 platform。头像、作者关联和排序不变。
+
+**Arbitrum 源交易编码（2026-09-10，预生产）**：`Core/Wallet/CCTPSourceTransaction` 将新鲜预检固定为 EIP-1559 type-2 交易，重验完整 USDC 授权/calldata、账户、nonce、金额与费用；`FundingEthereumSignature` 区分 EIP-3009 与交易恢复位并拒绝高 S。`Core/Trading/Funding/CCTPSourceGasBudget` 统一模拟和编码的 gas 上限算法。固定 Wallet Core 编译经恢复验证的签名，生成不可变交易字节与本地哈希；独立 Python 向量核对，不读设备私钥、不广播。设备日志已补充（见上），实际提交恢复、跨链记账、真实交易及生产审核仍待完成，正式资金入口不因此开放。
+
+**Arbitrum 入金预检（2026-09-10，预生产）**：`Core/Trading/Funding/ArbitrumSourcePreflight` 通过固定只读 RPC，在同一个 canonical block hash 检查真实 USDC/ETH 余额、EOA、Circle 合约配置/限制/额度；`CCTPSourceReadCodec` 负责静态 ABI，`FundingQuantity` 使用固定 BigInt 5.7.0 精确处理 uint256。已验证的单笔授权才能进入模拟执行和 gas 预估，费用/nonce/区块/账户/时效任一检查失败即作废。`Features/Account/ArbitrumWalletBalanceView` 提供手动查询，仅显示设备钱包余额，不记入 HyperCore 或练习账户，退后台/切账户清空。正式资金签名、持久日志、跨链对账、提现及真实交易尚未开放；公开 RPC 和合约 getters 不替代生产 SLA、实现字节码审计或独立安全审核。详见 `docs/contracts/trading_account.md` 和入金调研。
+
+**CCTP 入金准备（2026-09-10，预生产）**：核对官方最新 USDC 文档后，新计划不再使用已弃用的 Bridge2 / 固定 5 USDC 最低额。`Core/Trading/Funding` 固定 Arbitrum 原生 USDC → Circle CctpExtension → HyperEVM forwarder → 当前 owner 的 HyperCore 默认永续账户，提供官方费用查询、精确整数报价、60 秒失效与不可变计划；`Core/Wallet/CCTPDepositCodec` 用固定 Wallet Core 编码 EIP-3009/ABI 并校验签名，不读取私钥或广播。入金准备页可查询费用和净额，仍不开放收款；后续余额/gas 预检见上条，持久交易日志、逐笔签名/提交与跨链对账、提现及真实执行待完成。契约见 `docs/contracts/trading_account.md`，协议更新和证据见 `docs/product/arbitrum-usdc-funding.md`。
+
+**账户与 Arbitrum USDC 准备（2026-09-10，预生产）**：`services/client_api/accounts` 提供 Google/Apple 令牌校验、一次性 challenge、独立短时会话及钱包地址绑定；不保存钱包私钥、不自动跑迁移，也不替代研究安装会话。`Core/Data/Account*` 与 `Features/Account` 提供原生登录和入金准备，入口为设置“账户与钱包”；Google SDK 固定 9.2.0，外部登录配置未完成。新增 `Core/Wallet` 以 OS 熵和固定 Wallet Core 4.8.1 发布包实现设备钱包、标准 24 词恢复、Keychain 保护和固定 EIP-191 绑定签名；`wallet_repository/proof/routes` 验证签名并原子绑定唯一账户/地址，已有地址不替换。恢复词不上传，备份需完整重输，切换账户/退后台清理 UI；并发初始化遗留密钥保留不覆盖。`ArbitrumDepositPolicy` 只校验链/原生 USDC/整数金额。生产入口与资金能力仍关闭：真机恢复、真实 OAuth、链上对账、入金/提现/交易签名、账户生命周期、独立安全审核待完成。契约见 `docs/contracts/trading_account.md`，发布闸门见 `docs/product/arbitrum-usdc-funding.md`。练习余额保持隔离。
+
+**代表作补全与早期判断（2026-09-09）**：Client Read Model 作者列表新增可选 `representativeWork` 轻量摘要，首页/目录不再逐人等待全文和 K 线；`domain/smart_voice/client_read_model.py` 保持累计加分最高的三个标的排序，每个标的改用最早有效加分 Call 作为主观点，保留该点与最多九个高分点。`representative_intro.py` 投影同一条观点的日期、方向、结算涨幅和发帖前已完成日线参考价，不重算 Score，不倒填未来成交价。iOS `TodayInvestorDiscoveryWork` 在原简介高度内展示 Logo+ticker、日期/参考价及可追溯明细，详情默认也选择该早期观点。AppModel 网络错误不再永久缓存空证据。`jobs/smart_voice/representative_intro.py` 支持只读真源、dry-run 和本地快照补全；旧证据正文/译文保留。当前首页 87/87 候选齐全，全体 342/353 有代表作、341 位有历史参考价；其余不伪造，不等于生产发布。规则见 `docs/contracts/smart_account.md` 和 `docs/product/investor-discovery-home.md`。
+
+观点详情的阅读层位于 `Features/Smart/OpinionReaderView.swift`：现有 bSmart 摘要与作者正文分层，原文/完整译文点选切换，不再连续重复展示；正文无外框、支持动态字号和逐字复制。`OpinionReadingDocument` 只按原段落及系统句子边界组织长文，保留标题、列表、数字、条件与链接；仅将能在原文逐字或空白等价匹配的证据片段在原文内突出，不把译文或摘要伪装成引用。无翻译时回退原文，资料依据、历史结算、行情及交易入口保持原有功能；不改接口、采集、Score 或正文数据。
 
 ---
 
 ## 0. 架构文档导航与模块边界
 
+首页投资者发现评审位于 `docs/product/prototypes/investor-discovery/index.html`：A 头像池与焦点人物、B 逐人发现、C 按赛道选人、D 从观点识人。使用本地作者/观点快照，支持并排/单屏、追踪、目录与证据；仅 HTML 评审，不替换当前 SwiftUI 首页，不更改 Score、API 或生产数据。
+
+融合版原型位于 `docs/product/prototypes/investor-discovery-unified/bsmart-discovery-unified.html`，其交互已落地 SwiftUI 首页 `Features/Today/TodayInvestorDiscovery*`。当前上半屏只保留人物池、作者赛道筛选、可搜索目录和连续人物档案，不再重复提供“看观点”入口。原生只消费 AppModel 的显式平台 Top 25% 排名，不引入 HTML 快照、示例仓位或新的 Score；追踪写入原有持久化状态，详情复用 `SmartAccountDetailView` 及代表作。规则见 `docs/product/investor-discovery-home.md`。
+
+高表现力评审版位于 `docs/product/prototypes/investor-discovery-expressive/bsmart-discovery-expressive.html`：头像群像、人物卡、赛道与观点共用只读作者快照，追踪形成个人研究阵容，可导出人物/阵容/观点 PNG 卡片。单文件离线可用，分享保留日期、排名口径与摘要边界；仅设计评审，不替换原生实现、不修改 Score/API 或生产数据。
+
+**观点相关依据（2026-09-09）**：`Features/Smart/OpinionSupportingSourcesView.swift` 在原文/译文之后展示有对应事实的资料，点击卡片沿用共享元素转场进入独立详情，保留摘要、对应表述、短摘录与原文链接。支持公司披露、监管文件、媒体、研究、数据等可归属来源；不提供官方渠道追踪/通知，没有有效依据时整块不渲染且不影响作者信任分。`SmartAccountUpdate.supportingSources` 为可选契约；`pipeline/domain/opinions/supporting_sources.py` 从逐帖审核目录匹配平台、作者、原帖、标的及逐字表述，由批量导出和 X realtime job 在发布前投影，Client API 只保存/返回结果，不执行检索或算法。首批关联现有两条历史观点，尚未建设自动全网检索服务；更正/撤回在重新导出发布后生效，Score 与观点算法不变。现行方案见 `docs/product/opinion-supporting-sources.md`，契约见 `docs/contracts/opinion_supporting_sources.md`。原 `official-context` HTML 是历史研究原型，官方频道及缺失提示已明确不采纳。
+
+**本地资料抓取样本（2026-09-09）**：`pipeline/platforms/source_documents/web.py` 负责公开 HTML、robots、限速、公共 IP 固定连接与缓存；`domain/opinions/crawled_sources.py` 校验具体表述、文章标题、事实摘录及时间；`jobs/opinion_source_crawl.py` 仅运行 `local_crawl_samples.json` 指定的少量观点。默认 dry-run，`--apply` 更新独立 `crawled_sources.json` 并与人工目录合并导出本地 fixtures。新增 4 条观点的 5 条资料，旧历史样本保留。来源可选 `updatedAt` 保留修订时间；发布或修订晚于观点的版本标为后续资料，不倒填当时依据。这是人工选题和摘要、规则驱动抓取验证的本地实验，不是通用语义搜索，不启动常驻任务、不部署、不修改数据库或排名。
+
+Today 顶部由 `TodayInvestorDiscoveryModule` 替换价格观点图，无持仓用户也能发现投资者；下方 `TodayHomePager` 继续提供“持仓与追踪 / 市场情况 / 聪明动态”三个文字标签页。发现区只有一个实例，不参与横向分页；三个原生垂直滚动页独立保存位置，标签栏在发现区滚出后吸顶。`BSmartCollapsingScrollState` 只协调 UI 滚动，不接管 ScrollView delegate、不改图表数据或排序。方案落点见 `docs/product/today-home-navigation.md`。
+
+首页主模块以“发现聪明投资者 / 他们怎么看市场”区分人物与观点，复用 `TodayHomeSectionHeading` 的 20pt 标题和小图标；第二标题在共享头部中只出现一次并随头部滚出。下方三个标签继续左对齐，字号 16pt；`TodayEditorialSectionTitle` 统一下级模块为 15pt，追踪动态同步使用，支持 Dynamic Type，不加解释性小字。持仓观点行通过独立浅底色、细边框和间距区分，分组不重复套卡；排序、来源及详情路由不变。
+
+首页顶栏保留“今日”、帮助和设置。`TodayInvestorPool` 只编排发现展示：头像沿单条水平线排列，不采用环绕；中央大头像显示真实平台 Top 比例，两侧头像依距离递减，各带来源标识。默认聚焦 X 账号 `@aleabitoreddit`，仅在其仍符合当前筛选条件时采用，首屏两侧优先展示 3 位有头像的合格 YouTube 作者及 1 位有头像优先的 Reddit 作者（含已核实的内置头像映射）；剩余候选同样将有头像者前置，同组保留原顺序，无头像者不删除。排名、资格和完整候选覆盖不变。`SmartPlatformMark` 使用 Asset Catalog 的 `PlatformReddit` 内置橙白 Snoo 图片，不再用 `r/` 文字替代；资源复用仓库已有平台 Logo，无运行时网络依赖。`TodayInvestorDiscoveryPeople` 使用原生横滑居中吸附，仅由用户横滑或点击头像切换，移除定时横移、播放/暂停按钮及人数/进度行。简介卡取消裸 Score 和重复平台文字，固定高度内显示风格与首个既有贡献排名代表作的方向、结算窗口及标的股价变化；无代表作回退真实覆盖领域/标的，不把股价涨幅包装成账户收益。`TodayInvestorDiscoveryHighlight` 优先消费作者列表内置代表作摘要，旧数据缺失时才在焦点稳定 650ms 后复用 AppModel 按需证据缓存，目录不批量请求。下方三标签内容与详情图不变。
+
+**Reddit 作者头像（2026-09-10）**：`platforms/author_assets/reddit_profile_avatars.json` 记录按公开主页核实的身份与完整头像 URL（含平台默认头像，不等同自定义头像，部分为搜索索引快照）。Client Read Model 仅在 Reddit 头像缺失时按作者 ID 补齐；`scripts/sync_reddit_profile_avatars.py --apply` 投影本地作者、观点/代表作及 iOS 身份映射，`sync_ios_author_avatars.py --reddit-only` 沿用精确 URL 哈希打包。共享头像控件在源 URL 缺失且展示名明确为 u/账号时才使用同一映射，不覆盖在线有效头像、不按相似姓名猜图。首批 13/31 位作者、11 张不同源图片已核实打包；18 位仍待核实（公开访问验证/资源不可获取），不伪造其头像。无数据库写入、无评分变更、未发布生产。
+
+作者头像由共享 `BSmartAvatar` 统一读取：优先匹配完整源 URL 的内置 `AuthorAvatar_*` 小图，未内置的图片通过 `Core/Data/AvatarImageStore` 请求合并、最多 4 并发、后台解码和有界内存/磁盘缓存加载；回到前台可重试，失败不缓存成头像。`scripts/sync_ios_author_avatars.py` 只读现有模型的公开头像地址，维护 `ios/asset-sources/author-avatars.json` 与 URL 哈希注册表；可显式允许构建期公共图片中转，App 不依赖该中转服务。没有头像地址的作者继续显示占位，不按姓名猜测身份，不改变 API、作者池或 Score。
+
+三标签阅读节奏评审原型位于 `docs/product/prototypes/today-reading-rhythm/index.html`，可直接本地打开，支持并排与单屏预览。其布局已落地到原生 iOS；HTML 中的示意行情、样例仓位与追踪状态不进入 App。
+
+原 `TodayPortfolioNowModule` 行情组件保留兼容，但首页不再装载其行情 session。标的详情和下单页仍共用 Hyperliquid 公开 Info API 与市场选择规则（优先 xyz，缺失或失败才查其他 venue），现价与 24h 涨跌来自同一 coin 的 markPx/prevDayPx，不从持仓快照或观点证据推导行情。行情请求按版本、coin、interval 隔离，过滤无效 OHLC/重复时间。`Core/DesignSystem/BSmartCandlestick` 继续统一详情及下单页蜡烛绘制；交易仍为既有本地模拟边界。
+
+“持仓相关”位于第一个标签页。`TodayHoldingsActivity` 只匹配声明为持仓的股票（含仅填占比的持仓，不含自选与本地模拟交易仓位），从已有 Smart Account / Smart Money 中选取近 30 天最新来源动态；同一新鲜度档内按已知仓位占比排序，不重算 Smart 评分。首页先按来源筛选再沿用 3 条分散标的预览，全量页另支持标的筛选。`TodayHoldingGroupHeader` 每组只展示一次标的/仓位，`TodayHoldingsActivityRow` 使用独立底色和细边框区分摘要与来源卡片；组间按首次出现顺序排列，组内保持原顺序。追踪动态采用轻量行；观点进入原始证据页，资金操作直接进入对应 `SmartMoneyMovementDetailView`，不回退到同标的其他钱包。设计依据及边界见 `docs/product/holdings-related-activity.md`。
+
+Today 的“单独观点”已替换为第三个标签页的“聪明动态”；追踪动态留在第一个标签页并改为纵向列表。`TodayInvestorActivity` 按平台 + 作者 ID / 钱包账户 ID 聚合真实近 30 天的现有动态，跨标的保留原始事件，按最新时间排序；不受持仓筛选限制、不重新评分、不合并未知身份。`TodayInvestorActivityModule` 首页展示 3 位投资者，每人最近 2 条；完整列表按来源和投资者/标的搜索叠加筛选。`TodayInvestorActivityCard` 保留兼容名称，实际以无外框作者时间线展示：日期分隔、一次头像/平台/名称/排名、缩进观点序列与追踪按钮；单条动态进入原始证据，“全部动态”进入该投资者的时间线。无持仓或无数据时仍保留模块与明确空态。
+
+持仓页为统一资产工作区：顶部 `外部持仓 / bSmart 账户` 与估值图随整页纵向滚动收起，仅保留吸顶的文字下划线标签按 `自选 / 持仓 / 全部标的` 排列，支持点选和原生左右分页，不显示系统分段控件。三个列表保留独立滚动位置，切换不重建顶部曲线；持仓列表随资产账户切换，自选和全部目录不受影响。`PortfolioValueChart.swift` 提供 1D/1W/1M/全部、稀疏日期刻度和拖动估值点。`Core/Data/PortfolioValuationHistory.swift` 整理有效快照、去重与限量保留；AppModel 仅导入与当前持仓构成一致的服务端历史，并本地持续保存完整估值，数量/组合变化开启新记录段，不用现价倒推历史。交易账户在成交及盯市时记录现金+保证金+未实现盈亏，不把杠杆名义规模计入权益；旧账户无历史时仅显示已知单点，不制造走势。`PortfolioHoldingSnapshot.swift` 与 `PortfolioHoldingRow.swift` 保留成本、现价、价值和持仓回报；`PortfolioAppAccountView.swift` 保留现金/仓位权益。行情列表名称/价格维持紧凑字号并隐藏平台名称，底层 coin/venue 标识不变。
+
+Today 与 Portfolio 复用 `Core/DesignSystem/BSmartCollapsingPager.swift` 及 `BSmartCollapsingScrollState.swift`（原 Today 专属协调器），整页滚动和吸顶只处理 UI，不接管 ScrollView delegate、不改变行情和评分。Portfolio 三个内容模块不再内嵌第二层垂直 ScrollView；目录搜索聚焦时将头部滚出，取消搜索后保持用户阅读位置，可下拉恢复估值图。`Features/Research/TickerDirectorySections.swift` 沿用首页现有热门标的选取结果置顶最多 10 个，复用完整目录中的同一报价/标识；下方按原顺序展示其余标的，不重复、不减少覆盖。搜索同时覆盖热门与普通标的，进入搜索后统一展示匹配结果，不硬编码热门股票池。
+
+持仓、关注与全部标的复用 `Core/DesignSystem/BSmartMarketRow.swift`，展示单价、24h 涨跌及同一市场的名义成交量，缺失不填零；金额统一使用 `BSmartMoneyFormat` 的美元符号格式。标的图标随 Asset Catalog 内置，`scripts/sync_ios_ticker_logos.py` 维护资源与 `ios/asset-sources/ticker-logos.json` 来源/哈希审计，`TickerLogoRegistry` 用于完整性测试。
+
+Today 的市场标签页由 `TodayMarketActivityView` 展示两张热门卡片和两条轻量 `TodayAlphaDiscoveryRow`，更多进入完整列表；取消首页卡片内层横滑和穿插轮播，避免与切页手势冲突。首页与热门标的列表复用 `TodayViewpointPackageCard`，采用浅绿/浅蓝底和深色文字，预览采用容器宽度、232pt 基准等高和 12pt 上下间距，完整列表仍用 264pt 基准等高。顶部展示最近三位作者；正文先展示单条摘要，底部展示该作者头像、平台标识、名称、Top 比例和发布时间；摘要取 Top 25% 作者中最新的一条（无符合者回退到包内排名最高的作者）。Alpha 条目只预览第一条来源摘要及该来源的身份/排名，完整详情仍保留所有证据。热门和 Alpha 均独立进入详情并保留共享元素转场；平台标识复用 `Core/DesignSystem/SmartPlatformMark.swift`。原 Rail 组件保留兼容，不用于新首页。市场与聪明动态不再以是否有持仓作为可见性条件。
+
+iOS 标的导航统一使用 `Features/Research/TickerDestinationView.swift`，每个详情独立行情 session；`Core/Data/AppTickerCatalog.swift` 合并持仓、Smart 覆盖、摘要与 Hyperliquid 目录，缺少报价不填 0。下单页由 `TradeLeveragePicker` 提供横滑杠杆刻度，复用行情图切换键盘/K 线，方向只在底部确认操作中体现。
+
+所有标的复用 `TickerIntelligenceView(symbol:)`，不再按是否存在 NVDA 式研究快照分成正式页与简化页。价格图下展示用户持仓、概览/Smart Activity/交易；市场选择器同时切换简介、动态、持仓和交易目标。`TickerDetailSections` 复用两类持仓口径；`Core/Data/TickerProfile` 保存带公司官网来源的双语简介，缺失明确留空，不定义新的股票池。`HyperliquidMarketChart` 独立为共享行情图，详情可开启观点头像；`TickerChartOpinions` 按 1H/4H/1D/1W/1M 最多选 3/4/5/6/7 个主体，头像 38/36/34/30/28pt，完整触控区域与排名标签参与碰撞检测。同主体取最新，分来源按既有排名/分数排序，不重算 Score；时间窗外观点不贴到边缘，不把股票原始证据价格混入永续合约坐标。点头像直接进入证据，窗口全量动态仍可查看。切换行情周期的异步结果按请求版本与 coin/range 校验，防止旧响应覆盖。
+
+标的页概览只展示资产简介与市场事实，Smart Activity 独立展示动态。`Supporting/ticker-profiles.json` 扩充离线双语资料，连同 `TickerProfile` 共覆盖 47 个主要标的，保存官方来源，ETF 与公司分开描述；未知标的不编造简介。顶部星标直接写入既有关注列表，已有持仓保持追踪且不被关注操作覆盖。`Features/Smart/SmartSubjectDestination.swift` 统一观点、动态、共识及 Alpha 身份区域的共享元素主页入口；图表气泡和观点正文仍打开证据。观点详情不再展示结构化 Call 与审计模块，原文、译文、历史结果及后台证据字段保留。
+
+作者详情仅保留概览与历史表现两个分区，概览内可展开全部最新观点。`Features/Smart/SmartAccountRepresentativeWorks.swift` 在单一图表区域切换最多三个既有排名代表标的；图表支持 K 线/折线、点击编号观点与下方证据联动。`RepresentativeWorkChartModel` 仅整理有效 OHLC 与既有贡献排名前三的窗口内观点，标记不跨时间窗夹到边缘，44pt 点击区避让；切换标的重置所选观点，单条观点贡献与标的累计贡献不混用。原有 Score、代表作筛选及 Smart Money 图表不变。
+
 根目录 `ARCHITECTURE.md` 保持为项目活地图，记录当前系统事实、数据真源、主要目录和关键命令。长期设计边界已拆到专题文档：
 
 - `docs/product/product-direction-mvp.md`：第一阶段产品决策真源，定义持仓事件、Smart Account / Smart Money、覆盖策略和 iOS/Web 分工。
+- `docs/product/hyperliquid-trading-pivot-2026-09.md`：交易前端转向、模拟交易边界、Builder Code 路线和竞品取舍。
+- `docs/product/prototypes/today-home-tabs/index.html`：首页三子页的 A/B/C 历史交互评审原型及竞品研究；当前 SwiftUI 布局以 `docs/product/today-home-navigation.md` 为准，不改评分、接口或生产数据。
 - `docs/architecture/00-overview.md`：系统总览、当前真源和迁移策略。
 - `docs/architecture/01-frontend.md`：Next.js 前端 feature/shared/server 边界。
 - `docs/architecture/02-pipeline.md`：Python 管线 platforms/domain/jobs/cli 边界。
@@ -23,6 +161,7 @@
 - `docs/architecture/09-ios.md`：iOS 主客户端、SwiftUI 模块、API 消费和发布规则。
 - `docs/architecture/10-congress-score.md`：美国国会两院公开交易评分的来源、结算、输出和隔离边界。
 - `docs/operations/smart-money-live.md`：Hyperdash 主源、Hyperliquid 降级、原子发布、健康阈值与事故处置。
+- `docs/operations/ios-market-charts.md`：iOS 首页/详情/交易图的 Hyperliquid 行情口径、刷新、OHLC 验证和原生回归记录。
 
 跨平台产品契约位于 `docs/contracts/`：`opinion`、`author`、`ticker`、`judgment`、`smart_account`、`narrative`、`congress_score`。新增平台、观点筛选、Score、目标价、叙事等功能前，先确认 `docs/architecture/08-development-rules.md` 和对应 contract。
 
@@ -32,9 +171,11 @@
 
 **品牌标识（2026-08-10）**：产品公开名称统一为 `bSmart`；Swift 类型和 target 使用 `BSmart` 前缀，环境变量使用 `BSMART_` 前缀，URL scheme、存储键、数据库和机器标识使用小写 `bsmart`。旧品牌名不得重新出现在页面、接口说明、文档、资源文件名或新代码中；外部域名、部署配置和应用商店标识必须与该映射保持一致。
 
-**iOS Signal Pulse 展示层（2026-08-24）**：iOS 主客户端采用 `Signal Pulse` 原生视觉层。Today 以“状态条 + 单一首要持仓事件 + 次级变化流”组织；Smart 保持 Smart Account / Smart Money 平行入口并将叠加筛选收进统一 Sheet；标的详情使用 `概览 / Smart Activity` 的单标的联动结构，价格线上统一标注两种来源但保留各自语义；Smart Account 作者详情使用 `概览 / 观点 / 历史表现`，概览优先展示已发布作者画像、近 30 天每标的最新有效方向和最新观点，历史代表作与 Score 说明归入历史表现；Portfolio 统一承载 `持仓 / 关注标的 / 全部标的` 三个场景。荧光绿色只承担选中、实时、主要动作和最高优先级边线，不代表底层看多判断。该改版只调整 SwiftUI 信息层级与交互，不改变 API、Score、信号生成、持仓个性化和数据覆盖逻辑。共享组件必须落在 `ios/BSmart/Core/DesignSystem`，Feature 不得复制局部设计系统；完整规则见 `docs/architecture/09-ios.md`。
+**iOS Smart 双源产品边界（2026-09-04）**：iOS 主导航固定为 `Today / Portfolio / Smart / Mr Collie`，Smart Account 与 Smart Money 是平行、可独立审计的用户侧情报来源。`AppModel` 同时负责两类数据的装载、缓存、刷新、关注状态与证据按需加载；Today、Smart 榜单、标的价格证据图、持仓状态、提醒和 onboarding 均可展示两类来源，但不得把不同周期的来源强行推导成同向、背离或确认。`Mr Collie` 是最后一个 Tab，只解释既有持仓、信号和证据，不成为新的市场事实来源。`Signal Pulse` 视觉层继续有效：荧光绿色只承担选中、实时、主要动作和最高优先级边线，不代表底层看多判断。共享组件必须落在 `ios/BSmart/Core/DesignSystem`，Feature 不得复制局部设计系统；完整规则见 `docs/architecture/09-ios.md`。
 
-**iOS Mr Collie 研究入口（2026-08-13）**：主导航固定为 `Today / Smart / Portfolio / Mr Collie`（中文同样保留 `Mr Collie`），Smart 为第二个 Tab，Mr Collie 为最后一个 Tab；四个入口使用一致的原生 Tab 样式。界面位于 `ios/BSmart/Features/AI`；Live/Release 构建通过经过安装会话认证的 `POST /v1/mr-collie/query` 请求 Client API，由服务端把该安装的持仓与版本化 `PortfolioSignal`、`TickerIntelligence`、Smart Account / Smart Money 证据上下文交给 DeepSeek。服务端只回填模型引用的真实证据 ID，并返回 `contextVersion`、`dataAsOf` 与模型名；默认使用成本适中的 `deepseek-v4-flash`，通过独立的 `BSMART_MR_COLLIE_MODEL` 覆盖，不继承其他管道的 Pro 设置。模型不可在客户端生成市场事实、重算 Score、把缺失证据解释为中性或给出个性化买卖/杠杆/仓位指令。DeepSeek 不可用时，iOS 明确降级到本地确定性证据回答。
+**iOS Mr Collie 研究入口（2026-09-04 恢复）**：界面位于 `ios/BSmart/Features/AI`；Live/Release 构建通过经过安装会话认证的 `POST /v1/mr-collie/query` 请求 Client API，受控内部构建可通过 `ios/Config/Secrets.xcconfig` 临时直连 DeepSeek。所有远程回答必须保留真实证据 ID、数据时间和上下文版本；不可在客户端生成市场事实、重算 Score、把缺失证据解释为中性或给出个性化买卖/杠杆/仓位指令。远程服务不可用时，iOS 降级到 `AIResearchAssistant` 的本地确定性证据回答。
+
+**Hyperliquid 交易前端转向（2026-09-01）**：标的详情页以价格图和持仓为首层，图下默认概览并保留 `Trade` 上下文，直接消费 Hyperliquid 官方公开 Info API 的 HIP-3 市场元数据、标记价、盘口影响价和 K 线；Smart Account 概览与观点流仍由 bSmart Client API 提供并保留为交易判断证据。当前执行层是设备本地、初始资金固定为 US$10,000 的内测沙盒，支持多空、逐仓杠杆、资金费近似、未实现/已实现盈亏和维护保证金强平；封闭 TestFlight 使用正式账户与订单术语，不在每个控件重复展示模拟提示，但不得作为真实执行对外发布。卡片不再提供交易按钮；标的页以价格与大图表为主体、图下选择周期，账户与市场指标移入次级区域。共识、阿尔法、单条观点和各类证据详情统一复用 `Features/Trading` 的底部做空/做多栏和交易弹窗，金额页由 `TradeOrderComposer` 提供数字键盘、比例预设、杠杆和滑动确认，保留费用/敞口/强平价；弹窗行情独立 session，执行引擎共用。交易成功页的“完成”通过呈现方回调关闭整张交易弹窗，保留原页面状态；按钮整块背景均可点击。沙盒不得发送钱包签名或伪造 Hyperliquid 成交；未来真实执行必须放入独立签名适配器，逐单附加用户已批准的 Builder Code；Score、观点排序和行情展示不得受 Builder 返佣影响。完整决策见 `docs/product/hyperliquid-trading-pivot-2026-09.md`。
 
 **iOS 持仓估值与标的目录（2026-08-12）**：Portfolio 的 `持仓` 场景顶部优先展示当前持仓总价值；历史变动曲线只能读取独立的持仓估值快照，缺失时显示不可用，禁止从成本价或当前收益生成伪历史。独立 `Tickers` Tab 已取消，Portfolio 的 `全部标的` 场景必须完整列出服务端 `TickerIntelligence` 支持范围并在其上搜索，客户端不得维护第二份静态股票池。
 
@@ -47,6 +188,14 @@
 **MVP 数据覆盖闸门（2026-08-04）**：`scripts/audit_mvp_coverage.py` 从只读 SQLite 真源审计首发标的的 Smart Account 新鲜度、近 30 天合格独立作者、YouTube 证据/口播版本绑定，以及 Smart Money 市场流动性、成交新鲜度、7 日当前合格账户和派生信号。入口为 `make mvp-coverage-audit`，当前基准报告为 `docs/product/mvp-data-coverage-audit-2026-08-04.md`。历史观点数、历史合格账户或历史成交量不能代替当前覆盖；未达到双侧门槛时不得生成确认或背离，Smart Account 单侧通过时必须标注“暂无资金验证”。
 
 **Smart Account 术语约定**：产品和页面统一称 `Smart Account`，具体数值统一称 `Score`；iOS 中间主 Tab 固定称 `Smart`。`Smart`、`Smart Account`、`Smart Money` 是所有语言环境中的英文保留术语，不得翻译为中文或其他语言。`smart_voice` 包、`sv_*` 表/字段、`smartVoice.json` 和 `smartVoice*` adapter 是历史兼容标识，不得直接显示在 UI；没有 schema 与构建产物双读迁移前不得贸然改名。公开正式入口为 `/smart-account`，旧入口仅保留兼容。
+
+**X 增量归档重跑（2026-09-05）**：`x-import-archive --tweet-dir <目录>` 由 `pipeline/jobs/x_archive` 编排、`pipeline/platforms/x/archive.py` 解析，沿用本地已有价格覆盖池，按 `(ticker, tweet_id)` 只补缺失原文，支持多目录、dry-run 和导入报告；不删历史、不执行 DDL。随后 `sv-v0 --stage candidates --candidate-limit 0 --tweet-dir <目录>` 召回增量，`--stage extract --created-since YYYY-MM-DD` 可限定新资料时间范围；结算与 Score 仍使用完整历史证据。 当备用 DeepSeek V4 用于短输出批处理时，可设 `DEEPSEEK_THINKING=disabled`，避免默认思考耗尽 JSON 输出预算；不设置时保持提供商默认行为。
+
+**热门/阿尔法标的来源标题（2026-09-06）**：`Features/Today/TodaySourceHeadlines.swift` 统一展示来源观点与仓位变化；热门标的并列两条独立来源摘要（优先最近观点及不同方向来源），不生成共同论点；阿尔法按来源分别展示观点或仓位前后值，保留姓名与时间归属。`pipeline/common/smart_account_titles.py` 保留完整摘要及后续条件句，禁止持久化字符截断；现有本地 267 条动态已从本地真源刷新双语标题，无新增模型调用。
+
+**本地 Smart 快照预览（2026-09-06）**：9 月 5 日重跑结果已复制到 `contracts/fixtures/smart-accounts.json`、`smart-account-updates.json`、`smart-account-evidence.json`，用于显式 `--use-fixture-data` 的本地 Debug 预览。近 30 日动态 266 条，另保留 1 条已有持仓信号引用的历史观点以保证证据链接完整；账户 353 个、代表证据 916 条。原文件备份和运行记录位于 `data/runtime/x-refresh-20260905/`。本地快照不等于线上 API 发布，模型候选仍有未处理部分。
+
+**Kimi 限额续跑（2026-09-05）**：`common/kimi.py` 通过 `LLM_PROVIDER=kimi` 或显式 Kimi provider 接入现有抽取、提炼与翻译；沿用 `kimi-k2.6` 非思考模式。密钥仅从本地 `KIMI_API_KEY` 读取，调用必须同时设置 `KIMI_BUDGET_CNY` 和 `KIMI_BUDGET_FILE`。`common/kimi_budget.py` 用文件锁共享请求预留、实际 token 用量的公开价费用估算和不确定请求上界，跨进程共用同一额度，不自动充值或修改其他 provider 默认值。剩余原文未处理时，下游结算/Score/导出仅反映已有有效 Calls，运行报告必须保留覆盖缺口，不能宣称全量重跑完成。
 
 **迁移期规则**：现有 `web/lib/*Queries.ts`、`web/components/bsmart/*`、`pipeline/manage.py`、`pipeline/ingest`、`pipeline/analyze` 继续可用；新增复杂功能优先落到目标边界 `web/features`、`web/shared`、`web/server`、`pipeline/platforms`、`pipeline/domain`、`pipeline/jobs`、`pipeline/cli`。`pipeline/ingest` 和 `pipeline/analyze` 现在只作为历史导入/命令路径兼容层保留，新增平台或分析实现不得继续写入旧目录。前端 Tailwind content 必须覆盖 `web/features` 和 `web/shared`，否则迁移后的组件样式不会被生成。
 
@@ -71,6 +220,7 @@
 > **Smart Account 公开投资者榜（2026-07-31）**：`/[lang]/smart-account/leaderboard` 位于独立 `(public)` 路由壳，不渲染应用侧边栏且无需登录；应用内 `/smart-account` 只保留标的发现与实时观点，通过明确入口进入公开榜。公开页复用同一份构建期 Score 数据和作者证据，支持来源、正式/观察/前后分位、精确周期、优势周期、赛道、风格和作者/标的搜索的叠加筛选；右侧作者证据栏采用 `360/400/440px` 响应式宽度。榜单状态与列表编排归 `SmartVoiceLeaderboardView.tsx`，作者侧栏归 `SmartVoiceLeaderboardProfile.tsx`，纯筛选与能力分派生归 `leaderboardModel.ts`，不得把 Score 派生逻辑重新写回视图组件。
 > **Smart Account 高 Score 新关注（2026-07-31）**：应用内 `/smart-account` 的标的发现默认展示最近 7D 新覆盖。平台正式 Top 10% 作者在当前窗口首次发布某 ticker 的 actionable call，且该作者此前 180 天未覆盖该 ticker 时计为新增作者；历史期无任何当前 Top 10% 作者覆盖才标记“全新进入”，否则标记“新作者加入”。查询层读取最长 90D 当前窗口加 180D 历史基线，按作者/标的去重，并附原始观点证据；该信号不修改作者 Score，也不在历史时点回测完成前声称有交易收益。查询兼容入口 `smartVoiceQueries.ts` 仅重导出稳定 API，类型、SQL、聚合基础件、榜单构建和概览查询分别落在 `smartVoiceTypes.ts`、`smartVoiceMarketQueries.ts`、`smartVoiceMarketAggregation.ts`、`smartVoiceMarketBuilder.ts`、`smartVoiceOverviewQueries.ts`。
 > **Smart Account 作者证据与组合回测（2026-07-30）**：`/[lang]/investors/smart-account/[investorId]` 在分数解释和风格画像下提供“观点证据 / 组合回测”双视图；观点证据继续展示真实价格路径、原帖链接和全部已结算战绩，组合回测由该作者真实 `sv_call` / `sv_call_settlement` 与 `price_daily` 在构建期生成，口径为下一交易日复权开盘入场、同标的最新观点覆盖、活跃标的等权、空仓期持有现金、10 bps 往返成本并以 SPY 对照。回测是信号跟随模型，不代表作者真实账户。
+> **Smart Account 逐账户跟单回测（2026-09-02）**：`make smart-account-follow-backtest` 对当前正式 X、YouTube、Reddit 作者逐一计算总收益和年化。主结果只从 Call 发布日前最后一个历史平台合格快照开始；按下一交易日复权开盘执行，同标的同向判断延长周期、反向判断翻仓、平仓/失效判断退出，活跃标的等权并计 10bps 往返成本。任务同时输出只做多对照、当前作者池完整历史描述和逐笔证据到 `data/reports/smart_account_follow_backtest/`；完整历史带幸存者偏差，所有结果均不回写 Score。
 > **标的页『目标价 × 操作周期』(2026-06-29 新增)**：① **观点检索/正文提炼**——每条观点抽到时在 reader 多显一行「作者明确给出 买入/卖出/目标价 + 周期(原话+档)」(`OpinionExplorer` 的 `JudgmentLine`)；`getKolOpinions` 汇总 Reddit/YouTube/雪球/Toss/Yahoo JP/X。浏览器端观点池是有界展示层，不是原始数据真源：Reddit 按近 370 天时间倒序取最近 350 条，X 仅纳入已进入 `kol_refined` 的观点并按质量、相关性、互动排序取前 120 条，雪球/Toss/Yahoo JP 各取 100 条；全量原帖仍保留在 SQLite 并用于离线日指标，避免 mega-cap 单页把数万条 X 帖文序列化成百 MB HTML。② **整体数据**——`KolModule` 底部通过 `web/features/ticker/components/TargetPricePanel.tsx` 渲染目标价时间线/价格分布/筛选入口，旧 `web/components/bsmart/TargetPricePanel.tsx` 只保留兼容导出。抽取层=独立表 `kol_judgment`(reddit/x/雪球/Toss/Yahoo JP，见 §5)+ YouTube 复用 `yt_judgment`；**只抽作者明说、反臆造**，价格在 `kolQueries.judgmentMap` 按**现价 0.2–5× band 剔噪**(penny-pump/假设估值/$1225 这类数量级离谱者置空)。取数 `getKolTargetPrices`(复用 `getKolOpinions` 池，judgment 挂到 `KolOpinion.judgment`)。`make kol-judgment`。
 > Reddit 单站旧页（dashboard/ticker/post/author/leaderboard/cn/onboarding）已删；**后端 pipeline 全保留**。线上 redditalpha.xyz 仍由旧 `reddit_alpha` 仓库部署、不受影响（bSmart 部署需快照含 `gr_*`，否则相关页为空）。
 
@@ -303,6 +453,7 @@ crypto_us/
 | 叙事/简报 | `narratives` `narrative_tickers` `narrative_posts` `daily_briefs` | 主导叙事 + 每日简报 |
 | 叙事轮动(构建期 JSON) | `web/lib/data/narrativeRotation.json` | **新 `/narratives` 页面数据源**：固定板块 taxonomy 的跨社区叙事轮动；由 `make narrative-rotation` 从 `gr_post`、Reddit、X、YouTube 聚合生成，记录每日 rank/share/sentiment 与详情来源/地区/标的分布；**不使用旧 Reddit-only `narratives` 表**，不把财报/政策/估值等事件项作为板块 |
 | Smart Account 指标回测(本地派生) | `sv_investor_score_asof` `sv_indicator_signal_daily` `sv_indicator_event` `sv_indicator_outcome` `sv_indicator_stat` | 历史时点平台正式池 Score/排名 → 发现页四类指标的 1/3/7/30/90D 滚动信号 → 连续同向事件 → 下一交易日开盘后的 1/5/20/60/90D 调整价方向收益、相对 SPY 超额、胜率、Wilson 区间、盈亏比和利润因子；`make sv-indicator-backtest` 全量重建，`make sv-indicator-report` 另导出逐事件、逐原文证据、成本/时间/标的/强度/质量/不重叠持仓细分 CSV 及 40 例原帖证据案例集；`make sv-portfolio-backtest` 在 X 历史时点事件和作者 Call 上构建不重叠等权组合，输出 0/10/25bps 成本下的 CAGR、夏普和回撤，不新增主库日净值表 |
+| Smart Account 逐账户跟单回测(本地报告) | `sv_investor_score` `sv_investor_score_asof` `sv_call` `price_daily` | 当前正式 X/YouTube/Reddit 作者 → 发布日前历史资格 → 生命周期覆盖的单标的持仓 → 下一交易日开盘执行、活跃标的等权、10bps 成本 → 每个账户总收益、CAGR、SPY 超额、回撤、只做多对照和逐笔证据；输出 `data/reports/smart_account_follow_backtest/`，不写数据库或 Score |
 | Smart Account 子 Score 垂直回测(本地派生) | `sv_segment_score_asof` `sv_segment_signal_daily` `sv_segment_event` `sv_segment_outcome` `sv_segment_stat` | 仅用每个历史时点之前已结算的 Call 重建周期、赛道和投资类型子 Score，按子类内部 Top 10%/25% 作者生成 3/7/14/30D 集中方向事件，再从下一交易日开盘计算 1/5/20/60/90/180D 调整价方向收益和相对 SPY 超额；默认至少 3 位作者、65% 同向度和 2.5 有效声音，结果与原文证据写入 `data/reports/sv_segment_backtest/`，不修改当前作者分数或页面榜单 |
 | Smart Money（Hyperdash 主源） | `hyperdash-last-good.json`、原子 client manifest；`hl_*` 仅作降级审计 | Hyperdash Equities Focused → Copy Score/30 天绩效/仓位快照 → 快照差分 movement → iOS Read Model；来源和更新时间必须显式，客户端不重算 |
 | X Smart Account 实时事实与观点 | `x_realtime_subscription` `x_realtime_rule` `x_realtime_post` `x_realtime_call` `x_realtime_event_candidate` `x_realtime_run` | 正式 X Top 25% 作者池与规则版本 → webhook/15 分钟补偿幂等原帖 → 完整 Call/翻译门禁 → `smart-account-updates` 和持仓事件；生产只写 PostgreSQL，原始、译文、摘要严格分层，删除检查会撤下对应 Read Model 文档 |
@@ -372,6 +523,7 @@ crypto_us/
 | `make sv-indicator-report` | 不重算信号，基于现有 `sv_indicator_*` 导出逐事件结果、逐 Call 原文/URL、紧凑证据、稳健性统计和四指标各 5 个成功/5 个失败的原帖证据案例集到 `data/reports/` |
 | `make sv-segment-backtest` | X 作者周期/赛道/投资类型子 Score 垂直回测：历史时点子类排名 → Top 10%/25% 的 3/7/14/30D 集中事件 → 1/5/20/60/90/180D 方向收益、相对 SPY 超额和原帖证据；报告写 `data/reports/sv_segment_backtest/` |
 | `make sv-portfolio-backtest` | 只使用 X：将历史时点 Score 集体信号和逐作者已结算 Call 转成真实资金占用的组合净值，按下一交易日调整开盘、同标的不重叠、活跃持仓等权、空窗持有现金计算多空/只多/只空及 1/5/20/60/90/180D 的总收益、CAGR、年化波动、夏普、最大回撤和成本敏感性；输出 `data/reports/sv_portfolio_backtest/` |
+| `make smart-account-follow-backtest` | 当前正式 X/YouTube/Reddit 作者逐账户跟单：只从发布日前历史合格快照开始，按下一交易日复权开盘、同标的最新生命周期判断覆盖、活跃标的等权和 10bps 往返成本计算总收益、CAGR、SPY 超额、回撤及只做多对照；另导出带幸存者偏差的完整历史描述与逐笔证据到 `data/reports/smart_account_follow_backtest/` |
 | `make sv-rank-event-research` | 只使用 X 历史时点排名事件：强度阈值只读信号日前历史，宽参数搜索头部跟随、底部反向和头尾背离，并以前半段 50bps 净收益选参、后半段固定验证，同时做流动性、成本、延迟成交和剔除主要贡献标的压力测试；输出 `data/reports/sv_portfolio_backtest/x_sv_rank_event_*` |
 | `pipeline.manage overall-signals --ticker MU` | 重算标的页整体数据的异常归因与聪明钱/散户分歧：归因优先读显式 JSONL、缺失时读本地 `x_opinion`；聪明钱线缺旧实验缓存时读取 `sv_call` 并按 call 当日 `sv_investor_score_asof` 前 10% 作者加权，避免前视；输出 `web/lib/data/overallData.json` |
 | `make xueqiu-author-plan / xueqiu-author-auth / xueqiu-author-run / xueqiu-author-drain / xueqiu-author-status` | 雪球 Score 作者池：版本化候选池 → 用户登录授权 → 一年作者时间线断点回填（`drain` 为小批次冷却长跑）→ 状态统计；固定写本地 `data/dev.db` |

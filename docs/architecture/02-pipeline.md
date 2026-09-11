@@ -101,10 +101,10 @@ CLI 只负责命令注册和参数解析。长期目标是把当前 `pipeline/ma
 - CLI 命令适配与 argparse 子命令注册已按业务组拆到 `pipeline/cli/commands/`。
 - YouTube 命令已迁到 `pipeline/jobs/youtube/workflows.py`，CLI 不再直接依赖 `pipeline/ingest/youtube_*` 或 `pipeline/analyze/youtube_*`。
 - YouTube 抓取/频道刷新实现已迁入 `pipeline/platforms/youtube`，旧 `pipeline/ingest/youtube_*` 仅保留兼容 wrapper。
-- X 推文与 ticker/topic 硬匹配、云端 X 拉取、完整 X ticker universe 已迁到 `pipeline/platforms/x`。
+- X 推文与 ticker/topic 硬匹配、云端 X 拉取、完整 X ticker universe 已迁到 `pipeline/platforms/x`。增量 roster JSONL 使用 `jobs/x_archive` → `platforms/x/archive.py`，由 `x-import-archive` 命令按原有主键只补缺失原文，不清空历史。
 - YouTube 观点分析、完整口播、摘要、目标价判断、创作者综合观点实现已迁到 `pipeline/domain`。
 - `youtube-tag` 支持按发布日期、频道订阅数和视频时长限制候选；非头部视频优先复用 `yt_fulltext` 完整口播或在线字幕，再回退原生视频理解。
-- `pipeline/common/llm.py` 保留 LOW/MID/HIGH 默认路由，并支持通过 `LLM_PROVIDER=qwen|deepseek|gemini` 为一次任务显式切换 provider；Reddit 逐帖分析另按 `ITEM_ANALYSIS_PROVIDERS` 做真实 provider 回退。
+- `pipeline/common/llm.py` 保留 LOW/MID/HIGH 默认路由，并支持通过 `LLM_PROVIDER=qwen|deepseek|gemini|kimi` 为一次任务显式切换 provider；Reddit 逐帖分析另按 `ITEM_ANALYSIS_PROVIDERS` 做真实 provider 回退。
 - YouTube 进入观点流、目标价、相关性/质量和 KOL 日序列的展示门槛集中在 `pipeline/common/youtube_filters.py` 与 `web/server/queries/kol/shared.ts`：频道粉丝 `>=2000` 且视频时长 `>60` 秒。
 - KOL 命令已有 `pipeline/jobs/kol` 工作流，CLI 不再直接调用 domain。
 - KOL 观点提炼、视角分类、论点综合、完整翻译、相关性、质量评分实现已迁到 `pipeline/domain/opinions`。
@@ -133,3 +133,5 @@ CLI 只负责命令注册和参数解析。长期目标是把当前 `pipeline/ma
 1. Compatibility cleanup：确认无人直接执行 `pipeline.analyze.*` 或旧 `pipeline.ingest.*` 后，再删除对应 wrapper。
 2. Contract tests：为已迁入 domain 的 Smart Account、KOL、YouTube、narrative 输出补充小样本回归测试。
 3. Platform/domain coverage：持续补齐平台 wrapper 与 domain contract 的回归测试，避免后续重构破坏旧命令路径。
+
+Kimi 的限额文本请求由 `common/kimi.py` 处理，预留与费用账本由 `common/kimi_budget.py` 维护；任务通过同一 `KIMI_BUDGET_FILE` 共享人民币上限。切换其他 Kimi 模型前必须验证其价格并扩展计费映射。

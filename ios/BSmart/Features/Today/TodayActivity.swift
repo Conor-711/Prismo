@@ -428,7 +428,7 @@ private func accountActivityTitle(_ update: SmartAccountUpdate) -> String {
         return "%@ %@ toward %@: %@".bSmartLocalized(
             direction,
             update.ticker,
-            targetPrice.formatted(.currency(code: "USD").precision(.fractionLength(0))),
+            targetPrice.formatted(.bSmartDollars.precision(.fractionLength(0))),
             insight
         )
     }
@@ -491,7 +491,7 @@ private func compactActivityUSD(_ value: Double) -> String {
     case 1_000...:
         return String(format: "$%.1fK", value / 1_000)
     default:
-        return value.formatted(.currency(code: "USD").precision(.fractionLength(0)))
+        return value.formatted(.bSmartDollars.precision(.fractionLength(0)))
     }
 }
 

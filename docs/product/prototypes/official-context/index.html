@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>bSmart · 官方信息与观点</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="studio-header">
+    <div class="identity"><strong>bSmart</strong><span>产品实验室 / 官方信息</span></div>
+    <nav aria-label="方案导航"><button class="active" data-studio="prototype">交互原型</button><button data-studio="research">调研与方案</button></nav>
+    <button class="icon" id="theme" title="切换明暗主题" aria-label="切换明暗主题"><i data-lucide="sun"></i></button>
+  </header>
+
+  <main id="prototype" class="workspace">
+    <aside class="scenario-panel">
+      <div class="eyebrow">OFFICIAL CONTEXT</div>
+      <h1>看他的判断。<br>也看公司怎么说。</h1>
+      <p class="intro">给观点补上一层可追溯的官方信息，不把 bSmart 变成新闻终端。</p>
+      <div class="scenario-list" role="group" aria-label="示例场景">
+        <button class="scenario active" data-scenario="earnings" aria-pressed="true"><span class="index">01</span><span><b>财报引用</b><small>作者链接了具体官方材料</small></span><i data-lucide="arrow-up-right"></i></button>
+        <button class="scenario" data-scenario="partnership" aria-pressed="false"><span class="index">02</span><span><b>合作消息</b><small>系统关联，不冒充作者引用</small></span><i data-lucide="arrow-up-right"></i></button>
+        <button class="scenario" data-scenario="unmatched" aria-pressed="false"><span class="index">03</span><span><b>尚无官方披露</b><small>承认缺失，不用猜测填补</small></span><i data-lucide="arrow-up-right"></i></button>
+      </div>
+      <div class="flow-map"><span>作者观点</span><i data-lucide="arrow-down"></i><span>相关官方披露</span><i data-lucide="arrow-down"></i><span>原文与后续追踪</span></div>
+      <button class="text-command" id="reset"><i data-lucide="rotate-ccw"></i>重置交互</button>
+      <p class="prototype-note">设计预览。作者、排名与观点为交互示例；公告取自真实的 2025 年历史资料，并非当前最新消息。追踪设置仅保存在本浏览器，不会发送真实通知。</p>
+    </aside>
+
+    <section class="preview" aria-label="iOS 交互预览">
+      <div class="mobile-notice">交互示例 · 公告为 2025 年真实历史资料</div>
+      <div class="device"><div class="status"><span>9:41</span><span><i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i></span></div><div id="app" class="app"></div><div class="home-indicator"></div></div>
+      <div class="route" id="route" aria-live="polite"></div>
+    </section>
+
+    <aside class="principles">
+      <div class="eyebrow">设计决策</div>
+      <h2 id="decision-title">一条观点，一份出处。</h2>
+      <p id="decision-copy">默认只呈现最相关的一件披露：一句话、发布时间、发布主体。先补足上下文，再允许深入。</p>
+      <section><span class="note-index">A</span><h3>来源，不是背书</h3><p>“官方”只说明谁发布。公司披露、管理层预期与作者推断分别显示，不生成“利好已证实”。</p></section>
+      <section><span class="note-index">B</span><h3>不打断阅读</h3><p>作者正文下方直接露出官方信息，放在更长的价格证据与历史表现之前。点击卡片进入完整页面，返回保留阅读位置。</p></section>
+      <section><span class="note-index">C</span><h3>可持续追踪</h3><p>追踪的是这家公司的官方披露渠道，不是又关注了一名博主。默认进入每日摘要，即时通知由用户选择。</p></section>
+      <button class="walkthrough" id="channel-shortcut"><i data-lucide="radio"></i><span>体验官方渠道页</span><i data-lucide="arrow-right"></i></button>
+    </aside>
+  </main>
+
+  <main id="research" class="research" hidden>
+    <header><div class="eyebrow">RESEARCH / 2026.09.08</div><h1>不是多一条新闻，而是少一次搜索。</h1><p>基于以下产品的公开官方说明进行调研，未将网页资料解读为已登录实测。右栏是针对 bSmart 的设计判断。</p></header>
+    <div class="competitors">
+      <article><div class="brand-number">01 / Quartr</div><h2>以公司为单位，追踪一手资料</h2><p>移动端整合电话会、转录与 IR 材料；关注公司后可接收更新。关键词通知可以定位到相关转录语句。</p><a href="https://quartr.com/products/mobile-app" target="_blank" rel="noopener noreferrer">产品说明 <i data-lucide="arrow-up-right"></i></a><a href="https://quartr.com/features/keyword-alerts" target="_blank" rel="noopener noreferrer">关键词定位</a><footer>借鉴：公司渠道 + 定位原文。不照搬完整财报研究终端。</footer></article>
+      <article><div class="brand-number">02 / Particle</div><h2>故事之下，组织背景与来源</h2><p>围绕 Story 聚合报道、相关引语、原始资源链接及前因后果，并允许用户追踪相关实体。</p><a href="https://particle.news/blog/introducing-particle-the-news-organized" target="_blank" rel="noopener noreferrer">官方产品介绍 <i data-lucide="arrow-up-right"></i></a><footer>借鉴：聚合成一件事。不把转载篇数当作独立证据数量。</footer></article>
+      <article><div class="brand-number">03 / AlphaSense</div><h2>一个结论，回到对应段落</h2><p>生成式搜索中的摘要带有直接引用；点击后打开源文档，并高亮相关段落。</p><a href="https://help.alpha-sense.com/hc/en-us/articles/41666587181203-Interacting-with-Generative-Search" target="_blank" rel="noopener noreferrer">引用交互说明 <i data-lucide="arrow-up-right"></i></a><footer>借鉴：claim → passage。不仅附一个官网首页链接。</footer></article>
+      <article><div class="brand-number">04 / Koyfin</div><h2>从自选股出发，过滤信息</h2><p>Watchlist News 按自选范围组织新闻、公告、申报文件与转录；提醒可作用于单个标的或列表。</p><a href="https://www.koyfin.com/help/watchlist-news-feature/" target="_blank" rel="noopener noreferrer">Watchlist News <i data-lucide="arrow-up-right"></i></a><a href="https://www.koyfin.com/help/release-notes/v3-66-desktop-alerts/" target="_blank" rel="noopener noreferrer">文件提醒</a><footer>借鉴：范围与类型控制。不引入全市场新闻噪声。</footer></article>
+    </div>
+    <section class="proposal"><h2>bSmart 的切入口</h2><div class="proposal-columns"><div><h3>入口仍然是人和观点</h3><p>用户先被 Smart Account 的判断吸引，再花十几秒了解其涉及的官方披露。官方信息补足判断背景，不替用户判定作者正确，也不参与 Smart 排名。</p></div><div><h3>对象升级为“官方事件”</h3><p>一份 IR 新闻稿及同一份新闻稿的 SEC 附件，属于同一事件的不同文件。多个作者可以引用同一事件，但保留各自的推断与发布时间。</p></div><div><h3>追踪留在现有结构中</h3><p>入口在观点详情；官方渠道归属于标的详情；已追踪渠道进入现有追踪和提醒设置。不增加独立新闻 Tab。</p></div></div></section>
+    <section class="proposal"><h2>匹配边界</h2><div class="rules-table"><div><b>作者引用</b><p>原帖有可解析的官方链接，或清晰可定位的官方引文。仍需确认该段内容，而非只认域名。</p></div><div><b>相关官方资料</b><p>作者未给链接，系统按公司、事件、日期和具体事实匹配。明确标注系统关联，不声称作者看过。</p></div><div><b>未找到来源</b><p>不生成官方摘要；有明确事实声称但无法匹配时，显示“暂无可关联的官方披露”。纯技术观点不强行插入空模块。</p></div><div><b>时间与更正</b><p>早于观点的材料才可充当当时依据。晚发资料只能标为后续更新；旧财报不会因为被再次提及变成最新财报。</p></div></div></section>
+    <section class="proposal"><h2>第一版怎么落地</h2><ol class="milestones"><li><b>10 个主要标的试点</b><span>优先当前有高质量观点的公司，建立 IR、Newsroom 与 SEC 公司身份映射。人工审核首批关系。</span></li><li><b>先做直接引用，再做语义关联</b><span>财报发布与重大合作两类。候选检索后校验实体、财季、数字、时间、原文段落；低置信不展示。</span></li><li><b>上线卡片、独立详情和追踪</b><span>摘要每条绑定出处。重要披露先进入摘要；用户明确开启后才即时推送，并按事件去重。</span></li><li><b>验证价值，不考核新闻数量</b><span>看官方卡片打开率、原文打开率、追踪转化、来源错误率和通知退订率。人工抽检优先避免误关联。</span></li></ol></section>
+    <section class="proposal"><h2>数据入口与限制</h2><p>NVIDIA 已提供 <a href="https://investor.nvidia.com/investor-resources/rss/default.aspx" target="_blank" rel="noopener noreferrer">官方 RSS</a> 和 <a href="https://investor.nvidia.com/investor-resources/email-alerts/default.aspx" target="_blank" rel="noopener noreferrer">邮件提醒</a>。美国申报资料可从 <a href="https://www.sec.gov/about/developer-resources" target="_blank" rel="noopener noreferrer">SEC 开发者资源</a>获取，遵守其访问约束。可公开读取不等于获得全文再分发许可；MVP 使用客观转述、必要短摘录、原文链接，版权条款按来源审查。</p><p>原型不连接采集、推送或交易服务。正式实施先定义 OfficialEvent / OfficialDocument / OpinionSourceLink，再接入后端管线；不在 iOS 中搜索网页或判断官方身份。</p></section>
+  </main>
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -164,7 +164,11 @@ SPY 冒充行业基准，该 Call 只进入 `marketSelection`。
 
 投资者榜作者预览必须使用真实结算证据和 `price_daily`，不得用 mock 价格或仅把单条文字观点包装成代表作。每位可进入详情的作者分别生成 `best` / `weak` 两个候选：先按作者、ticker 和贡献正负聚合 `sum(abs(contribution))`，各取累计影响最大的 ticker，再在该 ticker 上取最多 10 条绝对贡献最高的已结算观点。图中同时保留这些观点的原始多空方向，不得因作者属于底部组而反转 stance；气泡颜色表达 bull/bear/neutral，大小表达 `abs(contribution)`，选中观点必须展示方向超额、结算日期和原始 URL。预览只展示收盘价折线，价格按 ticker 去重共享，客户端契约使用 `[day, close]` 紧凑元组。
 
-iOS 作者详情的“代表作”口径独立于榜单头尾预览：只聚合 `contribution > 0` 的已结算 Call，按作者与 ticker 求和，取累计正向 Score 加分最高的 3 个标的。每个代表标的保留最多 10 条正贡献观点，使用真实日线 OHLC 展示 K 线，并将观点按发布时间/入场交易日落点；点的颜色表达原始多空方向，大小表达单条 `contribution`。卡片必须展示标的累计加分和观点数，且能进入最高贡献观点的完整审计证据。客户端不得从收益率或命中次数重新推导该排名。
+iOS 作者详情的“代表作”口径独立于榜单头尾预览：只聚合 `contribution > 0` 的已结算 Call，按作者与 ticker 求和，取累计正向 Score 加分最高的 3 个标的。每个代表标的以最早的有效加分观点为锚点，保留该点及最多 9 条最高贡献观点，去重后不超过 10 条；使用真实日线 OHLC 展示 K 线。点的颜色表达原始多空方向，大小表达单条 `contribution`。卡片展示标的累计加分和观点数，默认选中最早加分观点，并能进入其完整审计证据。客户端不得从收益率或命中次数重新推导标的排名。
+
+作者列表可选 `representativeWork` 是上述第一代表标的的轻量摘要，随列表返回，不要求首页或目录先加载每人的 K 线/全文。选取“累计加分最多标的 + 最早有效加分观点”，保留同一条观点的证据 ID、作者/平台、发布时间、方向、原结算窗口、股价变化和结算入场价，不包含新的评分。可选 `firstOpinion` 同时进入证据及摘要，描述这条最早加分观点及其发布前参考价；不能与另一条更晚、更高分观点的表现混用。查询覆盖全部已结算正贡献 Call，不限于之前导出的 10 个高分点；展示名称是“最早加分观点”，不声称作者一生首次判断，也不纳入只有提及而无有效加分的旧帖。
+
+`firstOpinion.price` 仅是发帖前已完成的最近日线收盘参考价（最多回看 7 日），保留 `priceDay`、`priceSource`、`priceBasis=last_completed_daily_close`，不是逐笔实时价或模拟成交价；美国东部时间 16:00 前不得采用当日收盘。未知价格为 null，不能用后续入场价或当前价回填。代表判断收益仍属于原结算窗口，不得描述为从首次收录日起的收益。只有日线数据时必须显示“参考价”。旧客户端/旧数据缺少可选字段时沿用详情按需加载，网络错误不能永久缓存为无代表作。
 
 作者人数指标与加权净强度必须并列输出，不能互相冒充：在当前平台组合、时间窗和标的内，每个正式 Top 10% 平台作者按 `source + investor_id` 去重，只保留其最新 actionable call 的方向。`author_bull_count` / `author_bear_count` 是一人一票计数，`author_net = bull - bear`，`author_consensus = author_net / (bull + bear)`；同一作者在窗口内重复发帖不得重复计数。跨平台作者实体未归并前，不得仅凭 handle 相似自动合并。该指标当前只展示，不改变既有 `highBullScore - highBearScore` 排名。
 
@@ -218,6 +222,10 @@ Smart Account 发现页的四类指标使用独立的无未来函数回测层：
 `sv_investor_score_asof` 的平台历史字段为 `platform_sv`、`platform_rank_no`、`platform_population`、`platform_percentile` 和 `platform_qualified`。历史平台排名只包含当时达到对应平台 `n_eff`/已结算 Call 门槛的作者，且至少有 10 位合格作者时才形成 Top/Bottom 10% 信号。
 
 组合年化层不得使用当前作者排名回填历史交易。集体信号必须读取 `sv_indicator_event.source_scope='x'`；作者可执行口径必须要求观点当日 `sv_investor_score_asof.platform_qualified=1`。年化结果是报告产物，不回写 `sv_investor_score`，也不得用于重新训练同一历史区间的 Score 分数。
+
+逐账户跟单收益的主结果必须从 Call 发布日前最后一份已知平台资格快照开始，不能用当前正式状态回填作者更早的观点。执行假设固定为下一交易日复权开盘、同作者同标的单一仓位、最新生命周期判断覆盖、活跃标的等权、空窗现金和 10bps 完整往返成本；未知周期固定为 20 个交易日。看多做多、看空做空是主口径，同时保留只做多对照。当前正式作者的完整历史只能标记为描述性结果，必须明确包含当前作者池选择造成的幸存者偏差。逐笔结果需保留入场 Call、退出 Call、生命周期原因和原始 URL；所有结果只写报告，不进入作者 Score 反馈环。
+
+统一评估截止日不得由单独更新更晚的 SPY 序列决定，应取可交易标的价格库的最新覆盖日。单一标的在统一截止日前已经缺少后续价格时，仓位只能按最后可用收盘价退出并标记 `price_history_end`；该退出不是作者行为，账户结果必须单列此类交易数量。
 
 排名事件研究同样只能使用观点发布当日的 `sv_investor_score_asof` 排名。事件强度分位必须使用严格早于信号日的历史事件计算，并设置最小历史样本；不得使用全样本中位数或分位数回填过去。参数筛选只能读取训练期指标，时间外收益不得参与候选排序。宽参数结果必须与固定前后半段、成交额过滤、成本、延迟成交和标的集中度压力结果一并输出；任何产品文案不得把样本内最高年化直接称为预期收益或可复制收益。
 
@@ -305,3 +313,7 @@ Smart Account 发现页的四类指标使用独立的无未来函数回测层：
 - **可解释提醒**：仅由公开阈值触发分歧、反转、拥挤、目标价偏离和生命周期提醒，每条提醒必须展示触发原因。
 
 目标价权重必须使用观点发布日的 `sv_investor_score_asof`，不得使用当前排名产生未来信息泄漏。个性化配置只保存在用户浏览器，并与观点流的个性化排序共享同一个标的级配置键。
+
+## Source headline preservation (2026-09-06)
+
+`activityTitleZH` / `activityTitleEN` retain the complete source summary, including subsequent sentences with conditions or a different time horizon. Producers must not persist character-truncated titles. Trending/Alpha cards display these as attributed source views, not literal quotes or a platform consensus; source names and dates remain attached to each view.

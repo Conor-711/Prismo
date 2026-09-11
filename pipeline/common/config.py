@@ -84,6 +84,10 @@ class Settings:
     deepseek_model_low: str = os.environ.get("DEEPSEEK_MODEL_LOW", "deepseek-v4-flash")
     deepseek_model_mid: str = os.environ.get("DEEPSEEK_MODEL_MID", "deepseek-v4-pro")
 
+    kimi_api_key: str = os.environ.get("KIMI_API_KEY", "")
+    kimi_model: str = os.environ.get("KIMI_MODEL", "kimi-k2.6")
+    kimi_base_url: str = os.environ.get("KIMI_BASE_URL", "https://api.moonshot.cn/v1")
+
     # Gemini（Google Generative Language API）—— YouTube 视频理解 + 字幕文本总结（「YouTube 观点」模块）
     # 一把 Google key 可两用：同一 GCP 项目启用 Generative Language API + YouTube Data API v3 即可
     # （GEMINI_API_KEY / YOUTUBE_API_KEY 单独设则优先，否则都回退到 GOOGLE_API_KEY）。

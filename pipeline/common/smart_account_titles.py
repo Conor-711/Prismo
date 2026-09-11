@@ -5,7 +5,6 @@ import re
 from typing import Any
 
 
-_SENTENCE_BREAK = re.compile(r"(?<=[。！？!?])|(?<=\.)\s+")
 _SPACE = re.compile(r"\s+")
 _ZH_AUTHOR_PREFIX = re.compile(r"^(?:该)?(?:作者|博主)[：:，,\s]*")
 _EN_AUTHOR_PREFIX = re.compile(r"^(?:the\s+)?(?:author|creator)\s+", re.I)
@@ -101,8 +100,9 @@ def _concise(value: Any, *, language: str) -> str:
     text = _SPACE.sub(" ", str(value or "").replace("\n", " ")).strip()
     if not text:
         return ""
-    sentence = _SENTENCE_BREAK.split(text, maxsplit=1)[0].strip()
-    return _limit(sentence, language=language)
+    # A later sentence can negate or qualify the first (e.g. short-term rebound
+    # but long-term bearish). Preserve the complete source summary.
+    return text
 
 
 def _strip_author_prefix(value: str, *, language: str) -> str:
@@ -117,9 +117,8 @@ def _mentions_ticker(value: str, ticker: str) -> bool:
 
 
 def _limit(value: str, *, language: str) -> str:
-    limit = 42 if language == "zh" else 78
-    normalized = value.strip(" ：:")
-    return normalized if len(normalized) <= limit else normalized[: limit - 1].rstrip() + "…"
+    # Consumers control layout; never persist a truncated investment condition.
+    return value.strip(" ：:")
 
 
 def _price(value: float, *, language: str) -> str:

@@ -64,11 +64,13 @@ struct BSmartPageTitle: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(eyebrow.bSmartLocalized.uppercased())
-                .font(.system(size: 10, weight: .black))
-                .tracking(1.15)
-                .foregroundStyle(BSmartColor.pulse)
-                .accessibilityLabel(eyebrow.bSmartLocalized)
+            if !eyebrow.isEmpty {
+                Text(eyebrow.bSmartLocalized.uppercased())
+                    .font(.system(size: 10, weight: .black))
+                    .tracking(1.15)
+                    .foregroundStyle(BSmartColor.pulse)
+                    .accessibilityLabel(eyebrow.bSmartLocalized)
+            }
             HStack(spacing: BSmartSpacing.small) {
                 Text(title.bSmartLocalized)
                     .font(.system(.title2, design: .rounded, weight: .black))
@@ -302,8 +304,8 @@ struct BSmartAssetMark: View {
         ticker.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
     }
 
-    private var bundledTickers: Set<String> {
-        ["AVGO", "HOOD", "MSTR", "NVDA", "PLTR", "TSLA"]
+    private var hasBundledLogo: Bool {
+        UIImage(named: "Ticker_\(normalizedTicker)") != nil
     }
 
     private var bundledLogoInset: CGFloat {
@@ -312,7 +314,7 @@ struct BSmartAssetMark: View {
         case "HOOD", "TSLA": 0.15
         case "NVDA": 0.11
         case "AVGO", "MSTR": 0.07
-        default: 0.12
+        default: 0.04
         }
     }
 
@@ -345,7 +347,7 @@ struct BSmartAssetMark: View {
 
     var body: some View {
         Group {
-            if bundledTickers.contains(normalizedTicker) {
+            if hasBundledLogo {
                 bundledLogo
             } else if let remoteLogoURL {
                 AsyncImage(url: remoteLogoURL, transaction: Transaction(animation: .easeOut(duration: 0.18))) { phase in
@@ -365,7 +367,7 @@ struct BSmartAssetMark: View {
 
     @ViewBuilder
     private var bundledLogo: some View {
-        if normalizedTicker == "PLTR" {
+        if TickerLogoRegistry.templateSymbols.contains(normalizedTicker) {
             logoImage(
                 Image("Ticker_\(normalizedTicker)").renderingMode(.template),
                 inset: bundledLogoInset
@@ -398,20 +400,17 @@ struct BSmartAvatar: View {
     let name: String
     var size: CGFloat = 40
     var fallbackColor: Color = BSmartColor.sky
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var loadedImage: AvatarImage?
+
+    private var imageURL: URL? { url ?? RedditAuthorAvatars.url(forDisplayName: name) }
 
     var body: some View {
         Group {
-            if let url {
-                AsyncImage(url: url, transaction: Transaction(animation: .easeOut(duration: 0.2))) { phase in
-                    switch phase {
-                    case let .success(image):
-                        image
-                            .resizable()
-                            .scaledToFill()
-                    default:
-                        fallback
-                    }
-                }
+            if let asset = AuthorAvatarAsset.name(for: imageURL) {
+                Image(asset).resizable().scaledToFill()
+            } else if let loadedImage, loadedImage.sourceURL == imageURL {
+                Image(uiImage: loadedImage.image).resizable().scaledToFill()
             } else {
                 fallback
             }
@@ -422,6 +421,17 @@ struct BSmartAvatar: View {
             Circle().stroke(BSmartColor.line, lineWidth: 0.75)
         }
         .accessibilityLabel("%@ avatar".bSmartLocalized(name))
+        .task(id: RequestKey(url: imageURL, isActive: scenePhase == .active)) {
+            guard scenePhase == .active, let url = imageURL, AuthorAvatarAsset.name(for: url) == nil else { return }
+            let result = await AvatarImageStore.shared.image(for: url)
+            guard !Task.isCancelled else { return }
+            loadedImage = result
+        }
+    }
+
+    private struct RequestKey: Hashable {
+        let url: URL?
+        let isActive: Bool
     }
 
     private var fallback: some View {
@@ -580,7 +590,7 @@ extension PersonalizedAttentionLevel {
 extension SignalDirection {
     var color: Color {
         switch self {
-        case .bullish: BSmartColor.brand
+        case .bullish: BSmartColor.bull
         case .neutral: BSmartColor.secondaryText
         case .bearish: BSmartColor.bear
         case .mixed: BSmartColor.gold
@@ -640,5 +650,5 @@ extension SmartMoneyCoverage {
 }
 
 extension FormatStyle where Self == FloatingPointFormatStyle<Double>.Currency {
-    static var usd: Self { .currency(code: "USD") }
+    static var usd: Self { .bSmartDollars }
 }

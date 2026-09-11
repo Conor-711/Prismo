@@ -1,0 +1,113 @@
+{
+  "items": [
+    {
+      "id": "70000000-0000-0000-0000-000000000001",
+      "trader": {
+        "id": "50000000-0000-0000-0000-000000000001",
+        "nickname": "Casey",
+        "avatarURL": null
+      },
+      "opinion": {
+        "id": "b86a89a4-fc19-5b9a-a25a-750a9e7b7664",
+        "ticker": "NVDA",
+        "companyName": "NVIDIA",
+        "authorId": "1707559719215489024",
+        "authorName": "Wey How",
+        "platform": "X",
+        "score": 109.0,
+        "platformPercentile": 0.07265,
+        "direction": "bullish",
+        "lifecycle": "strengthened",
+        "horizon": "90D",
+        "targetPrice": null,
+        "thesis": "Author explicitly states holding NVDA for ultimate multiple expansions in a portfolio update, a bullish position statement without specific target or timeframe.",
+        "invalidation": null,
+        "publishedAt": "2026-09-05T00:21:25.000Z",
+        "evidenceURL": "https://twitter.com/1707559719215489024/status/2096030906897358925",
+        "authorAvatarURL": "https://pbs.twimg.com/profile_images/1849391659106385920/SV3ICsLW_400x400.jpg",
+        "originalText": "Sep 4, 2026: Sail with the Tide?\n$SNDK $MU $PLTR $NVDA $HOOD $DELL $SNOW $CRCL $BE $LITE $CRWD $NTNX\n\nFirst week into this \"seasonally weak\" September that now seems to be a public knowledge/ common sense thanks to the social media.\n\nSPX is seen digesting above 8ema, while portfolio is closing green thanks to the breakout in my long term hold memory names ($SNDK $MU).\n\nA) AI revolution is the TIDE. \n\nIn the personal context of an investor operating a longer timeframe, I care less about technical precision but care more if I am positioned well (overall exposure, names) in this AI revolution.  The rest are smaller waves which cause you nausea if you are navigating with your small boat.\n\nYou can't stop this bubble, I mean, revolution. \nTime is your friend.\n\nB) Portfolio (12 names).\n\nSome shift in weights: \n1. $MU and $SNDK still the core. Tiny trims after close just to reward myself.\n2. Holding $NVDA for the ultimate multiple expansions.\n3. Trimming some $PLTR as the SoF for new purchases.\n4. A beautiful top up below $120 onto $HOOD.\n5. Trimming some $DELL and $SNOW after their great earnings reaction but seems short term tired.\n6. $CRCL is a new entry below $100 for a stable coin play. \n7. $BE new entry, and looks great with the after hours announcement of entering S&P500.\n8. $LITE volatile but nothing wrong, still trusting my stop at the last price structure HL\n9. $CRWD and $NTNX are new buys with no traction yet, waiting to prove themselves (or out)\n10. Note I massage my portfolio frequently and change the weights/ names regularly according to how I personally see the market and my portfolio as a whole.\n\nAnd remember each trader is different.\n\nWhat works for you doesn't work for me, vice versa.\n\nC) Be Calm & Patience. Know yourself.\n\nHow the heck are you going to trade/ invest if not?\n\nHAGW.",
+        "sourceURL": "https://twitter.com/1707559719215489024/status/2096030906897358925",
+        "sourcePostId": "2096030906897358925",
+        "translatedTextZH": null,
+        "translatedTextEN": null
+      },
+      "side": "long",
+      "notionalUSD": "100",
+      "marketCoin": "xyz:NVDA",
+      "executedAt": "2026-09-10T12:00:00Z"
+    },
+    {
+      "id": "70000000-0000-0000-0000-000000000002",
+      "trader": {
+        "id": "50000000-0000-0000-0000-000000000002",
+        "nickname": "Morgan",
+        "avatarURL": null
+      },
+      "opinion": {
+        "id": "b86a89a4-fc19-5b9a-a25a-750a9e7b7664",
+        "ticker": "NVDA",
+        "companyName": "NVIDIA",
+        "authorId": "1707559719215489024",
+        "authorName": "Wey How",
+        "platform": "X",
+        "score": 109.0,
+        "platformPercentile": 0.07265,
+        "direction": "bullish",
+        "lifecycle": "strengthened",
+        "horizon": "90D",
+        "targetPrice": null,
+        "thesis": "Author explicitly states holding NVDA for ultimate multiple expansions in a portfolio update, a bullish position statement without specific target or timeframe.",
+        "invalidation": null,
+        "publishedAt": "2026-09-05T00:21:25.000Z",
+        "evidenceURL": "https://twitter.com/1707559719215489024/status/2096030906897358925",
+        "authorAvatarURL": "https://pbs.twimg.com/profile_images/1849391659106385920/SV3ICsLW_400x400.jpg",
+        "originalText": "Sep 4, 2026: Sail with the Tide?\n$SNDK $MU $PLTR $NVDA $HOOD $DELL $SNOW $CRCL $BE $LITE $CRWD $NTNX\n\nFirst week into this \"seasonally weak\" September that now seems to be a public knowledge/ common sense thanks to the social media.\n\nSPX is seen digesting above 8ema, while portfolio is closing green thanks to the breakout in my long term hold memory names ($SNDK $MU).\n\nA) AI revolution is the TIDE. \n\nIn the personal context of an investor operating a longer timeframe, I care less about technical precision but care more if I am positioned well (overall exposure, names) in this AI revolution.  The rest are smaller waves which cause you nausea if you are navigating with your small boat.\n\nYou can't stop this bubble, I mean, revolution. \nTime is your friend.\n\nB) Portfolio (12 names).\n\nSome shift in weights: \n1. $MU and $SNDK still the core. Tiny trims after close just to reward myself.\n2. Holding $NVDA for the ultimate multiple expansions.\n3. Trimming some $PLTR as the SoF for new purchases.\n4. A beautiful top up below $120 onto $HOOD.\n5. Trimming some $DELL and $SNOW after their great earnings reaction but seems short term tired.\n6. $CRCL is a new entry below $100 for a stable coin play. \n7. $BE new entry, and looks great with the after hours announcement of entering S&P500.\n8. $LITE volatile but nothing wrong, still trusting my stop at the last price structure HL\n9. $CRWD and $NTNX are new buys with no traction yet, waiting to prove themselves (or out)\n10. Note I massage my portfolio frequently and change the weights/ names regularly according to how I personally see the market and my portfolio as a whole.\n\nAnd remember each trader is different.\n\nWhat works for you doesn't work for me, vice versa.\n\nC) Be Calm & Patience. Know yourself.\n\nHow the heck are you going to trade/ invest if not?\n\nHAGW.",
+        "sourceURL": "https://twitter.com/1707559719215489024/status/2096030906897358925",
+        "sourcePostId": "2096030906897358925",
+        "translatedTextZH": null,
+        "translatedTextEN": null
+      },
+      "side": "short",
+      "notionalUSD": "500",
+      "marketCoin": "xyz:NVDA",
+      "executedAt": "2026-09-10T11:30:00Z"
+    },
+    {
+      "id": "70000000-0000-0000-0000-000000000003",
+      "trader": {
+        "id": "50000000-0000-0000-0000-000000000001",
+        "nickname": "Casey",
+        "avatarURL": null
+      },
+      "opinion": {
+        "id": "b86a89a4-fc19-5b9a-a25a-750a9e7b7664",
+        "ticker": "NVDA",
+        "companyName": "NVIDIA",
+        "authorId": "1707559719215489024",
+        "authorName": "Wey How",
+        "platform": "X",
+        "score": 109.0,
+        "platformPercentile": 0.07265,
+        "direction": "bullish",
+        "lifecycle": "strengthened",
+        "horizon": "90D",
+        "targetPrice": null,
+        "thesis": "Author explicitly states holding NVDA for ultimate multiple expansions in a portfolio update, a bullish position statement without specific target or timeframe.",
+        "invalidation": null,
+        "publishedAt": "2026-09-05T00:21:25.000Z",
+        "evidenceURL": "https://twitter.com/1707559719215489024/status/2096030906897358925",
+        "authorAvatarURL": "https://pbs.twimg.com/profile_images/1849391659106385920/SV3ICsLW_400x400.jpg",
+        "originalText": "Sep 4, 2026: Sail with the Tide?\n$SNDK $MU $PLTR $NVDA $HOOD $DELL $SNOW $CRCL $BE $LITE $CRWD $NTNX\n\nFirst week into this \"seasonally weak\" September that now seems to be a public knowledge/ common sense thanks to the social media.\n\nSPX is seen digesting above 8ema, while portfolio is closing green thanks to the breakout in my long term hold memory names ($SNDK $MU).\n\nA) AI revolution is the TIDE. \n\nIn the personal context of an investor operating a longer timeframe, I care less about technical precision but care more if I am positioned well (overall exposure, names) in this AI revolution.  The rest are smaller waves which cause you nausea if you are navigating with your small boat.\n\nYou can't stop this bubble, I mean, revolution. \nTime is your friend.\n\nB) Portfolio (12 names).\n\nSome shift in weights: \n1. $MU and $SNDK still the core. Tiny trims after close just to reward myself.\n2. Holding $NVDA for the ultimate multiple expansions.\n3. Trimming some $PLTR as the SoF for new purchases.\n4. A beautiful top up below $120 onto $HOOD.\n5. Trimming some $DELL and $SNOW after their great earnings reaction but seems short term tired.\n6. $CRCL is a new entry below $100 for a stable coin play. \n7. $BE new entry, and looks great with the after hours announcement of entering S&P500.\n8. $LITE volatile but nothing wrong, still trusting my stop at the last price structure HL\n9. $CRWD and $NTNX are new buys with no traction yet, waiting to prove themselves (or out)\n10. Note I massage my portfolio frequently and change the weights/ names regularly according to how I personally see the market and my portfolio as a whole.\n\nAnd remember each trader is different.\n\nWhat works for you doesn't work for me, vice versa.\n\nC) Be Calm & Patience. Know yourself.\n\nHow the heck are you going to trade/ invest if not?\n\nHAGW.",
+        "sourceURL": "https://twitter.com/1707559719215489024/status/2096030906897358925",
+        "sourcePostId": "2096030906897358925",
+        "translatedTextZH": null,
+        "translatedTextEN": null
+      },
+      "side": "long",
+      "notionalUSD": "250",
+      "marketCoin": "xyz:NVDA",
+      "executedAt": "2026-09-10T10:00:00Z"
+    }
+  ],
+  "nextOffset": null
+}

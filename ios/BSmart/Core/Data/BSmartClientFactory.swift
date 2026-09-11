@@ -51,6 +51,7 @@ struct BSmartClientComposition {
     let portfolioBootstrapStrategy: PortfolioBootstrapStrategy
     let syncCoordinator: BSmartSyncCoordinator?
     let isUsingDemoData: Bool
+    let accountClient: AccountAuthenticating?
 }
 
 enum BSmartClientFactory {
@@ -80,6 +81,9 @@ enum BSmartClientFactory {
             configuredBaseURL: bundle.object(forInfoDictionaryKey: "BSMART_DEEPSEEK_BASE_URL") as? String,
             configuredModel: bundle.object(forInfoDictionaryKey: "BSMART_MR_COLLIE_MODEL") as? String
         ).map { DirectDeepSeekMrCollieClient(configuration: $0, session: urlSession) }
+        let accountClient = SupabaseAccountConfiguration.resolve(bundle: bundle).map {
+            SupabaseAccountAuthClient(configuration: $0)
+        }
 
         switch configuration.dataSource {
         case .fixture:
@@ -91,7 +95,8 @@ enum BSmartClientFactory {
                 directMrCollieClient: directMrCollieClient,
                 portfolioBootstrapStrategy: .localOnly,
                 syncCoordinator: nil,
-                isUsingDemoData: true
+                isUsingDemoData: true,
+                accountClient: accountClient
             )
         case let .live(baseURL):
             #if DEBUG
@@ -126,7 +131,8 @@ enum BSmartClientFactory {
                 directMrCollieClient: directMrCollieClient,
                 portfolioBootstrapStrategy: .remoteFallback,
                 syncCoordinator: BSmartSyncCoordinator(client: client, defaults: defaults),
-                isUsingDemoData: configuration.isUsingDemoData
+                isUsingDemoData: configuration.isUsingDemoData,
+                accountClient: accountClient
             )
         }
     }

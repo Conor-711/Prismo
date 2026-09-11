@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from ...domain.smart_voice.client_read_model import build_smart_account_client_collections
+from ...domain.opinions.supporting_sources import enrich_collection
 
 
 def export_smart_account_client_read_model(
@@ -40,6 +41,7 @@ def export_smart_account_client_read_model(
         connection.close()
 
     for collection, documents in collections.items():
+        documents = enrich_collection(collection, documents)
         target = destination / f"{collection}.json"
         temporary = target.with_suffix(".json.tmp")
         temporary.write_text(json.dumps(documents, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

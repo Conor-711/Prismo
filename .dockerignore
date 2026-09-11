@@ -15,4 +15,5 @@ data/*.db-shm
 *.log
 .env
 web/.env
+services/client_api/.env
 legacy

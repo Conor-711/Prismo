@@ -7,6 +7,7 @@ struct AppSettingsView: View {
     @EnvironmentObject private var notificationPreferences: NotificationPreferencesStore
     @EnvironmentObject private var language: AppLanguageStore
     @EnvironmentObject private var appearance: AppAppearanceStore
+    @EnvironmentObject private var account: AccountAccessStore
     @State private var isShowingAlertSettings = false
     @State private var isConfirmingReset = false
     @State private var isResetting = false
@@ -15,6 +16,26 @@ struct AppSettingsView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: BSmartSpacing.xLarge) {
+                    settingsSection("Account") {
+                        NavigationLink {
+                            TradingAccountView()
+                        } label: {
+                            HStack(spacing: BSmartSpacing.medium) {
+                                Image(systemName: "person.crop.circle")
+                                    .foregroundStyle(BSmartColor.brand).frame(width: 24, height: 24)
+                                Text("Account".bSmartLocalized).font(.body.weight(.semibold))
+                                Spacer()
+                                if account.identity != nil {
+                                    Text("Signed in".bSmartLocalized)
+                                        .font(.subheadline).foregroundStyle(BSmartColor.brand)
+                                }
+                                Image(systemName: "chevron.right").font(.caption)
+                                    .foregroundStyle(BSmartColor.tertiaryText)
+                            }.foregroundStyle(BSmartColor.primaryText).frame(minHeight: 44)
+                        }
+                        .accessibilityIdentifier("settings.account")
+                    }
+
                     settingsSection("Language") {
                         VStack(spacing: 0) {
                             ForEach(Array(AppLanguage.allCases.enumerated()), id: \.element.id) { index, option in

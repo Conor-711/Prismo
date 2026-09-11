@@ -1,0 +1,19 @@
+{
+  "checkedAt": "2026-09-10",
+  "method": "Avatar links on public Reddit profile pages; some pages were search-index snapshots. Not a claim of live profile freshness.",
+  "profiles": {
+    "smart_money_hq": {"profileURL": "https://www.reddit.com/user/Smart_Money_HQ/", "avatarURL": "https://www.redditstatic.com/avatars/defaults/v2/avatar_default_7.png"},
+    "useful_tangerine4340": {"profileURL": "https://www.reddit.com/user/Useful_Tangerine4340/", "avatarURL": "https://www.redditstatic.com/avatars/defaults/v2/avatar_default_1.png"},
+    "alpha247365": {"profileURL": "https://www.reddit.com/user/alpha247365/", "avatarURL": "https://www.redditstatic.com/avatars/defaults/v2/avatar_default_6.png"},
+    "eastern-apartment934": {"profileURL": "https://www.reddit.com/user/Eastern-Apartment934/", "avatarURL": "https://www.redditstatic.com/avatars/defaults/v2/avatar_default_1.png"},
+    "far-east-locker": {"profileURL": "https://www.reddit.com/user/Far-East-locker/", "avatarURL": "https://i.redd.it/snoovatar/avatars/5c0afc98-1a60-4a83-8815-e9224584d53f.png"},
+    "-----marcel-----": {"profileURL": "https://www.reddit.com/user/-----Marcel-----/", "avatarURL": "https://www.redditstatic.com/avatars/defaults/v2/avatar_default_3.png"},
+    "joe4942": {"profileURL": "https://www.reddit.com/user/joe4942/", "avatarURL": "https://www.redditstatic.com/avatars/defaults/v2/avatar_default_1.png"},
+    "soft-dragonfly7929": {"profileURL": "https://www.reddit.com/user/Soft-Dragonfly7929/", "avatarURL": "https://www.redditstatic.com/avatars/defaults/v2/avatar_default_0.png"},
+    "company-charts": {"profileURL": "https://www.reddit.com/user/Company-Charts/", "avatarURL": "https://www.redditstatic.com/avatars/defaults/v2/avatar_default_5.png"},
+    "embarrassed-year6290": {"profileURL": "https://www.reddit.com/user/Embarrassed-Year6290/", "avatarURL": "https://i.redd.it/snoovatar/avatars/b3fd8ca2-caef-4b42-8d21-eb5128754d0e.png"},
+    "mrmrmrj": {"profileURL": "https://www.reddit.com/user/mrmrmrj/", "avatarURL": "https://i.redd.it/snoovatar/avatars/557fbce5-892e-48f3-a6b9-9d40cdc11689.png"},
+    "kawkface": {"profileURL": "https://www.reddit.com/user/kawkface/", "avatarURL": "https://i.redd.it/snoovatar/avatars/89f5ab6a-dea0-4dcb-a17b-8c463c7c5fe2.png"},
+    "homehedgefund": {"profileURL": "https://www.reddit.com/user/HomeHedgeFund/", "avatarURL": "https://i.redd.it/snoovatar/avatars/ffa6819d-ee22-434e-981a-dfd7d8aa8b7c.png"}
+  }
+}

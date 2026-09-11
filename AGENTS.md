@@ -25,6 +25,8 @@
 - 改完代码做验证：Python 侧无类型检查则跑相关命令；Web 侧 `npx tsc --noEmit`，必要时构建或用 curl 验证（用户不喜欢截图式自测）。
 
 ## 数据/构建工作流
+
+- 用户提供每日 X 数据包时，必须先读 `docs/operations/x-daily-package.md`，使用 `make x-daily PACKAGE=...` 检查，再处理和发布。只更新本地 fixtures 不等于已更新内测用户数据；必须报告 `inspected` / `ready` / `published` 的实际状态。不要重新构建 App 或网站来代替数据发布。
 - bSmart 内容默认写本地：`DATABASE_URL='sqlite:///./data/dev.db'`。
 - 出网站：`make site` 读取本地 `data/dev.db` 并生成 `web/out/`。
 - 推荐部署：Cloudflare Pages Direct Upload 上传本地 `web/out/`。

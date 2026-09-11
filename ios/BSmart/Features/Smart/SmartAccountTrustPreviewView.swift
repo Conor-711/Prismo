@@ -88,7 +88,7 @@ struct SmartAccountTrustPreviewView: View {
             } label: {
                 Text("View full profile".bSmartLocalized)
                     .font(.caption.weight(.bold))
-                    .foregroundStyle(BSmartColor.pulseInk)
+                    .foregroundStyle(BSmartColor.onAccent)
                     .frame(maxWidth: .infinity, minHeight: 38)
                     .background(BSmartColor.brand)
                     .clipShape(RoundedRectangle(cornerRadius: BSmartRadius.control, style: .continuous))
@@ -166,7 +166,7 @@ struct SmartAccountTrustPreviewView: View {
 
     private var recentSummary: some View {
         VStack(alignment: .leading, spacing: BSmartSpacing.small) {
-            Label("Mr Collie summary".bSmartLocalized, systemImage: "sparkles")
+            Label("Recent summary".bSmartLocalized, systemImage: "text.alignleft")
                 .font(.caption.weight(.black))
                 .foregroundStyle(BSmartColor.brand)
 
@@ -261,6 +261,7 @@ struct SmartAccountTrustPreviewView: View {
             } label: {
                 HStack(spacing: BSmartSpacing.medium) {
                     BSmartAssetMark(ticker: update.ticker, size: 38)
+                        .bSmartTickerDestination(update.ticker)
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text(representativeTitle(update))
@@ -448,7 +449,7 @@ struct SmartAccountTrustPreviewView: View {
     }
 
     private func currency(_ value: Double) -> String {
-        value.formatted(.currency(code: "USD").precision(.fractionLength(value < 100 ? 2 : 0)))
+        value.formatted(.bSmartDollars.precision(.fractionLength(value < 100 ? 2 : 0)))
     }
 
     private func signedPercent(_ value: Double?) -> String {

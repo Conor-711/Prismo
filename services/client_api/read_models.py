@@ -463,9 +463,10 @@ class ReadModelPublisher:
 class RealtimeReadModelPublisher:
     """Atomically replace high-frequency collections without cloning a release."""
 
-    def __init__(self, database_url: str):
+    def __init__(self, database_url: str, *, initialize_schema: bool = True):
         self.engine = _create_engine(database_url)
-        ReadModelBase.metadata.create_all(self.engine)
+        if initialize_schema:
+            ReadModelBase.metadata.create_all(self.engine)
 
     def publish(
         self,
@@ -543,6 +544,7 @@ class RealtimeReadModelPublisher:
         source_version: str,
         schema_version: str = "1.4.0",
         owns_document: Callable[[str, dict[str, Any]], bool] | None = None,
+        expected_hashes: dict[str, str | None] | None = None,
     ) -> RealtimeReadModelPublishResult:
         """Replace one producer's documents while retaining other live and base data."""
         producer = producer.strip()
@@ -566,7 +568,7 @@ class RealtimeReadModelPublisher:
         combined_hashes: dict[str, str] = {}
         combined_counts: dict[str, int] = {}
         with Session(self.engine) as session, session.begin():
-            for collection, incoming in collections.items():
+            for collection, incoming in sorted(collections.items()):
                 if self.engine.dialect.name == "postgresql":
                     session.execute(
                         text("SELECT pg_advisory_xact_lock(hashtext(:lock_key))"),
@@ -579,6 +581,12 @@ class RealtimeReadModelPublisher:
                         .where(RealtimeReadModelCollection.collection == collection)
                         .with_for_update()
                     )
+
+                if expected_hashes is not None and (
+                    collection not in expected_hashes
+                    or expected_hashes[collection] != (marker.content_hash if marker else None)
+                ):
+                    raise ValueError("Read models changed during publication; retry from a fresh snapshot")
 
                 retained: list[tuple[dict[str, Any], str | None]] = []
                 if marker is not None:
@@ -594,7 +602,7 @@ class RealtimeReadModelPublisher:
                         record_producer = record.producer or prior_default_producer
                         payload = _decode_document(record)
                         owned = bool(owns_document and owns_document(collection, payload))
-                        if record_producer is not None and record_producer != producer and not owned:
+                        if record_producer != producer and not owned:
                             retained.append((payload, record_producer))
                 retained.extend(
                     (item, None)

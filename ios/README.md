@@ -4,6 +4,17 @@ The iOS app is the primary MVP client. It is a native SwiftUI application and
 shares backend, database, algorithms, API contracts, and design tokens with the
 rest of the bSmart repository.
 
+## Accounts and device wallet
+
+The current scope is Google login only, directly through Supabase Auth.
+Apple sign-in and automatic wallet setup on the account page are disabled.
+See [setup checklist](../supabase/ios-account/README.md). Native configuration is
+in `project.yml` plus gitignored `Config/Supabase.xcconfig.local`; private wallet
+material remains in device-only Keychain. Login also works with fixture research
+data. Google login does not require Vultr, wallet tables, or an Edge Function.
+Real-user Google authorization still needs acceptance; wallet deployment and
+real funds are separate, later steps. See Settings > Account > Google.
+
 ## Requirements
 
 - Xcode 16 or newer
@@ -23,6 +34,25 @@ For command-line verification:
 make ios-build
 make ios-test
 ```
+
+## Package resolution recovery
+
+If Xcode reports `Missing package product 'WalletCore'` or
+`WalletCoreSwiftProtobuf`, inspect the first package-resolution error. A timeout
+fetching another dependency (for example GoogleSignIn) can invalidate the entire
+graph and produce these secondary errors. Restore network access and run:
+
+```bash
+make ios-resolve
+```
+
+This regenerates the project from `project.yml` and resolves packages into
+Xcode's normal workspace cache. It does not delete DerivedData, remove package
+pins, upgrade Wallet Core, or modify wallet data. Then build again in Xcode;
+if the open workspace still shows stale errors, use File > Packages > Resolve
+Package Versions. The local `Packages/WalletCore` manifest must remain in the
+repository; its two official binary artifacts are downloaded and checksum-checked
+by SwiftPM, not copied from a temporary build directory.
 
 ## Data environments
 

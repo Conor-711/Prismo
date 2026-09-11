@@ -289,6 +289,8 @@ struct SmartAccountUpdate: Identifiable, Codable, Hashable {
     var activityTitle: String? = nil
     var activityTitleZH: String? = nil
     var activityTitleEN: String? = nil
+    var supportingSources: [OpinionSupportingSource]? = nil
+    var firstOpinion: SmartAccountFirstOpinion? = nil
 }
 
 struct PriceCandle: Identifiable, Codable, Hashable {
@@ -676,6 +678,8 @@ struct SmartAccountProfile: Identifiable, Codable, Hashable {
     var postsCount: Int? = nil
     var verified: Bool? = nil
     var description: String? = nil
+
+    var representativeWork: SmartAccountRepresentativeIntro? = nil
 
     var resolvedRank: Int { rank ?? platformRank ?? 0 }
     var resolvedPlatformRank: Int { platformRank ?? rank ?? 0 }

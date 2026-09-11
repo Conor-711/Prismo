@@ -15,7 +15,7 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from . import deepseek, gemini, qwen
+from . import deepseek, gemini, kimi, qwen
 from .config import settings
 
 LOW = "low"
@@ -31,6 +31,8 @@ _GEMINI = "gemini"
 def _route(tier: str) -> tuple[str, str]:
     """档位 → (provider, model)。"""
     override = os.environ.get("LLM_PROVIDER", "").strip().lower()
+    if override == "kimi":
+        return "kimi", settings.kimi_model
     if override == _GEMINI:
         return _GEMINI, settings.gemini_model
     if override == _DEEPSEEK:
@@ -55,6 +57,8 @@ def model_label(tier: str) -> str:
 def available(tier: str) -> bool:
     """该档位对应 provider 的 key 是否就绪（不就绪时调用方应回退 mock）。"""
     provider, _ = _route(tier)
+    if provider == "kimi":
+        return kimi.available()
     if provider == _QWEN:
         return settings.has_qwen
     if provider == _GEMINI:
@@ -65,6 +69,8 @@ def available(tier: str) -> bool:
 def chat(tier: str, system: str, user: str, max_tokens: int = 1200,
          temperature: float = 0.2, enable_thinking: bool = False) -> str:
     provider, model = _route(tier)
+    if provider == "kimi":
+        return kimi.chat(system, user, max_tokens=max_tokens)
     if provider == _QWEN:
         return qwen.chat(system, user, model=model, max_tokens=max_tokens,
                          temperature=temperature, enable_thinking=enable_thinking)
@@ -77,6 +83,8 @@ def chat(tier: str, system: str, user: str, max_tokens: int = 1200,
 def messages_json(tier: str, system: str, user: str, max_tokens: int = 1200,
                   enable_thinking: bool = False) -> Any | None:
     provider, model = _route(tier)
+    if provider == "kimi":
+        return kimi.messages_json(system, user, max_tokens=max_tokens)
     if provider == _QWEN:
         return qwen.messages_json(system, user, model=model, max_tokens=max_tokens,
                                   enable_thinking=enable_thinking)

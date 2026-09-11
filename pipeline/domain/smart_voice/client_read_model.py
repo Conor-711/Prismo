@@ -8,6 +8,8 @@ from datetime import datetime, timezone
 from typing import Any
 
 from ...common.smart_account_titles import build_smart_account_activity_titles
+from ...common.reddit_profile_avatars import avatar_url as reddit_avatar_url
+from .representative_intro import enrich_representative_intros
 
 
 SMART_ACCOUNT_NAMESPACE = uuid.UUID("6f86d8e3-19b2-4d33-9f06-403a3b034330")
@@ -383,6 +385,8 @@ def _profile_metadata(
         ).fetchone()
         if row:
             metadata["avatar_url"] = row[0]
+    if source == "reddit" and not metadata["avatar_url"]:
+        metadata["avatar_url"] = reddit_avatar_url(investor_id)
     return metadata
 
 
@@ -527,6 +531,7 @@ def _update_rows(
            AND ranked.platform_rank <= CAST((ranked.platform_population + 3) / 4 AS INTEGER)
            {ticker_filter}
            AND datetime(call.created_at) >= datetime(?, ?)
+           AND datetime(call.created_at) <= datetime(?)
          ORDER BY datetime(call.created_at) DESC, call.call_weight DESC, call.candidate_id ASC
          {limit_clause}
         """,
@@ -535,6 +540,7 @@ def _update_rows(
             *(ticker.upper() for ticker in tickers),
             as_of.astimezone(timezone.utc).isoformat(),
             f"-{max(1, days)} days",
+            as_of.astimezone(timezone.utc).isoformat(),
             *((limit,) if limit > 0 else ()),
         ),
     ).fetchall()
@@ -665,7 +671,11 @@ def _evidence_rows(
                             ) DESC,
                             datetime(created_at) DESC,
                             candidate_id
-                 ) AS positive_ticker_call_rank
+                 ) AS positive_ticker_call_rank,
+                 ROW_NUMBER() OVER (
+                   PARTITION BY investor_id, ticker
+                   ORDER BY datetime(created_at), contribution DESC, candidate_id
+                 ) AS earliest_ticker_call_rank
             FROM calls
            WHERE settlement_status='settled'
              AND contribution > 0
@@ -694,7 +704,7 @@ def _evidence_rows(
               ON ranked_tickers.investor_id=contributing.investor_id
              AND ranked_tickers.ticker=contributing.ticker
            WHERE ranked_tickers.representative_ticker_rank <= ?
-             AND contributing.positive_ticker_call_rank <= 10
+             AND (contributing.positive_ticker_call_rank <= 10 OR contributing.earliest_ticker_call_rank=1)
         ),
         marked AS (
           SELECT limited_calls.*,
@@ -721,7 +731,7 @@ def _evidence_rows(
           SELECT marked.*,
                  'representative' AS evidence_role
             FROM marked
-           WHERE positive_ticker_call_rank=1
+           WHERE earliest_ticker_call_rank=1
         )
         SELECT *
           FROM selected
@@ -849,6 +859,22 @@ def _call_document(
     return document
 
 
+def build_representative_evidence(connection: sqlite3.Connection, *, per_author_limit: int = 3) -> list[dict]:
+    """Keep ticker contribution order, with its earliest positive call as the anchor."""
+    connection.row_factory = sqlite3.Row
+    evidence = []
+    for row in _evidence_rows(connection, per_author_limit=per_author_limit):
+        metadata = _profile_metadata(connection, source=row["source"],
+                                     investor_id=row["investor_id"], handle=row["author_name"])
+        markers = _representative_markers(row)
+        primary_id = _stable_update_id(row["candidate_id"])
+        markers.sort(key=lambda marker: marker["id"] != primary_id)
+        markers = markers[:10]
+        price_evidence = _representative_price_evidence(connection, ticker=row["ticker"], markers=markers)
+        evidence.append(_call_document(row, metadata=metadata, price_evidence=price_evidence, include_settlement=True))
+    return evidence
+
+
 def build_smart_account_client_collections(
     connection: sqlite3.Connection,
     *,
@@ -940,33 +966,9 @@ def build_smart_account_client_collections(
             )
         )
 
-    evidence = []
-    if include_profiles:
-        for row in _evidence_rows(connection, per_author_limit=evidence_per_author):
-            metadata = _profile_metadata(
-                connection,
-                source=row["source"],
-                investor_id=row["investor_id"],
-                handle=row["author_name"],
-            )
-            markers = _representative_markers(row)
-            cache_key = ("representative", row["investor_id"], row["ticker"])
-            if cache_key not in price_evidence_cache:
-                price_evidence_cache[cache_key] = _representative_price_evidence(
-                    connection,
-                    ticker=row["ticker"],
-                    markers=markers,
-                )
-            price_evidence = price_evidence_cache[cache_key]
-            evidence.append(
-                _call_document(
-                    row,
-                    metadata=metadata,
-                    price_evidence=price_evidence,
-                    include_settlement=True,
-                )
-            )
+    evidence = build_representative_evidence(connection, per_author_limit=evidence_per_author) if include_profiles else []
 
+    enrich_representative_intros(connection, profiles, evidence, as_of=as_of or datetime.now(timezone.utc))
     return {
         "smart-accounts": profiles,
         "smart-account-updates": updates,

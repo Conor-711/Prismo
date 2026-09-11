@@ -155,7 +155,7 @@ struct PortfolioSetupView: View {
             HStack(spacing: BSmartSpacing.medium) {
                 Image(systemName: "link.badge.plus")
                     .font(.headline.weight(.bold))
-                    .foregroundStyle(BSmartColor.pulseInk)
+                    .foregroundStyle(BSmartColor.onAccent)
                     .frame(width: 42, height: 42)
                     .background(BSmartColor.brand)
                     .clipShape(RoundedRectangle(cornerRadius: BSmartRadius.card, style: .continuous))

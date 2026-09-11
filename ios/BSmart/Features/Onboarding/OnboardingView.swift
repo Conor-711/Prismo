@@ -109,7 +109,7 @@ struct OnboardingView: View {
                         OnboardingJudgmentExample(
                             symbol: "person.3.sequence.fill",
                             color: BSmartColor.brand,
-                            title: "Smart Consensus",
+                            title: "Trending Tickers",
                             ticker: "NVDA",
                             headline: "4 top accounts are converging on the reasoning around NVDA",
                             detail: "Independent judgments · one theme",
@@ -122,7 +122,7 @@ struct OnboardingView: View {
                         OnboardingJudgmentExample(
                             symbol: "sparkles",
                             color: BSmartColor.gold,
-                            title: "Smart Alpha",
+                            title: "Alpha Tickers",
                             ticker: "MSTR",
                             headline: "A Top 2% account introduces a new MSTR thesis",
                             detail: "A high-ranked source before consensus",
@@ -141,16 +141,6 @@ struct OnboardingView: View {
                         )
                         .onboardingFeatureSurface()
 
-                        Spacer(minLength: BSmartSpacing.xLarge)
-
-                        OnboardingCompactExample(
-                            imageName: "SmartMoneyBorderCollie",
-                            color: BSmartColor.pulse,
-                            title: "Mr Collie",
-                            headline: "What changed in NVDA this week?",
-                            detail: "Compare ranked judgments and open their evidence."
-                        )
-                        .onboardingFeatureSurface()
                     }
                     .frame(
                         minHeight: max(0, proxy.size.height - BSmartSpacing.small),
@@ -216,8 +206,10 @@ struct OnboardingView: View {
                                 }
                             }
                         }
+                    }
 
-                        if accountCandidates.isEmpty && moneyCandidates.isEmpty {
+                    if accountCandidates.isEmpty && moneyCandidates.isEmpty {
+                        VStack(alignment: .leading, spacing: BSmartSpacing.medium) {
                             Label("Intelligence accounts are still loading".bSmartLocalized, systemImage: "arrow.triangle.2.circlepath")
                                 .font(.caption)
                                 .foregroundStyle(BSmartColor.secondaryText)
@@ -250,7 +242,7 @@ struct OnboardingView: View {
                     Image(systemName: page == pageCount - 1 ? "checkmark" : "arrow.right")
                 }
                 .font(.subheadline.weight(.bold))
-                .foregroundStyle(BSmartColor.pulseInk)
+                .foregroundStyle(BSmartColor.onAccent)
                 .padding(.horizontal, BSmartSpacing.large)
                 .frame(maxWidth: .infinity, minHeight: 50)
                 .background(BSmartColor.brand)
@@ -593,7 +585,7 @@ private struct OnboardingJudgmentExample: View {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(title.bSmartLocalized)
                         .font(.subheadline.weight(.bold))
-                    Text(title == "Smart Consensus" ? "SMART CONSENSUS" : "SMART ALPHA")
+                    Text(title == "Trending Tickers" ? "TRENDING TICKERS" : "ALPHA TICKERS")
                         .font(.system(size: 8, weight: .bold))
                         .tracking(0.7)
                         .foregroundStyle(BSmartColor.tertiaryText)
@@ -802,7 +794,7 @@ private struct OnboardingCompactMoneyChoice: View {
             VStack(alignment: .leading, spacing: BSmartSpacing.small) {
                 HStack {
                     BSmartSmartMoneyAvatar(identity: signal.publicIdentity, size: 42)
-                Spacer()
+                    Spacer()
                     Image(systemName: isFollowing ? "checkmark.circle.fill" : "plus.circle")
                         .foregroundStyle(isFollowing ? BSmartColor.brand : BSmartColor.tertiaryText)
                 }

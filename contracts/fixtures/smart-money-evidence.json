@@ -1,1 +1,1607 @@
-[]
+[
+  {
+    "id": "cab821de-fb9b-560e-9a72-09ea258f3a07",
+    "accountId": "0x0905212fc6387e4412c5546cee4c530bf802ea1a",
+    "accountDisplayName": "Juno",
+    "avatarVariant": 31,
+    "ticker": "SKHY",
+    "market": "xyz:SKHY",
+    "representativeRank": 1,
+    "cumulativeEntryNotional": 77288.17,
+    "entryCount": 2,
+    "assetNetPnl": -327098.81,
+    "latestEntryAt": "2026-08-07T00:31:00+00:00",
+    "priceEvidence": {
+      "market": "xyz:SKHY",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "44723bd0-eaf7-5dd7-a719-8006b3375107",
+          "observedAt": "2026-08-07T00:31:00+00:00",
+          "price": 145.09,
+          "priceBasis": "reported",
+          "direction": "bearish",
+          "action": "increased",
+          "entryNotional": 50781.5,
+          "evidenceURL": "https://hyperdash.com/trader/0x0905212fc6387e4412c5546cee4c530bf802ea1a"
+        },
+        {
+          "id": "cf13f065-391f-5e28-b888-89c962abd8c9",
+          "observedAt": "2026-08-07T00:23:00+00:00",
+          "price": 145.25,
+          "priceBasis": "reported",
+          "direction": "bearish",
+          "action": "increased",
+          "entryNotional": 26506.67,
+          "evidenceURL": "https://hyperdash.com/trader/0x0905212fc6387e4412c5546cee4c530bf802ea1a"
+        }
+      ]
+    }
+  },
+  {
+    "id": "b4c1fef5-11be-5fd9-98d1-445b4440cc0e",
+    "accountId": "0x0905212fc6387e4412c5546cee4c530bf802ea1a",
+    "accountDisplayName": "Juno",
+    "avatarVariant": 31,
+    "ticker": "SMSN",
+    "market": "xyz:SMSN",
+    "representativeRank": 2,
+    "cumulativeEntryNotional": 20721.25,
+    "entryCount": 1,
+    "assetNetPnl": 245622.2,
+    "latestEntryAt": "2026-08-06T19:05:04+00:00",
+    "priceEvidence": {
+      "market": "xyz:SMSN",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "aa512c57-b4c1-5e78-98ab-02b10e3709bf",
+          "observedAt": "2026-08-06T19:05:04+00:00",
+          "price": 165.77,
+          "priceBasis": "reported",
+          "direction": "bullish",
+          "action": "increased",
+          "entryNotional": 20721.25,
+          "evidenceURL": "https://hyperdash.com/trader/0x0905212fc6387e4412c5546cee4c530bf802ea1a"
+        }
+      ]
+    }
+  },
+  {
+    "id": "321516c6-fbbf-5ee9-ba63-1d390ecd80a8",
+    "accountId": "0x0905212fc6387e4412c5546cee4c530bf802ea1a",
+    "accountDisplayName": "Juno",
+    "avatarVariant": 31,
+    "ticker": "UNITREE",
+    "market": "xyz:UNITREE",
+    "representativeRank": 3,
+    "cumulativeEntryNotional": 10776.14,
+    "entryCount": 2,
+    "assetNetPnl": 0.0,
+    "latestEntryAt": "2026-08-07T00:23:00+00:00",
+    "priceEvidence": {
+      "market": "xyz:UNITREE",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "c95a8b7e-e8cf-58bd-a633-ef09a03f19d5",
+          "observedAt": "2026-08-07T00:23:00+00:00",
+          "price": 80.916,
+          "priceBasis": "reported",
+          "direction": "bearish",
+          "action": "increased",
+          "entryNotional": 6578.47,
+          "evidenceURL": "https://hyperdash.com/trader/0x0905212fc6387e4412c5546cee4c530bf802ea1a"
+        },
+        {
+          "id": "d078de97-b8da-5c9f-bc8a-374affb1ff79",
+          "observedAt": "2026-08-06T19:05:04+00:00",
+          "price": 79.381,
+          "priceBasis": "reported",
+          "direction": "bearish",
+          "action": "increased",
+          "entryNotional": 4197.67,
+          "evidenceURL": "https://hyperdash.com/trader/0x0905212fc6387e4412c5546cee4c530bf802ea1a"
+        }
+      ]
+    }
+  },
+  {
+    "id": "9064d2a6-04f6-572b-a101-c82cce065a60",
+    "accountId": "0x0ad9e656d9e6211d0ea1c5462342e1fc94cc4cbf",
+    "accountDisplayName": "Nia",
+    "avatarVariant": 27,
+    "ticker": "SPCX",
+    "market": "xyz:SPCX",
+    "representativeRank": 1,
+    "cumulativeEntryNotional": 460587.1,
+    "entryCount": 1,
+    "assetNetPnl": 0.0,
+    "latestEntryAt": "2026-08-14T07:56:37+00:00",
+    "priceEvidence": {
+      "market": "xyz:SPCX",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "73c81328-e418-5833-b724-d58d6442550d",
+          "observedAt": "2026-08-14T07:56:37+00:00",
+          "price": 141.84,
+          "priceBasis": "reported",
+          "direction": "bearish",
+          "action": "opened",
+          "entryNotional": 460587.1,
+          "evidenceURL": "https://hyperdash.com/trader/0x0ad9e656d9e6211d0ea1c5462342e1fc94cc4cbf"
+        }
+      ]
+    }
+  },
+  {
+    "id": "a5692efc-11bc-58a4-a68f-57add55d1d66",
+    "accountId": "0x0ad9e656d9e6211d0ea1c5462342e1fc94cc4cbf",
+    "accountDisplayName": "Nia",
+    "avatarVariant": 27,
+    "ticker": "XYZ100",
+    "market": "xyz:XYZ100",
+    "representativeRank": 2,
+    "cumulativeEntryNotional": 320907.47,
+    "entryCount": 1,
+    "assetNetPnl": 0.0,
+    "latestEntryAt": "2026-08-14T07:56:37+00:00",
+    "priceEvidence": {
+      "market": "xyz:XYZ100",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "9ff0e919-4e35-5465-bc71-3b215c88aa9b",
+          "observedAt": "2026-08-14T07:56:37+00:00",
+          "price": 29574.0,
+          "priceBasis": "reported",
+          "direction": "bearish",
+          "action": "increased",
+          "entryNotional": 320907.47,
+          "evidenceURL": "https://hyperdash.com/trader/0x0ad9e656d9e6211d0ea1c5462342e1fc94cc4cbf"
+        }
+      ]
+    }
+  },
+  {
+    "id": "3fda4ff5-6996-5820-9b3c-ad99651122fd",
+    "accountId": "0x0ad9e656d9e6211d0ea1c5462342e1fc94cc4cbf",
+    "accountDisplayName": "Nia",
+    "avatarVariant": 27,
+    "ticker": "KIOXIA",
+    "market": "xyz:KIOXIA",
+    "representativeRank": 3,
+    "cumulativeEntryNotional": 320272.49,
+    "entryCount": 1,
+    "assetNetPnl": 0.0,
+    "latestEntryAt": "2026-08-07T00:31:00+00:00",
+    "priceEvidence": {
+      "market": "xyz:KIOXIA",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "a96a2eda-2695-57a5-9d0b-812666ad718e",
+          "observedAt": "2026-08-07T00:31:00+00:00",
+          "price": 304.03,
+          "priceBasis": "reported",
+          "direction": "bullish",
+          "action": "increased",
+          "entryNotional": 320272.49,
+          "evidenceURL": "https://hyperdash.com/trader/0x0ad9e656d9e6211d0ea1c5462342e1fc94cc4cbf"
+        }
+      ]
+    }
+  },
+  {
+    "id": "eec2ae8d-23f7-5c08-bfda-9fc30f5f9043",
+    "accountId": "0x0d438ba1817d0958ae3bf70b23faaf1d0117c930",
+    "accountDisplayName": "Caleb",
+    "avatarVariant": 34,
+    "ticker": "SKHX",
+    "market": "xyz:SKHX",
+    "representativeRank": 1,
+    "cumulativeEntryNotional": 3676.37,
+    "entryCount": 1,
+    "assetNetPnl": -46551.66,
+    "latestEntryAt": "2026-08-07T00:31:00+00:00",
+    "priceEvidence": {
+      "market": "xyz:SKHX",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "fd8eed70-7c38-5490-a510-46630ab18058",
+          "observedAt": "2026-08-07T00:31:00+00:00",
+          "price": 1061.0,
+          "priceBasis": "reported",
+          "direction": "bullish",
+          "action": "increased",
+          "entryNotional": 3676.37,
+          "evidenceURL": "https://hyperdash.com/trader/0x0d438ba1817d0958ae3bf70b23faaf1d0117c930"
+        }
+      ]
+    }
+  },
+  {
+    "id": "9544eec9-3ad3-580d-a43a-80d78327cf27",
+    "accountId": "0x0d438ba1817d0958ae3bf70b23faaf1d0117c930",
+    "accountDisplayName": "Caleb",
+    "avatarVariant": 34,
+    "ticker": "MU",
+    "market": "xyz:MU",
+    "representativeRank": 2,
+    "cumulativeEntryNotional": 705.49,
+    "entryCount": 1,
+    "assetNetPnl": 133351.85,
+    "latestEntryAt": "2026-08-07T00:31:00+00:00",
+    "priceEvidence": {
+      "market": "xyz:MU",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "fca12db3-eb20-5985-b3e7-60b12ea0b577",
+          "observedAt": "2026-08-07T00:31:00+00:00",
+          "price": 870.97,
+          "priceBasis": "reported",
+          "direction": "bullish",
+          "action": "increased",
+          "entryNotional": 705.49,
+          "evidenceURL": "https://hyperdash.com/trader/0x0d438ba1817d0958ae3bf70b23faaf1d0117c930"
+        }
+      ]
+    }
+  },
+  {
+    "id": "125a3a6f-701d-517a-b263-bf45c961e816",
+    "accountId": "0x1b7ca89aa121890b8572d326e363185cf4780c6a",
+    "accountDisplayName": "Ivan",
+    "avatarVariant": 24,
+    "ticker": "AVGO",
+    "market": "xyz:AVGO",
+    "representativeRank": 1,
+    "cumulativeEntryNotional": 53684.86,
+    "entryCount": 1,
+    "assetNetPnl": 0.0,
+    "latestEntryAt": "2026-08-14T07:56:37+00:00",
+    "priceEvidence": {
+      "market": "xyz:AVGO",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "82f7067b-622b-5309-b39f-cab701b2fe41",
+          "observedAt": "2026-08-14T07:56:37+00:00",
+          "price": 425.53,
+          "priceBasis": "reported",
+          "direction": "bearish",
+          "action": "opened",
+          "entryNotional": 53684.86,
+          "evidenceURL": "https://hyperdash.com/trader/0x1b7ca89aa121890b8572d326e363185cf4780c6a"
+        }
+      ]
+    }
+  },
+  {
+    "id": "a29ea25d-5dd8-54c8-bdef-4aae08b9ed9f",
+    "accountId": "0x1f67d79afc8d0e7609ddba6c9b657cc635f69981",
+    "accountDisplayName": "Hugo",
+    "avatarVariant": 26,
+    "ticker": "UNITREE",
+    "market": "para:UNITREE",
+    "representativeRank": 1,
+    "cumulativeEntryNotional": 57662.64,
+    "entryCount": 1,
+    "assetNetPnl": 0.0,
+    "latestEntryAt": "2026-08-14T07:56:37+00:00",
+    "priceEvidence": {
+      "market": "para:UNITREE",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "22401260-a747-5a02-b547-3f520a66eb04",
+          "observedAt": "2026-08-14T07:56:37+00:00",
+          "price": 82.253,
+          "priceBasis": "reported",
+          "direction": "bullish",
+          "action": "increased",
+          "entryNotional": 57662.64,
+          "evidenceURL": "https://hyperdash.com/trader/0x1f67d79afc8d0e7609ddba6c9b657cc635f69981"
+        }
+      ]
+    }
+  },
+  {
+    "id": "e6211f37-4697-5a1f-9035-240aca045bf5",
+    "accountId": "0x1f67d79afc8d0e7609ddba6c9b657cc635f69981",
+    "accountDisplayName": "Hugo",
+    "avatarVariant": 26,
+    "ticker": "UNITREE",
+    "market": "xyz:UNITREE",
+    "representativeRank": 2,
+    "cumulativeEntryNotional": 56968.68,
+    "entryCount": 1,
+    "assetNetPnl": 0.0,
+    "latestEntryAt": "2026-08-14T07:56:37+00:00",
+    "priceEvidence": {
+      "market": "xyz:UNITREE",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "cfd2be52-9384-51b9-b6cb-064a19830b18",
+          "observedAt": "2026-08-14T07:56:37+00:00",
+          "price": 82.488,
+          "priceBasis": "reported",
+          "direction": "bearish",
+          "action": "increased",
+          "entryNotional": 56968.68,
+          "evidenceURL": "https://hyperdash.com/trader/0x1f67d79afc8d0e7609ddba6c9b657cc635f69981"
+        }
+      ]
+    }
+  },
+  {
+    "id": "68a811fa-e193-567a-b54a-c284b0441cbc",
+    "accountId": "0x1f67d79afc8d0e7609ddba6c9b657cc635f69981",
+    "accountDisplayName": "Hugo",
+    "avatarVariant": 26,
+    "ticker": "SKHY",
+    "market": "xyz:SKHY",
+    "representativeRank": 3,
+    "cumulativeEntryNotional": 42341.09,
+    "entryCount": 1,
+    "assetNetPnl": 0.0,
+    "latestEntryAt": "2026-08-14T07:56:37+00:00",
+    "priceEvidence": {
+      "market": "xyz:SKHY",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "5846f3ba-41db-597b-bf26-5b7663e7fd76",
+          "observedAt": "2026-08-14T07:56:37+00:00",
+          "price": 166.05,
+          "priceBasis": "reported",
+          "direction": "bearish",
+          "action": "opened",
+          "entryNotional": 42341.09,
+          "evidenceURL": "https://hyperdash.com/trader/0x1f67d79afc8d0e7609ddba6c9b657cc635f69981"
+        }
+      ]
+    }
+  },
+  {
+    "id": "e318624a-929d-5279-b73e-873c0c84e101",
+    "accountId": "0x32008fcb6bbd16532afc83ca8b6c920dde22c407",
+    "accountDisplayName": "Ezra",
+    "avatarVariant": 53,
+    "ticker": "SPCX",
+    "market": "xyz:SPCX",
+    "representativeRank": 1,
+    "cumulativeEntryNotional": 13177048.64,
+    "entryCount": 3,
+    "assetNetPnl": 0.0,
+    "latestEntryAt": "2026-08-14T07:56:37+00:00",
+    "priceEvidence": {
+      "market": "xyz:SPCX",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "ce9bf5d9-0b87-537a-9672-3b73569e96d6",
+          "observedAt": "2026-08-14T07:56:37+00:00",
+          "price": 123.81,
+          "priceBasis": "reported",
+          "direction": "bearish",
+          "action": "increased",
+          "entryNotional": 12263155.17,
+          "evidenceURL": "https://hyperdash.com/trader/0x32008fcb6bbd16532afc83ca8b6c920dde22c407"
+        },
+        {
+          "id": "eb660e71-0c80-5cd3-9ac8-012cf2a9e32e",
+          "observedAt": "2026-08-07T00:31:00+00:00",
+          "price": 113.23,
+          "priceBasis": "reported",
+          "direction": "bearish",
+          "action": "increased",
+          "entryNotional": 674032.14,
+          "evidenceURL": "https://hyperdash.com/trader/0x32008fcb6bbd16532afc83ca8b6c920dde22c407"
+        },
+        {
+          "id": "7a700394-f4b0-58b3-b395-ed2757dc13a9",
+          "observedAt": "2026-08-07T00:23:00+00:00",
+          "price": 113.14,
+          "priceBasis": "reported",
+          "direction": "bearish",
+          "action": "increased",
+          "entryNotional": 239861.33,
+          "evidenceURL": "https://hyperdash.com/trader/0x32008fcb6bbd16532afc83ca8b6c920dde22c407"
+        }
+      ]
+    }
+  },
+  {
+    "id": "6150b396-d133-5e5c-a3c5-45b8a0f27b4a",
+    "accountId": "0x32008fcb6bbd16532afc83ca8b6c920dde22c407",
+    "accountDisplayName": "Ezra",
+    "avatarVariant": 53,
+    "ticker": "GOOGL",
+    "market": "xyz:GOOGL",
+    "representativeRank": 2,
+    "cumulativeEntryNotional": 2023018.9,
+    "entryCount": 1,
+    "assetNetPnl": 0.0,
+    "latestEntryAt": "2026-08-07T00:23:00+00:00",
+    "priceEvidence": {
+      "market": "xyz:GOOGL",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "5f797743-6394-5e44-971f-88c257b18838",
+          "observedAt": "2026-08-07T00:23:00+00:00",
+          "price": 362.96,
+          "priceBasis": "reported",
+          "direction": "bullish",
+          "action": "increased",
+          "entryNotional": 2023018.9,
+          "evidenceURL": "https://hyperdash.com/trader/0x32008fcb6bbd16532afc83ca8b6c920dde22c407"
+        }
+      ]
+    }
+  },
+  {
+    "id": "8a0661a3-f6c8-5fa3-b035-7b8ab3ddeb71",
+    "accountId": "0x3e2fbe61f37f11d68e3d1e4f25c53c73f414b269",
+    "accountDisplayName": "Rose",
+    "avatarVariant": 21,
+    "ticker": "NBIS",
+    "market": "xyz:NBIS",
+    "representativeRank": 1,
+    "cumulativeEntryNotional": 1188413.98,
+    "entryCount": 1,
+    "assetNetPnl": 30047.76,
+    "latestEntryAt": "2026-08-14T07:56:37+00:00",
+    "priceEvidence": {
+      "market": "xyz:NBIS",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "03811374-7181-52d6-8a6e-18dde10d074f",
+          "observedAt": "2026-08-14T07:56:37+00:00",
+          "price": 248.87,
+          "priceBasis": "reported",
+          "direction": "bearish",
+          "action": "opened",
+          "entryNotional": 1188413.98,
+          "evidenceURL": "https://hyperdash.com/trader/0x3e2fbe61f37f11d68e3d1e4f25c53c73f414b269"
+        }
+      ]
+    }
+  },
+  {
+    "id": "a8647d58-09ae-5c96-a1f2-8e5e74cbe444",
+    "accountId": "0x42bc06d636e9a9a93edb1ddf781ee97821a73946",
+    "accountDisplayName": "Jesse",
+    "avatarVariant": 22,
+    "ticker": "XYZ100",
+    "market": "xyz:XYZ100",
+    "representativeRank": 1,
+    "cumulativeEntryNotional": 25422498.43,
+    "entryCount": 1,
+    "assetNetPnl": 129208.16,
+    "latestEntryAt": "2026-08-14T07:56:37+00:00",
+    "priceEvidence": {
+      "market": "xyz:XYZ100",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "3163cde4-2989-5761-87d0-ac4842942489",
+          "observedAt": "2026-08-14T07:56:37+00:00",
+          "price": 29889.0,
+          "priceBasis": "reported",
+          "direction": "bearish",
+          "action": "opened",
+          "entryNotional": 25422498.43,
+          "evidenceURL": "https://hyperdash.com/trader/0x42bc06d636e9a9a93edb1ddf781ee97821a73946"
+        }
+      ]
+    }
+  },
+  {
+    "id": "159513fe-016f-5de5-a900-021599d22fcb",
+    "accountId": "0x42bc06d636e9a9a93edb1ddf781ee97821a73946",
+    "accountDisplayName": "Jesse",
+    "avatarVariant": 22,
+    "ticker": "SP500",
+    "market": "xyz:SP500",
+    "representativeRank": 2,
+    "cumulativeEntryNotional": 15524607.76,
+    "entryCount": 1,
+    "assetNetPnl": -12624.84,
+    "latestEntryAt": "2026-08-14T07:56:37+00:00",
+    "priceEvidence": {
+      "market": "xyz:SP500",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "35573308-d92c-5e07-858a-197636d9ae33",
+          "observedAt": "2026-08-14T07:56:37+00:00",
+          "price": 7762.3,
+          "priceBasis": "reported",
+          "direction": "bearish",
+          "action": "opened",
+          "entryNotional": 15524607.76,
+          "evidenceURL": "https://hyperdash.com/trader/0x42bc06d636e9a9a93edb1ddf781ee97821a73946"
+        }
+      ]
+    }
+  },
+  {
+    "id": "2d082439-b848-527c-8ab0-c18242524da5",
+    "accountId": "0x42bc06d636e9a9a93edb1ddf781ee97821a73946",
+    "accountDisplayName": "Jesse",
+    "avatarVariant": 22,
+    "ticker": "AAPL",
+    "market": "xyz:AAPL",
+    "representativeRank": 3,
+    "cumulativeEntryNotional": 2335809.44,
+    "entryCount": 5,
+    "assetNetPnl": 756877.67,
+    "latestEntryAt": "2026-08-06T18:15:04+00:00",
+    "priceEvidence": {
+      "market": "xyz:AAPL",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "7d4a4ac1-3381-520e-b722-c3bba795eb45",
+          "observedAt": "2026-08-06T16:56:23+00:00",
+          "price": 312.1,
+          "priceBasis": "reported",
+          "direction": "bearish",
+          "action": "increased",
+          "entryNotional": 1068165.99,
+          "evidenceURL": "https://hyperdash.com/trader/0x42bc06d636e9a9a93edb1ddf781ee97821a73946"
+        },
+        {
+          "id": "cf9995af-4534-5be4-9df2-eeb08fa13db2",
+          "observedAt": "2026-08-06T18:15:04+00:00",
+          "price": 311.87,
+          "priceBasis": "reported",
+          "direction": "bearish",
+          "action": "increased",
+          "entryNotional": 668146.24,
+          "evidenceURL": "https://hyperdash.com/trader/0x42bc06d636e9a9a93edb1ddf781ee97821a73946"
+        },
+        {
+          "id": "f466fb3e-57a2-50e8-a054-63f9a77c867f",
+          "observedAt": "2026-08-06T17:16:23+00:00",
+          "price": 311.98,
+          "priceBasis": "reported",
+          "direction": "bearish",
+          "action": "increased",
+          "entryNotional": 451813.18,
+          "evidenceURL": "https://hyperdash.com/trader/0x42bc06d636e9a9a93edb1ddf781ee97821a73946"
+        },
+        {
+          "id": "b64aad67-1ad8-53c3-aef9-9d0e65adc10d",
+          "observedAt": "2026-08-06T17:55:04+00:00",
+          "price": 311.96,
+          "priceBasis": "reported",
+          "direction": "bearish",
+          "action": "increased",
+          "entryNotional": 111560.96,
+          "evidenceURL": "https://hyperdash.com/trader/0x42bc06d636e9a9a93edb1ddf781ee97821a73946"
+        },
+        {
+          "id": "3b293d0a-c84e-550e-a127-102d33cfca70",
+          "observedAt": "2026-08-06T16:46:23+00:00",
+          "price": 313.09,
+          "priceBasis": "reported",
+          "direction": "bearish",
+          "action": "increased",
+          "entryNotional": 36123.07,
+          "evidenceURL": "https://hyperdash.com/trader/0x42bc06d636e9a9a93edb1ddf781ee97821a73946"
+        }
+      ]
+    }
+  },
+  {
+    "id": "bbb95961-5c1b-500a-8e0f-e74ec446d586",
+    "accountId": "0x649156ebf0a350deb18a1e4835873defd4dc5349",
+    "accountDisplayName": "Hazel",
+    "avatarVariant": 4,
+    "ticker": "SKHX",
+    "market": "xyz:SKHX",
+    "representativeRank": 1,
+    "cumulativeEntryNotional": 29651.6,
+    "entryCount": 1,
+    "assetNetPnl": 12026.99,
+    "latestEntryAt": "2026-08-14T07:56:37+00:00",
+    "priceEvidence": {
+      "market": "xyz:SKHX",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "c84c35d5-2491-5c6a-9eb2-65d0f8b09dd5",
+          "observedAt": "2026-08-14T07:56:37+00:00",
+          "price": 1174.6,
+          "priceBasis": "reported",
+          "direction": "bearish",
+          "action": "flipped",
+          "entryNotional": 29651.6,
+          "evidenceURL": "https://hyperdash.com/trader/0x649156ebf0a350deb18a1e4835873defd4dc5349"
+        }
+      ]
+    }
+  },
+  {
+    "id": "a40c3dfa-d1cb-577a-94c3-d396373be166",
+    "accountId": "0x6ac0b46b32dc429dbd129a503292f88649d2b8a0",
+    "accountDisplayName": "Briar",
+    "avatarVariant": 49,
+    "ticker": "SKHX",
+    "market": "xyz:SKHX",
+    "representativeRank": 1,
+    "cumulativeEntryNotional": 199997.78,
+    "entryCount": 1,
+    "assetNetPnl": 0.0,
+    "latestEntryAt": "2026-08-14T07:56:37+00:00",
+    "priceEvidence": {
+      "market": "xyz:SKHX",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "99cc38a1-5d04-5841-bb98-cd897be262f3",
+          "observedAt": "2026-08-14T07:56:37+00:00",
+          "price": 1187.6,
+          "priceBasis": "reported",
+          "direction": "bullish",
+          "action": "opened",
+          "entryNotional": 199997.78,
+          "evidenceURL": "https://hyperdash.com/trader/0x6ac0b46b32dc429dbd129a503292f88649d2b8a0"
+        }
+      ]
+    }
+  },
+  {
+    "id": "ea7cff09-780f-5830-a412-f9010c35fd27",
+    "accountId": "0x6ac0b46b32dc429dbd129a503292f88649d2b8a0",
+    "accountDisplayName": "Briar",
+    "avatarVariant": 49,
+    "ticker": "SKHY",
+    "market": "xyz:SKHY",
+    "representativeRank": 2,
+    "cumulativeEntryNotional": 199997.64,
+    "entryCount": 1,
+    "assetNetPnl": 0.0,
+    "latestEntryAt": "2026-08-14T07:56:37+00:00",
+    "priceEvidence": {
+      "market": "xyz:SKHY",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "e211d832-853a-595c-b1fb-3656c392bc8e",
+          "observedAt": "2026-08-14T07:56:37+00:00",
+          "price": 165.55,
+          "priceBasis": "reported",
+          "direction": "bearish",
+          "action": "opened",
+          "entryNotional": 199997.64,
+          "evidenceURL": "https://hyperdash.com/trader/0x6ac0b46b32dc429dbd129a503292f88649d2b8a0"
+        }
+      ]
+    }
+  },
+  {
+    "id": "78ac88cf-b8fc-58c4-8e92-bc9b0b3f0c9d",
+    "accountId": "0x6ac0b46b32dc429dbd129a503292f88649d2b8a0",
+    "accountDisplayName": "Briar",
+    "avatarVariant": 49,
+    "ticker": "UNITREE",
+    "market": "xyz:UNITREE",
+    "representativeRank": 3,
+    "cumulativeEntryNotional": 12588.64,
+    "entryCount": 1,
+    "assetNetPnl": 0.0,
+    "latestEntryAt": "2026-08-06T15:36:23+00:00",
+    "priceEvidence": {
+      "market": "xyz:UNITREE",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "50f4c81b-4380-5c7a-9d2b-45d1e8aa88ea",
+          "observedAt": "2026-08-06T15:36:23+00:00",
+          "price": 83.044,
+          "priceBasis": "reported",
+          "direction": "bearish",
+          "action": "opened",
+          "entryNotional": 12588.64,
+          "evidenceURL": "https://hyperdash.com/trader/0x6ac0b46b32dc429dbd129a503292f88649d2b8a0"
+        }
+      ]
+    }
+  },
+  {
+    "id": "d4162e74-4e78-55fd-bff5-efd7fd1d2768",
+    "accountId": "0x72774e2fe1992d5da8c6e9cef73fd2ab980c0b98",
+    "accountDisplayName": "Silas",
+    "avatarVariant": 1,
+    "ticker": "GOOGL",
+    "market": "xyz:GOOGL",
+    "representativeRank": 1,
+    "cumulativeEntryNotional": 1879997.42,
+    "entryCount": 1,
+    "assetNetPnl": 0.0,
+    "latestEntryAt": "2026-08-14T07:56:37+00:00",
+    "priceEvidence": {
+      "market": "xyz:GOOGL",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "071d6212-74ec-5b14-9e2d-0811d611f351",
+          "observedAt": "2026-08-14T07:56:37+00:00",
+          "price": 351.22,
+          "priceBasis": "reported",
+          "direction": "bullish",
+          "action": "increased",
+          "entryNotional": 1879997.42,
+          "evidenceURL": "https://hyperdash.com/trader/0x72774e2fe1992d5da8c6e9cef73fd2ab980c0b98"
+        }
+      ]
+    }
+  },
+  {
+    "id": "07ad97a2-d7c9-51e9-b3d7-3974fea0d000",
+    "accountId": "0x72774e2fe1992d5da8c6e9cef73fd2ab980c0b98",
+    "accountDisplayName": "Silas",
+    "avatarVariant": 1,
+    "ticker": "UNITREE",
+    "market": "xyz:UNITREE",
+    "representativeRank": 2,
+    "cumulativeEntryNotional": 961411.08,
+    "entryCount": 1,
+    "assetNetPnl": 0.0,
+    "latestEntryAt": "2026-08-14T07:56:37+00:00",
+    "priceEvidence": {
+      "market": "xyz:UNITREE",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "16b6fc16-02b6-56b4-a7ba-561fdb8db45a",
+          "observedAt": "2026-08-14T07:56:37+00:00",
+          "price": 85.714,
+          "priceBasis": "reported",
+          "direction": "bullish",
+          "action": "opened",
+          "entryNotional": 961411.08,
+          "evidenceURL": "https://hyperdash.com/trader/0x72774e2fe1992d5da8c6e9cef73fd2ab980c0b98"
+        }
+      ]
+    }
+  },
+  {
+    "id": "26e2b7ca-1329-519e-95a8-7914bfe70fbb",
+    "accountId": "0x72774e2fe1992d5da8c6e9cef73fd2ab980c0b98",
+    "accountDisplayName": "Silas",
+    "avatarVariant": 1,
+    "ticker": "SNDK",
+    "market": "xyz:SNDK",
+    "representativeRank": 3,
+    "cumulativeEntryNotional": 731407.6,
+    "entryCount": 1,
+    "assetNetPnl": 516621.98,
+    "latestEntryAt": "2026-08-14T07:56:37+00:00",
+    "priceEvidence": {
+      "market": "xyz:SNDK",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "f0a7b983-7747-58e9-86a3-d46bef8dba90",
+          "observedAt": "2026-08-14T07:56:37+00:00",
+          "price": 1474.3,
+          "priceBasis": "reported",
+          "direction": "bearish",
+          "action": "increased",
+          "entryNotional": 731407.6,
+          "evidenceURL": "https://hyperdash.com/trader/0x72774e2fe1992d5da8c6e9cef73fd2ab980c0b98"
+        }
+      ]
+    }
+  },
+  {
+    "id": "270df4a0-c7ad-5abd-80f5-fba092e68c5b",
+    "accountId": "0x97b1419998d4c804336c6c22519d28277bacebd7",
+    "accountDisplayName": "Sasha",
+    "avatarVariant": 28,
+    "ticker": "LLY",
+    "market": "xyz:LLY",
+    "representativeRank": 1,
+    "cumulativeEntryNotional": 40040.43,
+    "entryCount": 1,
+    "assetNetPnl": 0.0,
+    "latestEntryAt": "2026-08-06T15:36:23+00:00",
+    "priceEvidence": {
+      "market": "xyz:LLY",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "00888dd0-7917-55b3-bdec-e323444fb01c",
+          "observedAt": "2026-08-06T15:36:23+00:00",
+          "price": 1186.0,
+          "priceBasis": "reported",
+          "direction": "bullish",
+          "action": "opened",
+          "entryNotional": 40040.43,
+          "evidenceURL": "https://hyperdash.com/trader/0x97b1419998d4c804336c6c22519d28277bacebd7"
+        }
+      ]
+    }
+  },
+  {
+    "id": "fd8d8691-4487-5262-89c7-0ef088d940cf",
+    "accountId": "0xa4add8273d7f47318675bdfbcce3e9648cdb4509",
+    "accountDisplayName": "Adrian",
+    "avatarVariant": 50,
+    "ticker": "NBIS",
+    "market": "xyz:NBIS",
+    "representativeRank": 1,
+    "cumulativeEntryNotional": 1204044.88,
+    "entryCount": 1,
+    "assetNetPnl": 0.0,
+    "latestEntryAt": "2026-08-14T07:56:37+00:00",
+    "priceEvidence": {
+      "market": "xyz:NBIS",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "82a097a3-d140-5130-ad76-25601d7f579a",
+          "observedAt": "2026-08-14T07:56:37+00:00",
+          "price": 248.91,
+          "priceBasis": "reported",
+          "direction": "bearish",
+          "action": "opened",
+          "entryNotional": 1204044.88,
+          "evidenceURL": "https://hyperdash.com/trader/0xa4add8273d7f47318675bdfbcce3e9648cdb4509"
+        }
+      ]
+    }
+  },
+  {
+    "id": "10d4792d-31e4-5264-9623-e3ed74b91a36",
+    "accountId": "0xab81fef97356d57cd30f8ceb15285b988682c608",
+    "accountDisplayName": "Zoe",
+    "avatarVariant": 36,
+    "ticker": "SP500",
+    "market": "xyz:SP500",
+    "representativeRank": 1,
+    "cumulativeEntryNotional": 1552320.0,
+    "entryCount": 1,
+    "assetNetPnl": 15861.44,
+    "latestEntryAt": "2026-08-14T07:56:37+00:00",
+    "priceEvidence": {
+      "market": "xyz:SP500",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "dbed4fb8-c497-5abf-8b99-0723b7d813ce",
+          "observedAt": "2026-08-14T07:56:37+00:00",
+          "price": 7761.6,
+          "priceBasis": "reported",
+          "direction": "bullish",
+          "action": "opened",
+          "entryNotional": 1552320.0,
+          "evidenceURL": "https://hyperdash.com/trader/0xab81fef97356d57cd30f8ceb15285b988682c608"
+        }
+      ]
+    }
+  },
+  {
+    "id": "b60b7ce3-6afc-5e31-9511-ca2abc7545a6",
+    "accountId": "0xab81fef97356d57cd30f8ceb15285b988682c608",
+    "accountDisplayName": "Zoe",
+    "avatarVariant": 36,
+    "ticker": "XYZ100",
+    "market": "xyz:XYZ100",
+    "representativeRank": 2,
+    "cumulativeEntryNotional": 451185.0,
+    "entryCount": 1,
+    "assetNetPnl": 113452.87,
+    "latestEntryAt": "2026-08-14T07:56:37+00:00",
+    "priceEvidence": {
+      "market": "xyz:XYZ100",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "c8181a39-3030-5316-aea4-1d59a6d8760f",
+          "observedAt": "2026-08-14T07:56:37+00:00",
+          "price": 30079.0,
+          "priceBasis": "reported",
+          "direction": "bullish",
+          "action": "opened",
+          "entryNotional": 451185.0,
+          "evidenceURL": "https://hyperdash.com/trader/0xab81fef97356d57cd30f8ceb15285b988682c608"
+        }
+      ]
+    }
+  },
+  {
+    "id": "6c42cfe8-32b6-5f77-933c-ab10ce7b097b",
+    "accountId": "0xab81fef97356d57cd30f8ceb15285b988682c608",
+    "accountDisplayName": "Zoe",
+    "avatarVariant": 36,
+    "ticker": "CBRS",
+    "market": "xyz:CBRS",
+    "representativeRank": 3,
+    "cumulativeEntryNotional": 256366.0,
+    "entryCount": 1,
+    "assetNetPnl": 0.0,
+    "latestEntryAt": "2026-08-14T07:56:37+00:00",
+    "priceEvidence": {
+      "market": "xyz:CBRS",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "e7ea5a01-bd1f-5c09-a777-512c9c662a5b",
+          "observedAt": "2026-08-14T07:56:37+00:00",
+          "price": 233.06,
+          "priceBasis": "reported",
+          "direction": "bearish",
+          "action": "opened",
+          "entryNotional": 256366.0,
+          "evidenceURL": "https://hyperdash.com/trader/0xab81fef97356d57cd30f8ceb15285b988682c608"
+        }
+      ]
+    }
+  },
+  {
+    "id": "77b5351e-4ae9-5886-b25e-e9f4b1f982c5",
+    "accountId": "0xaeaab54bbf65bfd6efed7d2eb68372298e3c2416",
+    "accountDisplayName": "Wyatt",
+    "avatarVariant": 17,
+    "ticker": "MU",
+    "market": "xyz:MU",
+    "representativeRank": 1,
+    "cumulativeEntryNotional": 899807.5,
+    "entryCount": 1,
+    "assetNetPnl": 0.0,
+    "latestEntryAt": "2026-08-06T15:46:23+00:00",
+    "priceEvidence": {
+      "market": "xyz:MU",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "43a85cde-7ec6-5648-b767-903609071295",
+          "observedAt": "2026-08-06T15:46:23+00:00",
+          "price": 910.4,
+          "priceBasis": "reported",
+          "direction": "bullish",
+          "action": "flipped",
+          "entryNotional": 899807.5,
+          "evidenceURL": "https://hyperdash.com/trader/0xaeaab54bbf65bfd6efed7d2eb68372298e3c2416"
+        }
+      ]
+    }
+  },
+  {
+    "id": "75c16f91-6c0c-5001-90d9-205807fcba4e",
+    "accountId": "0xb69eec8fea0081343c3b09e652ba1fa7dcf7033a",
+    "accountDisplayName": "Anya",
+    "avatarVariant": 42,
+    "ticker": "DRAM",
+    "market": "xyz:DRAM",
+    "representativeRank": 1,
+    "cumulativeEntryNotional": 453839.2,
+    "entryCount": 1,
+    "assetNetPnl": 357231.14,
+    "latestEntryAt": "2026-08-14T07:56:37+00:00",
+    "priceEvidence": {
+      "market": "xyz:DRAM",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "75858613-b842-5336-8361-1b2dc9cbd86e",
+          "observedAt": "2026-08-14T07:56:37+00:00",
+          "price": 51.957,
+          "priceBasis": "reported",
+          "direction": "bullish",
+          "action": "opened",
+          "entryNotional": 453839.2,
+          "evidenceURL": "https://hyperdash.com/trader/0xb69eec8fea0081343c3b09e652ba1fa7dcf7033a"
+        }
+      ]
+    }
+  },
+  {
+    "id": "8410a5af-0040-534d-97d8-05f9987db034",
+    "accountId": "0xcac19662ec88d23fa1c81ac0e8570b0cf2ff26b3",
+    "accountDisplayName": "Atlas",
+    "avatarVariant": 19,
+    "ticker": "SPCX",
+    "market": "xyz:SPCX",
+    "representativeRank": 1,
+    "cumulativeEntryNotional": 2516467.51,
+    "entryCount": 1,
+    "assetNetPnl": 0.0,
+    "latestEntryAt": "2026-08-14T07:56:37+00:00",
+    "priceEvidence": {
+      "market": "xyz:SPCX",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "1924551c-2ad7-5f21-b857-cb3521ed8d76",
+          "observedAt": "2026-08-14T07:56:37+00:00",
+          "price": 129.11,
+          "priceBasis": "reported",
+          "direction": "bullish",
+          "action": "increased",
+          "entryNotional": 2516467.51,
+          "evidenceURL": "https://hyperdash.com/trader/0xcac19662ec88d23fa1c81ac0e8570b0cf2ff26b3"
+        }
+      ]
+    }
+  },
+  {
+    "id": "51003e25-e44b-5168-ac9f-ae2ff3bb1296",
+    "accountId": "0xcac19662ec88d23fa1c81ac0e8570b0cf2ff26b3",
+    "accountDisplayName": "Atlas",
+    "avatarVariant": 19,
+    "ticker": "SNDK",
+    "market": "xyz:SNDK",
+    "representativeRank": 2,
+    "cumulativeEntryNotional": 1025694.47,
+    "entryCount": 1,
+    "assetNetPnl": 0.0,
+    "latestEntryAt": "2026-08-14T07:56:37+00:00",
+    "priceEvidence": {
+      "market": "xyz:SNDK",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "abf21eec-998c-5a77-b85f-160e865da2e6",
+          "observedAt": "2026-08-14T07:56:37+00:00",
+          "price": 1546.5,
+          "priceBasis": "reported",
+          "direction": "bullish",
+          "action": "opened",
+          "entryNotional": 1025694.47,
+          "evidenceURL": "https://hyperdash.com/trader/0xcac19662ec88d23fa1c81ac0e8570b0cf2ff26b3"
+        }
+      ]
+    }
+  },
+  {
+    "id": "7b091550-d4fb-5678-aeaf-7a438d9f2544",
+    "accountId": "0xcac19662ec88d23fa1c81ac0e8570b0cf2ff26b3",
+    "accountDisplayName": "Atlas",
+    "avatarVariant": 19,
+    "ticker": "META",
+    "market": "xyz:META",
+    "representativeRank": 3,
+    "cumulativeEntryNotional": 987057.69,
+    "entryCount": 1,
+    "assetNetPnl": 0.0,
+    "latestEntryAt": "2026-08-14T07:56:37+00:00",
+    "priceEvidence": {
+      "market": "xyz:META",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "9956b97a-10e8-569d-85e7-e3e24aedb92e",
+          "observedAt": "2026-08-14T07:56:37+00:00",
+          "price": 601.56,
+          "priceBasis": "reported",
+          "direction": "bearish",
+          "action": "opened",
+          "entryNotional": 987057.69,
+          "evidenceURL": "https://hyperdash.com/trader/0xcac19662ec88d23fa1c81ac0e8570b0cf2ff26b3"
+        }
+      ]
+    }
+  },
+  {
+    "id": "dbf4e5e4-05a4-5620-8567-740f8a50cff8",
+    "accountId": "0xd8c5228c515db3043dfa0c8cd6f22450ee9a99b0",
+    "accountDisplayName": "Ethan",
+    "avatarVariant": 40,
+    "ticker": "SP500",
+    "market": "xyz:SP500",
+    "representativeRank": 1,
+    "cumulativeEntryNotional": 866714.22,
+    "entryCount": 4,
+    "assetNetPnl": 4285590.21,
+    "latestEntryAt": "2026-08-06T18:55:04+00:00",
+    "priceEvidence": {
+      "market": "xyz:SP500",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "4cd14b0d-13f8-5c9a-86ae-5b8d12f7f664",
+          "observedAt": "2026-08-06T18:35:04+00:00",
+          "price": 7565.5,
+          "priceBasis": "reported",
+          "direction": "bullish",
+          "action": "increased",
+          "entryNotional": 414438.09,
+          "evidenceURL": "https://hyperdash.com/trader/0xd8c5228c515db3043dfa0c8cd6f22450ee9a99b0"
+        },
+        {
+          "id": "81e03b7c-3f7a-57c5-b75e-569941ce7a38",
+          "observedAt": "2026-08-06T18:45:04+00:00",
+          "price": 7569.8,
+          "priceBasis": "reported",
+          "direction": "bullish",
+          "action": "increased",
+          "entryNotional": 339278.44,
+          "evidenceURL": "https://hyperdash.com/trader/0xd8c5228c515db3043dfa0c8cd6f22450ee9a99b0"
+        },
+        {
+          "id": "936e2bb6-0f81-5755-af49-207a89a3b411",
+          "observedAt": "2026-08-06T18:25:04+00:00",
+          "price": 7559.8,
+          "priceBasis": "reported",
+          "direction": "bullish",
+          "action": "increased",
+          "entryNotional": 75295.61,
+          "evidenceURL": "https://hyperdash.com/trader/0xd8c5228c515db3043dfa0c8cd6f22450ee9a99b0"
+        },
+        {
+          "id": "d07c597c-7bf6-52b4-9328-93439c105400",
+          "observedAt": "2026-08-06T18:55:04+00:00",
+          "price": 7570.7,
+          "priceBasis": "reported",
+          "direction": "bullish",
+          "action": "increased",
+          "entryNotional": 37702.08,
+          "evidenceURL": "https://hyperdash.com/trader/0xd8c5228c515db3043dfa0c8cd6f22450ee9a99b0"
+        }
+      ]
+    }
+  },
+  {
+    "id": "19563408-b846-509f-b723-2dc874050394",
+    "accountId": "0xd8c5228c515db3043dfa0c8cd6f22450ee9a99b0",
+    "accountDisplayName": "Ethan",
+    "avatarVariant": 40,
+    "ticker": "XYZ100",
+    "market": "xyz:XYZ100",
+    "representativeRank": 2,
+    "cumulativeEntryNotional": 71760.67,
+    "entryCount": 2,
+    "assetNetPnl": 1000671.54,
+    "latestEntryAt": "2026-08-07T00:23:00+00:00",
+    "priceEvidence": {
+      "market": "xyz:XYZ100",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "ab2f61df-56a2-5d80-96a8-cde7be9fb445",
+          "observedAt": "2026-08-06T18:35:04+00:00",
+          "price": 29503.0,
+          "priceBasis": "reported",
+          "direction": "bearish",
+          "action": "increased",
+          "entryNotional": 35881.55,
+          "evidenceURL": "https://hyperdash.com/trader/0xd8c5228c515db3043dfa0c8cd6f22450ee9a99b0"
+        },
+        {
+          "id": "0bdbc57b-a0a3-5675-8468-761615f66c85",
+          "observedAt": "2026-08-07T00:23:00+00:00",
+          "price": 29501.0,
+          "priceBasis": "reported",
+          "direction": "bearish",
+          "action": "increased",
+          "entryNotional": 35879.12,
+          "evidenceURL": "https://hyperdash.com/trader/0xd8c5228c515db3043dfa0c8cd6f22450ee9a99b0"
+        }
+      ]
+    }
+  },
+  {
+    "id": "ce629f07-b605-5d7f-a287-70fe781d1637",
+    "accountId": "0xe7af24d3f27e9bb48f268c01515860deac468d34",
+    "accountDisplayName": "Eliana",
+    "avatarVariant": 48,
+    "ticker": "SKHX",
+    "market": "xyz:SKHX",
+    "representativeRank": 1,
+    "cumulativeEntryNotional": 63357.0,
+    "entryCount": 2,
+    "assetNetPnl": 286201.81,
+    "latestEntryAt": "2026-08-07T00:31:00+00:00",
+    "priceEvidence": {
+      "market": "xyz:SKHX",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "0645d930-91df-5dc0-8cbd-0eaca6e7d50d",
+          "observedAt": "2026-08-07T00:31:00+00:00",
+          "price": 1054.7,
+          "priceBasis": "reported",
+          "direction": "bullish",
+          "action": "increased",
+          "entryNotional": 47461.5,
+          "evidenceURL": "https://hyperdash.com/trader/0xe7af24d3f27e9bb48f268c01515860deac468d34"
+        },
+        {
+          "id": "5c24572b-09f6-5c0c-949f-02ba88b4f6d9",
+          "observedAt": "2026-08-07T00:23:00+00:00",
+          "price": 1059.7,
+          "priceBasis": "reported",
+          "direction": "bullish",
+          "action": "increased",
+          "entryNotional": 15895.5,
+          "evidenceURL": "https://hyperdash.com/trader/0xe7af24d3f27e9bb48f268c01515860deac468d34"
+        }
+      ]
+    }
+  },
+  {
+    "id": "2f463cce-4bc3-595b-b54a-e1497d2a08b9",
+    "accountId": "0xe8d89110c52df4ca33e75e060e3c72dcbf6c8dda",
+    "accountDisplayName": "Iris",
+    "avatarVariant": 39,
+    "ticker": "BE",
+    "market": "xyz:BE",
+    "representativeRank": 1,
+    "cumulativeEntryNotional": 27816.25,
+    "entryCount": 1,
+    "assetNetPnl": 0.0,
+    "latestEntryAt": "2026-08-14T07:56:37+00:00",
+    "priceEvidence": {
+      "market": "xyz:BE",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "16e39d90-57a0-5b5b-af24-3c50e78b20be",
+          "observedAt": "2026-08-14T07:56:37+00:00",
+          "price": 222.53,
+          "priceBasis": "reported",
+          "direction": "bullish",
+          "action": "increased",
+          "entryNotional": 27816.25,
+          "evidenceURL": "https://hyperdash.com/trader/0xe8d89110c52df4ca33e75e060e3c72dcbf6c8dda"
+        }
+      ]
+    }
+  },
+  {
+    "id": "a03796e4-dd14-5147-9087-4abc3358d62f",
+    "accountId": "0xf3dcaeb909d3d17318c0908a1ec0ca31321e1672",
+    "accountDisplayName": "Ivy",
+    "avatarVariant": 46,
+    "ticker": "STRC",
+    "market": "xyz:STRC",
+    "representativeRank": 1,
+    "cumulativeEntryNotional": 221044.3,
+    "entryCount": 7,
+    "assetNetPnl": -39986.76,
+    "latestEntryAt": "2026-08-07T00:31:00+00:00",
+    "priceEvidence": {
+      "market": "xyz:STRC",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "52cfc875-5eaf-5335-abfc-82cfa161f4c1",
+          "observedAt": "2026-08-07T00:23:00+00:00",
+          "price": 92.51,
+          "priceBasis": "reported",
+          "direction": "bearish",
+          "action": "increased",
+          "entryNotional": 123824.63,
+          "evidenceURL": "https://hyperdash.com/trader/0xf3dcaeb909d3d17318c0908a1ec0ca31321e1672"
+        },
+        {
+          "id": "b727a909-194c-5b2b-b923-b977801505e6",
+          "observedAt": "2026-08-06T17:16:23+00:00",
+          "price": 92.266,
+          "priceBasis": "reported",
+          "direction": "bearish",
+          "action": "increased",
+          "entryNotional": 44952.0,
+          "evidenceURL": "https://hyperdash.com/trader/0xf3dcaeb909d3d17318c0908a1ec0ca31321e1672"
+        },
+        {
+          "id": "5ba78186-92d1-51f6-bba9-5cd7a67a3809",
+          "observedAt": "2026-08-06T17:35:04+00:00",
+          "price": 92.342,
+          "priceBasis": "reported",
+          "direction": "bearish",
+          "action": "increased",
+          "entryNotional": 39633.18,
+          "evidenceURL": "https://hyperdash.com/trader/0xf3dcaeb909d3d17318c0908a1ec0ca31321e1672"
+        },
+        {
+          "id": "76501d72-caeb-5f75-aa76-feb3292e7224",
+          "observedAt": "2026-08-06T17:45:04+00:00",
+          "price": 92.354,
+          "priceBasis": "reported",
+          "direction": "bearish",
+          "action": "increased",
+          "entryNotional": 6538.67,
+          "evidenceURL": "https://hyperdash.com/trader/0xf3dcaeb909d3d17318c0908a1ec0ca31321e1672"
+        },
+        {
+          "id": "593f180f-cb2a-568f-bce2-3eda3da6fab0",
+          "observedAt": "2026-08-06T18:15:04+00:00",
+          "price": 92.362,
+          "priceBasis": "reported",
+          "direction": "bearish",
+          "action": "increased",
+          "entryNotional": 3869.97,
+          "evidenceURL": "https://hyperdash.com/trader/0xf3dcaeb909d3d17318c0908a1ec0ca31321e1672"
+        },
+        {
+          "id": "f58c3456-0170-547f-abe3-52213a7c5992",
+          "observedAt": "2026-08-07T00:31:00+00:00",
+          "price": 92.512,
+          "priceBasis": "reported",
+          "direction": "bearish",
+          "action": "increased",
+          "entryNotional": 1202.65,
+          "evidenceURL": "https://hyperdash.com/trader/0xf3dcaeb909d3d17318c0908a1ec0ca31321e1672"
+        },
+        {
+          "id": "f7560c10-fb9a-542a-a4aa-647afee948ce",
+          "observedAt": "2026-08-06T15:36:23+00:00",
+          "price": 92.18,
+          "priceBasis": "reported",
+          "direction": "bearish",
+          "action": "increased",
+          "entryNotional": 1023.2,
+          "evidenceURL": "https://hyperdash.com/trader/0xf3dcaeb909d3d17318c0908a1ec0ca31321e1672"
+        }
+      ]
+    }
+  },
+  {
+    "id": "e343a442-de26-5a33-8286-403dd03628e2",
+    "accountId": "0xfc37faf026597474691dca71ed9dcae1a6633b84",
+    "accountDisplayName": "Kieran",
+    "avatarVariant": 7,
+    "ticker": "GOOGL",
+    "market": "xyz:GOOGL",
+    "representativeRank": 1,
+    "cumulativeEntryNotional": 225901.86,
+    "entryCount": 1,
+    "assetNetPnl": 0.0,
+    "latestEntryAt": "2026-08-14T07:56:37+00:00",
+    "priceEvidence": {
+      "market": "xyz:GOOGL",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "a939465c-159c-5826-a0d4-3478b280c8c9",
+          "observedAt": "2026-08-14T07:56:37+00:00",
+          "price": 353.32,
+          "priceBasis": "reported",
+          "direction": "bullish",
+          "action": "opened",
+          "entryNotional": 225901.86,
+          "evidenceURL": "https://hyperdash.com/trader/0xfc37faf026597474691dca71ed9dcae1a6633b84"
+        }
+      ]
+    }
+  },
+  {
+    "id": "8a9308d8-db9b-535d-ac42-bd3f53aeb151",
+    "accountId": "0xfc37faf026597474691dca71ed9dcae1a6633b84",
+    "accountDisplayName": "Kieran",
+    "avatarVariant": 7,
+    "ticker": "XYZ100",
+    "market": "xyz:XYZ100",
+    "representativeRank": 2,
+    "cumulativeEntryNotional": 195118.14,
+    "entryCount": 2,
+    "assetNetPnl": 60513.41,
+    "latestEntryAt": "2026-08-06T17:16:23+00:00",
+    "priceEvidence": {
+      "market": "xyz:XYZ100",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "ad0ec06b-936d-53f0-a59b-326a36fd81ee",
+          "observedAt": "2026-08-06T17:16:23+00:00",
+          "price": 29429.0,
+          "priceBasis": "reported",
+          "direction": "bullish",
+          "action": "increased",
+          "entryNotional": 130782.48,
+          "evidenceURL": "https://hyperdash.com/trader/0xfc37faf026597474691dca71ed9dcae1a6633b84"
+        },
+        {
+          "id": "c8ca9bc0-9cf8-5b59-8c34-d77b3bdd6e92",
+          "observedAt": "2026-08-06T15:36:23+00:00",
+          "price": 29420.0,
+          "priceBasis": "reported",
+          "direction": "bullish",
+          "action": "increased",
+          "entryNotional": 64335.66,
+          "evidenceURL": "https://hyperdash.com/trader/0xfc37faf026597474691dca71ed9dcae1a6633b84"
+        }
+      ]
+    }
+  },
+  {
+    "id": "2e001fcc-1eca-55f1-8e1b-ca212061edfa",
+    "accountId": "0xfc37faf026597474691dca71ed9dcae1a6633b84",
+    "accountDisplayName": "Kieran",
+    "avatarVariant": 7,
+    "ticker": "META",
+    "market": "xyz:META",
+    "representativeRank": 3,
+    "cumulativeEntryNotional": 131709.05,
+    "entryCount": 1,
+    "assetNetPnl": 0.0,
+    "latestEntryAt": "2026-08-14T07:56:37+00:00",
+    "priceEvidence": {
+      "market": "xyz:META",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "3e000489-a2f9-5eb6-9c06-125abc8c740b",
+          "observedAt": "2026-08-14T07:56:37+00:00",
+          "price": 592.75,
+          "priceBasis": "reported",
+          "direction": "bullish",
+          "action": "opened",
+          "entryNotional": 131709.05,
+          "evidenceURL": "https://hyperdash.com/trader/0xfc37faf026597474691dca71ed9dcae1a6633b84"
+        }
+      ]
+    }
+  },
+  {
+    "id": "c95f7f52-e577-5c49-8d7f-3ef4bafc351d",
+    "accountId": "0xfc98b6ec7f59ea13354bae6171a9120692fb8777",
+    "accountDisplayName": "Lara",
+    "avatarVariant": 37,
+    "ticker": "SNDK",
+    "market": "xyz:SNDK",
+    "representativeRank": 1,
+    "cumulativeEntryNotional": 2344547.5,
+    "entryCount": 2,
+    "assetNetPnl": 615696.34,
+    "latestEntryAt": "2026-08-14T07:56:37+00:00",
+    "priceEvidence": {
+      "market": "xyz:SNDK",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "8acf00f4-0fae-5f3a-b225-da14b71fe32a",
+          "observedAt": "2026-08-14T07:56:37+00:00",
+          "price": 1492.2,
+          "priceBasis": "reported",
+          "direction": "bearish",
+          "action": "increased",
+          "entryNotional": 2312910.0,
+          "evidenceURL": "https://hyperdash.com/trader/0xfc98b6ec7f59ea13354bae6171a9120692fb8777"
+        },
+        {
+          "id": "55638f36-b504-560e-b739-c9982aefa5b8",
+          "observedAt": "2026-08-07T00:23:00+00:00",
+          "price": 1265.5,
+          "priceBasis": "reported",
+          "direction": "bearish",
+          "action": "increased",
+          "entryNotional": 31637.5,
+          "evidenceURL": "https://hyperdash.com/trader/0xfc98b6ec7f59ea13354bae6171a9120692fb8777"
+        }
+      ]
+    }
+  },
+  {
+    "id": "6539a80e-4dc0-50ef-873d-4568455e57ff",
+    "accountId": "0xfc98b6ec7f59ea13354bae6171a9120692fb8777",
+    "accountDisplayName": "Lara",
+    "avatarVariant": 37,
+    "ticker": "NBIS",
+    "market": "xyz:NBIS",
+    "representativeRank": 2,
+    "cumulativeEntryNotional": 383250.0,
+    "entryCount": 1,
+    "assetNetPnl": 0.0,
+    "latestEntryAt": "2026-08-14T07:56:37+00:00",
+    "priceEvidence": {
+      "market": "xyz:NBIS",
+      "interval": "4h",
+      "source": "Hyperliquid candleSnapshot",
+      "candles": [],
+      "entryMarkers": [
+        {
+          "id": "b3864f7d-4648-589b-ac7b-c25c9c5358cc",
+          "observedAt": "2026-08-14T07:56:37+00:00",
+          "price": 255.5,
+          "priceBasis": "reported",
+          "direction": "bearish",
+          "action": "opened",
+          "entryNotional": 383250.0,
+          "evidenceURL": "https://hyperdash.com/trader/0xfc98b6ec7f59ea13354bae6171a9120692fb8777"
+        }
+      ]
+    }
+  }
+]

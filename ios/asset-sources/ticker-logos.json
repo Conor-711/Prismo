@@ -1,0 +1,2902 @@
+{
+  "logos": {
+    "AA": {
+      "asset": "AA.png",
+      "sha256": "28de0951216d35605861de5518615bfbc2efd8414ccf4082b096df77a7be369a",
+      "source": "https://financialmodelingprep.com/image-stock/AA.png",
+      "status": "downloaded"
+    },
+    "AAOI": {
+      "asset": "AAOI.png",
+      "sha256": "7fa062e19ed7b59e025cd80d9495356d2bbb51d72addb8d143557edbea6e6313",
+      "source": "https://financialmodelingprep.com/image-stock/AAOI.png",
+      "status": "downloaded"
+    },
+    "AAPL": {
+      "asset": "AAPL.svg",
+      "sha256": "a792691f67ad6b9607c093fd9b8afe724fa26faebc8aa779c663d46cfb8d0290",
+      "source": "https://app.trade.xyz/markets/aapl.svg",
+      "status": "downloaded"
+    },
+    "ABCL": {
+      "asset": "ABCL.png",
+      "sha256": "61de91b05a6ee7d1c4f085b776a9c4e06c217fca80e052c347162ee6acaf29cc",
+      "source": "https://financialmodelingprep.com/image-stock/ABCL.png",
+      "status": "downloaded"
+    },
+    "ABNB": {
+      "asset": "ABNB.png",
+      "sha256": "276c02bdf6498d89c332bdaa095dcfd2c244473ffec029fc1ab56dab6421f81b",
+      "source": "https://financialmodelingprep.com/image-stock/ABNB.png",
+      "status": "downloaded"
+    },
+    "ABVX": {
+      "asset": "ABVX.png",
+      "sha256": "62831ae12ac9668b09605f50063e516808d08ac6544f31ca93de16bd6feb30dd",
+      "source": "https://financialmodelingprep.com/image-stock/ABVX.png",
+      "status": "downloaded"
+    },
+    "ACHR": {
+      "asset": "ACHR.png",
+      "sha256": "4871cafcc69e4e08df189dfc55bdb307612309f802369664f73f1e7ec19531ac",
+      "source": "https://financialmodelingprep.com/image-stock/ACHR.png",
+      "status": "downloaded"
+    },
+    "ACN": {
+      "asset": "ACN.png",
+      "sha256": "9a8d5e8f2f0333e90269535e2626a3a4c3c4b91c0645f3fd766c0111f2f55a30",
+      "source": "https://financialmodelingprep.com/image-stock/ACN.png",
+      "status": "downloaded"
+    },
+    "ADBE": {
+      "asset": "ADBE.png",
+      "sha256": "bf4a234c6a2cd48befd889daa4bd6cb03ecffe81a36e2bdd38941227e0916a7e",
+      "source": "https://financialmodelingprep.com/image-stock/ADBE.png",
+      "status": "downloaded"
+    },
+    "ADUR": {
+      "asset": "ADUR.png",
+      "sha256": "cfd8b9261ed3ff8da8fab8843db0c92c199c075328c9fa3e044d2c5229e9727f",
+      "source": "https://financialmodelingprep.com/image-stock/ADUR.png",
+      "status": "downloaded"
+    },
+    "AEHR": {
+      "asset": "AEHR.png",
+      "sha256": "ce27edcc53485d88a80e86aff078a0020345ab6e9ee4142813d427b904a5f393",
+      "source": "https://financialmodelingprep.com/image-stock/AEHR.png",
+      "status": "downloaded"
+    },
+    "AEO": {
+      "asset": "AEO.png",
+      "sha256": "5bebfe3e4fc6f1332922946d9f03ff98d6fa8a8d4c5860a82b931ca8437ca744",
+      "source": "https://financialmodelingprep.com/image-stock/AEO.png",
+      "status": "downloaded"
+    },
+    "AEVA": {
+      "asset": "AEVA.png",
+      "sha256": "33bfd45b64437f07e3496e3209c10edf977807b3ea41a7e56450bce925b9ff7a",
+      "source": "https://financialmodelingprep.com/image-stock/AEVA.png",
+      "status": "downloaded"
+    },
+    "AFRM": {
+      "asset": "AFRM.png",
+      "sha256": "5e84c10d0342eb1fc3843933066c7344c0f9ad6d0514dc5d7b435a33bbe85eff",
+      "source": "https://financialmodelingprep.com/image-stock/AFRM.png",
+      "status": "downloaded"
+    },
+    "AI": {
+      "asset": "AI.png",
+      "sha256": "dc683d86786e4485b4fbf25f1a13fc3bc1c1d88b6d9ff8a69a35d4343e8fc76a",
+      "source": "https://financialmodelingprep.com/image-stock/AI.png",
+      "status": "downloaded"
+    },
+    "AIIO": {
+      "asset": "AIIO.png",
+      "sha256": "28edb06c43287412cde533c6102d30227815d8b277319a3961faba5e45e67db1",
+      "source": "https://financialmodelingprep.com/image-stock/AIIO.png",
+      "status": "downloaded"
+    },
+    "AIXI": {
+      "asset": "AIXI.png",
+      "sha256": "7c5f1faf6c0e4c32dc649a91ac481ae83bdecafac85b23955b382ca5e51ed375",
+      "source": "https://financialmodelingprep.com/image-stock/AIXI.png",
+      "status": "downloaded"
+    },
+    "ALAB": {
+      "asset": "ALAB.png",
+      "sha256": "1369f12000bd93a4b70b7bd3863654015ddf0d63566587f06a88c9b105c32b4a",
+      "source": "https://financialmodelingprep.com/image-stock/ALAB.png",
+      "status": "downloaded"
+    },
+    "ALM": {
+      "asset": "ALM.png",
+      "sha256": "f5c188c5effde98eb1f2d0d417fab3179b7dcecdd7c3d8b4e4c7345efafc2ab3",
+      "source": "https://financialmodelingprep.com/image-stock/ALM.png",
+      "status": "downloaded"
+    },
+    "ALMU": {
+      "asset": "ALMU.png",
+      "sha256": "419f8b13e36ef74cc6f8d361e23969d8d0c6f72d74a0029700264e0b1cd3bc0d",
+      "source": "https://financialmodelingprep.com/image-stock/ALMU.png",
+      "status": "downloaded"
+    },
+    "ALUMINIUM": {
+      "asset": "ALUMINIUM.svg",
+      "sha256": "bae3b07d78080e4fb4b3c6698632f0f0be3b9851acb33b82f1ae86179093e9c7",
+      "source": "https://app.trade.xyz/markets/aluminium.svg",
+      "status": "downloaded"
+    },
+    "AMAT": {
+      "asset": "AMAT.svg",
+      "sha256": "f47ce33392c363b94b6da3888cd908821bda4f4d561de23e84a3a9a19ee9ead3",
+      "source": "https://app.trade.xyz/markets/amat.svg",
+      "status": "downloaded"
+    },
+    "AMBA": {
+      "asset": "AMBA.png",
+      "sha256": "f57218b4e3177f92cd7b2d01b8525386d359e2d7b8cc3e28c9b62d2602dc55cf",
+      "source": "https://financialmodelingprep.com/image-stock/AMBA.png",
+      "status": "downloaded"
+    },
+    "AMC": {
+      "asset": "AMC.png",
+      "sha256": "6c49dfb8b96b46fccf52790a1014ebf4a1a54181f974cf5c7e9bf77107f2a007",
+      "source": "https://financialmodelingprep.com/image-stock/AMC.png",
+      "status": "downloaded"
+    },
+    "AMD": {
+      "asset": "AMD.svg",
+      "sha256": "7143fcad3c44bf2ce5652a397fbc11741363afb1b1434360d332861877687136",
+      "source": "https://app.trade.xyz/markets/amd.svg",
+      "status": "downloaded"
+    },
+    "AMKR": {
+      "asset": "AMKR.png",
+      "sha256": "a2b1916548c982ec45977d16ab07bcd5d9d68c4930a36f71dc2f1f1c9864e70c",
+      "source": "https://financialmodelingprep.com/image-stock/AMKR.png",
+      "status": "downloaded"
+    },
+    "AMPG": {
+      "asset": "AMPG.png",
+      "sha256": "426579f7b9357950632125491372beb2e53a8580cdd08116eab94568c26d22f7",
+      "source": "https://financialmodelingprep.com/image-stock/AMPG.png",
+      "status": "downloaded"
+    },
+    "AMPX": {
+      "asset": "AMPX.png",
+      "sha256": "7c08acb134c4ee200a760fd6bbf11e9a717929ce9a1b531654b966fc67bbd051",
+      "source": "https://financialmodelingprep.com/image-stock/AMPX.png",
+      "status": "downloaded"
+    },
+    "AMZE": {
+      "asset": "AMZE.png",
+      "sha256": "0e40fe1c0b4c626946cfc83a77ccc4f07471a2a16e6c65cf56ab69534ff2765e",
+      "source": "https://financialmodelingprep.com/image-stock/AMZE.png",
+      "status": "downloaded"
+    },
+    "AMZN": {
+      "asset": "AMZN.svg",
+      "sha256": "419bc9e9b2ca019b9ab69b56d0d4b4964166557a56dcce79aec8c1185e787777",
+      "source": "https://app.trade.xyz/markets/amzn.svg",
+      "status": "downloaded"
+    },
+    "ANET": {
+      "asset": "ANET.png",
+      "sha256": "387803c260106adeb1a92de1d8964311903eb1a5cc2f94ad8505bf72d04e72cd",
+      "source": "https://financialmodelingprep.com/image-stock/ANET.png",
+      "status": "downloaded"
+    },
+    "APA": {
+      "asset": "APA.png",
+      "sha256": "ed8225c9982eec6c846013da7d367fc157d0866d057c8192fa244296e5e39a8a",
+      "source": "https://financialmodelingprep.com/image-stock/APA.png",
+      "status": "downloaded"
+    },
+    "APLD": {
+      "asset": "APLD.png",
+      "sha256": "283a9bade39873d9be55d8f48e00bdbce122511b66017d6522221a76e731fc42",
+      "source": "https://financialmodelingprep.com/image-stock/APLD.png",
+      "status": "downloaded"
+    },
+    "APP": {
+      "asset": "APP.png",
+      "sha256": "be2326794163a6188620b450eb632bac508b982335772d84fdb503b717e222fb",
+      "source": "https://financialmodelingprep.com/image-stock/APP.png",
+      "status": "downloaded"
+    },
+    "AQST": {
+      "asset": "AQST.png",
+      "sha256": "57a2f38bb255bd000a579f50977effe0ffbf62e4609911e508227cd93602234c",
+      "source": "https://financialmodelingprep.com/image-stock/AQST.png",
+      "status": "downloaded"
+    },
+    "ARDX": {
+      "asset": "ARDX.png",
+      "sha256": "b3eef3b3a4a87e5efa0cadc36b547655b6ebc98a186fbae4b05b4ae35132c86f",
+      "source": "https://financialmodelingprep.com/image-stock/ARDX.png",
+      "status": "downloaded"
+    },
+    "ARM": {
+      "asset": "ARM.svg",
+      "sha256": "f1522bd12eea73c087ef1e810680bd2d28696d8b04d5bc34b0b9c5bf99c768c2",
+      "source": "https://app.trade.xyz/markets/arm.svg",
+      "status": "downloaded"
+    },
+    "ARQQ": {
+      "asset": "ARQQ.png",
+      "sha256": "02e28f3c1b6ed4213dbf05a3377e2f9cf3a3375aeddaa2e0a5dab4b916411f8d",
+      "source": "https://financialmodelingprep.com/image-stock/ARQQ.png",
+      "status": "downloaded"
+    },
+    "ASM": {
+      "asset": "ASM.png",
+      "sha256": "48eda31f0e1dcee62a8a33aef6d32f16a2fb3d2e0c19547a10c489d69402dd3a",
+      "source": "https://financialmodelingprep.com/image-stock/ASM.png",
+      "status": "downloaded"
+    },
+    "ASML": {
+      "asset": "ASML.svg",
+      "sha256": "d07a8c4b9a5c888c0484a4c32a500ad7d6d23fc9b986947195bdc5b5ff45562c",
+      "source": "https://app.trade.xyz/markets/asml.svg",
+      "status": "downloaded"
+    },
+    "ASST": {
+      "asset": "ASST.png",
+      "sha256": "0e1b825ca481b5ac2708f2b51962b66f331f3d9ed6c8e252c65c65f75bd5f13c",
+      "source": "https://financialmodelingprep.com/image-stock/ASST.png",
+      "status": "downloaded"
+    },
+    "ASTS": {
+      "asset": "ASTS.png",
+      "sha256": "f793e7146005f14b9011f200aae38e94e32cf30cb88734c93523f999d72eedba",
+      "source": "https://financialmodelingprep.com/image-stock/ASTS.png",
+      "status": "downloaded"
+    },
+    "ATOM": {
+      "asset": "ATOM.png",
+      "sha256": "da5e7fc6fe51773b2486df689d5f542a3b7aab9f89806afa6cbd003c6d7332a8",
+      "source": "https://financialmodelingprep.com/image-stock/ATOM.png",
+      "status": "downloaded"
+    },
+    "AUR": {
+      "asset": "AUR.png",
+      "sha256": "3752bf927c2f764b0317c8ab76ec112629c9530681cc937a2158cb28325c7094",
+      "source": "https://financialmodelingprep.com/image-stock/AUR.png",
+      "status": "downloaded"
+    },
+    "AVAV": {
+      "asset": "AVAV.png",
+      "sha256": "72ca7f6c766c84bec86eb66573741405f2b116c0dcabbb5a22c8fcfd59cfa5c5",
+      "source": "https://financialmodelingprep.com/image-stock/AVAV.png",
+      "status": "downloaded"
+    },
+    "AVGO": {
+      "source": "existing project asset",
+      "status": "existing"
+    },
+    "AXTI": {
+      "asset": "AXTI.png",
+      "sha256": "353b349049a4176a278af912f6fc8218e3e653414e2bbe33e8d7f51d6fc534de",
+      "source": "https://financialmodelingprep.com/image-stock/AXTI.png",
+      "status": "downloaded"
+    },
+    "BA": {
+      "asset": "BA.png",
+      "sha256": "9ae5136e0711c9bf39ea7c0f4dfebff5f6bd4262efe3277f1f9bd67bc54b47eb",
+      "source": "https://financialmodelingprep.com/image-stock/BA.png",
+      "status": "downloaded"
+    },
+    "BABA": {
+      "asset": "BABA.svg",
+      "sha256": "3fa967b87fbcdcfb426f497df1e683a7f1e2ba7426a702a6450f738d228379bd",
+      "source": "https://app.trade.xyz/markets/baba.svg",
+      "status": "downloaded"
+    },
+    "BB": {
+      "asset": "BB.svg",
+      "sha256": "8b8f1861e29ca3334ba8ee532c85b7edd4f8fe9a21dfc02581f0d0c9b3cc6ab8",
+      "source": "https://app.trade.xyz/markets/bb.svg",
+      "status": "downloaded"
+    },
+    "BBAI": {
+      "asset": "BBAI.png",
+      "sha256": "5bb0b97fcc0aec0a8720d5f0b8937c596655931c2c44ddf20cc4fe2bc385b1ed",
+      "source": "https://financialmodelingprep.com/image-stock/BBAI.png",
+      "status": "downloaded"
+    },
+    "BBBY": {
+      "asset": "BBBY.png",
+      "sha256": "f2d52c9fa57123ce7023a79cd632293f6808380f99fe1e2da4391f3939031178",
+      "source": "https://financialmodelingprep.com/image-stock/BBBY.png",
+      "status": "downloaded"
+    },
+    "BBIO": {
+      "asset": "BBIO.png",
+      "sha256": "8ebac52c20aa9c463078c04781ae54aa8162ba1128cfe1a84da4d8df27a7ae3e",
+      "source": "https://financialmodelingprep.com/image-stock/BBIO.png",
+      "status": "downloaded"
+    },
+    "BE": {
+      "asset": "BE.svg",
+      "sha256": "81c7e42acbc603d8952901c72feb9b5a026870a02188a18a2e08605a77befe31",
+      "source": "https://app.trade.xyz/markets/be.svg",
+      "status": "downloaded"
+    },
+    "BIDU": {
+      "asset": "BIDU.png",
+      "sha256": "609690f179f6d97ee58d478f6b32360e5574d16a7caded3aea1defc56e9f9ef4",
+      "source": "https://financialmodelingprep.com/image-stock/BIDU.png",
+      "status": "downloaded"
+    },
+    "BIRD": {
+      "asset": "BIRD.svg",
+      "sha256": "83996632e939c2aedb72abcfe4a2f2745fc751d0f60c50aff0b2ae9b37d733c8",
+      "source": "https://app.trade.xyz/markets/bird.svg",
+      "status": "downloaded"
+    },
+    "BKNG": {
+      "asset": "BKNG.png",
+      "sha256": "52d8679714e497f225cab3b7f2238d133673adb12756b880e9b4c86b83ea0afa",
+      "source": "https://financialmodelingprep.com/image-stock/BKNG.png",
+      "status": "downloaded"
+    },
+    "BKSY": {
+      "asset": "BKSY.png",
+      "sha256": "cb88d9472d023d57e744b5147f19e1767f89115b1807e098f4379b5d347a5fcd",
+      "source": "https://financialmodelingprep.com/image-stock/BKSY.png",
+      "status": "downloaded"
+    },
+    "BMNR": {
+      "asset": "BMNR.png",
+      "sha256": "8cd121b4b6dc23c36ce503083e014866d6348bc2a724f03f0e23e582d17d9c75",
+      "source": "https://financialmodelingprep.com/image-stock/BMNR.png",
+      "status": "downloaded"
+    },
+    "BNAI": {
+      "asset": "BNAI.png",
+      "sha256": "dc7283686fcfbed84397df9bcc3f70d172a43f83012d00548110bc4adfe87e36",
+      "source": "https://financialmodelingprep.com/image-stock/BNAI.png",
+      "status": "downloaded"
+    },
+    "BOT": {
+      "asset": "BOT.svg",
+      "sha256": "9412ceace3d7cad0294915fb427761fed5a60f8a614a4246ff48927aa220750d",
+      "source": "https://app.trade.xyz/markets/bot.svg",
+      "status": "downloaded"
+    },
+    "BRENTOIL": {
+      "asset": "BRENTOIL.svg",
+      "sha256": "2a3bef0c265b29040270ceb09633732d1908f2efa168693a559a27842fdca0f3",
+      "source": "https://app.trade.xyz/markets/brentoil.svg",
+      "status": "downloaded"
+    },
+    "BRUN": {
+      "asset": "BRUN.png",
+      "sha256": "5c45220a4fddc54c32d817c3a54c87ee54412b6fd02a89686d2148cc58fc0686",
+      "source": "https://financialmodelingprep.com/image-stock/BRUN.png",
+      "status": "downloaded"
+    },
+    "BTBT": {
+      "asset": "BTBT.png",
+      "sha256": "3a70538069f6fb686632087a8278fc039ac3aba3376eef23228fc196717b4edb",
+      "source": "https://financialmodelingprep.com/image-stock/BTBT.png",
+      "status": "downloaded"
+    },
+    "BTCS": {
+      "asset": "BTCS.png",
+      "sha256": "c3bb49e2f6a37288faa357e80bb35b5b6c9221cd8b882d930823cbc41b4b4668",
+      "source": "https://financialmodelingprep.com/image-stock/BTCS.png",
+      "status": "downloaded"
+    },
+    "BTDR": {
+      "asset": "BTDR.png",
+      "sha256": "d5604853b2272b774ef3889dbbb9a302843f884f7d9944416a319a9056ad0619",
+      "source": "https://financialmodelingprep.com/image-stock/BTDR.png",
+      "status": "downloaded"
+    },
+    "BULL": {
+      "asset": "BULL.png",
+      "sha256": "23b0ee3aaf33987cc979db02f8745f3059421c7d9201a53d1cf786a88e08c5a5",
+      "source": "https://financialmodelingprep.com/image-stock/BULL.png",
+      "status": "downloaded"
+    },
+    "BX": {
+      "asset": "BX.svg",
+      "sha256": "f1e6b2cdb9915a2e919b004adeebbdee34012baeda5ea3971328e2fe0687cd69",
+      "source": "https://app.trade.xyz/markets/bx.svg",
+      "status": "downloaded"
+    },
+    "BYND": {
+      "asset": "BYND.png",
+      "sha256": "44459872c23e25a14a436d8e9c490a95b084682c814aff13814d90d8a0d8715b",
+      "source": "https://financialmodelingprep.com/image-stock/BYND.png",
+      "status": "downloaded"
+    },
+    "CAN": {
+      "asset": "CAN.png",
+      "sha256": "26e58fba507087512088fd263cf77f9572831e74cca4739638350265390685c0",
+      "source": "https://financialmodelingprep.com/image-stock/CAN.png",
+      "status": "downloaded"
+    },
+    "CAR": {
+      "asset": "CAR.png",
+      "sha256": "47adc695041d7c5e9f8af88fcac7bbfcf4a1ade9aca6ad927c25e35d8f146dd2",
+      "source": "https://financialmodelingprep.com/image-stock/CAR.png",
+      "status": "downloaded"
+    },
+    "CAT": {
+      "asset": "CAT.png",
+      "sha256": "76c6dacee015a9a80d59b12fd7c238b144a7ca3ad13e7e107f0df70b649249d9",
+      "source": "https://financialmodelingprep.com/image-stock/CAT.png",
+      "status": "downloaded"
+    },
+    "CAVA": {
+      "asset": "CAVA.png",
+      "sha256": "5c8a4493a8043b1402507726cb896f0a91b94d41d2b25c48171759b95345a6c6",
+      "source": "https://financialmodelingprep.com/image-stock/CAVA.png",
+      "status": "downloaded"
+    },
+    "CBRS": {
+      "asset": "CBRS.svg",
+      "sha256": "8b0d899475de753ebf54cb4292a0bdba67bebee1e07e9806474246fd7ac634c3",
+      "source": "https://app.trade.xyz/markets/cbrs.svg",
+      "status": "downloaded"
+    },
+    "CCJ": {
+      "asset": "CCJ.png",
+      "sha256": "c526c035d76bbfd42202355c38411bf95323b1501f5b71d9e6ab33ac840de7f5",
+      "source": "https://financialmodelingprep.com/image-stock/CCJ.png",
+      "status": "downloaded"
+    },
+    "CDE": {
+      "asset": "CDE.png",
+      "sha256": "fdafa3dd128b81ae30efa2a527db8092917c7bad7532a4c041a76628bbe91066",
+      "source": "https://financialmodelingprep.com/image-stock/CDE.png",
+      "status": "downloaded"
+    },
+    "CDT": {
+      "asset": "CDT.png",
+      "sha256": "4aa89b24548e58548c063a0ffd150589fa0b2143e55e1b7be7bfac23405c0c25",
+      "source": "https://financialmodelingprep.com/image-stock/CDT.png",
+      "status": "downloaded"
+    },
+    "CEG": {
+      "asset": "CEG.png",
+      "sha256": "4d37b19024af8a8a799258a4232e22459973641620710457b1baf983c530c35e",
+      "source": "https://financialmodelingprep.com/image-stock/CEG.png",
+      "status": "downloaded"
+    },
+    "CELH": {
+      "asset": "CELH.png",
+      "sha256": "1f9b1a07a95a950ab7c943246d572f7c730f40373d3ed2b5b13743e6806acbc4",
+      "source": "https://financialmodelingprep.com/image-stock/CELH.png",
+      "status": "downloaded"
+    },
+    "CIEN": {
+      "asset": "CIEN.png",
+      "sha256": "7173631a874e791e1dbbbf4902735ab1a104c794b28ef93e3d7db2ec2bcc3126",
+      "source": "https://financialmodelingprep.com/image-stock/CIEN.png",
+      "status": "downloaded"
+    },
+    "CIFR": {
+      "asset": "CIFR.png",
+      "sha256": "c0c2eb1b5e85f2406d548000a79123e0f00de15034722f6438ee0d13846b03f6",
+      "source": "https://financialmodelingprep.com/image-stock/CIFR.png",
+      "status": "downloaded"
+    },
+    "CL": {
+      "asset": "CL.svg",
+      "sha256": "2a3bef0c265b29040270ceb09633732d1908f2efa168693a559a27842fdca0f3",
+      "source": "https://app.trade.xyz/markets/cl.svg",
+      "status": "downloaded"
+    },
+    "CLMT": {
+      "asset": "CLMT.png",
+      "sha256": "a40455db362dec61988eaf5f69a1e8a37f1fd4b627b216616660f9e72831fae5",
+      "source": "https://financialmodelingprep.com/image-stock/CLMT.png",
+      "status": "downloaded"
+    },
+    "CLOV": {
+      "asset": "CLOV.png",
+      "sha256": "ddc376861278882c2dc5618fa728927d7dc44f286355e8968e03371e97b8ffc8",
+      "source": "https://financialmodelingprep.com/image-stock/CLOV.png",
+      "status": "downloaded"
+    },
+    "CLSK": {
+      "asset": "CLSK.png",
+      "sha256": "5d66c92989665e9eb590544b11b3c94cf36fe53f48d90914ad939d8cbfb3f07d",
+      "source": "https://financialmodelingprep.com/image-stock/CLSK.png",
+      "status": "downloaded"
+    },
+    "CMG": {
+      "asset": "CMG.png",
+      "sha256": "dc673f6057289c2c737c72b5ec63b2e57b3b733794bec6bfdfaf04f5c0181386",
+      "source": "https://financialmodelingprep.com/image-stock/CMG.png",
+      "status": "downloaded"
+    },
+    "CMPS": {
+      "asset": "CMPS.png",
+      "sha256": "2cd599a78ade4f69628b4dc8d11a10c5b0fe04ebf2937a006f01b5fb54757aca",
+      "source": "https://financialmodelingprep.com/image-stock/CMPS.png",
+      "status": "downloaded"
+    },
+    "COGT": {
+      "asset": "COGT.png",
+      "sha256": "b97bddd940e9fe3db5057fd7e6fe3b15f001904826a3f8e2385063d50443756f",
+      "source": "https://financialmodelingprep.com/image-stock/COGT.png",
+      "status": "downloaded"
+    },
+    "COHR": {
+      "asset": "COHR.png",
+      "sha256": "ee48da025ff62f3e57c31919fffefdb5c660f83496275087d8644814ee0547d4",
+      "source": "https://financialmodelingprep.com/image-stock/COHR.png",
+      "status": "downloaded"
+    },
+    "COIN": {
+      "asset": "COIN.svg",
+      "sha256": "1cdb3cfa00cf46457ec20dd7e1912c37dbb1e322622e0ce80552e757dd6c2dae",
+      "source": "https://app.trade.xyz/markets/coin.svg",
+      "status": "downloaded"
+    },
+    "COPPER": {
+      "asset": "COPPER.svg",
+      "sha256": "16d89de3badd806dfb55346f5c7c68cc4a324bc1c61026d4626ca5cd35d60219",
+      "source": "https://app.trade.xyz/markets/copper.svg",
+      "status": "downloaded"
+    },
+    "CORN": {
+      "asset": "CORN.svg",
+      "sha256": "fc9aa10b5fec9153d75d0537ee0ae869130670938c2ffefa0b84c0cfa9a6fecd",
+      "source": "https://app.trade.xyz/markets/corn.svg",
+      "status": "downloaded"
+    },
+    "COST": {
+      "asset": "COST.svg",
+      "sha256": "e836b55e6ba50eead72ff236fb07adfa11e333a69b738b69e03b1026c03b93c1",
+      "source": "https://app.trade.xyz/markets/cost.svg",
+      "status": "downloaded"
+    },
+    "CRCL": {
+      "asset": "CRCL.svg",
+      "sha256": "de06b8303af7c9c5ff79c7345490b4987af8bcad4824c8c333cf916d247e386b",
+      "source": "https://app.trade.xyz/markets/crcl.svg",
+      "status": "downloaded"
+    },
+    "CRDO": {
+      "asset": "CRDO.png",
+      "sha256": "8d98941c5d1f90c86d3a9a559f256bba5b04a6823933847ed69644842b0c4126",
+      "source": "https://financialmodelingprep.com/image-stock/CRDO.png",
+      "status": "downloaded"
+    },
+    "CRM": {
+      "asset": "CRM.png",
+      "sha256": "ed2497f25676abd2b3318a5e53ef1d8c825df37d1094bbe434be47759e9deab6",
+      "source": "https://financialmodelingprep.com/image-stock/CRM.png",
+      "status": "downloaded"
+    },
+    "CRML": {
+      "asset": "CRML.png",
+      "sha256": "9b9c7413f2461ae2491402c0f85845420f7f93aae394bdb236d7840422ae57eb",
+      "source": "https://financialmodelingprep.com/image-stock/CRML.png",
+      "status": "downloaded"
+    },
+    "CRVS": {
+      "asset": "CRVS.png",
+      "sha256": "882c526e5365b5272ec7d766d8c7e96ced40971bb89dc360ccd2e10cae89eba8",
+      "source": "https://financialmodelingprep.com/image-stock/CRVS.png",
+      "status": "downloaded"
+    },
+    "CRWD": {
+      "asset": "CRWD.png",
+      "sha256": "94571e3276372eb18d12a31b8a920f85530fa29d63706485d033eae2d7eb2fa6",
+      "source": "https://financialmodelingprep.com/image-stock/CRWD.png",
+      "status": "downloaded"
+    },
+    "CRWV": {
+      "asset": "CRWV.svg",
+      "sha256": "94a5f5efb5efc8b177dc5f4addafb695033e30b1e7a3bc5b1d2e90ec7fe9f1c1",
+      "source": "https://app.trade.xyz/markets/crwv.svg",
+      "status": "downloaded"
+    },
+    "CSCO": {
+      "asset": "CSCO.png",
+      "sha256": "a8c05bebcd6f3f1be56a730ecc4f9d815adf472f08af061fab0914f4641c48bc",
+      "source": "https://financialmodelingprep.com/image-stock/CSCO.png",
+      "status": "downloaded"
+    },
+    "CVNA": {
+      "asset": "CVNA.png",
+      "sha256": "c6d95e0ca204ede4fb994d49d0c50a51188a312332fa853df53540e70ac28586",
+      "source": "https://financialmodelingprep.com/image-stock/CVNA.png",
+      "status": "downloaded"
+    },
+    "CVS": {
+      "asset": "CVS.png",
+      "sha256": "935d421a25f4d88c1cc83a9f6d4b414b3422412aa8c10acb898a5bb8633fe229",
+      "source": "https://financialmodelingprep.com/image-stock/CVS.png",
+      "status": "downloaded"
+    },
+    "CVX": {
+      "asset": "CVX.png",
+      "sha256": "bb5b12592e40e98fe09fac924c415822dec3decf098d44af11b91a18bdd8aad3",
+      "source": "https://financialmodelingprep.com/image-stock/CVX.png",
+      "status": "downloaded"
+    },
+    "CXMT": {
+      "asset": "CXMT.svg",
+      "sha256": "5bf263b90e647cf5eeed756245f0391fc7a90f000a5c620a90148d2bda2c3cb4",
+      "source": "https://app.trade.xyz/markets/cxmt.svg",
+      "status": "downloaded"
+    },
+    "DASH": {
+      "asset": "DASH.png",
+      "sha256": "431b2dce3124d94ec00b3a7441d4788723e1b380513f26457c4a167b93759f2c",
+      "source": "https://financialmodelingprep.com/image-stock/DASH.png",
+      "status": "downloaded"
+    },
+    "DBA": {
+      "asset": "DBA.png",
+      "sha256": "d3f46a794a58ac0d48a59b7dc86939ab5313ae25ade0c2212e3e560f60a0605c",
+      "source": "https://financialmodelingprep.com/image-stock/DBA.png",
+      "status": "downloaded"
+    },
+    "DDOG": {
+      "asset": "DDOG.png",
+      "sha256": "064cb00f4b2a2eeba064614121bd7f22d5801d3688bfb57c2fefedeedcd9075e",
+      "source": "https://financialmodelingprep.com/image-stock/DDOG.png",
+      "status": "downloaded"
+    },
+    "DECK": {
+      "asset": "DECK.png",
+      "sha256": "2eeb688883f888d9a2167a19878b3f5c5335d93baab4ca180bb344e7ddf10f6c",
+      "source": "https://financialmodelingprep.com/image-stock/DECK.png",
+      "status": "downloaded"
+    },
+    "DELL": {
+      "asset": "DELL.svg",
+      "sha256": "176bf510d4d6caabb2898d0c379dd58fd243b51e37b1c2e79f54ad1aa50ec930",
+      "source": "https://app.trade.xyz/markets/dell.svg",
+      "status": "downloaded"
+    },
+    "DGXX": {
+      "asset": "DGXX.png",
+      "sha256": "0b29f2af56c06dc1fd09a6cc8dcf9a52ceeb7acc6de60ba79759b81c4683eade",
+      "source": "https://www.digipowerx.com/icon.png",
+      "status": "downloaded"
+    },
+    "DIA": {
+      "asset": "DIA.png",
+      "sha256": "cf9df1d186512359ce5a7101ca06b77f8074a0de5a1f3f61114f1ea2d5fed422",
+      "source": "https://financialmodelingprep.com/image-stock/DIA.png",
+      "status": "downloaded"
+    },
+    "DJT": {
+      "asset": "DJT.png",
+      "sha256": "ff7bc02f2523418de489161b4b8b328fb204f5103fdc28a6db657777c9060f60",
+      "source": "https://financialmodelingprep.com/image-stock/DJT.png",
+      "status": "downloaded"
+    },
+    "DKNG": {
+      "asset": "DKNG.svg",
+      "sha256": "0a144096d320a1de1f083ccd30b35479a60dbcaf5af0d0b0ebecec0044352612",
+      "source": "https://app.trade.xyz/markets/dkng.svg",
+      "status": "downloaded"
+    },
+    "DLO": {
+      "asset": "DLO.png",
+      "sha256": "136382d60f766c0fddfa4fb09edf6ee4526904c2a480fa5ef4284f10ead30077",
+      "source": "https://financialmodelingprep.com/image-stock/DLO.png",
+      "status": "downloaded"
+    },
+    "DOCN": {
+      "asset": "DOCN.png",
+      "sha256": "ab3525545896017bfaa1b15087d287accfdcc4829eee7b7a68d9b5b05edee460",
+      "source": "https://financialmodelingprep.com/image-stock/DOCN.png",
+      "status": "downloaded"
+    },
+    "DOW": {
+      "asset": "DOW.png",
+      "sha256": "e040438a99c5351198b652a7c3d34139b146a5b84aab6a507baf81210d268a5f",
+      "source": "https://financialmodelingprep.com/image-stock/DOW.png",
+      "status": "downloaded"
+    },
+    "DRAM": {
+      "asset": "DRAM.svg",
+      "sha256": "9ddea90de42c6b1ee42b719ee4591e3a0cc8b46cac3985eac6ad664605eb86ad",
+      "source": "https://app.trade.xyz/markets/dram.svg",
+      "status": "downloaded"
+    },
+    "DUOL": {
+      "asset": "DUOL.png",
+      "sha256": "547bcf7f3490f90370598b90a7e86d3bf36b3a201ede0b88f6d5b8d30928b383",
+      "source": "https://financialmodelingprep.com/image-stock/DUOL.png",
+      "status": "downloaded"
+    },
+    "DVN": {
+      "asset": "DVN.png",
+      "sha256": "e477da30c01e7fab99334cdac28da2a3f8cfdd27c8a5acf5e89de577c96599bb",
+      "source": "https://financialmodelingprep.com/image-stock/DVN.png",
+      "status": "downloaded"
+    },
+    "DXY": {
+      "asset": "DXY.svg",
+      "sha256": "30095391af334b55650312002d29edab70372403b5b0d2f80ae9f5243a3d6c63",
+      "source": "https://app.trade.xyz/markets/dxy.svg",
+      "status": "downloaded"
+    },
+    "DXYZ": {
+      "asset": "DXYZ.png",
+      "sha256": "062adc3b66960f3f03bea922e0bb08077f0c9b6351c039bab506f6d1fe04b8c8",
+      "source": "https://financialmodelingprep.com/image-stock/DXYZ.png",
+      "status": "downloaded"
+    },
+    "EBAY": {
+      "asset": "EBAY.svg",
+      "sha256": "36f44175f63813aeb124a8f0ef58d8cfe0ce19f843cea68e9f39c760f6fae9db",
+      "source": "https://app.trade.xyz/markets/ebay.svg",
+      "status": "downloaded"
+    },
+    "EL": {
+      "asset": "EL.png",
+      "sha256": "bb9f9c8027424c1bd24eacd63658ccee9b254a6c3969818cc4487a61c88b170d",
+      "source": "https://financialmodelingprep.com/image-stock/EL.png",
+      "status": "downloaded"
+    },
+    "ELF": {
+      "asset": "ELF.png",
+      "sha256": "25fefa9ffec71553f91ef97f65f9b104d56df6358fc0f7f17e9f5a095bcbcbec",
+      "source": "https://financialmodelingprep.com/image-stock/ELF.png",
+      "status": "downloaded"
+    },
+    "ELV": {
+      "asset": "ELV.png",
+      "sha256": "465fbf4744cc8354643239f7a8f00a6219964f1e994625039e93ce4815e8e33c",
+      "source": "https://financialmodelingprep.com/image-stock/ELV.png",
+      "status": "downloaded"
+    },
+    "ENPH": {
+      "asset": "ENPH.png",
+      "sha256": "0230d298efdd0f8e2fddb994a698237a3d07ba6528910da4fbbeb05f4ce173bc",
+      "source": "https://financialmodelingprep.com/image-stock/ENPH.png",
+      "status": "downloaded"
+    },
+    "EOS": {
+      "asset": "EOS.png",
+      "sha256": "8a6a870a03e75737b7aa808aa7c7c8f51ce068bb1c5098f65e8581b75c9c361e",
+      "source": "https://financialmodelingprep.com/image-stock/EOS.png",
+      "status": "downloaded"
+    },
+    "EOSE": {
+      "asset": "EOSE.png",
+      "sha256": "4f25919def573897751b070579cfdcbf5ab10f80548165ceeebf6a33c0fb40ab",
+      "source": "https://financialmodelingprep.com/image-stock/EOSE.png",
+      "status": "downloaded"
+    },
+    "EQR": {
+      "asset": "EQR.png",
+      "sha256": "8c99e8ee6418ffe570c8986ff1cedc772546f79843d4493e46274725f083027d",
+      "source": "https://financialmodelingprep.com/image-stock/EQR.png",
+      "status": "downloaded"
+    },
+    "EQX": {
+      "asset": "EQX.png",
+      "sha256": "b238bf731ef1167132ecd73037065986d1c41859b6e90fa5dc86472530a158d0",
+      "source": "https://financialmodelingprep.com/image-stock/EQX.png",
+      "status": "downloaded"
+    },
+    "ET": {
+      "asset": "ET.png",
+      "sha256": "e7351588b7e887528728fedaabaeca7bea80a27eeaf624a4ea11820f0bc0204c",
+      "source": "https://financialmodelingprep.com/image-stock/ET.png",
+      "status": "downloaded"
+    },
+    "ETHA": {
+      "asset": "ETHA.png",
+      "sha256": "2f3c5e631f65c5471b397764522e969c436623c96214bd430994d13acd2bfb40",
+      "source": "https://financialmodelingprep.com/image-stock/ETHA.png",
+      "status": "downloaded"
+    },
+    "ETN": {
+      "asset": "ETN.png",
+      "sha256": "29025719c954ebf23f9220522248603212b0a43993b9ec5361cb546bdd7f9f8d",
+      "source": "https://financialmodelingprep.com/image-stock/ETN.png",
+      "status": "downloaded"
+    },
+    "EUR": {
+      "asset": "EUR.svg",
+      "sha256": "a97b51025fbc1df9218466ae28aeccbb47671c709b886bbc9ca838efb5217753",
+      "source": "https://app.trade.xyz/markets/eur.svg",
+      "status": "downloaded"
+    },
+    "EWJ": {
+      "asset": "EWJ.svg",
+      "sha256": "a62ca22730c6d6e3293db1809d490b74f5c3ffcdc6bd9bf70c9ac2d618c94dc9",
+      "source": "https://app.trade.xyz/markets/ewj.svg",
+      "status": "downloaded"
+    },
+    "EWT": {
+      "asset": "EWT.svg",
+      "sha256": "e9e3f027eb79febb81c42724afd11f420cc7038b41df8a59a3770e6dec91e216",
+      "source": "https://app.trade.xyz/markets/ewt.svg",
+      "status": "downloaded"
+    },
+    "EWY": {
+      "asset": "EWY.svg",
+      "sha256": "8de8d18522739b57d26efa4f39472c8d58bc4b2f30cca07e84e6193c328af855",
+      "source": "https://app.trade.xyz/markets/ewy.svg",
+      "status": "downloaded"
+    },
+    "EWZ": {
+      "asset": "EWZ.svg",
+      "sha256": "e34c6a8321b4c94387c737e8bbe5f0f4d36341306be8a26c270a342414bad943",
+      "source": "https://app.trade.xyz/markets/ewz.svg",
+      "status": "downloaded"
+    },
+    "EXK": {
+      "asset": "EXK.png",
+      "sha256": "7665681bacba1b1e8fdb8581d3c1cdee1aace740c19821cec12b0a21c41e6d6f",
+      "source": "https://financialmodelingprep.com/image-stock/EXK.png",
+      "status": "downloaded"
+    },
+    "FCEL": {
+      "asset": "FCEL.png",
+      "sha256": "d3f493d3318a6bb1f1235601aca6620d3631009fb83e185dda25359b99bd5ecb",
+      "source": "https://financialmodelingprep.com/image-stock/FCEL.png",
+      "status": "downloaded"
+    },
+    "FDX": {
+      "asset": "FDX.png",
+      "sha256": "3f73bccba5caa89a02962d7fb89ff1c3077433b44273a1d16745e842b9ee90a6",
+      "source": "https://financialmodelingprep.com/image-stock/FDX.png",
+      "status": "downloaded"
+    },
+    "FIG": {
+      "asset": "FIG.png",
+      "sha256": "2131ab816be09a7de239ef9749e0576145e01375c17465fc6164f63b1c819b96",
+      "source": "https://financialmodelingprep.com/image-stock/FIG.png",
+      "status": "downloaded"
+    },
+    "FIGR": {
+      "asset": "FIGR.png",
+      "sha256": "d11268c3c4dedc5c3510593ac3f3ef90a9bcceb38d6f163566e9d1cb93de6c3a",
+      "source": "https://financialmodelingprep.com/image-stock/FIGR.png",
+      "status": "downloaded"
+    },
+    "FLNC": {
+      "asset": "FLNC.png",
+      "sha256": "8cf8d1e6002337abaf934f3b848c4170cc61a83fc5c6103e13db112760de0c21",
+      "source": "https://financialmodelingprep.com/image-stock/FLNC.png",
+      "status": "downloaded"
+    },
+    "FLY": {
+      "asset": "FLY.png",
+      "sha256": "d6249d421087d65f94a14a2200b585906d9da8c6c2f6284ed0a5bfe9e6f3e835",
+      "source": "https://financialmodelingprep.com/image-stock/FLY.png",
+      "status": "downloaded"
+    },
+    "FN": {
+      "asset": "FN.png",
+      "sha256": "7469a14623f477c07febe6dec97bab3244103aeba00c87e190cffdf12116d50c",
+      "source": "https://financialmodelingprep.com/image-stock/FN.png",
+      "status": "downloaded"
+    },
+    "FRMI": {
+      "asset": "FRMI.png",
+      "sha256": "095ed5f6abeaaf7fdc4006f859260d5e1d6c75c38b8417e4c65a03ea8e5194f9",
+      "source": "https://financialmodelingprep.com/image-stock/FRMI.png",
+      "status": "downloaded"
+    },
+    "FROG": {
+      "asset": "FROG.png",
+      "sha256": "07a41b9fad4f3c7240575c2e45c299b8c814ec189e740c09450f45ed848230d6",
+      "source": "https://financialmodelingprep.com/image-stock/FROG.png",
+      "status": "downloaded"
+    },
+    "FTNT": {
+      "asset": "FTNT.png",
+      "sha256": "4d4dbdf14f3a09838ab593182b94def273c2a5a64a44d6369b293c43268bb0e6",
+      "source": "https://financialmodelingprep.com/image-stock/FTNT.png",
+      "status": "downloaded"
+    },
+    "FUBO": {
+      "asset": "FUBO.png",
+      "sha256": "46cf81cc6fbb47ff30f94395d5d30e7dc0215767e9f5f9bc57bc479b1bf32a49",
+      "source": "https://financialmodelingprep.com/image-stock/FUBO.png",
+      "status": "downloaded"
+    },
+    "GBP": {
+      "asset": "GBP.svg",
+      "sha256": "ef15776c305d2a0bd8dcd160ca1ea1f812d28f1683e73a6101dfe0a5c170ccc9",
+      "source": "https://app.trade.xyz/markets/gbp.svg",
+      "status": "downloaded"
+    },
+    "GDX": {
+      "asset": "GDX.png",
+      "sha256": "8a15858713f347b3b126d7c7e7591798ba0b2b8293c62601df099f9f311f7f52",
+      "source": "https://financialmodelingprep.com/image-stock/GDX.png",
+      "status": "downloaded"
+    },
+    "GDXJ": {
+      "asset": "GDXJ.png",
+      "sha256": "33cd3bf73ede315629cb7276080884a0f7c7610cc5ed0a87e6c115780d450e6b",
+      "source": "https://financialmodelingprep.com/image-stock/GDXJ.png",
+      "status": "downloaded"
+    },
+    "GE": {
+      "asset": "GE.png",
+      "sha256": "a212143a30717d562e6e020b6e60a9ffa83efaafe12b65a9316b008b951e0a25",
+      "source": "https://financialmodelingprep.com/image-stock/GE.png",
+      "status": "downloaded"
+    },
+    "GEV": {
+      "asset": "GEV.svg",
+      "sha256": "d2136e588c8156275b396263fbb76cb04f81a12623593aa4c01540da3989c8b7",
+      "source": "https://app.trade.xyz/markets/gev.svg",
+      "status": "downloaded"
+    },
+    "GIGADEV": {
+      "asset": "GIGADEV.svg",
+      "sha256": "ba38cdfdea77c2131e5c7f7c340c1d5e39b1b4b2e2d4e73411f9d942bf69c39a",
+      "source": "https://app.trade.xyz/markets/gigadev.svg",
+      "status": "downloaded"
+    },
+    "GLD": {
+      "asset": "GLD.png",
+      "sha256": "286f2f7d2c1cef4f846dc0fddf33e45eee8834b5faf84c1c9908d8575c44b1fc",
+      "source": "https://financialmodelingprep.com/image-stock/GLD.png",
+      "status": "downloaded"
+    },
+    "GLL": {
+      "asset": "GLL.png",
+      "sha256": "e12706f447a1b580f4318a49e7113ac032ecdfe3bd57a4ef217712e1288630c6",
+      "source": "https://financialmodelingprep.com/image-stock/GLL.png",
+      "status": "downloaded"
+    },
+    "GLSI": {
+      "asset": "GLSI.png",
+      "sha256": "e770e15ca79be5256980934e0a74696aae7c492fadaa137bb0b5ee6e2eceee6b",
+      "source": "https://financialmodelingprep.com/image-stock/GLSI.png",
+      "status": "downloaded"
+    },
+    "GLW": {
+      "asset": "GLW.png",
+      "sha256": "d1fb9bee78d3b41b9bcbcf0bd95d7651ff385eacb84ba07f3464747ce9af605b",
+      "source": "https://financialmodelingprep.com/image-stock/GLW.png",
+      "status": "downloaded"
+    },
+    "GLXY": {
+      "asset": "GLXY.png",
+      "sha256": "fd06063f7fd44ae5231745bb602fb4e44c49afe63d6b9af02cd199a59925f695",
+      "source": "https://financialmodelingprep.com/image-stock/GLXY.png",
+      "status": "downloaded"
+    },
+    "GM": {
+      "asset": "GM.png",
+      "sha256": "53835e756c1ed5882dccfbe6c89cf7dfe0109af8d7a6274a89cd9ba7fdd55865",
+      "source": "https://financialmodelingprep.com/image-stock/GM.png",
+      "status": "downloaded"
+    },
+    "GME": {
+      "asset": "GME.svg",
+      "sha256": "08478383549c7cbb4b33ca54c0f8e33c3703c3c70d6428291ed0ea89a5babd13",
+      "source": "https://app.trade.xyz/markets/gme.svg",
+      "status": "downloaded"
+    },
+    "GNPX": {
+      "asset": "GNPX.png",
+      "sha256": "83b5f660a315f6eb905e7ee2c1db551f252c8045693e1468497799c36775c086",
+      "source": "https://financialmodelingprep.com/image-stock/GNPX.png",
+      "status": "downloaded"
+    },
+    "GOLD": {
+      "asset": "GOLD.svg",
+      "sha256": "09b53287d6933d8784758b19c7f6db6b9a65fed0df080854c163ecaca6168efd",
+      "source": "https://app.trade.xyz/markets/gold.svg",
+      "status": "downloaded"
+    },
+    "GOOG": {
+      "asset": "GOOG.png",
+      "sha256": "3e9644246b993d86f2d1c95121ee6366c6b3bb5e355ba248c45e0ba601bc8642",
+      "source": "https://financialmodelingprep.com/image-stock/GOOG.png",
+      "status": "downloaded"
+    },
+    "GOOGL": {
+      "asset": "GOOGL.svg",
+      "sha256": "fbd339c4c088ea0aca68c19d8d07c57aeb5a9b7bb830b76f2278ed518868bf38",
+      "source": "https://app.trade.xyz/markets/googl.svg",
+      "status": "downloaded"
+    },
+    "GRAB": {
+      "asset": "GRAB.png",
+      "sha256": "19042dc464d34596890154d871637c6506914f79f2621507e193f1a5c3b71882",
+      "source": "https://financialmodelingprep.com/image-stock/GRAB.png",
+      "status": "downloaded"
+    },
+    "GRPN": {
+      "asset": "GRPN.png",
+      "sha256": "f350d1c7c6ccfe8028d4539b77179ccdb6fa2235eab00797d7708d221d427e6c",
+      "source": "https://financialmodelingprep.com/image-stock/GRPN.png",
+      "status": "downloaded"
+    },
+    "GRRR": {
+      "asset": "GRRR.png",
+      "sha256": "c3e59369043923dcc1d7990f0755ec4708b58bcaae51f470b5e2cd187e6bb75b",
+      "source": "https://financialmodelingprep.com/image-stock/GRRR.png",
+      "status": "downloaded"
+    },
+    "GS": {
+      "asset": "GS.png",
+      "sha256": "e9c72e60cc1886a6c9f0687bde635f74bcbdba27b76a9d145a8e37eb777d7e0c",
+      "source": "https://financialmodelingprep.com/image-stock/GS.png",
+      "status": "downloaded"
+    },
+    "GSIT": {
+      "asset": "GSIT.png",
+      "sha256": "b64503a91721d6c12737ee37cdc6125409eb06e2068f46bee75125eeb4024cf6",
+      "source": "https://financialmodelingprep.com/image-stock/GSIT.png",
+      "status": "downloaded"
+    },
+    "H100": {
+      "asset": "H100.svg",
+      "sha256": "ca70c1e7fdc80d7e125ca377daa0ad0188e544e67d0ded7ac1ef69bd975cbf76",
+      "source": "https://app.trade.xyz/markets/h100.svg",
+      "status": "downloaded"
+    },
+    "HBM": {
+      "asset": "HBM.png",
+      "sha256": "22ad6256a3b9db12c72b08a3f067d37607cb53c28df799d66eac4842866e6c2b",
+      "source": "https://financialmodelingprep.com/image-stock/HBM.png",
+      "status": "downloaded"
+    },
+    "HD": {
+      "asset": "HD.svg",
+      "sha256": "2057db33e97929236a8a491dccf918f7581affca277b6420d9e320062bbdf18a",
+      "source": "https://app.trade.xyz/markets/hd.svg",
+      "status": "downloaded"
+    },
+    "HIMS": {
+      "asset": "HIMS.svg",
+      "sha256": "94a0ef9ccca038f22b07b60e1b6cb3eeb1a9ff083419eb4b7e35dd1e116e8a64",
+      "source": "https://app.trade.xyz/markets/hims.svg",
+      "status": "downloaded"
+    },
+    "HOOD": {
+      "source": "existing project asset",
+      "status": "existing"
+    },
+    "HOOW": {
+      "asset": "HOOW.png",
+      "sha256": "a231ec294b6f6e63bbe93bf32e452a04d240ae771c0262d79ccf3e153ba58112",
+      "source": "https://financialmodelingprep.com/image-stock/HOOW.png",
+      "status": "downloaded"
+    },
+    "HPE": {
+      "asset": "HPE.png",
+      "sha256": "bcf29435328ad217a7c26149e99f6eb812a2db3f54c620f192f6d356bfc200d6",
+      "source": "https://financialmodelingprep.com/image-stock/HPE.png",
+      "status": "downloaded"
+    },
+    "HROW": {
+      "asset": "HROW.png",
+      "sha256": "489bd24d92b1b67b07d26d0de04a3223db021dc4f897ebbb3c47547ef4abd9e9",
+      "source": "https://financialmodelingprep.com/image-stock/HROW.png",
+      "status": "downloaded"
+    },
+    "HSI": {
+      "asset": "HSI.svg",
+      "sha256": "4e000c622949760eba10fa320ef4eaf0afd577e10cd4c4341a95a9517f2014f0",
+      "source": "https://app.trade.xyz/markets/hsi.svg",
+      "status": "downloaded"
+    },
+    "HTZ": {
+      "asset": "HTZ.png",
+      "sha256": "8054ced15399cd68b1544715d132f0d0b4e5605231a35d1657fc07c4c5e7c2f5",
+      "source": "https://financialmodelingprep.com/image-stock/HTZ.png",
+      "status": "downloaded"
+    },
+    "HUM": {
+      "asset": "HUM.png",
+      "sha256": "42d110d49a5abdad736b83aa03335b1339b599be35f9e44374ca50d5380b157f",
+      "source": "https://financialmodelingprep.com/image-stock/HUM.png",
+      "status": "downloaded"
+    },
+    "HUT": {
+      "asset": "HUT.png",
+      "sha256": "62484fc8732cee7e5bdf4edc005aff30e5210b26bbaff990ff4fe056accb5466",
+      "source": "https://financialmodelingprep.com/image-stock/HUT.png",
+      "status": "downloaded"
+    },
+    "HYUNDAI": {
+      "asset": "HYUNDAI.svg",
+      "sha256": "eb2fdd7dc38b66d93ae0247313d390067749eeb661b8c79e6b7c374ef4d40432",
+      "source": "https://app.trade.xyz/markets/hyundai.svg",
+      "status": "downloaded"
+    },
+    "IAG": {
+      "asset": "IAG.png",
+      "sha256": "62ee7d52d2ca7f4c5603b5f69d2097b3e8a331a178da8a2a7363533138a6bfe1",
+      "source": "https://financialmodelingprep.com/image-stock/IAG.png",
+      "status": "downloaded"
+    },
+    "IBIDEN": {
+      "asset": "IBIDEN.svg",
+      "sha256": "2d811a83f35efc2aa52fda45cb4ffa4982716878489fc1634c35854b31ceef6b",
+      "source": "https://app.trade.xyz/markets/ibiden.svg",
+      "status": "downloaded"
+    },
+    "IBIT": {
+      "asset": "IBIT.png",
+      "sha256": "2f3c5e631f65c5471b397764522e969c436623c96214bd430994d13acd2bfb40",
+      "source": "https://financialmodelingprep.com/image-stock/IBIT.png",
+      "status": "downloaded"
+    },
+    "IBM": {
+      "asset": "IBM.svg",
+      "sha256": "a147f2beb77b8eb872bda1c359b750bd46ba5af4fc647f344b3e1f13cee6ed14",
+      "source": "https://app.trade.xyz/markets/ibm.svg",
+      "status": "downloaded"
+    },
+    "IBOV": {
+      "asset": "IBOV.svg",
+      "sha256": "404df880c814d2b7abf933551dc2285d93fee87027a59e3d379909b898dbe5e3",
+      "source": "https://app.trade.xyz/markets/ibov.svg",
+      "status": "downloaded"
+    },
+    "IBRX": {
+      "asset": "IBRX.png",
+      "sha256": "de0f0639080033224d8b7ee5c91fe64d143479c576b77dcb866cfe7f732292ae",
+      "source": "https://financialmodelingprep.com/image-stock/IBRX.png",
+      "status": "downloaded"
+    },
+    "IGV": {
+      "asset": "IGV.png",
+      "sha256": "2f3c5e631f65c5471b397764522e969c436623c96214bd430994d13acd2bfb40",
+      "source": "https://financialmodelingprep.com/image-stock/IGV.png",
+      "status": "downloaded"
+    },
+    "INFQ": {
+      "asset": "INFQ.png",
+      "sha256": "f4b8f61c1550e9773f1f88901bb0dd983eb096d0685e041b27323a17bf48256c",
+      "source": "https://financialmodelingprep.com/image-stock/INFQ.png",
+      "status": "downloaded"
+    },
+    "INSM": {
+      "asset": "INSM.png",
+      "sha256": "90939b58bf92323285013976c4c5a5ea86fd045aa96ed0ca8211986b068053a5",
+      "source": "https://financialmodelingprep.com/image-stock/INSM.png",
+      "status": "downloaded"
+    },
+    "INTC": {
+      "asset": "INTC.svg",
+      "sha256": "c3e1cd6736b013f4a280ad7ad83141f83fdf209d05cfae1289e84a2dc8302436",
+      "source": "https://app.trade.xyz/markets/intc.svg",
+      "status": "downloaded"
+    },
+    "INTU": {
+      "asset": "INTU.png",
+      "sha256": "8cea2d3ac428e5ebf4ccb7463f8fb41804080f584aeae14c5ab10aa000330e86",
+      "source": "https://financialmodelingprep.com/image-stock/INTU.png",
+      "status": "downloaded"
+    },
+    "INV": {
+      "asset": "INV.png",
+      "sha256": "685e03349a2e033777d7df3d62c27b45871f56712002681c54151b5bec91d381",
+      "source": "https://financialmodelingprep.com/image-stock/INV.png",
+      "status": "downloaded"
+    },
+    "IONQ": {
+      "asset": "IONQ.png",
+      "sha256": "6435971e55b8c152ac76bf4b4b53239b08631202d3a1be0476feed7a62c5e4bc",
+      "source": "https://financialmodelingprep.com/image-stock/IONQ.png",
+      "status": "downloaded"
+    },
+    "IOVA": {
+      "asset": "IOVA.png",
+      "sha256": "746098da73f2aef9c529aedaa33c668cd5718cd04a1cf7a76413c1bd2f1ffcef",
+      "source": "https://financialmodelingprep.com/image-stock/IOVA.png",
+      "status": "downloaded"
+    },
+    "IRDM": {
+      "asset": "IRDM.png",
+      "sha256": "7947e228adfc3c31d5411ba00159f41f99493bcd64029b6db74c2843fdd3467d",
+      "source": "https://financialmodelingprep.com/image-stock/IRDM.png",
+      "status": "downloaded"
+    },
+    "IREN": {
+      "asset": "IREN.png",
+      "sha256": "641e7b8fa7d5830c3bce1220f08e6998c7f84735db744e7090fe2d7c7ac360af",
+      "source": "https://financialmodelingprep.com/image-stock/IREN.png",
+      "status": "downloaded"
+    },
+    "ISPC": {
+      "asset": "ISPC.png",
+      "sha256": "fd087e907456914b6142491b21a8e61ac5c3ac57c5751bb90878aba85e11df57",
+      "source": "https://financialmodelingprep.com/image-stock/ISPC.png",
+      "status": "downloaded"
+    },
+    "ISRG": {
+      "asset": "ISRG.png",
+      "sha256": "d615aeb799b38e2ae3bd0b551068b6f8daa253b60ed33104b8e60dedc74bf4ee",
+      "source": "https://financialmodelingprep.com/image-stock/ISRG.png",
+      "status": "downloaded"
+    },
+    "IWM": {
+      "asset": "IWM.png",
+      "sha256": "4dd65ba7b27142733f59c809c1908befac597c798120c684ed11f6fb8774f143",
+      "source": "https://financialmodelingprep.com/image-stock/IWM.png",
+      "status": "downloaded"
+    },
+    "IXHL": {
+      "asset": "IXHL.png",
+      "sha256": "c43e303d4c77f0842bce18da8497a7ebb52b57791b8baf340dec150635bdb4b3",
+      "source": "https://financialmodelingprep.com/image-stock/IXHL.png",
+      "status": "downloaded"
+    },
+    "JD": {
+      "asset": "JD.png",
+      "sha256": "b37bd98938b779a2f6ee6f8b801f545ebce5c93559ac321ec24c8ee851068a74",
+      "source": "https://financialmodelingprep.com/image-stock/JD.png",
+      "status": "downloaded"
+    },
+    "JETS": {
+      "asset": "JETS.png",
+      "sha256": "63bf5c3af815e6472a0b92759e9b05908d57a8e88f6f978802702aabab17c1db",
+      "source": "https://financialmodelingprep.com/image-stock/JETS.png",
+      "status": "downloaded"
+    },
+    "JNJ": {
+      "asset": "JNJ.png",
+      "sha256": "9d9efc8c019d0205964a79a0cb0a1b3f21c4e00ea5f4f45e6ada2994b8fef4da",
+      "source": "https://financialmodelingprep.com/image-stock/JNJ.png",
+      "status": "downloaded"
+    },
+    "JOBY": {
+      "asset": "JOBY.png",
+      "sha256": "7dc966ba1270d11206ef5800be1d8a3192a521a75cc89239f99206f702d9c1aa",
+      "source": "https://financialmodelingprep.com/image-stock/JOBY.png",
+      "status": "downloaded"
+    },
+    "JP225": {
+      "asset": "JP225.svg",
+      "sha256": "9f5be79d64b272a854a821d409fb55aa9a64a4da127ab999a31654bf04014b4f",
+      "source": "https://app.trade.xyz/markets/jp225.svg",
+      "status": "downloaded"
+    },
+    "JPM": {
+      "asset": "JPM.png",
+      "sha256": "2c260ce21fabfe0b2f3363954721e3a13ef1ef0b2b87d729271cb7bf14b3714d",
+      "source": "https://financialmodelingprep.com/image-stock/JPM.png",
+      "status": "downloaded"
+    },
+    "JPY": {
+      "asset": "JPY.svg",
+      "sha256": "7c21fb1eb89a6ce4a748286fab67e69872ca117a08bb6dbc9cdb4629ef659b9d",
+      "source": "https://app.trade.xyz/markets/jpy.svg",
+      "status": "downloaded"
+    },
+    "KEEL": {
+      "asset": "KEEL.png",
+      "sha256": "7833c11ff79b5334b434f59e8da1ad0da2f04247b0ce151ea877b9e1eff6a823",
+      "source": "https://financialmodelingprep.com/image-stock/KEEL.png",
+      "status": "downloaded"
+    },
+    "KIOXIA": {
+      "asset": "KIOXIA.svg",
+      "sha256": "f2a736377a89a097226997997a5e89f96304eeab2df8f3aeea8eb0d8a188f084",
+      "source": "https://app.trade.xyz/markets/kioxia.svg",
+      "status": "downloaded"
+    },
+    "KO": {
+      "asset": "KO.png",
+      "sha256": "223f6c48eba7c73dbc679427f4d891a186c189bd7bbb924de0c0fa0dad10aabe",
+      "source": "https://financialmodelingprep.com/image-stock/KO.png",
+      "status": "downloaded"
+    },
+    "KODK": {
+      "asset": "KODK.png",
+      "sha256": "73d10c768d76b7b3ea05ff7f884e138f843e9fbb0f324358b0ba92c985e3752c",
+      "source": "https://financialmodelingprep.com/image-stock/KODK.png",
+      "status": "downloaded"
+    },
+    "KOPN": {
+      "asset": "KOPN.png",
+      "sha256": "dd7689026cf5c41222f3bec804d165c59f18a3dabcaf0ea75d86beffd0d7684c",
+      "source": "https://financialmodelingprep.com/image-stock/KOPN.png",
+      "status": "downloaded"
+    },
+    "KORU": {
+      "asset": "KORU.png",
+      "sha256": "983c64f302620a629f9d6a1528349a209cb803e97ee9b1c9f3be84eb043aee36",
+      "source": "https://financialmodelingprep.com/image-stock/KORU.png",
+      "status": "downloaded"
+    },
+    "KR11": {
+      "asset": "KR11.svg",
+      "sha256": "2f8ac0798404f23501b355f34c0a4d801639ddd0b442a6cc6adcc49f40885541",
+      "source": "https://app.trade.xyz/markets/kr11.svg",
+      "status": "downloaded"
+    },
+    "KR200": {
+      "asset": "KR200.svg",
+      "sha256": "a63c66dd5dd9461882ed612884e4c6a6ba74130af0aa5113e1b6bfa41e3f073a",
+      "source": "https://app.trade.xyz/markets/kr200.svg",
+      "status": "downloaded"
+    },
+    "KRW": {
+      "asset": "KRW.svg",
+      "sha256": "fe717e404e64b6e7c63fe7d0afb6441c714d84e15574d5f99baab21f45991838",
+      "source": "https://app.trade.xyz/markets/krw.svg",
+      "status": "downloaded"
+    },
+    "KSTR": {
+      "asset": "KSTR.svg",
+      "sha256": "11c470e2db38493be46b1554055f8ab1a2a73e482a6cbae745b754a4849603d0",
+      "source": "https://app.trade.xyz/markets/kstr.svg",
+      "status": "downloaded"
+    },
+    "LAC": {
+      "asset": "LAC.png",
+      "sha256": "9cbc11c7777af95f0ce6102e4bd020fc1007089a747ae1448a3f6818dd2980d8",
+      "source": "https://financialmodelingprep.com/image-stock/LAC.png",
+      "status": "downloaded"
+    },
+    "LCID": {
+      "asset": "LCID.png",
+      "sha256": "4401eb00897cdd07f9f1941c9306887749a42ea620d548c485792942621f01cb",
+      "source": "https://financialmodelingprep.com/image-stock/LCID.png",
+      "status": "downloaded"
+    },
+    "LEU": {
+      "asset": "LEU.png",
+      "sha256": "dc0bce52a38c0c772d658ef8fd037e34147aec50f11a7ea1077f81e70f64b553",
+      "source": "https://financialmodelingprep.com/image-stock/LEU.png",
+      "status": "downloaded"
+    },
+    "LITE": {
+      "asset": "LITE.svg",
+      "sha256": "81ee85fc578b72455051f479131d3540dfc9633a645e7f9ad647d1656df0983a",
+      "source": "https://app.trade.xyz/markets/lite.svg",
+      "status": "downloaded"
+    },
+    "LLY": {
+      "asset": "LLY.svg",
+      "sha256": "f56de296fbdfa5814649903a056deedc13e75d15a7b8ad4ad4e1217cf97b7786",
+      "source": "https://app.trade.xyz/markets/lly.svg",
+      "status": "downloaded"
+    },
+    "LMND": {
+      "asset": "LMND.png",
+      "sha256": "1bf0bb9cb7d9c9ee60ea4f890075abacacff54cabe065d395100455dfdf519d3",
+      "source": "https://financialmodelingprep.com/image-stock/LMND.png",
+      "status": "downloaded"
+    },
+    "LMT": {
+      "asset": "LMT.png",
+      "sha256": "7b140ca60e66d82308d64aa2e63725fccde446557e8d6152f3b0c61afa900bef",
+      "source": "https://financialmodelingprep.com/image-stock/LMT.png",
+      "status": "downloaded"
+    },
+    "LNG": {
+      "asset": "LNG.png",
+      "sha256": "60fe62ce6fbf116257cdb227a42fa4f86960540117f52427ecbaf17de129e79b",
+      "source": "https://financialmodelingprep.com/image-stock/LNG.png",
+      "status": "downloaded"
+    },
+    "LPTH": {
+      "asset": "LPTH.png",
+      "sha256": "409ff0b85fb76d75344cec6b91abefc2e3264ab77ec65e2543e2e5c2eaf36884",
+      "source": "https://financialmodelingprep.com/image-stock/LPTH.png",
+      "status": "downloaded"
+    },
+    "LQDA": {
+      "asset": "LQDA.png",
+      "sha256": "d8dfb044d698d70be52107a11080374ff983b8cb1926fa8cd3f164a89222793a",
+      "source": "https://financialmodelingprep.com/image-stock/LQDA.png",
+      "status": "downloaded"
+    },
+    "LRCX": {
+      "asset": "LRCX.png",
+      "sha256": "bad05133840c30081d4b385f5b710c81a2ad5de74bbe6905ff6b6e4118813b2a",
+      "source": "https://financialmodelingprep.com/image-stock/LRCX.png",
+      "status": "downloaded"
+    },
+    "LULU": {
+      "asset": "LULU.png",
+      "sha256": "5b3621d1b5179390fa0dc81b5cce843d6f7785b1d0a2b35ecf2c8d1b25ba8d93",
+      "source": "https://financialmodelingprep.com/image-stock/LULU.png",
+      "status": "downloaded"
+    },
+    "LUNR": {
+      "asset": "LUNR.png",
+      "sha256": "9dbbdd148cba39e78b658d6b2e62e7749550335285f2124df26fb898f608050a",
+      "source": "https://financialmodelingprep.com/image-stock/LUNR.png",
+      "status": "downloaded"
+    },
+    "LUV": {
+      "asset": "LUV.png",
+      "sha256": "40e921e06b5ff3b22520150f7068513a0f6eab605846ea9bef75134a9c74e838",
+      "source": "https://financialmodelingprep.com/image-stock/LUV.png",
+      "status": "downloaded"
+    },
+    "LWLG": {
+      "asset": "LWLG.png",
+      "sha256": "2f433ce7b07b80119aa4105a0486635d55d1eca5dc9857a437b7054e612f6c81",
+      "source": "https://financialmodelingprep.com/image-stock/LWLG.png",
+      "status": "downloaded"
+    },
+    "LYTE": {
+      "asset": "LYTE.svg",
+      "sha256": "1a02aec1457c1921cf09f94387e4273bc668aed7cf2b9aee1e7fa3c45d9851db",
+      "source": "https://www.roundhillinvestments.com/assets/img/roundhill-round-logo-white.svg",
+      "status": "downloaded"
+    },
+    "MA": {
+      "asset": "MA.png",
+      "sha256": "b75642e6375bd63646e730df07e02db6c308dd7a2e423e861e11542978468dbe",
+      "source": "https://financialmodelingprep.com/image-stock/MA.png",
+      "status": "downloaded"
+    },
+    "MAGS": {
+      "asset": "MAGS.png",
+      "sha256": "660350985515bd8688b53aadf46fd6b1ab8b2a6f8fcceeac43ec3cdcbd303722",
+      "source": "https://financialmodelingprep.com/image-stock/MAGS.png",
+      "status": "downloaded"
+    },
+    "MARA": {
+      "asset": "MARA.png",
+      "sha256": "fd8f33cb869fbde15b98080a6d8271e527ae6d9570d784c83fff1bc203e1c9f5",
+      "source": "https://financialmodelingprep.com/image-stock/MARA.png",
+      "status": "downloaded"
+    },
+    "MCD": {
+      "asset": "MCD.png",
+      "sha256": "165e1cc79ba2c5d65122dcade43795b0f47864bf39bcf92f6af23e987eca4cad",
+      "source": "https://financialmodelingprep.com/image-stock/MCD.png",
+      "status": "downloaded"
+    },
+    "MDA": {
+      "asset": "MDA.png",
+      "sha256": "0b37afff5bae2c2b624ee7962589ee716adc704ce450f61d358bd167fe0a6d95",
+      "source": "https://financialmodelingprep.com/image-stock/MDA.png",
+      "status": "downloaded"
+    },
+    "MDB": {
+      "asset": "MDB.png",
+      "sha256": "aa894c520354894d48ccaa13f7d181151ab0cf9b8266b3a8c6c1938bdc00cb65",
+      "source": "https://financialmodelingprep.com/image-stock/MDB.png",
+      "status": "downloaded"
+    },
+    "MELI": {
+      "asset": "MELI.png",
+      "sha256": "d2be8b8433f6d116fb94be4b5c2c91ea0d16a450d40adbe2ed466aa5a215fbcd",
+      "source": "https://financialmodelingprep.com/image-stock/MELI.png",
+      "status": "downloaded"
+    },
+    "META": {
+      "asset": "META.svg",
+      "sha256": "61be0d4411e4ec5bb7a82bb963fa807356794578525bf48836aa90b1e89ba264",
+      "source": "https://app.trade.xyz/markets/meta.svg",
+      "status": "downloaded"
+    },
+    "MINIMAX": {
+      "asset": "MINIMAX.svg",
+      "sha256": "4e23db9489f522b4b1a84ce77ab47a0a17a49de3bed797cf008654b0767670c8",
+      "source": "https://app.trade.xyz/markets/minimax.svg",
+      "status": "downloaded"
+    },
+    "MIRM": {
+      "asset": "MIRM.png",
+      "sha256": "db8863033e58235f063bc5dcfccdc563235cded6bbb7c86ed5759098ebe13759",
+      "source": "https://financialmodelingprep.com/image-stock/MIRM.png",
+      "status": "downloaded"
+    },
+    "MLTX": {
+      "asset": "MLTX.png",
+      "sha256": "feacf9baa0e85ac2f8a3fe4764e4837c5101207aad6a144c4874279ac43ec2bb",
+      "source": "https://financialmodelingprep.com/image-stock/MLTX.png",
+      "status": "downloaded"
+    },
+    "MNTS": {
+      "asset": "MNTS.png",
+      "sha256": "1d730b074f24726bc2367b5f832cfd98b0f61c9865371373ceb7a8d6916143f6",
+      "source": "https://financialmodelingprep.com/image-stock/MNTS.png",
+      "status": "downloaded"
+    },
+    "MO": {
+      "asset": "MO.png",
+      "sha256": "8f718d48d6bbeaba8dcd4986fd3430ae5bb08464800ba165c49fc5d212caa3ac",
+      "source": "https://financialmodelingprep.com/image-stock/MO.png",
+      "status": "downloaded"
+    },
+    "MOS": {
+      "asset": "MOS.png",
+      "sha256": "1bb36fab703fbe495720095b3d0613dead57cb39d30baf2125d1f5f90b85f173",
+      "source": "https://financialmodelingprep.com/image-stock/MOS.png",
+      "status": "downloaded"
+    },
+    "MP": {
+      "asset": "MP.png",
+      "sha256": "b942e1583f5958ffa243127049ff3dbe8f6ed1343d566277a25fc1a040e2eddb",
+      "source": "https://financialmodelingprep.com/image-stock/MP.png",
+      "status": "downloaded"
+    },
+    "MRAM": {
+      "asset": "MRAM.png",
+      "sha256": "02c6722cd23a38c2853832612547179c5fdd0c24a9af41a1a3fc05af82419e31",
+      "source": "https://financialmodelingprep.com/image-stock/MRAM.png",
+      "status": "downloaded"
+    },
+    "MRK": {
+      "asset": "MRK.png",
+      "sha256": "2dbc8e53091e3e898ee39b6622bf6985800ff34331e21cafaffc4ac9a8e9eb75",
+      "source": "https://financialmodelingprep.com/image-stock/MRK.png",
+      "status": "downloaded"
+    },
+    "MRLN": {
+      "asset": "MRLN.png",
+      "sha256": "317f05a3004e7cb05a6e16493b6974c218523c25bb79db14d52d34584329bd22",
+      "source": "https://merlinlabs.com/icons/icon-512x512.png?v=ddd2864990cce3a12677fa91f6f1ee8a",
+      "status": "downloaded"
+    },
+    "MRNA": {
+      "asset": "MRNA.png",
+      "sha256": "b23765ac94ec45108710c67348a01a8d4917f4651546755b68d234333a7a98cc",
+      "source": "https://financialmodelingprep.com/image-stock/MRNA.png",
+      "status": "downloaded"
+    },
+    "MRVL": {
+      "asset": "MRVL.svg",
+      "sha256": "6cebf7251676762548377a1a24b1fe82b459375a35f354f673d424dafa06b8ec",
+      "source": "https://app.trade.xyz/markets/mrvl.svg",
+      "status": "downloaded"
+    },
+    "MSFT": {
+      "asset": "MSFT.svg",
+      "sha256": "050832e2957a4c20fa81c8a84fa5d1ad285607d556f1d1bbd60325c8d4b8d809",
+      "source": "https://app.trade.xyz/markets/msft.svg",
+      "status": "downloaded"
+    },
+    "MSTR": {
+      "source": "existing project asset",
+      "status": "existing"
+    },
+    "MSTY": {
+      "asset": "MSTY.png",
+      "sha256": "7775ad88bdefa9c94811ba4d424a2c35adceb34a75bbc02ec16cef9278130e77",
+      "source": "https://financialmodelingprep.com/image-stock/MSTY.png",
+      "status": "downloaded"
+    },
+    "MU": {
+      "asset": "MU.svg",
+      "sha256": "97261ebbf039a32f36a59884ab386c6bdd7d88580c671944f1d757a0be322a19",
+      "source": "https://app.trade.xyz/markets/mu.svg",
+      "status": "downloaded"
+    },
+    "NATGAS": {
+      "asset": "NATGAS.svg",
+      "sha256": "1b305515fda3fc8a6811f11e376e78ba04766177512402f231595af913890922",
+      "source": "https://app.trade.xyz/markets/natgas.svg",
+      "status": "downloaded"
+    },
+    "NBIS": {
+      "asset": "NBIS.svg",
+      "sha256": "d08a30e8e8f4aaf55b47ea40227efaf1f90a85a3464c2b82b6b6f6a69a7752be",
+      "source": "https://app.trade.xyz/markets/nbis.svg",
+      "status": "downloaded"
+    },
+    "NCLD": {
+      "asset": "NCLD.svg",
+      "sha256": "1a02aec1457c1921cf09f94387e4273bc668aed7cf2b9aee1e7fa3c45d9851db",
+      "source": "https://www.roundhillinvestments.com/assets/img/roundhill-round-logo-white.svg",
+      "status": "downloaded"
+    },
+    "NEM": {
+      "asset": "NEM.png",
+      "sha256": "e43f6b999dec3cd469f920ce1b09f577ac8b0a456e0a87a704a771409cd7598f",
+      "source": "https://financialmodelingprep.com/image-stock/NEM.png",
+      "status": "downloaded"
+    },
+    "NET": {
+      "asset": "NET.png",
+      "sha256": "69376189344ac06fd9b27f59ab1be7744d220066a4bd96e8b9f3325421d96014",
+      "source": "https://financialmodelingprep.com/image-stock/NET.png",
+      "status": "downloaded"
+    },
+    "NEXR": {
+      "asset": "NEXR.png",
+      "sha256": "c649e39f97cb53890fb6afa0116abedde2ee471fda3cd7d013885f6a29c48a87",
+      "source": "https://financialmodelingprep.com/image-stock/NEXR.png",
+      "status": "downloaded"
+    },
+    "NFLX": {
+      "asset": "NFLX.svg",
+      "sha256": "7bf1454a23c9e6fcfeb3467094fc2bdb38c3e0cecdaf3f55eb95b9ea28b4104b",
+      "source": "https://app.trade.xyz/markets/nflx.svg",
+      "status": "downloaded"
+    },
+    "NIFTY": {
+      "asset": "NIFTY.svg",
+      "sha256": "b4bad5d77bd906495066f0b819c219bc3733a6ea36fd1f0c6f1c45a3f657ba52",
+      "source": "https://app.trade.xyz/markets/nifty.svg",
+      "status": "downloaded"
+    },
+    "NIO": {
+      "asset": "NIO.png",
+      "sha256": "8a7bbff547b82125d9e9640b2a337b7828ff9bb4487dd3217f9da6b82e16abdc",
+      "source": "https://financialmodelingprep.com/image-stock/NIO.png",
+      "status": "downloaded"
+    },
+    "NKE": {
+      "asset": "NKE.png",
+      "sha256": "cf4e9d1bcaf04da7f9a8a350dfa5fb2ee7bf100b77c463237f919f10cc1c5a2f",
+      "source": "https://financialmodelingprep.com/image-stock/NKE.png",
+      "status": "downloaded"
+    },
+    "NKTR": {
+      "asset": "NKTR.png",
+      "sha256": "39727fda81f76f423bbf1e7fd76d6e9ae6352a60382fea1b80c2251ba5b72d70",
+      "source": "https://financialmodelingprep.com/image-stock/NKTR.png",
+      "status": "downloaded"
+    },
+    "NNE": {
+      "asset": "NNE.png",
+      "sha256": "7375875fbfc33cbe338ecfea8ccb21b6830e8ce2c5d034b56e6a3192bd4cf2f4",
+      "source": "https://financialmodelingprep.com/image-stock/NNE.png",
+      "status": "downloaded"
+    },
+    "NOK": {
+      "asset": "NOK.svg",
+      "sha256": "6f3f6b8ba7a84f7fb1b5a333a4831c67ebb89757cbc87189ebb40ea2f3b52cbe",
+      "source": "https://app.trade.xyz/markets/nok.svg",
+      "status": "downloaded"
+    },
+    "NOW": {
+      "asset": "NOW.svg",
+      "sha256": "01015ee02e9701a758e6dfbba90cc885dbcfb15315ad8237ada046b151cfe86a",
+      "source": "https://app.trade.xyz/markets/now.svg",
+      "status": "downloaded"
+    },
+    "NU": {
+      "asset": "NU.png",
+      "sha256": "74c09646dcad5a6adaf5cc52e8ea57ad624f90938a68ecb20575525e8278a0eb",
+      "source": "https://financialmodelingprep.com/image-stock/NU.png",
+      "status": "downloaded"
+    },
+    "NUAI": {
+      "asset": "NUAI.png",
+      "sha256": "06991b88d56ce05c9da42e2d36e3089108e08c2368f15863f2dcbf75d32443d0",
+      "source": "https://financialmodelingprep.com/image-stock/NUAI.png",
+      "status": "downloaded"
+    },
+    "NVDA": {
+      "source": "existing project asset",
+      "status": "existing"
+    },
+    "NVO": {
+      "asset": "NVO.png",
+      "sha256": "d0838bbfb2665f6477e0f05eb7779c58cef9eb3b982a31bdef73620d269e4ea5",
+      "source": "https://financialmodelingprep.com/image-stock/NVO.png",
+      "status": "downloaded"
+    },
+    "NVTS": {
+      "asset": "NVTS.png",
+      "sha256": "e130f1ad5d8eb2f0269a7d80c84bd7be8779315bd50dc3e7d231a90065972a05",
+      "source": "https://financialmodelingprep.com/image-stock/NVTS.png",
+      "status": "downloaded"
+    },
+    "OCG": {
+      "asset": "OCG.png",
+      "sha256": "eff9e0920295ca2f710664fcc854270fe72068a1c0af852d44cd89a76e2d0eae",
+      "source": "https://financialmodelingprep.com/image-stock/OCG.png",
+      "status": "downloaded"
+    },
+    "OCUL": {
+      "asset": "OCUL.png",
+      "sha256": "f68cd1ea56657c259a62f412cbad7e3d5ceb8e27544316a40444b3b032e883e5",
+      "source": "https://financialmodelingprep.com/image-stock/OCUL.png",
+      "status": "downloaded"
+    },
+    "OIH": {
+      "asset": "OIH.png",
+      "sha256": "9efe8cb886bb054ccaee6d4653dbc9feda8c0826430ccb910e4f6675b18ff007",
+      "source": "https://financialmodelingprep.com/image-stock/OIH.png",
+      "status": "downloaded"
+    },
+    "OKLO": {
+      "asset": "OKLO.png",
+      "sha256": "6846e5a0c010ad8f6b49a2ee8a30614cfb39854adf239852727d2b8b42a0c1ee",
+      "source": "https://financialmodelingprep.com/image-stock/OKLO.png",
+      "status": "downloaded"
+    },
+    "OKTA": {
+      "asset": "OKTA.png",
+      "sha256": "bd15ba21534ca06769631c265f1f1109ca106b8b58fd8dcad07801c4477065fe",
+      "source": "https://financialmodelingprep.com/image-stock/OKTA.png",
+      "status": "downloaded"
+    },
+    "ON": {
+      "asset": "ON.png",
+      "sha256": "5d7e5ce33bc34bd97c1c18ab6b20ad2872877619b1365dd4cfa9d0571b45b982",
+      "source": "https://financialmodelingprep.com/image-stock/ON.png",
+      "status": "downloaded"
+    },
+    "ONDS": {
+      "asset": "ONDS.png",
+      "sha256": "03f5d0845f3177dd547a141fc639a80f491f9854564be78e7ef9c061f6595fcd",
+      "source": "https://financialmodelingprep.com/image-stock/ONDS.png",
+      "status": "downloaded"
+    },
+    "OPEN": {
+      "asset": "OPEN.png",
+      "sha256": "2e1e2927c047da540d2325dd99fcd904413bf9f556d344d0aac1fa1d7268b69a",
+      "source": "https://financialmodelingprep.com/image-stock/OPEN.png",
+      "status": "downloaded"
+    },
+    "OPTX": {
+      "asset": "OPTX.png",
+      "sha256": "24c68362d020acc92cd2fc0fa15d82fc280a041f42420167bde6bd90eb9388b2",
+      "source": "https://financialmodelingprep.com/image-stock/OPTX.png",
+      "status": "downloaded"
+    },
+    "ORBS": {
+      "asset": "ORBS.png",
+      "sha256": "8564fa96c60b245c878a8e97747d1a9305001e530883a9d1bf78416d54df56c0",
+      "source": "https://financialmodelingprep.com/image-stock/ORBS.png",
+      "status": "downloaded"
+    },
+    "ORCL": {
+      "asset": "ORCL.svg",
+      "sha256": "ccf58c2f20333ada3c9d796c1e606de9537455567d17a2311cc9c4fe254f1e39",
+      "source": "https://app.trade.xyz/markets/orcl.svg",
+      "status": "downloaded"
+    },
+    "OSCR": {
+      "asset": "OSCR.png",
+      "sha256": "ac2971cd17105d0fb62a2fe063677c853eece1b54af0731f81353e8cc6c432cf",
+      "source": "https://financialmodelingprep.com/image-stock/OSCR.png",
+      "status": "downloaded"
+    },
+    "OSS": {
+      "asset": "OSS.png",
+      "sha256": "1532ba0e76023e4c09eca674decc61d2662d5417c1f90761010a23421aac3615",
+      "source": "https://financialmodelingprep.com/image-stock/OSS.png",
+      "status": "downloaded"
+    },
+    "OUST": {
+      "asset": "OUST.png",
+      "sha256": "704d7c6cf3719e8bd669ff8e8019b4219b168783467027a9dcf771a579a3b422",
+      "source": "https://financialmodelingprep.com/image-stock/OUST.png",
+      "status": "downloaded"
+    },
+    "OWL": {
+      "asset": "OWL.png",
+      "sha256": "7b6848f7ebc79b67d5e0e929cea129687c01f5db7cb1e0ac45e75f3f6b13f39e",
+      "source": "https://financialmodelingprep.com/image-stock/OWL.png",
+      "status": "downloaded"
+    },
+    "PAAS": {
+      "asset": "PAAS.png",
+      "sha256": "84a60e0ddf7131ce6e5c723b43a09e6d223d662dcb5f0d6bb451e691f3003978",
+      "source": "https://financialmodelingprep.com/image-stock/PAAS.png",
+      "status": "downloaded"
+    },
+    "PALLADIUM": {
+      "asset": "PALLADIUM.svg",
+      "sha256": "a660479485cadcd027e4967131bc85aebd0e39e72d0779e0c11f9fe526a77a7f",
+      "source": "https://app.trade.xyz/markets/palladium.svg",
+      "status": "downloaded"
+    },
+    "PANW": {
+      "asset": "PANW.png",
+      "sha256": "f88e6e81c5334fccc5505b1fe847e69107ab617a74bafde11a32d410ee7e43fb",
+      "source": "https://financialmodelingprep.com/image-stock/PANW.png",
+      "status": "downloaded"
+    },
+    "PATH": {
+      "asset": "PATH.png",
+      "sha256": "bba0fe25c029718764ea180206356cbc20c224f094e00b3f6a70894ded4f281c",
+      "source": "https://financialmodelingprep.com/image-stock/PATH.png",
+      "status": "downloaded"
+    },
+    "PCT": {
+      "asset": "PCT.png",
+      "sha256": "8db5b44393cdbb0dabaa872b50aab4b4113a032df1d9cb877d362e1856ae4e54",
+      "source": "https://financialmodelingprep.com/image-stock/PCT.png",
+      "status": "downloaded"
+    },
+    "PDYN": {
+      "asset": "PDYN.png",
+      "sha256": "4aae1811cfe86e45820d1a35fcba679ffc2b6d6513f2cab840d5c72f6818cd47",
+      "source": "https://financialmodelingprep.com/image-stock/PDYN.png",
+      "status": "downloaded"
+    },
+    "PEP": {
+      "asset": "PEP.png",
+      "sha256": "51f8ba4a6d699fd44ea8b5252337aa85aa8165348226eec67ebf1a9c31ee76d2",
+      "source": "https://financialmodelingprep.com/image-stock/PEP.png",
+      "status": "downloaded"
+    },
+    "PL": {
+      "asset": "PL.png",
+      "sha256": "ce9821e9f77fc1218faded86e4b6431556f66a5a5c37e51d44c70cb57ff3c359",
+      "source": "https://financialmodelingprep.com/image-stock/PL.png",
+      "status": "downloaded"
+    },
+    "PLATINUM": {
+      "asset": "PLATINUM.svg",
+      "sha256": "a1200df212d7bbb6e434ffde01ae9218b393095368899ffea9ad3ee3f7f9e46f",
+      "source": "https://app.trade.xyz/markets/platinum.svg",
+      "status": "downloaded"
+    },
+    "PLG": {
+      "asset": "PLG.png",
+      "sha256": "f2ef886f1c3169d0639247701929d1e3c5766fcc9204aac043a2081da7bb5087",
+      "source": "https://financialmodelingprep.com/image-stock/PLG.png",
+      "status": "downloaded"
+    },
+    "PLTR": {
+      "source": "existing project asset",
+      "status": "existing"
+    },
+    "PLUG": {
+      "asset": "PLUG.png",
+      "sha256": "3dde69f5e5f6e4f4a9c72f4c6237097b5607bdd2ee2fe6592bd2e1849a7118ed",
+      "source": "https://financialmodelingprep.com/image-stock/PLUG.png",
+      "status": "downloaded"
+    },
+    "POET": {
+      "asset": "POET.png",
+      "sha256": "9c05dad131f39c05cce37df954be651c44166c7fbd3ca3cfbee6f246c7427ebc",
+      "source": "https://financialmodelingprep.com/image-stock/POET.png",
+      "status": "downloaded"
+    },
+    "PPLT": {
+      "asset": "PPLT.png",
+      "sha256": "3d33f53f4068dc7b2324c4ae0bb4c76347b239d61a5d6a06f8c6186528ae6c76",
+      "source": "https://financialmodelingprep.com/image-stock/PPLT.png",
+      "status": "downloaded"
+    },
+    "PRFX": {
+      "asset": "PRFX.png",
+      "sha256": "d6717186e3e79dd65773e1eef1aa4e9b956249c3ada893c6c74db3eecab291d8",
+      "source": "https://financialmodelingprep.com/image-stock/PRFX.png",
+      "status": "downloaded"
+    },
+    "PRME": {
+      "asset": "PRME.png",
+      "sha256": "a2ef60ccd9589b306b1aa381f534d60c643fc3132e14d361c71b2f5704c51afc",
+      "source": "https://financialmodelingprep.com/image-stock/PRME.png",
+      "status": "downloaded"
+    },
+    "PSKY": {
+      "asset": "PSKY.png",
+      "sha256": "2a43c8c629bcbded63c213c03fedcc2c5208c55bf0a392486ac804f9e8267bb3",
+      "source": "https://financialmodelingprep.com/image-stock/PSKY.png",
+      "status": "downloaded"
+    },
+    "PSNL": {
+      "asset": "PSNL.png",
+      "sha256": "79f22f8748b475728adaeb7455c0bed44f13af45937e43fc311f6aad9e1e75b9",
+      "source": "https://financialmodelingprep.com/image-stock/PSNL.png",
+      "status": "downloaded"
+    },
+    "PTGX": {
+      "asset": "PTGX.png",
+      "sha256": "81f9fc0d9f8a13d2b471d3fbc41ef4ea0c41757ad8b0a29ec51e07da1130dee0",
+      "source": "https://financialmodelingprep.com/image-stock/PTGX.png",
+      "status": "downloaded"
+    },
+    "PURRDAT": {
+      "asset": "PURRDAT.svg",
+      "sha256": "36b11766564786b150190e523bce5d7452a1884468404f2e9bf48f05134e6ae8",
+      "source": "https://app.trade.xyz/markets/purrdat.svg",
+      "status": "downloaded"
+    },
+    "PYPL": {
+      "asset": "PYPL.png",
+      "sha256": "f27a693e7370ca7f7f2ae3373dd7abc5e4309a31b5a008fd4ef3ac703ceb7b19",
+      "source": "https://financialmodelingprep.com/image-stock/PYPL.png",
+      "status": "downloaded"
+    },
+    "QBTS": {
+      "asset": "QBTS.png",
+      "sha256": "5928b79de25b120c923177371d8b16944cd0cc78115d18e10dee10a66f86d07d",
+      "source": "https://financialmodelingprep.com/image-stock/QBTS.png",
+      "status": "downloaded"
+    },
+    "QCOM": {
+      "asset": "QCOM.svg",
+      "sha256": "27e18bfef5eae0450254541493c9bb7313c92d6fec77bedc1442a48b272d096f",
+      "source": "https://app.trade.xyz/markets/qcom.svg",
+      "status": "downloaded"
+    },
+    "QNT": {
+      "asset": "QNT.svg",
+      "sha256": "6dedd5b82b9b9151a830115538050fa334bf0559aacf68d8e3ca011f5f8354f7",
+      "source": "https://app.trade.xyz/markets/qnt.svg",
+      "status": "downloaded"
+    },
+    "QQQ": {
+      "asset": "QQQ.png",
+      "sha256": "f3c4d5183cddb29bb89b6ddb669391a9e8df96d707f96d0d30d6c1a8c44fd9f8",
+      "source": "https://financialmodelingprep.com/image-stock/QQQ.png",
+      "status": "downloaded"
+    },
+    "QS": {
+      "asset": "QS.png",
+      "sha256": "b610ebfe05370cf572ff159a1402ab3a60bbe6d00ae80dfd62adddb4d7469146",
+      "source": "https://financialmodelingprep.com/image-stock/QS.png",
+      "status": "downloaded"
+    },
+    "QUBT": {
+      "asset": "QUBT.png",
+      "sha256": "3ffe4dc71dafa760a8abc841911a247657d17f62d1de8780d999dc4fe5262345",
+      "source": "https://financialmodelingprep.com/image-stock/QUBT.png",
+      "status": "downloaded"
+    },
+    "QURE": {
+      "asset": "QURE.png",
+      "sha256": "1df577fa55b3cb43c944ce6961795a5684df75d73ce85694bed082492e7dfce1",
+      "source": "https://financialmodelingprep.com/image-stock/QURE.png",
+      "status": "downloaded"
+    },
+    "RACE": {
+      "asset": "RACE.png",
+      "sha256": "62a5120709c4a1b2cb6ccf59aec796d41d657f1f3a90466aaf34c6728fbfc4e6",
+      "source": "https://financialmodelingprep.com/image-stock/RACE.png",
+      "status": "downloaded"
+    },
+    "RBRK": {
+      "asset": "RBRK.png",
+      "sha256": "2da023b36444e53e9c3d383becee3dac41d23f662646a8d006895576e0205276",
+      "source": "https://financialmodelingprep.com/image-stock/RBRK.png",
+      "status": "downloaded"
+    },
+    "RCAT": {
+      "asset": "RCAT.png",
+      "sha256": "55195558d5842e5d9e43f0f1eb2dd0866d9f2bcb0fcab328fac89b3bcf48c29c",
+      "source": "https://financialmodelingprep.com/image-stock/RCAT.png",
+      "status": "downloaded"
+    },
+    "RDDT": {
+      "asset": "RDDT.png",
+      "sha256": "a320137c3a767aad271324c5bfaac8a0977f7d40c20fad50fd98c4f031274194",
+      "source": "https://financialmodelingprep.com/image-stock/RDDT.png",
+      "status": "downloaded"
+    },
+    "RDW": {
+      "asset": "RDW.png",
+      "sha256": "230e8bc33bdd4d5eaa53153a421672850062f5074ced01bee994eec2771086a7",
+      "source": "https://financialmodelingprep.com/image-stock/RDW.png",
+      "status": "downloaded"
+    },
+    "REPL": {
+      "asset": "REPL.png",
+      "sha256": "582a2e91882a208344a15795cad60f96beb2f2853388ff315efbeb9c892f6d45",
+      "source": "https://financialmodelingprep.com/image-stock/REPL.png",
+      "status": "downloaded"
+    },
+    "RGC": {
+      "asset": "RGC.png",
+      "sha256": "d28dae67ce257ca4e451fa4863f26c8a8e29bec3133d043f055c83647a2ee197",
+      "source": "https://financialmodelingprep.com/image-stock/RGC.png",
+      "status": "downloaded"
+    },
+    "RGTI": {
+      "asset": "RGTI.png",
+      "sha256": "49bc91189917c1f9fd8335451da27edca7c00f613ba00ca0360f27111464f299",
+      "source": "https://financialmodelingprep.com/image-stock/RGTI.png",
+      "status": "downloaded"
+    },
+    "RILY": {
+      "asset": "RILY.png",
+      "sha256": "54b90e2f20c89f570bc3c3293ae8d33cb125623cac56ed51c8c6d3a3294e768a",
+      "source": "https://financialmodelingprep.com/image-stock/RILY.png",
+      "status": "downloaded"
+    },
+    "RIOT": {
+      "asset": "RIOT.png",
+      "sha256": "4b04499aa194743056fa17add6e751d9dcbee3f008b549431abb61bf2851d059",
+      "source": "https://financialmodelingprep.com/image-stock/RIOT.png",
+      "status": "downloaded"
+    },
+    "RIVN": {
+      "asset": "RIVN.svg",
+      "sha256": "fafbf3ecc421d1b72b9592484b045997160bc46d7e50b2e8423175db93580c45",
+      "source": "https://app.trade.xyz/markets/rivn.svg",
+      "status": "downloaded"
+    },
+    "RKLB": {
+      "asset": "RKLB.svg",
+      "sha256": "a298dc6fc41db9fda651f5c5b6b8d1b440f7776807d73474a8568f62766e2dee",
+      "source": "https://app.trade.xyz/markets/rklb.svg",
+      "status": "downloaded"
+    },
+    "RKT": {
+      "asset": "RKT.png",
+      "sha256": "f390b03b3ed0ac81436cd5427201f1597e9bfd01e24b303b52f74dfdda32fe80",
+      "source": "https://financialmodelingprep.com/image-stock/RKT.png",
+      "status": "downloaded"
+    },
+    "RR": {
+      "asset": "RR.png",
+      "sha256": "c4f2da6c686199c018e204ab8dce637f43e3fa2158c44f045f7f7893484dec14",
+      "source": "https://financialmodelingprep.com/image-stock/RR.png",
+      "status": "downloaded"
+    },
+    "RUBI": {
+      "asset": "RUBI.png",
+      "sha256": "e94f2a8bcb3eb310c5319a82a4c28ed0576198d6243a377c567a467cdc2052c1",
+      "source": "https://financialmodelingprep.com/image-stock/RUBI.png",
+      "status": "downloaded"
+    },
+    "RUM": {
+      "asset": "RUM.png",
+      "sha256": "5bbf878e0e7251100bfd3182bf5074cefda19bbcd64252c012cb0ed6f21e4b34",
+      "source": "https://financialmodelingprep.com/image-stock/RUM.png",
+      "status": "downloaded"
+    },
+    "RUN": {
+      "asset": "RUN.png",
+      "sha256": "43de12d335214c403552082af03f01be047a7b91832a77e9532a33104423bfc8",
+      "source": "https://financialmodelingprep.com/image-stock/RUN.png",
+      "status": "downloaded"
+    },
+    "RXT": {
+      "asset": "RXT.png",
+      "sha256": "74de48c18303cbb59c8a6fd542ad837e40571501bd22f30c5ec5f9d7d929eed9",
+      "source": "https://financialmodelingprep.com/image-stock/RXT.png",
+      "status": "downloaded"
+    },
+    "RZLV": {
+      "asset": "RZLV.png",
+      "sha256": "18ab5844573888de08ead32c55544d07f085f5dfbf0a09cf167b590af0243c11",
+      "source": "https://financialmodelingprep.com/image-stock/RZLV.png",
+      "status": "downloaded"
+    },
+    "SATA": {
+      "asset": "SATA.png",
+      "sha256": "8461b3a070cbc0a848ae6646a724530bdd81f2f1158d4927c25030e95fd85b07",
+      "source": "https://financialmodelingprep.com/image-stock/SATA.png",
+      "status": "downloaded"
+    },
+    "SATL": {
+      "asset": "SATL.png",
+      "sha256": "5eaae1b42ccfd9cbf3ebc6f296b3d1c81f58e151f87a860fd413e54f6f5d431d",
+      "source": "https://financialmodelingprep.com/image-stock/SATL.png",
+      "status": "downloaded"
+    },
+    "SBET": {
+      "asset": "SBET.png",
+      "sha256": "ddea305894e61068534ca2dc3b25f7180f548f2e6e38816c9c3494c7e26e93c9",
+      "source": "https://financialmodelingprep.com/image-stock/SBET.png",
+      "status": "downloaded"
+    },
+    "SBSW": {
+      "asset": "SBSW.png",
+      "sha256": "2c13e2ee36f0c72d49dbac628d1f647842111ea8072134b9d13adb0f1d45a40d",
+      "source": "https://financialmodelingprep.com/image-stock/SBSW.png",
+      "status": "downloaded"
+    },
+    "SBUX": {
+      "asset": "SBUX.png",
+      "sha256": "a20d12426aee69c2ca940c7c6e08762376493f12f51f9196b4af77b64d1a10a8",
+      "source": "https://financialmodelingprep.com/image-stock/SBUX.png",
+      "status": "downloaded"
+    },
+    "SCHW": {
+      "asset": "SCHW.png",
+      "sha256": "55fed6e441aa5ba1d406370cc0d7d5a57645b7d82ba50807ca1e0d00187a28c1",
+      "source": "https://financialmodelingprep.com/image-stock/SCHW.png",
+      "status": "downloaded"
+    },
+    "SEDG": {
+      "asset": "SEDG.png",
+      "sha256": "dfea5beb5724c8081e6ddcb483d7774c8f22c4ed04a8572b556742cde3a9cbfd",
+      "source": "https://financialmodelingprep.com/image-stock/SEDG.png",
+      "status": "downloaded"
+    },
+    "SEZL": {
+      "asset": "SEZL.png",
+      "sha256": "40f1009f48c5c9e910fbcab55e8489356d78bcf64b5fa4af93a3ec2ec64ac2c3",
+      "source": "https://financialmodelingprep.com/image-stock/SEZL.png",
+      "status": "downloaded"
+    },
+    "SHAZ": {
+      "asset": "SHAZ.svg",
+      "sha256": "3c289400fb56f7dcbfa51453ed7740093fced2caca88fb78ba201c80bfc06510",
+      "source": "https://app.trade.xyz/markets/shaz.svg",
+      "status": "downloaded"
+    },
+    "SHEIN": {
+      "asset": "SHEIN.png",
+      "sha256": "e9e89e0d6b659bc9b7f0fd817ab07b2055ee2c235a4f3eba91429c029026aadd",
+      "source": "https://www.sheingroup.com/apple-touch-icon-152x152.png",
+      "status": "downloaded"
+    },
+    "SHMD": {
+      "asset": "SHMD.png",
+      "sha256": "5cf8ad3fe5737673a99a9822c59dcd96654a4d2e53b09f30b0ed5043d3057abf",
+      "source": "https://financialmodelingprep.com/image-stock/SHMD.png",
+      "status": "downloaded"
+    },
+    "SHOP": {
+      "asset": "SHOP.png",
+      "sha256": "89e18946cf0bd052b68c497eed7a54df4e35ece4f47b9d3a66658aabafe5457b",
+      "source": "https://financialmodelingprep.com/image-stock/SHOP.png",
+      "status": "downloaded"
+    },
+    "SIL": {
+      "asset": "SIL.png",
+      "sha256": "8adecc0f70916831bc3f8415651293aaa7469bda6ddf0ccfc204d0ec6ac072c3",
+      "source": "https://financialmodelingprep.com/image-stock/SIL.png",
+      "status": "downloaded"
+    },
+    "SILJ": {
+      "asset": "SILJ.png",
+      "sha256": "07b593ad8fbdd2ba01ea3eebea83b610a21fa1e76188db1b3dbd63e935603246",
+      "source": "https://financialmodelingprep.com/image-stock/SILJ.png",
+      "status": "downloaded"
+    },
+    "SILVER": {
+      "asset": "SILVER.svg",
+      "sha256": "a660479485cadcd027e4967131bc85aebd0e39e72d0779e0c11f9fe526a77a7f",
+      "source": "https://app.trade.xyz/markets/silver.svg",
+      "status": "downloaded"
+    },
+    "SKHX": {
+      "asset": "SKHX.svg",
+      "sha256": "7ef9ad9366bab6c936fd3be4e19142ae0101bcc956a997ae8cb42f4079132405",
+      "source": "https://app.trade.xyz/markets/skhx.svg",
+      "status": "downloaded"
+    },
+    "SKHY": {
+      "asset": "SKHY.svg",
+      "sha256": "7ef9ad9366bab6c936fd3be4e19142ae0101bcc956a997ae8cb42f4079132405",
+      "source": "https://app.trade.xyz/markets/skhy.svg",
+      "status": "downloaded"
+    },
+    "SKM": {
+      "asset": "SKM.png",
+      "sha256": "cd9cab56bfe5fcc9612be2aa2fed7190b9fbb08ce36e9fd3ed2c4b163bb5bf2d",
+      "source": "https://financialmodelingprep.com/image-stock/SKM.png",
+      "status": "downloaded"
+    },
+    "SKYQ": {
+      "asset": "SKYQ.png",
+      "sha256": "f49f3ac6479b61ab8627553bcfcf30fa405fea95584764c30da732ce85e5db4c",
+      "source": "https://financialmodelingprep.com/image-stock/SKYQ.png",
+      "status": "downloaded"
+    },
+    "SLB": {
+      "asset": "SLB.png",
+      "sha256": "2a830202abc4a3dc116f9e82085e7fe7bc7ca131abb695d3a67efc0dd30cd433",
+      "source": "https://financialmodelingprep.com/image-stock/SLB.png",
+      "status": "downloaded"
+    },
+    "SLNH": {
+      "asset": "SLNH.png",
+      "sha256": "cf1478081c7a2d6cbff71cad44456d8027151e4147b645f769548954fae4e10e",
+      "source": "https://financialmodelingprep.com/image-stock/SLNH.png",
+      "status": "downloaded"
+    },
+    "SLS": {
+      "asset": "SLS.png",
+      "sha256": "544eeef0edf686c1144a71d8372b95309094a87a16c343265414f2d29c2f2db8",
+      "source": "https://financialmodelingprep.com/image-stock/SLS.png",
+      "status": "downloaded"
+    },
+    "SLV": {
+      "asset": "SLV.png",
+      "sha256": "9f887c76a0304665390b4aff617771a0f99115638debd86c28fa056236ac5f37",
+      "source": "https://financialmodelingprep.com/image-stock/SLV.png",
+      "status": "downloaded"
+    },
+    "SMCI": {
+      "asset": "SMCI.png",
+      "sha256": "c1fd589f328d820175e877eb9462330b7116c80b076ba805d1954b46d806b7ff",
+      "source": "https://financialmodelingprep.com/image-stock/SMCI.png",
+      "status": "downloaded"
+    },
+    "SMH": {
+      "asset": "SMH.svg",
+      "sha256": "ca70c1e7fdc80d7e125ca377daa0ad0188e544e67d0ded7ac1ef69bd975cbf76",
+      "source": "https://app.trade.xyz/markets/smh.svg",
+      "status": "downloaded"
+    },
+    "SMR": {
+      "asset": "SMR.png",
+      "sha256": "c9c8f4c45748fcfd2776c9b487c4e3e35a860c57ce8b7edfbe4e2dc9333dcc5b",
+      "source": "https://financialmodelingprep.com/image-stock/SMR.png",
+      "status": "downloaded"
+    },
+    "SMSN": {
+      "asset": "SMSN.svg",
+      "sha256": "87898f58052a5036db4f9d08bc4f4f7d78329665eb980708502a34f8624c0033",
+      "source": "https://app.trade.xyz/markets/smsn.svg",
+      "status": "downloaded"
+    },
+    "SMTC": {
+      "asset": "SMTC.png",
+      "sha256": "9e6695d0f1b3d52606aad23ef5d11f63af6c765d1041908279c927d33eae98e0",
+      "source": "https://financialmodelingprep.com/image-stock/SMTC.png",
+      "status": "downloaded"
+    },
+    "SNAP": {
+      "asset": "SNAP.png",
+      "sha256": "b3140744cf680acd231350e2ffd7c85ddf14eddcd40f17390aa26897c5bc9ebd",
+      "source": "https://financialmodelingprep.com/image-stock/SNAP.png",
+      "status": "downloaded"
+    },
+    "SNDK": {
+      "asset": "SNDK.svg",
+      "sha256": "ab6c68f0bb5baa10465daf0fd97e4c936e245467573af7d6cb5d4c0aaf40fdc4",
+      "source": "https://app.trade.xyz/markets/sndk.svg",
+      "status": "downloaded"
+    },
+    "SNOW": {
+      "asset": "SNOW.png",
+      "sha256": "a018028b4532984418bb1de90e9ca1cb6bea2107fc954d11b311eb13aca116d7",
+      "source": "https://financialmodelingprep.com/image-stock/SNOW.png",
+      "status": "downloaded"
+    },
+    "SOFI": {
+      "asset": "SOFI.png",
+      "sha256": "55961cdd74369c77b8cb9ac18d669708a6bd7cc24d21cc567f52ea15134b71a1",
+      "source": "https://financialmodelingprep.com/image-stock/SOFI.png",
+      "status": "downloaded"
+    },
+    "SOFTBANK": {
+      "asset": "SOFTBANK.svg",
+      "sha256": "a83d1feb4a7d838c014cc772a5f601468fc77b75b0d8e825ca64b1d3d8735fd8",
+      "source": "https://app.trade.xyz/markets/softbank.svg",
+      "status": "downloaded"
+    },
+    "SOUN": {
+      "asset": "SOUN.png",
+      "sha256": "7172b1ce3f7bf0ab8cd1bff774bd62a40b5996ee6b071cbdaf7986f76e536457",
+      "source": "https://financialmodelingprep.com/image-stock/SOUN.png",
+      "status": "downloaded"
+    },
+    "SOXL": {
+      "asset": "SOXL.png",
+      "sha256": "46783cb63a4c931b9ca2da88fb9b412ac07ba064f3295a3f2f48cf74a1c131a3",
+      "source": "https://financialmodelingprep.com/image-stock/SOXL.png",
+      "status": "downloaded"
+    },
+    "SOXS": {
+      "asset": "SOXS.png",
+      "sha256": "983c64f302620a629f9d6a1528349a209cb803e97ee9b1c9f3be84eb043aee36",
+      "source": "https://financialmodelingprep.com/image-stock/SOXS.png",
+      "status": "downloaded"
+    },
+    "SOXX": {
+      "asset": "SOXX.png",
+      "sha256": "a032cc706eab9e46ae2e36d18a172d8ada5705394aacbce0e45339eb535859a5",
+      "source": "https://financialmodelingprep.com/image-stock/SOXX.png",
+      "status": "downloaded"
+    },
+    "SP500": {
+      "asset": "SP500.svg",
+      "sha256": "506c98a475022de7e6b3a158bfcbc99b8f2c8d9880e8b7b68895ab9f9425b778",
+      "source": "https://app.trade.xyz/markets/sp500.svg",
+      "status": "downloaded"
+    },
+    "SPCE": {
+      "asset": "SPCE.png",
+      "sha256": "40f83dbf3969f64669648571b57e9565295bd53850a4d545f75631074acb0664",
+      "source": "https://financialmodelingprep.com/image-stock/SPCE.png",
+      "status": "downloaded"
+    },
+    "SPCX": {
+      "asset": "SPCX.svg",
+      "sha256": "4ee6d639375d8e4ae2a3935ed0f59784b6c733dbbf91d04e7eeb6f89b197a0c3",
+      "source": "https://app.trade.xyz/markets/spcx.svg",
+      "status": "downloaded"
+    },
+    "SPOT": {
+      "asset": "SPOT.png",
+      "sha256": "d86fa7dbb10c5d9a2b2d9fedacedfe1e91d420bbc04352c1688870f005aa52be",
+      "source": "https://financialmodelingprep.com/image-stock/SPOT.png",
+      "status": "downloaded"
+    },
+    "SQQQ": {
+      "asset": "SQQQ.png",
+      "sha256": "198994205ce0e1e94c5f3de3571ebc9c0467170a96e51252a4581defb5c60136",
+      "source": "https://financialmodelingprep.com/image-stock/SQQQ.png",
+      "status": "downloaded"
+    },
+    "SRPT": {
+      "asset": "SRPT.png",
+      "sha256": "d3ce825dba225bfa9e28de1fe95a6a13fb961e12f18053197bdb7a5fb6a5b193",
+      "source": "https://financialmodelingprep.com/image-stock/SRPT.png",
+      "status": "downloaded"
+    },
+    "STRC": {
+      "asset": "STRC.svg",
+      "sha256": "eee13d881651f414e47f5f1d02021bc5b99c44668bd557375cfaf083bbd775ff",
+      "source": "https://app.trade.xyz/markets/strc.svg",
+      "status": "downloaded"
+    },
+    "STRK": {
+      "asset": "STRK.png",
+      "sha256": "33c88064008d8fd8d42eb04463b4321f2c1c5b04aa72075fa42c17394b3d17eb",
+      "source": "https://financialmodelingprep.com/image-stock/STRK.png",
+      "status": "downloaded"
+    },
+    "STX": {
+      "asset": "STX.png",
+      "sha256": "ed32452442027a7bf85cfbc0b8b2d010f5e2191a91da43e597caa9e42d3fd9b5",
+      "source": "https://financialmodelingprep.com/image-stock/STX.png",
+      "status": "downloaded"
+    },
+    "SUI": {
+      "asset": "SUI.png",
+      "sha256": "efe5ddf1dd69a733d263d6f529d19878636401815a03e77c6e52b864df4526f4",
+      "source": "https://financialmodelingprep.com/image-stock/SUI.png",
+      "status": "downloaded"
+    },
+    "SVIX": {
+      "asset": "SVIX.png",
+      "sha256": "17ebbaadc5da91422757c86804e6aa0e0b638929c42b018d45b8965a37fa435c",
+      "source": "https://financialmodelingprep.com/image-stock/SVIX.png",
+      "status": "downloaded"
+    },
+    "SYM": {
+      "asset": "SYM.png",
+      "sha256": "6cde6d2082142520b6db62bb608bd3da510702fbdb9579ee59ed30b274b1d53c",
+      "source": "https://financialmodelingprep.com/image-stock/SYM.png",
+      "status": "downloaded"
+    },
+    "TAN": {
+      "asset": "TAN.png",
+      "sha256": "a9596768800f7828c1483a9563f41108d3e9bf0ed6aae9c6f0c8c909c1cfae82",
+      "source": "https://financialmodelingprep.com/image-stock/TAN.png",
+      "status": "downloaded"
+    },
+    "TE": {
+      "asset": "TE.png",
+      "sha256": "6b8d9d2c28c381a340e88bcdc263e025b4be1d3974759d19dc181152b6841229",
+      "source": "https://financialmodelingprep.com/image-stock/TE.png",
+      "status": "downloaded"
+    },
+    "TEAM": {
+      "asset": "TEAM.png",
+      "sha256": "f76ae1b1095236f6e7711b604c7c68fcee9a8329de6451ddf61ec2437e53d9ef",
+      "source": "https://financialmodelingprep.com/image-stock/TEAM.png",
+      "status": "downloaded"
+    },
+    "TEM": {
+      "asset": "TEM.png",
+      "sha256": "fbdc9def48928981ccd83ec343b2876b4f0b2727f006394064a9da35e9e86776",
+      "source": "https://financialmodelingprep.com/image-stock/TEM.png",
+      "status": "downloaded"
+    },
+    "TENCENT": {
+      "asset": "TENCENT.svg",
+      "sha256": "b83b553805cbdb1acb094c294172b12658d56a52625b2418f47db5b52db6c32d",
+      "source": "https://app.trade.xyz/markets/tencent.svg",
+      "status": "downloaded"
+    },
+    "TER": {
+      "asset": "TER.png",
+      "sha256": "1dec18366886fe48651ab26b50c4c6f01a340cf9bd46a3f0be6fd3a45ca0c3c9",
+      "source": "https://financialmodelingprep.com/image-stock/TER.png",
+      "status": "downloaded"
+    },
+    "TGT": {
+      "asset": "TGT.png",
+      "sha256": "67b53dd3149efa2b83705cfe58dba199b8cb297f6a4f36e04baadc010c719da2",
+      "source": "https://financialmodelingprep.com/image-stock/TGT.png",
+      "status": "downloaded"
+    },
+    "TGTX": {
+      "asset": "TGTX.png",
+      "sha256": "ed4dff8470fcc663916dd297c115e3556ee7928bc20d22e608fc5e11ba72421d",
+      "source": "https://financialmodelingprep.com/image-stock/TGTX.png",
+      "status": "downloaded"
+    },
+    "TLRY": {
+      "asset": "TLRY.png",
+      "sha256": "9c78845c117f899e19b0714fb8cc6bc44588c65d87b4ed8fd31930cdf2c6b682",
+      "source": "https://financialmodelingprep.com/image-stock/TLRY.png",
+      "status": "downloaded"
+    },
+    "TLT": {
+      "asset": "TLT.png",
+      "sha256": "4dd65ba7b27142733f59c809c1908befac597c798120c684ed11f6fb8774f143",
+      "source": "https://financialmodelingprep.com/image-stock/TLT.png",
+      "status": "downloaded"
+    },
+    "TMDX": {
+      "asset": "TMDX.png",
+      "sha256": "566eb6a4d810e76fd2e2dd131f0fd22818d1efdf422c746fa2b2bb8a7db51356",
+      "source": "https://financialmodelingprep.com/image-stock/TMDX.png",
+      "status": "downloaded"
+    },
+    "TQQQ": {
+      "asset": "TQQQ.png",
+      "sha256": "198994205ce0e1e94c5f3de3571ebc9c0467170a96e51252a4581defb5c60136",
+      "source": "https://financialmodelingprep.com/image-stock/TQQQ.png",
+      "status": "downloaded"
+    },
+    "TSEM": {
+      "asset": "TSEM.png",
+      "sha256": "5a5374388b2762e35e838722b02d56aa3a62ee90040fff21a2e13fe5ba89d083",
+      "source": "https://financialmodelingprep.com/image-stock/TSEM.png",
+      "status": "downloaded"
+    },
+    "TSLA": {
+      "source": "existing project asset",
+      "status": "existing"
+    },
+    "TSLL": {
+      "asset": "TSLL.png",
+      "sha256": "46783cb63a4c931b9ca2da88fb9b412ac07ba064f3295a3f2f48cf74a1c131a3",
+      "source": "https://financialmodelingprep.com/image-stock/TSLL.png",
+      "status": "downloaded"
+    },
+    "TSM": {
+      "asset": "TSM.svg",
+      "sha256": "1460b75b490587ab0ec4011ad9abc54b5b13d118a8759984376d6b1438cc047b",
+      "source": "https://app.trade.xyz/markets/tsm.svg",
+      "status": "downloaded"
+    },
+    "TSSI": {
+      "asset": "TSSI.png",
+      "sha256": "d72056c0d88bb437b67230955ba4b2653ce170c82234f9fe0a98cfe5c029be88",
+      "source": "https://financialmodelingprep.com/image-stock/TSSI.png",
+      "status": "downloaded"
+    },
+    "TTD": {
+      "asset": "TTD.png",
+      "sha256": "632e3b14a408bbe4395734ff10f74f31d321967d00fb8c04e03bc5b8d647af38",
+      "source": "https://financialmodelingprep.com/image-stock/TTD.png",
+      "status": "downloaded"
+    },
+    "TTF": {
+      "asset": "TTF.svg",
+      "sha256": "1b305515fda3fc8a6811f11e376e78ba04766177512402f231595af913890922",
+      "source": "https://app.trade.xyz/markets/ttf.svg",
+      "status": "downloaded"
+    },
+    "TTWO": {
+      "asset": "TTWO.png",
+      "sha256": "c87d7932337a2cc4871c8202de52d2ae15c383fb6ea81971ea6021cd4f3bb1bc",
+      "source": "https://financialmodelingprep.com/image-stock/TTWO.png",
+      "status": "downloaded"
+    },
+    "TXN": {
+      "asset": "TXN.png",
+      "sha256": "fc1b11cb1aef71ccd77f3d10f028d9e4758ad02ba3864188037ed1a556352e5e",
+      "source": "https://financialmodelingprep.com/image-stock/TXN.png",
+      "status": "downloaded"
+    },
+    "U": {
+      "asset": "U.png",
+      "sha256": "f86b7bf4de4fa588dc84ef95616b0f452557c9c02a711f323441f58f6cf45f09",
+      "source": "https://financialmodelingprep.com/image-stock/U.png",
+      "status": "downloaded"
+    },
+    "UAL": {
+      "asset": "UAL.png",
+      "sha256": "9770a188f9d48e7acd39c90c2e8097e3d71e609672eef9669d6d6522c5ac477f",
+      "source": "https://financialmodelingprep.com/image-stock/UAL.png",
+      "status": "downloaded"
+    },
+    "UBER": {
+      "asset": "UBER.png",
+      "sha256": "faf556253f9d54babb60fae6a835b5614d36dab786d8e80374e02222e5f6f48e",
+      "source": "https://financialmodelingprep.com/image-stock/UBER.png",
+      "status": "downloaded"
+    },
+    "UEC": {
+      "asset": "UEC.png",
+      "sha256": "6124fd3345c2221282e5aafb5b303f738fba91831da8220dbdca89976148353f",
+      "source": "https://financialmodelingprep.com/image-stock/UEC.png",
+      "status": "downloaded"
+    },
+    "UMAC": {
+      "asset": "UMAC.png",
+      "sha256": "4fdc104f7f46b32f40bbcb334811b14ef50b202b0e0b41fd33706186d7e9dc02",
+      "source": "https://financialmodelingprep.com/image-stock/UMAC.png",
+      "status": "downloaded"
+    },
+    "UNH": {
+      "asset": "UNH.png",
+      "sha256": "a7a3e0a1f84a71335e447451263daba5e7d3ec5fd9b4f3a38ebd5194f7010f49",
+      "source": "https://financialmodelingprep.com/image-stock/UNH.png",
+      "status": "downloaded"
+    },
+    "UNITREE": {
+      "asset": "UNITREE.svg",
+      "sha256": "159179ee9b4df9a6cf6363193c9e2aa2eed66967728c402ba3c0bd09130bcc59",
+      "source": "https://www.unitree.com/unitree-favicon.svg",
+      "status": "downloaded"
+    },
+    "UPST": {
+      "asset": "UPST.png",
+      "sha256": "d9ea5cc25b48c0c166bb39fd26e65c4f99eec03439fed83bbfd8bff73a424283",
+      "source": "https://financialmodelingprep.com/image-stock/UPST.png",
+      "status": "downloaded"
+    },
+    "URA": {
+      "asset": "URA.png",
+      "sha256": "e9438b78075f21118eceff8de26005170b43caf925562b1aa66a119800da725b",
+      "source": "https://financialmodelingprep.com/image-stock/URA.png",
+      "status": "downloaded"
+    },
+    "URANIUM": {
+      "asset": "URANIUM.svg",
+      "sha256": "8ab9de746163e788dd09b9c10c84920d8952b799a8733676450dc43fbff6e18c",
+      "source": "https://app.trade.xyz/markets/uranium.svg",
+      "status": "downloaded"
+    },
+    "URNM": {
+      "asset": "URNM.svg",
+      "sha256": "8ab9de746163e788dd09b9c10c84920d8952b799a8733676450dc43fbff6e18c",
+      "source": "https://app.trade.xyz/markets/urnm.svg",
+      "status": "downloaded"
+    },
+    "UROY": {
+      "asset": "UROY.png",
+      "sha256": "1f2cf845d61bb2504ac0891edd9121511a4b99951b94627d4523c5fd54bca26e",
+      "source": "https://financialmodelingprep.com/image-stock/UROY.png",
+      "status": "downloaded"
+    },
+    "USAR": {
+      "asset": "USAR.svg",
+      "sha256": "9d2c521586e0eabd9bf8b3a4cf2a0b903d5b099770531384afbdf80d881be48b",
+      "source": "https://app.trade.xyz/markets/usar.svg",
+      "status": "downloaded"
+    },
+    "USO": {
+      "asset": "USO.png",
+      "sha256": "af5d524220a8af45883299525a7d7eee10641c808e7285f646facdbb2b04de52",
+      "source": "https://financialmodelingprep.com/image-stock/USO.png",
+      "status": "downloaded"
+    },
+    "UUP": {
+      "asset": "UUP.png",
+      "sha256": "d907d63fb153c04dba94f1dc91670783e6ebb0fde66951f240df60890b91055c",
+      "source": "https://financialmodelingprep.com/image-stock/UUP.png",
+      "status": "downloaded"
+    },
+    "UUUU": {
+      "asset": "UUUU.png",
+      "sha256": "e3f9ae87a2c89ac7c0bb9df20d8e00fcfcc9483c6d328218240f6cd3327a7e9e",
+      "source": "https://financialmodelingprep.com/image-stock/UUUU.png",
+      "status": "downloaded"
+    },
+    "UVIX": {
+      "asset": "UVIX.png",
+      "sha256": "17ebbaadc5da91422757c86804e6aa0e0b638929c42b018d45b8965a37fa435c",
+      "source": "https://financialmodelingprep.com/image-stock/UVIX.png",
+      "status": "downloaded"
+    },
+    "UVXY": {
+      "asset": "UVXY.png",
+      "sha256": "e12706f447a1b580f4318a49e7113ac032ecdfe3bd57a4ef217712e1288630c6",
+      "source": "https://financialmodelingprep.com/image-stock/UVXY.png",
+      "status": "downloaded"
+    },
+    "V": {
+      "asset": "V.png",
+      "sha256": "c5f2b68e6c2d8c2ee61e1bcf2913e444d4418a2b14231f320e99095448ed7c64",
+      "source": "https://financialmodelingprep.com/image-stock/V.png",
+      "status": "downloaded"
+    },
+    "VCIG": {
+      "asset": "VCIG.png",
+      "sha256": "697ba8cc9904eb54b9e9cd2f5f078cad63801d1d16dd490c157cc85fa8fa00c1",
+      "source": "https://financialmodelingprep.com/image-stock/VCIG.png",
+      "status": "downloaded"
+    },
+    "VELO": {
+      "asset": "VELO.png",
+      "sha256": "3599282b3a419067bb0c70e5bf8f852e927e8807646b04d3ea5593a9243a8c58",
+      "source": "https://financialmodelingprep.com/image-stock/VELO.png",
+      "status": "downloaded"
+    },
+    "VG": {
+      "asset": "VG.png",
+      "sha256": "0952caa8d7ed22d425cc864dbe158f282370f009edce934909a83328630c1e6f",
+      "source": "https://financialmodelingprep.com/image-stock/VG.png",
+      "status": "downloaded"
+    },
+    "VICR": {
+      "asset": "VICR.png",
+      "sha256": "15fa2add59bbc26df1dd11510f0a48b83c47e640babc4659a6fe25dd6a0f8e31",
+      "source": "https://financialmodelingprep.com/image-stock/VICR.png",
+      "status": "downloaded"
+    },
+    "VIX": {
+      "asset": "VIX.svg",
+      "sha256": "e008b4f942109d5ed88ef1727dddae11e43b4ae97f72f607f28a7cbd44ac50d0",
+      "source": "https://app.trade.xyz/markets/vix.svg",
+      "status": "downloaded"
+    },
+    "VKTX": {
+      "asset": "VKTX.png",
+      "sha256": "5cea46fa1883fbf1b36348259ba3a4814354c0e6d4886d920a20fda96937a36a",
+      "source": "https://financialmodelingprep.com/image-stock/VKTX.png",
+      "status": "downloaded"
+    },
+    "VMAR": {
+      "asset": "VMAR.png",
+      "sha256": "e6f89d0967aa271ffe58ef5555baf172ad2c5a5620a00906ad71f755893c5d0e",
+      "source": "https://financialmodelingprep.com/image-stock/VMAR.png",
+      "status": "downloaded"
+    },
+    "VNDA": {
+      "asset": "VNDA.png",
+      "sha256": "08e9a1ad8edfc966892bfa97524a767952cae12cb500eda44715faa0a1c97731",
+      "source": "https://financialmodelingprep.com/image-stock/VNDA.png",
+      "status": "downloaded"
+    },
+    "VOL": {
+      "asset": "VOL.svg",
+      "sha256": "d6dfd4971e7e58886437891e4e7e2d9bbb381cd7d0aa526cc2d7b1ceafccc105",
+      "source": "https://app.trade.xyz/markets/vol.svg",
+      "status": "downloaded"
+    },
+    "VOO": {
+      "asset": "VOO.png",
+      "sha256": "b1909ad392078d27b84c242251b4a56fa6b95db565a58e354144a7d10c9dd6de",
+      "source": "https://financialmodelingprep.com/image-stock/VOO.png",
+      "status": "downloaded"
+    },
+    "VPG": {
+      "asset": "VPG.png",
+      "sha256": "0195e500c55f91f0c1ae2afa2fd08a8ee9296babe963fbcfd65b9e33dc5c8857",
+      "source": "https://financialmodelingprep.com/image-stock/VPG.png",
+      "status": "downloaded"
+    },
+    "VRT": {
+      "asset": "VRT.png",
+      "sha256": "88787f18b9403f6fb48deda3a789aefce95f8d0966295b6a3063730c294dcd7b",
+      "source": "https://financialmodelingprep.com/image-stock/VRT.png",
+      "status": "downloaded"
+    },
+    "VST": {
+      "asset": "VST.png",
+      "sha256": "0679571dc7f6d4c7dc892ed41318565163e4dec442c8bb77355ebf2ab4065e8f",
+      "source": "https://financialmodelingprep.com/image-stock/VST.png",
+      "status": "downloaded"
+    },
+    "VXX": {
+      "asset": "VXX.png",
+      "sha256": "a7f1d649bd15676973b5697f73e2900415837db37c8a97b3664d851f24e18323",
+      "source": "https://financialmodelingprep.com/image-stock/VXX.png",
+      "status": "downloaded"
+    },
+    "WBD": {
+      "asset": "WBD.png",
+      "sha256": "4f1fd69dbfc605a319731b5f7a9409e2aba73061a44d262dc99b71dd8c7e3b30",
+      "source": "https://financialmodelingprep.com/image-stock/WBD.png",
+      "status": "downloaded"
+    },
+    "WDC": {
+      "asset": "WDC.svg",
+      "sha256": "522d4cac38073ef63c5150271e66ca93cdec99ffbcee5019a634f40898c4b8e3",
+      "source": "https://app.trade.xyz/markets/wdc.svg",
+      "status": "downloaded"
+    },
+    "WEN": {
+      "asset": "WEN.png",
+      "sha256": "fa178dfd1bd50174af04ee49637df8d0bb1b773fa7d1b6d972442690e634e0c4",
+      "source": "https://financialmodelingprep.com/image-stock/WEN.png",
+      "status": "downloaded"
+    },
+    "WGMI": {
+      "asset": "WGMI.png",
+      "sha256": "4b0244702a0b2f5a539c71513a7ceb857ee7c8ee2cb36e4cbbe4606a878e43e1",
+      "source": "https://financialmodelingprep.com/image-stock/WGMI.png",
+      "status": "downloaded"
+    },
+    "WHEAT": {
+      "asset": "WHEAT.svg",
+      "sha256": "aa43d14447a773cd965c1355996b4aabbdf9c0444de5e5e1fc2256e2ac067dad",
+      "source": "https://app.trade.xyz/markets/wheat.svg",
+      "status": "downloaded"
+    },
+    "WIX": {
+      "asset": "WIX.png",
+      "sha256": "e59b7ecea316fc0d92cd8745a70a99a6b4c643cdb55eae57695619a54d8fd7d8",
+      "source": "https://financialmodelingprep.com/image-stock/WIX.png",
+      "status": "downloaded"
+    },
+    "WKEY": {
+      "asset": "WKEY.png",
+      "sha256": "0c98306cefd6dca5d98ea25abfafc725909cd8c218e721ce5c56ef9af9a930d8",
+      "source": "https://financialmodelingprep.com/image-stock/WKEY.png",
+      "status": "downloaded"
+    },
+    "WMT": {
+      "asset": "WMT.png",
+      "sha256": "82e14875b3208d523542a8b6d27536233db08feae275aa57cd0212cc1fd7587f",
+      "source": "https://financialmodelingprep.com/image-stock/WMT.png",
+      "status": "downloaded"
+    },
+    "WNW": {
+      "asset": "WNW.png",
+      "sha256": "907ba560f07366a24f5b7791c4d5f1c65125d5f6b75c284c4b86f994a698a77c",
+      "source": "https://financialmodelingprep.com/image-stock/WNW.png",
+      "status": "downloaded"
+    },
+    "WOLF": {
+      "asset": "WOLF.png",
+      "sha256": "f6f7c9a94bbc3e140a2ae9371051efc7a54dfbcd7abd82b3f2aff48170c3453a",
+      "source": "https://financialmodelingprep.com/image-stock/WOLF.png",
+      "status": "downloaded"
+    },
+    "WTI": {
+      "asset": "WTI.png",
+      "sha256": "59c9f74fa376154b551cf88cf8e5646988404e217dd80e924bca0c0cbdb94500",
+      "source": "https://financialmodelingprep.com/image-stock/WTI.png",
+      "status": "downloaded"
+    },
+    "WULF": {
+      "asset": "WULF.png",
+      "sha256": "adf8d97116858774d0b31dde7d69f86fff117657921a73c9fbfa545f6756e31f",
+      "source": "https://financialmodelingprep.com/image-stock/WULF.png",
+      "status": "downloaded"
+    },
+    "WVE": {
+      "asset": "WVE.png",
+      "sha256": "6383f85c207c8f7f6d34e02e18f8c09217b598cb44bd93786add4539aa053239",
+      "source": "https://financialmodelingprep.com/image-stock/WVE.png",
+      "status": "downloaded"
+    },
+    "WYFI": {
+      "asset": "WYFI.png",
+      "sha256": "fed84bf9eebe57cab61052e854344c933cc684172cfac80f2b6b2aae8740a60e",
+      "source": "https://financialmodelingprep.com/image-stock/WYFI.png",
+      "status": "downloaded"
+    },
+    "XBI": {
+      "asset": "XBI.png",
+      "sha256": "7dda35b340d5da28acb03d02ac9eff24837dbccb0bd23735d36a9926fec629c3",
+      "source": "https://financialmodelingprep.com/image-stock/XBI.png",
+      "status": "downloaded"
+    },
+    "XERS": {
+      "asset": "XERS.png",
+      "sha256": "fa3e5a82719043205990774b1d4b844fa53a210ac8d65de1094e34dd92056ead",
+      "source": "https://financialmodelingprep.com/image-stock/XERS.png",
+      "status": "downloaded"
+    },
+    "XLE": {
+      "asset": "XLE.svg",
+      "sha256": "5e7c8149248b783c185bde8503d180b822ffd170a9991d5140fe75763724e400",
+      "source": "https://app.trade.xyz/markets/xle.svg",
+      "status": "downloaded"
+    },
+    "XLF": {
+      "asset": "XLF.png",
+      "sha256": "7dda35b340d5da28acb03d02ac9eff24837dbccb0bd23735d36a9926fec629c3",
+      "source": "https://financialmodelingprep.com/image-stock/XLF.png",
+      "status": "downloaded"
+    },
+    "XLI": {
+      "asset": "XLI.png",
+      "sha256": "cf9df1d186512359ce5a7101ca06b77f8074a0de5a1f3f61114f1ea2d5fed422",
+      "source": "https://financialmodelingprep.com/image-stock/XLI.png",
+      "status": "downloaded"
+    },
+    "XLK": {
+      "asset": "XLK.png",
+      "sha256": "cf9df1d186512359ce5a7101ca06b77f8074a0de5a1f3f61114f1ea2d5fed422",
+      "source": "https://financialmodelingprep.com/image-stock/XLK.png",
+      "status": "downloaded"
+    },
+    "XLP": {
+      "asset": "XLP.png",
+      "sha256": "cf9df1d186512359ce5a7101ca06b77f8074a0de5a1f3f61114f1ea2d5fed422",
+      "source": "https://financialmodelingprep.com/image-stock/XLP.png",
+      "status": "downloaded"
+    },
+    "XLRE": {
+      "asset": "XLRE.png",
+      "sha256": "cf9df1d186512359ce5a7101ca06b77f8074a0de5a1f3f61114f1ea2d5fed422",
+      "source": "https://financialmodelingprep.com/image-stock/XLRE.png",
+      "status": "downloaded"
+    },
+    "XLU": {
+      "asset": "XLU.png",
+      "sha256": "cf9df1d186512359ce5a7101ca06b77f8074a0de5a1f3f61114f1ea2d5fed422",
+      "source": "https://financialmodelingprep.com/image-stock/XLU.png",
+      "status": "downloaded"
+    },
+    "XLV": {
+      "asset": "XLV.png",
+      "sha256": "cf9df1d186512359ce5a7101ca06b77f8074a0de5a1f3f61114f1ea2d5fed422",
+      "source": "https://financialmodelingprep.com/image-stock/XLV.png",
+      "status": "downloaded"
+    },
+    "XLY": {
+      "asset": "XLY.png",
+      "sha256": "e5f2cd1542a556ce9886f1f09dcf35fcee01501ca74a85f5a52bfc77afbaeb02",
+      "source": "https://financialmodelingprep.com/image-stock/XLY.png",
+      "status": "downloaded"
+    },
+    "XOM": {
+      "asset": "XOM.png",
+      "sha256": "f6d7a9750e4f5790c1d0a91bae61637a8f5f64ffaf9c338d146a92c4f7d145d2",
+      "source": "https://financialmodelingprep.com/image-stock/XOM.png",
+      "status": "downloaded"
+    },
+    "XPEV": {
+      "asset": "XPEV.png",
+      "sha256": "48e7d7503853572f56eee735e4e9dafc166bfae3d04c6760c0286e12affcd40c",
+      "source": "https://financialmodelingprep.com/image-stock/XPEV.png",
+      "status": "downloaded"
+    },
+    "XRX": {
+      "asset": "XRX.png",
+      "sha256": "7ecebe321b44f6cd05da8ed65f0f3dcfba7814827a5b03b73ad6e54bbd16c7b3",
+      "source": "https://financialmodelingprep.com/image-stock/XRX.png",
+      "status": "downloaded"
+    },
+    "XYZ": {
+      "asset": "XYZ.png",
+      "sha256": "cae7b623e04e375c4b74bc465b552167717bd94bd7e135db712e7050993559e3",
+      "source": "https://financialmodelingprep.com/image-stock/XYZ.png",
+      "status": "downloaded"
+    },
+    "XYZ100": {
+      "asset": "XYZ100.png",
+      "sha256": "bffb2c0ddb40ee9ca030ef201e46dcae3bf991099184f1041d3be4015b9af877",
+      "source": "https://app.trade.xyz/markets/100.png",
+      "status": "downloaded"
+    },
+    "YMTC": {
+      "asset": "YMTC.png",
+      "sha256": "af41c5d8fe72693723f86dee181ec7ad0a75652090af1efc945926a37952b9e6",
+      "source": "https://www.ymtc.com/cn/1ca/image/20210521/671aa77220b00477809847e105bbf72e.png",
+      "status": "downloaded"
+    },
+    "ZENA": {
+      "asset": "ZENA.png",
+      "sha256": "774260bc5959e32e77d280c55a393331303e3fdf3580527e2f2731398d97bf45",
+      "source": "https://financialmodelingprep.com/image-stock/ZENA.png",
+      "status": "downloaded"
+    },
+    "ZETA": {
+      "asset": "ZETA.png",
+      "sha256": "d0d365ad34eb08b480a876a321ff4fda913f94cae72c254c4a5e15273a64dfbd",
+      "source": "https://financialmodelingprep.com/image-stock/ZETA.png",
+      "status": "downloaded"
+    },
+    "ZHIPU": {
+      "asset": "ZHIPU.svg",
+      "sha256": "388fac2bc64dc78ce9badfd3d0795104abc59cbde729952a35e7f8817e5bcc95",
+      "source": "https://app.trade.xyz/markets/zhipu.svg",
+      "status": "downloaded"
+    },
+    "ZIM": {
+      "asset": "ZIM.png",
+      "sha256": "9091a5bafe6097ab33f96040149400e7eb51af17bb182e213cc0f715e7a44609",
+      "source": "https://financialmodelingprep.com/image-stock/ZIM.png",
+      "status": "downloaded"
+    },
+    "ZM": {
+      "asset": "ZM.svg",
+      "sha256": "f600c172d0872c5e7cf5aa58236192db50a8ba46bd1c15679e30948d20b0db81",
+      "source": "https://app.trade.xyz/markets/zm.svg",
+      "status": "downloaded"
+    },
+    "ZS": {
+      "asset": "ZS.png",
+      "sha256": "4d24b7feb620c74ba35fca1fb321865e33ba5d6984c0565bbcf6d30e5e38eb35",
+      "source": "https://financialmodelingprep.com/image-stock/ZS.png",
+      "status": "downloaded"
+    },
+    "ZSL": {
+      "asset": "ZSL.png",
+      "sha256": "e12706f447a1b580f4318a49e7113ac032ecdfe3bd57a4ef217712e1288630c6",
+      "source": "https://financialmodelingprep.com/image-stock/ZSL.png",
+      "status": "downloaded"
+    }
+  }
+}

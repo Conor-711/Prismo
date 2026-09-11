@@ -198,7 +198,7 @@ enum AIResearchAssistant {
                     money.market
                 ),
                 metric: "Notional change %@".bSmartLocalized(
-                    abs(money.notionalChange).formatted(.currency(code: "USD").precision(.fractionLength(0)))
+                    abs(money.notionalChange).formatted(.bSmartDollars.precision(.fractionLength(0)))
                 )
             ))
         }
@@ -372,7 +372,7 @@ enum AIResearchAssistant {
             if position.averageCost > 0 {
                 return "Held position · %@ of portfolio · cost %@".bSmartLocalized(
                     weight.formatted(.percent.precision(.fractionLength(0))),
-                    position.averageCost.formatted(.currency(code: "USD"))
+                    position.averageCost.formatted(.bSmartDollars)
                 )
             }
             return "Held position · %@ of portfolio".bSmartLocalized(

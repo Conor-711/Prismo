@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>bSmart · 首页三场景设计对比</title>
+  <meta name="description" content="持仓与追踪、市场情况、聪明动态：三种可横滑首页布局的交互原型。">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="review-header">
+    <div class="wordmark">bSmart<span>DESIGN REVIEW / 07 SEP 2026</span></div>
+    <div class="review-heading"><h1>同一个首页，三条更短的路径。</h1><p>先选择需求，再看内容。保留既有信息，不再堆在一条长页面里。</p></div>
+    <span class="review-status">交互原型 · 未修改 App</span>
+  </header>
+  <div class="review-controls">
+    <div class="review-modes" role="group" aria-label="布局方案">
+      <button data-mode="compare" class="active"><i data-lucide="columns-3"></i><span>并排对比</span></button>
+      <button data-mode="a">A <span>轻量标签</span></button>
+      <button data-mode="b">B <span>原生分段</span></button>
+      <button data-mode="c">C <span>单手切换</span></button>
+    </div>
+    <div class="review-extras">
+      <select id="scenario" aria-label="预览数据状态"><option value="normal">已有持仓与追踪</option><option value="empty">无持仓与追踪</option><option value="quiet">近 30 天无动态</option></select>
+      <button class="icon-button" id="theme" aria-label="切换白天模式" title="切换白天模式"><i data-lucide="sun"></i></button>
+      <a class="icon-button" href="#rationale" aria-label="查看研究与取舍" title="查看研究与取舍"><i data-lucide="file-text"></i></a>
+    </div>
+  </div>
+  <main>
+    <section class="stage" aria-label="三种首页方案">
+      <div class="stage-toolbar"><p><b>同内容对比</b><span>点击标签或在手机内容区左右拖动；触屏支持横滑。</span></p><div class="sync-tabs" role="group" aria-label="同时预览子页"><button data-sync="0" class="active">持仓与追踪</button><button data-sync="1">市场情况</button><button data-sync="2">聪明动态</button></div></div>
+      <div id="prototypes" class="prototypes" data-mode="compare"></div>
+      <p class="data-note">观点、作者头像与排名取自项目本地快照；展示原始日期，不模拟实时更新。持仓、追踪名单和市场分组仅为布局样例，不代表你的实际账户或新的推荐结果。追踪与已读操作只在此原型内生效。</p>
+    </section>
+    <section id="rationale" class="rationale">
+      <div class="section-title"><span>DESIGN DECISION</span><h2>推荐 A：导航要明显，内容要先出现。</h2></div>
+      <div class="decision-grid">
+        <article><b>01 / 分流，不再叠加</b><h3>持仓看变化，市场找机会，动态看人。</h3><p>持仓相关与追踪动态只在第一栏；热门与阿尔法只在第二栏；按投资者聚合的动态独立放在第三栏。价格观点图留在标的详情。底部主导航不增加入口。</p></article>
+        <article><b>02 / 一条横轴</b><h3>横滑只负责切换子页面。</h3><p>市场页仍显示两张上下排列的热门卡片，但不再嵌套横向轮播。想看更多，进入完整列表。纵向阅读、横向切页，职责明确。</p></article>
+        <article><b>03 / 不打断阅读</b><h3>三个独立滚动位置，一套阅读状态。</h3><p>切页不回顶部，详情返回保留位置；同一证据的已读状态跨模块同步。默认进入持仓与追踪。无持仓时提供添加入口，无动态时如实留空。</p></article>
+      </div>
+      <div class="comparison-wrap"><table><thead><tr><th>方案</th><th>优势</th><th>取舍</th><th>建议</th></tr></thead><tbody><tr><td>A · 顶部文字标签</td><td>三种需求同时可见，选中下划线明确，最少占用内容高度</td><td>标签在顶部，单手依靠横滑补充</td><td><strong>优先采用</strong></td></tr><tr><td>B · 原生分段控件</td><td>选中状态最强，分组感清楚，接近 iOS 原生习惯</td><td>与页面内筛选控件容易混淆；长标签在小屏更紧</td><td>稳妥备选</td></tr><tr><td>C · 底部单手切换</td><td>不用伸手到顶部，当前场景可以用大标题表达</td><td>与底部主导航形成双层导航，认知和空间成本更高</td><td>对照验证</td></tr></tbody></table></div>
+      <div class="section-title research-title"><span>RESEARCH NOTES</span><h2>参考成熟的信息分流方式，不复制交易终端。</h2><p>依据官方公开文档研究信息架构。并未将其文档中的标签切换等同于已验证的原生横滑手势；横滑交互是本次 bSmart 方案。</p></div>
+      <div class="sources">
+        <a href="https://help.stocktwits.com/c/navigating/articles/home-feed" target="_blank" rel="noopener"><span>01 / STOCKTWITS</span><h3>首页顶部按关注对象分流 <i data-lucide="arrow-up-right"></i></h3><p>Following、Watchlist、Trending、Suggested 将追踪、标的与发现拆成不同视图。最贴近本次三场景首页。</p></a>
+        <a href="https://uk.help.yahoo.com/kb/SLN24700.html" target="_blank" rel="noopener"><span>02 / YAHOO FINANCE</span><h3>个人组合与市场浏览分开 <i data-lucide="arrow-up-right"></i></h3><p>iOS 官方指南将组合放在 Home，市场放在 Markets。借鉴任务边界，不照搬它的五个一级入口。</p></a>
+        <a href="https://www.tradingview.com/support/solutions/43000734013-filter-by-watchlist/" target="_blank" rel="noopener"><span>03 / TRADINGVIEW</span><h3>让内容跟随自己的标的 <i data-lucide="arrow-up-right"></i></h3><p>新闻流可按用户选定的自选列表过滤。对应第一栏“与我有关”，而非再次展示泛市场内容。</p></a>
+        <a href="https://developer.apple.com/design/human-interface-guidelines/segmented-controls" target="_blank" rel="noopener"><span>04 / APPLE HIG</span><h3>相关子视图保持同级 <i data-lucide="arrow-up-right"></i></h3><p>分段控件适合切换相关子视图；独立 App 功能用主导航。首页三栏不应挤进底部一级 Tab。</p></a>
+      </div>
+      <p class="footnote">评审范围：布局、分流、横滑与阅读路径。未改 SwiftUI、数据管道、Smart 排名或生产配置。原型窗口按 2026-09-07 的本地数据样本固定展示。</p>
+    </section>
+  </main>
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

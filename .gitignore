@@ -84,6 +84,8 @@ marketing/remotion/cap/test/
 /data/reports/sv_indicator_event_evidence.csv
 /twitter_selected_tickers_unlabeled_sample_100_quick_labels.csv
 /data/runtime/
+/data/.x-daily.lock
+/supabase/ios-account/supabase/.temp/
 /data/reports/ui/
 
 # OS / editor

@@ -712,14 +712,14 @@ private struct SmartMoneyCohortSummary: View {
                 Spacer()
                 Text(netLabel)
                     .font(.caption.weight(.bold))
-                    .foregroundStyle(netRatio >= 0 ? BSmartColor.brand : BSmartColor.bear)
+                    .foregroundStyle(netRatio >= 0 ? BSmartColor.bull : BSmartColor.bear)
                     .monospacedDigit()
             }
 
             GeometryReader { proxy in
                 HStack(spacing: 2) {
                     Rectangle()
-                        .fill(BSmartColor.brand)
+                        .fill(BSmartColor.bull)
                         .frame(width: max(2, proxy.size.width * longShare))
                     Rectangle()
                         .fill(BSmartColor.bear)
@@ -729,7 +729,7 @@ private struct SmartMoneyCohortSummary: View {
             .clipShape(Capsule())
 
             HStack(spacing: BSmartSpacing.large) {
-                cohortMetric("Long", compactCurrency(longNotional), BSmartColor.brand)
+                cohortMetric("Long", compactCurrency(longNotional), BSmartColor.bull)
                 cohortMetric("Short", compactCurrency(shortNotional), BSmartColor.bear)
                 cohortMetric("Gross", compactCurrency(grossNotional), BSmartColor.primaryText)
                 Spacer(minLength: 0)
@@ -783,7 +783,7 @@ private struct SmartRankBadge: View {
     }
 
     private var foreground: Color {
-        rank == 1 ? BSmartColor.pulseInk : accent
+        rank == 1 ? BSmartColor.onAccent : accent
     }
 
     private var fill: Color {
@@ -907,7 +907,7 @@ private struct SmartMoneyRow: View {
                     VStack(alignment: .trailing, spacing: 2) {
                         Text(compactSignedCurrency(signal.netPnl ?? 0))
                             .font(.subheadline.weight(.bold))
-                            .foregroundStyle((signal.netPnl ?? 0) >= 0 ? BSmartColor.brand : BSmartColor.bear)
+                            .foregroundStyle((signal.netPnl ?? 0) >= 0 ? BSmartColor.bull : BSmartColor.bear)
                             .monospacedDigit()
                         Text("Win %@".bSmartLocalized(percent(signal.winRate)))
                             .font(.caption2)
@@ -985,6 +985,7 @@ private struct SmartAssetCluster: View {
         HStack(spacing: -5) {
             ForEach(Array(tickers.prefix(3)), id: \.self) { ticker in
                 BSmartAssetMark(ticker: ticker, size: 22)
+                    .bSmartTickerDestination(ticker)
                     .frame(width: 22, height: 22)
                     .background(BSmartColor.ink)
                     .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
@@ -1060,53 +1061,9 @@ private extension View {
     }
 }
 
-struct SmartPlatformMark: View {
-    let platform: String
-    var size: CGFloat = 16
-
-    private var normalized: String { platform.lowercased() }
-
-    var body: some View {
-        Group {
-            if normalized.contains("youtube") {
-                Image(systemName: "play.rectangle.fill")
-                    .foregroundStyle(Color.red)
-            } else if normalized.contains("reddit") {
-                Text("r/")
-                    .font(.system(size: size * 0.66, weight: .black, design: .rounded))
-                    .foregroundStyle(Color.orange)
-            } else if normalized.contains("xueqiu") || normalized.contains("雪球") {
-                Text("雪")
-                    .font(.system(size: size * 0.62, weight: .black))
-                    .foregroundStyle(BSmartColor.sky)
-            } else if normalized.contains("toss") {
-                Text("T")
-                    .font(.system(size: size * 0.68, weight: .black))
-                    .foregroundStyle(BSmartColor.sky)
-            } else if normalized.contains("hyper") {
-                Text("H")
-                    .font(.system(size: size * 0.66, weight: .black))
-                    .foregroundStyle(BSmartColor.sky)
-            } else if normalized == "x" || normalized.contains("twitter") {
-                Text("X")
-                    .font(.system(size: size * 0.7, weight: .black))
-                    .foregroundStyle(BSmartColor.primaryText)
-            } else {
-                Image(systemName: "network")
-                    .font(.system(size: size * 0.62, weight: .bold))
-                    .foregroundStyle(BSmartColor.secondaryText)
-            }
-        }
-        .frame(width: size, height: size)
-        .background(BSmartColor.elevated)
-        .clipShape(RoundedRectangle(cornerRadius: size * 0.28, style: .continuous))
-        .accessibilityLabel(platform)
-    }
-}
 
 private enum SmartAccountDetailSection: String, CaseIterable, Identifiable {
     case overview = "Overview"
-    case views = "Views"
     case trackRecord = "Track record"
 
     var id: Self { self }
@@ -1116,6 +1073,7 @@ struct SmartAccountDetailView: View {
     @EnvironmentObject private var model: AppModel
     let account: SmartAccountProfile
     @State private var section: SmartAccountDetailSection = .overview
+    @State private var showsAllViews = false
 
     private var updates: [SmartAccountUpdate] { model.accountEvidence(for: account) }
     private var representativeWorks: [SmartAccountUpdate] {
@@ -1140,16 +1098,14 @@ struct SmartAccountDetailView: View {
                     SmartAccountCurrentViewsSection(insights: insights)
                     SmartAccountLatestViewsSection(
                         updates: insights.latestViews,
-                        limit: 4,
+                        limit: showsAllViews ? nil : 4,
                         onViewAll: {
                             withAnimation(BSmartMotion.quick) {
-                                section = .views
+                                showsAllViews = true
                             }
                         }
                     )
                     scoreProvenance
-                case .views:
-                    SmartAccountLatestViewsSection(updates: insights.latestViews)
                 case .trackRecord:
                     benchmarkAbility
                     viewEvidence
@@ -1178,109 +1134,9 @@ struct SmartAccountDetailView: View {
         .accessibilityIdentifier("smart.account.detail.section")
     }
 
-    @ViewBuilder
     private var viewEvidence: some View {
-        VStack(alignment: .leading, spacing: BSmartSpacing.medium) {
-            BSmartSectionHeader(
-                title: "Representative works",
-                detail: "Top 3 tickers by cumulative Score contribution"
-            )
-
-            if representativeWorks.isEmpty {
-                HStack(spacing: BSmartSpacing.small) {
-                    if model.isLoadingAccountEvidence(account) { ProgressView() }
-                    Text("No settled representative work with price evidence is available yet.")
-                }
-                .font(.subheadline)
-                .foregroundStyle(BSmartColor.secondaryText)
-            } else {
-                ForEach(Array(representativeWorks.enumerated()), id: \.element.id) { index, update in
-                    representativeEvidenceCard(update: update, index: index)
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func representativeEvidenceCard(update: SmartAccountUpdate, index: Int) -> some View {
-        if let evidence = update.priceEvidence {
-            VStack(alignment: .leading, spacing: BSmartSpacing.medium) {
-                HStack(alignment: .top) {
-                    HStack(spacing: BSmartSpacing.small) {
-                        BSmartAssetMark(ticker: update.ticker, size: 36)
-                        Text(update.ticker)
-                            .font(.title3.weight(.black))
-                            .lineLimit(1)
-                            .fixedSize(horizontal: true, vertical: false)
-                        BSmartTag(text: directionLabel(update.direction), color: update.direction.color)
-                        BSmartTag(text: update.horizon, color: BSmartColor.sky)
-                    }
-                    Spacer()
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text(scoreContributionLabel(update.representativeTickerContribution))
-                            .font(.headline.weight(.black))
-                            .foregroundStyle(BSmartColor.brand)
-                            .monospacedDigit()
-                        Text("Score contribution".bSmartLocalized)
-                            .font(.caption2)
-                            .foregroundStyle(BSmartColor.tertiaryText)
-                    }
-                }
-
-                HStack {
-                    BSmartTag(
-                        text: "Representative ticker #%d".bSmartLocalized(
-                            update.representativeTickerRank ?? index + 1
-                        ),
-                        color: BSmartColor.gold
-                    )
-                    Text("%d contributing views".bSmartLocalized(
-                        update.representativeCallCount ?? evidence.opinionMarkers?.count ?? 1
-                    ))
-                    .font(.caption)
-                    .foregroundStyle(BSmartColor.secondaryText)
-                    Spacer()
-                }
-
-                EvidenceChartGuide(kind: "Price history", detail: "1–3 match evidence below")
-
-                PriceEvidenceChart(update: update, evidence: evidence)
-                    .frame(height: 196)
-
-                SmartAccountOpinionEvidenceList(update: update, evidence: evidence)
-
-                Text("Highest-contributing view".bSmartLocalized)
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(BSmartColor.tertiaryText)
-
-                Text(update.originalText ?? update.thesis)
-                    .font(.subheadline.weight(.medium))
-                    .lineLimit(5)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                HStack {
-                    Label("%@ daily OHLC".bSmartLocalized(evidence.source), systemImage: "checkmark.shield")
-                        .font(.caption2)
-                        .foregroundStyle(BSmartColor.tertiaryText)
-                    Spacer()
-                    BSmartDetailNavigationLink(id: "account-evidence-\(update.id)") {
-                        SmartAccountEvidenceDetailView(update: update)
-                    } label: {
-                        Label("View evidence", systemImage: "chevron.right")
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(BSmartColor.brand)
-                    }
-                }
-
-            }
-            .bSmartSurface()
-            .accessibilityIdentifier("smart.account.representative-work.\(index)")
-        }
-    }
-
-    private func scoreContributionLabel(_ contribution: Double?) -> String {
-        guard let contribution else { return "—" }
-        return contribution.formatted(.number.precision(.fractionLength(2)).sign(strategy: .always()))
+        SmartAccountRepresentativeWorks(works: representativeWorks, updates: updates,
+            isLoading: model.isLoadingAccountEvidence(account))
     }
 
     private var identityHeader: some View {
@@ -1431,16 +1287,7 @@ struct SmartAccountDetailView: View {
 
 struct SmartAccountEvidenceDetailView: View {
     let update: SmartAccountUpdate
-
-    private var sourceURL: URL? { update.sourceURL ?? update.evidenceURL }
-    private var preferredTranslation: String? {
-        let candidate = BSmartLocalization.isSimplifiedChinese
-            ? (update.translatedTextZH ?? update.translatedText)
-            : (update.translatedTextEN ?? update.translatedText)
-        guard let candidate, !candidate.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-              candidate != update.originalText else { return nil }
-        return candidate
-    }
+    @State private var traderRefresh = 0
 
     private func displayHorizon(_ value: String) -> String {
         value.lowercased() == "unknown" ? "Horizon unavailable".bSmartLocalized : value
@@ -1450,15 +1297,19 @@ struct SmartAccountEvidenceDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: BSmartSpacing.large) {
                 evidenceHeader
-                structuredCall
-                sourceEvidence
+                OpinionTradersSection(opinionID: update.id, ticker: update.ticker,
+                                     referencePrice: update.priceEvidence?.latestPrice, refresh: traderRefresh)
+                    .id(update.id)
+                OpinionReaderView(update: update)
+                if !update.displayableSupportingSources.isEmpty {
+                    OpinionSupportingSourcesSection(sources: update.displayableSupportingSources)
+                }
                 if let settlement = update.settlement {
                     settlementEvidence(settlement)
                 }
                 if let priceEvidence = update.priceEvidence {
                     priceContext(priceEvidence)
                 }
-                auditTrail
             }
             .padding(BSmartSpacing.large)
             .padding(.bottom, BSmartSpacing.xLarge)
@@ -1468,6 +1319,8 @@ struct SmartAccountEvidenceDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .accessibilityIdentifier("smart.account.evidence.detail")
         .bSmartDetailPage()
+        .bSmartTradeDock(symbol: update.ticker, opinionSource: .init(opinionID: update.id, ticker: update.ticker),
+                        onTradeDismiss: { traderRefresh += 1 })
         .bSmartPage()
     }
 
@@ -1475,6 +1328,7 @@ struct SmartAccountEvidenceDetailView: View {
         VStack(alignment: .leading, spacing: BSmartSpacing.medium) {
             HStack(alignment: .top, spacing: BSmartSpacing.medium) {
                 BSmartAvatar(url: update.authorAvatarURL, name: update.authorName, size: 46)
+                    .bSmartSubjectDestination(update)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(update.authorName)
                         .font(.headline.weight(.bold))
@@ -1482,6 +1336,7 @@ struct SmartAccountEvidenceDetailView: View {
                         .font(.caption)
                         .foregroundStyle(BSmartColor.secondaryText)
                 }
+                .bSmartSubjectDestination(update)
                 Spacer()
                 Text(update.score.formatted(.number.precision(.fractionLength(0))))
                     .font(.title3.weight(.black))
@@ -1490,6 +1345,7 @@ struct SmartAccountEvidenceDetailView: View {
             }
             HStack(spacing: BSmartSpacing.small) {
                 BSmartAssetMark(ticker: update.ticker, size: 30)
+                    .bSmartTickerDestination(update.ticker)
                 Text(update.ticker)
                     .font(.headline.weight(.black))
                 BSmartTag(text: directionLabel, color: update.direction.color)
@@ -1501,77 +1357,6 @@ struct SmartAccountEvidenceDetailView: View {
         }
     }
 
-    private var structuredCall: some View {
-        VStack(alignment: .leading, spacing: BSmartSpacing.medium) {
-            BSmartSectionHeader(
-                title: "Structured Call",
-                detail: "bSmart interpretation; verify against the source evidence below"
-            )
-            Text(update.thesis)
-                .font(.body.weight(.semibold))
-                .fixedSize(horizontal: false, vertical: true)
-            HStack(spacing: 0) {
-                evidenceMetric(label: "Direction", value: directionLabel)
-                Divider().overlay(BSmartColor.line)
-                evidenceMetric(label: "Horizon", value: displayHorizon(update.horizon))
-                Divider().overlay(BSmartColor.line)
-                evidenceMetric(label: "Target", value: targetLabel)
-            }
-            if let invalidation = update.invalidation, !invalidation.isEmpty {
-                Label(invalidation, systemImage: "shield.slash")
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(BSmartColor.secondaryText)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .bSmartSurface()
-    }
-
-    private var sourceEvidence: some View {
-        VStack(alignment: .leading, spacing: BSmartSpacing.medium) {
-            BSmartSectionHeader(
-                title: "Source evidence",
-                detail: "Exact public text kept separate from bSmart analysis"
-            )
-            if let span = update.evidenceSpan, !span.isEmpty {
-                VStack(alignment: .leading, spacing: 6) {
-                    Label("Evidence excerpt", systemImage: "quote.opening")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(BSmartColor.brand)
-                    Text(span)
-                        .font(.body.weight(.medium))
-                        .textSelection(.enabled)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .padding(BSmartSpacing.medium)
-                .background(BSmartColor.brand.opacity(0.08))
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(BSmartColor.brand.opacity(0.35), lineWidth: 1)
-                }
-            }
-            if let translation = preferredTranslation {
-                sourceText(title: "Complete translation", text: translation)
-                Divider().overlay(BSmartColor.line)
-            }
-            if let original = update.originalText, !original.isEmpty {
-                sourceText(title: "Original source text", text: original)
-            } else {
-                Text("The complete source text is unavailable; only the extracted evidence is shown.")
-                    .font(.caption)
-                    .foregroundStyle(BSmartColor.secondaryText)
-            }
-            if let sourceURL {
-                Link(destination: sourceURL) {
-                    Label("Open original source", systemImage: "arrow.up.right")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(BSmartColor.brand)
-                }
-            }
-        }
-        .bSmartSurface()
-    }
 
     private func settlementEvidence(_ settlement: SmartAccountSettlementEvidence) -> some View {
         VStack(alignment: .leading, spacing: BSmartSpacing.medium) {
@@ -1585,7 +1370,7 @@ struct SmartAccountEvidenceDetailView: View {
                     systemImage: settlement.actualHit == true ? "checkmark.circle.fill" : "xmark.circle.fill"
                 )
                 .font(.headline.weight(.bold))
-                .foregroundStyle(settlement.actualHit == true ? BSmartColor.brand : BSmartColor.bear)
+                .foregroundStyle(settlement.actualHit == true ? BSmartColor.bull : BSmartColor.bear)
                 Spacer()
                 Text(settlement.horizon)
                     .font(.caption.weight(.bold))
@@ -1621,44 +1406,13 @@ struct SmartAccountEvidenceDetailView: View {
             )
             EvidenceChartGuide(kind: "Price history", detail: "1–3 match evidence below")
             PriceEvidenceChart(update: update, evidence: evidence)
-                .frame(height: 230)
+                .frame(height: 286)
             SmartAccountOpinionEvidenceList(update: update, evidence: evidence)
             PriceEvidenceMilestones(update: update, evidence: evidence, settlement: update.settlement)
         }
         .bSmartSurface()
     }
 
-    private var auditTrail: some View {
-        VStack(alignment: .leading, spacing: BSmartSpacing.small) {
-            BSmartSectionHeader(title: "Audit trail", detail: "Data and scoring provenance")
-            auditRow("Published", update.publishedAt.formatted(date: .abbreviated, time: .shortened))
-            if let sourcePostId = update.sourcePostId { auditRow("Source post ID", sourcePostId) }
-            if let ingestedAt = update.ingestedAt {
-                auditRow("Ingested", ingestedAt.formatted(date: .abbreviated, time: .shortened))
-            }
-            if let processedAt = update.processedAt {
-                auditRow("Processed", processedAt.formatted(date: .abbreviated, time: .shortened))
-            }
-            if let scoreAsOf = update.authorScoreAsOf {
-                auditRow("Account Score as of", scoreAsOf.formatted(date: .abbreviated, time: .shortened))
-            }
-            if let version = update.callScoringVersion { auditRow("Call model", version) }
-            if let version = update.settlement?.settlementVersion { auditRow("Settlement model", version) }
-        }
-        .bSmartSurface()
-    }
-
-    private func sourceText(title: String, text: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title.bSmartLocalized)
-                .font(.caption.weight(.bold))
-                .foregroundStyle(BSmartColor.secondaryText)
-            Text(text)
-                .font(.body)
-                .textSelection(.enabled)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
 
     private func evidenceMetric(label: String, value: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -1675,18 +1429,6 @@ struct SmartAccountEvidenceDetailView: View {
         .padding(.horizontal, BSmartSpacing.small)
     }
 
-    private func auditRow(_ label: String, _ value: String) -> some View {
-        HStack(alignment: .firstTextBaseline) {
-            Text(label.bSmartLocalized)
-                .foregroundStyle(BSmartColor.tertiaryText)
-            Spacer(minLength: BSmartSpacing.medium)
-            Text(value)
-                .foregroundStyle(BSmartColor.primaryText)
-                .multilineTextAlignment(.trailing)
-                .textSelection(.enabled)
-        }
-        .font(.caption)
-    }
 
     private var directionLabel: String {
         switch update.direction {
@@ -1697,9 +1439,6 @@ struct SmartAccountEvidenceDetailView: View {
         }
     }
 
-    private var targetLabel: String {
-        update.targetPrice.map(currency) ?? "Not stated".bSmartLocalized
-    }
 
     private func settlementResultLabel(_ settlement: SmartAccountSettlementEvidence) -> String {
         guard settlement.status == "settled" else { return "Pending settlement".bSmartLocalized }
@@ -1712,7 +1451,7 @@ struct SmartAccountEvidenceDetailView: View {
     }
 
     private func currency(_ value: Double) -> String {
-        value.formatted(.currency(code: "USD").precision(.fractionLength(value >= 100 ? 0 : 2)))
+        value.formatted(.bSmartDollars.precision(.fractionLength(value >= 100 ? 0 : 2)))
     }
 
     private func roleLabel(_ role: String) -> String {
@@ -1743,187 +1482,14 @@ private struct EvidenceChartGuide: View {
     }
 }
 
-private struct PriceEvidenceChart: View {
-    let update: SmartAccountUpdate
-    let evidence: SmartAccountPriceEvidence
-
-    private var opinionMarkers: [SmartAccountOpinionMarker] {
-        if let markers = evidence.opinionMarkers, !markers.isEmpty { return markers }
-        return []
-    }
-
-    private var displayedMarkers: [SmartAccountOpinionMarker] {
-        opinionMarkers
-            .sorted { $0.contribution > $1.contribution }
-            .prefix(3)
-            .sorted { $0.publishedAt < $1.publishedAt }
-    }
-
-    private var range: ClosedRange<Double> {
-        let markerPrices = opinionMarkers.map(\.viewPrice)
-        let lows = evidence.candles.map(\.low) + markerPrices + [evidence.viewPrice]
-        let highs = evidence.candles.map(\.high) + markerPrices + [evidence.viewPrice]
-        let lower = lows.min() ?? evidence.viewPrice
-        let upper = highs.max() ?? evidence.viewPrice
-        let padding = max((upper - lower) * 0.08, upper * 0.005)
-        return (lower - padding)...(upper + padding)
-    }
-
-    private var axisDays: [String] {
-        let days = evidence.candles.map(\.day)
-        guard days.count > 3 else { return days }
-        let last = days.count - 1
-        return [0, last / 2, last]
-            .map { days[$0] }
-            .reduce(into: [String]()) { result, day in
-                if !result.contains(day) { result.append(day) }
-            }
-    }
-
-    private var viewMarker: (day: String, price: Double) {
-        if let candle = evidence.candles.first(where: { $0.day == evidence.viewDay }) {
-            return (candle.day, evidence.viewPrice)
-        }
-        if let candle = evidence.candles.last(where: { $0.day <= evidence.viewDay }) ?? evidence.candles.last {
-            return (candle.day, candle.close)
-        }
-        return (evidence.viewDay, evidence.viewPrice)
-    }
-
-    var body: some View {
-        VStack(spacing: BSmartSpacing.xSmall) {
-            Chart {
-                ForEach(evidence.candles) { candle in
-                    RuleMark(
-                        x: .value("Session", candle.day),
-                        yStart: .value("Low", candle.low),
-                        yEnd: .value("High", candle.high)
-                    )
-                    .foregroundStyle(candleColor(candle).opacity(0.72))
-                    .lineStyle(StrokeStyle(lineWidth: 1))
-
-                    RectangleMark(
-                        x: .value("Session", candle.day),
-                        yStart: .value("Open", candle.open),
-                        yEnd: .value("Close", candle.close),
-                        width: .fixed(3)
-                    )
-                    .foregroundStyle(candleColor(candle).opacity(0.78))
-                }
-
-                if displayedMarkers.isEmpty {
-                    RuleMark(x: .value("Published", viewMarker.day))
-                        .foregroundStyle(update.direction.color.opacity(0.3))
-                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
-
-                    PointMark(
-                        x: .value("Published", viewMarker.day),
-                        y: .value("Price at view", viewMarker.price)
-                    )
-                    .foregroundStyle(update.direction.color)
-                    .symbolSize(108)
-                    .annotation(position: .overlay) {
-                        markerNumber(1)
-                    }
-                } else {
-                    ForEach(Array(displayedMarkers.enumerated()), id: \.element.id) { index, marker in
-                        RuleMark(x: .value("Published", markerDay(marker)))
-                            .foregroundStyle(marker.direction.color.opacity(0.3))
-                            .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
-
-                        PointMark(
-                            x: .value("Published", markerDay(marker)),
-                            y: .value("Price at view", marker.viewPrice)
-                        )
-                        .foregroundStyle(marker.direction.color)
-                        .symbolSize(108)
-                        .annotation(position: .overlay) {
-                            markerNumber(index + 1)
-                        }
-                    }
-                }
-            }
-            .chartYScale(domain: range)
-            .chartXScale(range: .plotDimension(startPadding: 7, endPadding: 7))
-            .chartXAxis(.hidden)
-            .chartYAxis {
-                AxisMarks(position: .trailing, values: .automatic(desiredCount: 3)) { value in
-                    AxisGridLine().foregroundStyle(BSmartColor.line.opacity(0.55))
-                    AxisValueLabel {
-                        if let price = value.as(Double.self) {
-                            Text(compactPrice(price))
-                                .font(.caption2.monospacedDigit())
-                        }
-                    }
-                    .foregroundStyle(BSmartColor.tertiaryText)
-                }
-            }
-            .chartPlotStyle { plot in
-                plot.background(BSmartColor.recessed.opacity(0.68))
-            }
-
-            chartDayLabels
-        }
-        .accessibilityLabel("%@ candlestick chart with %d contributing views".bSmartLocalized(
-            update.ticker,
-            max(displayedMarkers.count, 1)
-        ))
-    }
-
-    private var chartDayLabels: some View {
-        HStack {
-            ForEach(Array(axisDays.enumerated()), id: \.element) { index, day in
-                if index > 0 { Spacer(minLength: 0) }
-                Text(formattedDay(day))
-                    .font(.caption2.monospacedDigit())
-                    .foregroundStyle(BSmartColor.tertiaryText)
-            }
-        }
-        .padding(.trailing, 46)
-    }
-
-    private func markerNumber(_ value: Int) -> some View {
-        Text("\(value)")
-            .font(.system(size: 8, weight: .black, design: .rounded))
-            .foregroundStyle(BSmartColor.ink)
-            .accessibilityHidden(true)
-    }
-
-    private func candleColor(_ candle: PriceCandle) -> Color {
-        candle.close >= candle.open ? BSmartColor.brand : BSmartColor.bear
-    }
-
-    private func compactPrice(_ price: Double) -> String {
-        switch abs(price) {
-        case 1_000...: String(format: "$%.1fK", price / 1_000)
-        case 100...: String(format: "$%.0f", price)
-        default: String(format: "$%.2f", price)
-        }
-    }
-
-    private func formattedDay(_ day: String) -> String {
-        String(day.suffix(5)).replacingOccurrences(of: "-", with: "/")
-    }
-
-    private func markerDay(_ marker: SmartAccountOpinionMarker) -> String {
-        if evidence.candles.contains(where: { $0.day == marker.viewDay }) { return marker.viewDay }
-        return evidence.candles.last(where: { $0.day <= marker.viewDay })?.day
-            ?? evidence.candles.first?.day
-            ?? marker.viewDay
-    }
-
-}
 
 private struct SmartAccountOpinionEvidenceList: View {
     let update: SmartAccountUpdate
     let evidence: SmartAccountPriceEvidence
 
     private var displayedMarkers: [SmartAccountOpinionMarker] {
-        let markers = evidence.opinionMarkers ?? []
-        return markers
-            .sorted { $0.contribution > $1.contribution }
-            .prefix(3)
-            .sorted { $0.publishedAt < $1.publishedAt }
+        guard !(evidence.opinionMarkers ?? []).isEmpty else { return [] }
+        return RepresentativeWorkChartModel(update: update, evidence: evidence).markers.map(\.opinion)
     }
 
     var body: some View {
@@ -2030,7 +1596,7 @@ private struct SmartAccountOpinionEvidenceList: View {
     }
 
     private func currency(_ value: Double) -> String {
-        value.formatted(.currency(code: "USD").precision(.fractionLength(value >= 100 ? 0 : 2)))
+        value.formatted(.bSmartDollars.precision(.fractionLength(value >= 100 ? 0 : 2)))
     }
 }
 
@@ -2100,137 +1666,11 @@ private struct PriceEvidenceMilestones: View {
     private func milestoneValue(_ milestone: Milestone) -> String {
         let day = String(milestone.day.suffix(5)).replacingOccurrences(of: "-", with: "/")
         guard let price = milestone.price else { return day }
-        let formattedPrice = price.formatted(.currency(code: "USD").precision(.fractionLength(price >= 100 ? 0 : 2)))
+        let formattedPrice = price.formatted(.bSmartDollars.precision(.fractionLength(price >= 100 ? 0 : 2)))
         return "\(day) · \(formattedPrice)"
     }
 }
 
-private struct SmartMoneyEntryEvidenceChart: View {
-    let evidence: SmartMoneyRepresentativeEvidence
-
-    private var candles: [SmartMoneyCandle] { evidence.priceEvidence.candles }
-    private var markers: [SmartMoneyEntryMarker] { evidence.priceEvidence.entryMarkers }
-    private var displayedMarkers: [SmartMoneyEntryMarker] {
-        markers
-            .sorted { $0.entryNotional > $1.entryNotional }
-            .prefix(3)
-            .sorted { $0.observedAt < $1.observedAt }
-    }
-    private var priceRange: ClosedRange<Double> {
-        let lows = candles.map(\.low) + markers.map(\.price)
-        let highs = candles.map(\.high) + markers.map(\.price)
-        let lower = lows.min() ?? 0
-        let upper = highs.max() ?? max(lower + 1, 1)
-        let padding = max((upper - lower) * 0.08, upper * 0.005)
-        return (lower - padding)...(upper + padding)
-    }
-
-    var body: some View {
-        if candles.isEmpty {
-            ContentUnavailableView(
-                "Price history unavailable".bSmartLocalized,
-                systemImage: "chart.xyaxis.line",
-                description: Text("Entry evidence is retained, but this contract has no matching candle history.".bSmartLocalized)
-            )
-        } else {
-            VStack(spacing: BSmartSpacing.xSmall) {
-                Chart {
-                    ForEach(candles) { candle in
-                        RuleMark(
-                            x: .value("Time", candle.timestamp),
-                            yStart: .value("Low", candle.low),
-                            yEnd: .value("High", candle.high)
-                        )
-                        .foregroundStyle(candleColor(candle).opacity(0.72))
-                        .lineStyle(StrokeStyle(lineWidth: 1))
-
-                        RectangleMark(
-                            x: .value("Time", candle.timestamp),
-                            yStart: .value("Open", candle.open),
-                            yEnd: .value("Close", candle.close),
-                            width: .fixed(3)
-                        )
-                        .foregroundStyle(candleColor(candle).opacity(0.78))
-                    }
-
-                    ForEach(Array(displayedMarkers.enumerated()), id: \.element.id) { index, marker in
-                        RuleMark(x: .value("Observed", marker.observedAt))
-                            .foregroundStyle(marker.direction.color.opacity(0.3))
-                            .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
-
-                        PointMark(
-                            x: .value("Observed", marker.observedAt),
-                            y: .value("Entry price", marker.price)
-                        )
-                        .foregroundStyle(marker.direction.color)
-                        .symbolSize(108)
-                        .annotation(position: .overlay) {
-                            markerNumber(index + 1)
-                        }
-                    }
-                }
-                .chartYScale(domain: priceRange)
-                .chartXScale(range: .plotDimension(startPadding: 7, endPadding: 7))
-                .chartXAxis(.hidden)
-                .chartYAxis {
-                    AxisMarks(position: .trailing, values: .automatic(desiredCount: 3)) { value in
-                        AxisGridLine().foregroundStyle(BSmartColor.line.opacity(0.55))
-                        AxisValueLabel {
-                            if let price = value.as(Double.self) {
-                                Text(compactPrice(price))
-                                    .font(.caption2.monospacedDigit())
-                            }
-                        }
-                        .foregroundStyle(BSmartColor.tertiaryText)
-                    }
-                }
-                .chartPlotStyle { plot in
-                    plot.background(BSmartColor.recessed.opacity(0.68))
-                }
-
-                chartDateLabels
-            }
-            .accessibilityLabel("%@ candlestick chart with %d observed entries".bSmartLocalized(
-                evidence.ticker,
-                displayedMarkers.count
-            ))
-        }
-    }
-
-    private var chartDateLabels: some View {
-        let dates: [Date] = candles.isEmpty
-            ? []
-            : [candles[0].timestamp, candles[candles.count / 2].timestamp, candles[candles.count - 1].timestamp]
-        return HStack {
-            ForEach(Array(dates.enumerated()), id: \.offset) { index, date in
-                if index > 0 { Spacer(minLength: 0) }
-                Text(date, format: .dateTime.month(.abbreviated).day())
-                    .font(.caption2.monospacedDigit())
-                    .foregroundStyle(BSmartColor.tertiaryText)
-            }
-        }
-        .padding(.trailing, 42)
-    }
-
-    private func markerNumber(_ value: Int) -> some View {
-        Text("\(value)")
-            .font(.system(size: 8, weight: .black, design: .rounded))
-            .foregroundStyle(BSmartColor.ink)
-            .accessibilityHidden(true)
-    }
-
-    private func candleColor(_ candle: SmartMoneyCandle) -> Color {
-        candle.close >= candle.open ? BSmartColor.brand : BSmartColor.bear
-    }
-
-    private func compactPrice(_ price: Double) -> String {
-        switch abs(price) {
-        case 1_000...: String(format: "$%.1fK", price / 1_000)
-        case 100...: String(format: "$%.0f", price)
-        default: String(format: "$%.2f", price)
-        }
-    }
-}
 
 private struct SmartMoneyEntryEvidenceList: View {
     let evidence: SmartMoneyRepresentativeEvidence
@@ -2333,7 +1773,7 @@ private struct SmartMoneyEntryEvidenceList: View {
     }
 
     private func currency(_ value: Double) -> String {
-        value.formatted(.currency(code: "USD").precision(.fractionLength(value >= 100 ? 0 : 2)))
+        value.formatted(.bSmartDollars.precision(.fractionLength(value >= 100 ? 0 : 2)))
     }
 }
 
@@ -2442,7 +1882,7 @@ struct SmartMoneyDetailView: View {
                 VStack(alignment: .leading, spacing: 3) {
                     Text((netExposure >= 0 ? "Net long" : "Net short").bSmartLocalized)
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(netExposure >= 0 ? BSmartColor.brand : BSmartColor.bear)
+                        .foregroundStyle(netExposure >= 0 ? BSmartColor.bull : BSmartColor.bear)
                     Text(compactCurrency(abs(netExposure)))
                         .font(.title2.weight(.black))
                         .monospacedDigit()
@@ -2454,7 +1894,7 @@ struct SmartMoneyDetailView: View {
                         .foregroundStyle(BSmartColor.tertiaryText)
                     Text(compactSignedCurrency(totalOpenPnl))
                         .font(.headline.weight(.black))
-                        .foregroundStyle(totalOpenPnl >= 0 ? BSmartColor.brand : BSmartColor.bear)
+                        .foregroundStyle(totalOpenPnl >= 0 ? BSmartColor.bull : BSmartColor.bear)
                         .monospacedDigit()
                 }
             }
@@ -2464,6 +1904,7 @@ struct SmartMoneyDetailView: View {
             if let largestPosition {
                 HStack(spacing: BSmartSpacing.medium) {
                     BSmartAssetMark(ticker: largestPosition.symbol, size: 42)
+                        .bSmartTickerDestination(largestPosition.symbol)
                     VStack(alignment: .leading, spacing: 3) {
                         Text("Largest position")
                             .font(.caption2)
@@ -2523,6 +1964,7 @@ struct SmartMoneyDetailView: View {
             HStack(alignment: .top) {
                 HStack(spacing: BSmartSpacing.small) {
                     BSmartAssetMark(ticker: evidence.ticker, size: 36)
+                        .bSmartTickerDestination(evidence.ticker)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(evidence.ticker)
                             .font(.title3.weight(.black))
@@ -2556,7 +1998,7 @@ struct SmartMoneyDetailView: View {
                 Spacer()
                 Text(compactSignedCurrency(evidence.assetNetPnl))
                     .font(.caption.weight(.bold))
-                    .foregroundStyle(evidence.assetNetPnl >= 0 ? BSmartColor.brand : BSmartColor.bear)
+                    .foregroundStyle(evidence.assetNetPnl >= 0 ? BSmartColor.bull : BSmartColor.bear)
                     .monospacedDigit()
                 Text("Asset PNL".bSmartLocalized)
                     .font(.caption2)
@@ -2566,7 +2008,7 @@ struct SmartMoneyDetailView: View {
             EvidenceChartGuide(kind: "Price history", detail: "1–3 match entries below")
 
             SmartMoneyEntryEvidenceChart(evidence: evidence)
-                .frame(height: 196)
+                .frame(height: 270)
 
             SmartMoneyEntryEvidenceList(evidence: evidence)
 
@@ -2669,7 +2111,7 @@ struct SmartMoneyDetailView: View {
             }
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: BSmartSpacing.medium) {
-                detailMetric(label: "Net PNL", value: compactSignedCurrency(displayedPnl), color: displayedPnl >= 0 ? BSmartColor.brand : BSmartColor.bear)
+                detailMetric(label: "Net PNL", value: compactSignedCurrency(displayedPnl), color: displayedPnl >= 0 ? BSmartColor.bull : BSmartColor.bear)
                 detailMetric(label: "Win rate", value: percent(signal.winRate), color: BSmartColor.primaryText)
                 detailMetric(label: "Sharpe", value: decimal(selectedMetric?.sharpe ?? signal.sharpe), color: BSmartColor.sky)
                 detailMetric(label: "Max drawdown", value: percent(selectedMetric?.maxDrawdownPercent ?? signal.maxDrawdownPercent), color: BSmartColor.bear)
@@ -2736,9 +2178,10 @@ struct SmartMoneyDetailView: View {
         return VStack(alignment: .leading, spacing: BSmartSpacing.small) {
             HStack {
                 BSmartAssetMark(ticker: position.symbol, size: 34)
+                    .bSmartTickerDestination(position.symbol)
                 Text(position.symbol)
                     .font(.headline.weight(.black))
-                BSmartTag(text: position.direction, color: long ? BSmartColor.brand : BSmartColor.bear)
+                BSmartTag(text: position.direction, color: long ? BSmartColor.bull : BSmartColor.bear)
                 Text(position.dex.uppercased())
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(BSmartColor.tertiaryText)
@@ -2750,7 +2193,7 @@ struct SmartMoneyDetailView: View {
             HStack {
                 positionMetric("Entry", currency(position.entryPrice))
                 positionMetric("Mark", currency(position.markPrice))
-                positionMetric("Open PNL", compactSignedCurrency(position.unrealizedPnl), color: position.unrealizedPnl >= 0 ? BSmartColor.brand : BSmartColor.bear)
+                positionMetric("Open PNL", compactSignedCurrency(position.unrealizedPnl), color: position.unrealizedPnl >= 0 ? BSmartColor.bull : BSmartColor.bear)
             }
             HStack {
                 positionMetric("Leverage", position.leverage > 0 ? String(format: "%.1fx", position.leverage) : "--")
@@ -2772,7 +2215,7 @@ struct SmartMoneyDetailView: View {
                         x: .value("Net PNL", asset.netPnl),
                         y: .value("Asset", asset.symbol)
                     )
-                    .foregroundStyle(asset.netPnl >= 0 ? BSmartColor.brand : BSmartColor.bear)
+                    .foregroundStyle(asset.netPnl >= 0 ? BSmartColor.bull : BSmartColor.bear)
                     .annotation(position: asset.netPnl >= 0 ? .trailing : .leading) {
                         Text(compactSignedCurrency(asset.netPnl))
                             .font(.caption2.weight(.semibold))
@@ -2802,7 +2245,7 @@ struct SmartMoneyDetailView: View {
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: BSmartSpacing.medium) {
                 detailMetric(label: "Style", value: signal.resolvedStyle, color: BSmartColor.sky)
                 detailMetric(label: "Median hold", value: holdDuration(signal.tradeDuration?.medianHoldHours), color: BSmartColor.primaryText)
-                detailMetric(label: "Long bias", value: percent(signal.longBias), color: BSmartColor.brand)
+                detailMetric(label: "Long bias", value: percent(signal.longBias), color: BSmartColor.bull)
                 detailMetric(label: "Active days", value: signal.activeDays.map(String.init) ?? "--", color: BSmartColor.primaryText)
                 detailMetric(label: "Account value", value: compactCurrency(signal.accountValue ?? 0), color: BSmartColor.primaryText)
                 detailMetric(label: "Margin used", value: percent(signal.marginUtilization), color: liquidationColor(signal.marginUtilization))
@@ -2848,9 +2291,10 @@ struct SmartMoneyDetailView: View {
                     HStack(alignment: .top, spacing: BSmartSpacing.medium) {
                         ZStack(alignment: .bottomTrailing) {
                             BSmartAssetMark(ticker: trade.symbol, size: 38)
+                                .bSmartTickerDestination(trade.symbol)
                             Image(systemName: trade.side == "Buy" ? "arrow.up.right.circle.fill" : "arrow.down.right.circle.fill")
                                 .font(.caption)
-                                .foregroundStyle(trade.side == "Buy" ? BSmartColor.brand : BSmartColor.bear)
+                                .foregroundStyle(trade.side == "Buy" ? BSmartColor.bull : BSmartColor.bear)
                                 .background(BSmartColor.ink, in: Circle())
                         }
                         VStack(alignment: .leading, spacing: 2) {
@@ -2868,7 +2312,7 @@ struct SmartMoneyDetailView: View {
                             if trade.closedPnl != 0 {
                                 Text(compactSignedCurrency(trade.closedPnl))
                                     .font(.caption2)
-                                    .foregroundStyle(trade.closedPnl >= 0 ? BSmartColor.brand : BSmartColor.bear)
+                                    .foregroundStyle(trade.closedPnl >= 0 ? BSmartColor.bull : BSmartColor.bear)
                             }
                         }
                     }
@@ -2981,7 +2425,7 @@ struct SmartMoneyDetailView: View {
 
     private func currency(_ value: Double?) -> String {
         guard let value else { return "--" }
-        return value.formatted(.currency(code: "USD").precision(.fractionLength(value >= 100 ? 0 : 2)))
+        return value.formatted(.bSmartDollars.precision(.fractionLength(value >= 100 ? 0 : 2)))
     }
 }
 
@@ -3011,7 +2455,7 @@ private func compactCurrency(_ value: Double) -> String {
     case 1_000...:
         String(format: "$%.0fK", value / 1_000)
     default:
-        value.formatted(.currency(code: "USD").precision(.fractionLength(0)))
+        value.formatted(.bSmartDollars.precision(.fractionLength(0)))
     }
 }
 
