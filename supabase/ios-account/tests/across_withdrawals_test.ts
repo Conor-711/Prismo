@@ -94,6 +94,12 @@ Deno.test("Across quote failures distinguish unsupported amounts from service er
   });
   assert.equal(missingFee.status, 503);
   assert.equal((await missingFee.json()).error, "quote_incomplete");
+  const missingSigningStep = await handleAcross(request("/quote", "POST", input), client, true, "key", "0xdead", {
+    quote: async () => ({ ...quote("100000000"), swapTxns: quote("100000000").swapTxns.slice(0, 1) }),
+    submit: async () => ({}), status: async () => ({}),
+  });
+  assert.equal(missingSigningStep.status, 503);
+  assert.equal((await missingSigningStep.json()).error, "quote_incomplete");
 });
 
 Deno.test("background reconciliation requires the Vault token before reading records", async () => {

@@ -19,7 +19,7 @@ enum AcrossWithdrawalError: String, Error, LocalizedError {
         case .quoteUnavailable:
             "Across could not quote this amount or route. Change the amount or try later.".bSmartLocalized
         case .quoteIncomplete:
-            "Across returned a quote without its submission fee. No transfer was made; please contact support."
+            "Across returned an incomplete withdrawal quote. No transfer was made; please contact support."
                 .bSmartLocalized
         case .providerUnavailable, .unavailable:
             "Across is temporarily unavailable. Refresh withdrawal status before trying again.".bSmartLocalized

@@ -303,42 +303,16 @@ export async function handleAcross(req: Request, client: SupabaseClient, enabled
         const reason = quoteValidationFailure(quote, input.sourceDex as "spot" | "perps", units);
         console.warn("Across quote failed local validation", reason);
         if (reason === "submission_fee_null" && record(quote)) {
-          const signingSteps = steps(quote);
-          const feeWitness = signingSteps?.map((step) => {
-            const message = step.typedData.message;
-            return record(message) && record(message.submissionFees);
-          });
           const rawSteps = Array.isArray(quote.swapTxns) ? quote.swapTxns : [];
-          const otherFailure = quoteValidationFailure({
-            ...quote,
-            fees: { submission: { amount: "0", token: {} } },
-          }, input.sourceDex as "spot" | "perps", units);
           console.warn("Across null-fee quote structure", {
             swapTxNull: quote.swapTx === null,
-            swapTxnsKind: quote.swapTxns === null ? "null" : Array.isArray(quote.swapTxns) ? "array" : typeof quote.swapTxns,
             stepCount: rawSteps.length,
-            stepShapes: rawSteps.slice(0, 3).map((raw) => {
-              if (!record(raw)) return { record: false };
-              const typed = record(raw.typedData) ? raw.typedData : null;
-              const domain = typed && record(typed.domain) ? typed.domain : null;
-              return {
-                stepIdValid: typeof raw.stepId === "string" && /^[a-zA-Z0-9_-]{1,80}$/.test(raw.stepId),
-                ecosystem: ["hypercore", "evm-gasless"].includes(String(raw.ecosystem)) ? raw.ecosystem : "other",
-                typedDataPresent: typed !== null,
-                domainPresent: domain !== null,
-                domainChainId: domain ? Number(domain.chainId) : null,
-                typesPresent: typed ? record(typed.types) : false,
-                messagePresent: typed ? record(typed.message) : false,
-                primaryTypeValid: typed ? typeof typed.primaryType === "string" &&
-                  /^[A-Za-z0-9_:]{1,120}$/.test(typed.primaryType) : false,
-              };
-            }),
-            signingStepsValid: signingSteps !== null,
-            signedFeeWitnesses: feeWitness ?? [],
-            otherFailure,
+            ecosystems: rawSteps.map((step) => record(step) && ["hypercore", "evm-gasless"].includes(String(step.ecosystem))
+              ? step.ecosystem : "other"),
           });
         }
-        return reply({ error: reason === "submission_fee_null" ? "quote_incomplete" : "provider_unavailable" }, 503);
+        return reply({ error: ["submission_fee_null", "submission_fee_missing", "signing_steps"].includes(String(reason))
+          ? "quote_incomplete" : "provider_unavailable" }, 503);
       }
       const { data, error: reserveError } = await client.rpc("bsmart_across_withdrawal_reserve", {
         p_account: user.id, p_id: input.id, p_wallet: owner, p_recipient: input.recipient,

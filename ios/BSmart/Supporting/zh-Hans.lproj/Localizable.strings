@@ -2001,7 +2001,7 @@
 "Message not sent. Please try again." = "消息未发送，请重试。";
 "This item cannot be shared." = "这条内容暂时无法分享。";
 "Across could not quote this amount or route. Change the amount or try later." = "Across 暂时无法为此金额或路线报价，请调整金额或稍后重试。";
-"Across returned a quote without its submission fee. No transfer was made; please contact support." = "Across 返回的报价缺少提交费用；尚未转账，请联系支持。";
+"Across returned an incomplete withdrawal quote. No transfer was made; please contact support." = "Across 返回的出金报价不完整；尚未转账，请联系支持。";
 "Across is temporarily unavailable. Refresh withdrawal status before trying again." = "Across 暂时不可用；再次操作前请先刷新出金状态。";
 "Across withdrawals are not authorized for this app. Please contact support; no transfer was made." = "Across 出金服务尚未获授权，请联系支持；未进行转账。";
 "A withdrawal is already pending. Refresh its status before trying again." = "已有出金正在处理，请先刷新其状态。";
