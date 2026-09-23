@@ -79,23 +79,30 @@ function steps(quote: Record<string, unknown>): Step[] | null {
 
 export function validQuote(value: unknown, source: "spot" | "perps", units: string, now = Date.now()):
   value is Record<string, unknown> {
-  if (!record(value) || !record(value.inputToken) || !record(value.outputToken) ||
-      !record(value.refundToken) || !record(value.fees) || !record(value.fees.submission) ||
-      !digits(value.fees.submission.amount) || !record(value.fees.submission.token) ||
-      value.swapTx !== null || !steps(value) ||
-      !digits(value.depositId) || value.inputAmount !== units ||
-      value.inputToken.chainId !== ORIGIN ||
+  return quoteValidationFailure(value, source, units, now) === null;
+}
+
+function quoteValidationFailure(value: unknown, source: "spot" | "perps", units: string,
+  now = Date.now()): string | null {
+  if (!record(value)) return "response_shape";
+  if (!record(value.inputToken) || !record(value.outputToken) || !record(value.refundToken)) return "token_shape";
+  if (!record(value.fees) || !record(value.fees.submission) ||
+      !digits(value.fees.submission.amount) || !record(value.fees.submission.token)) return "fee_shape";
+  if (value.swapTx !== null || !steps(value)) return "signing_steps";
+  if (!digits(value.depositId) || value.inputAmount !== units) return "quote_identity";
+  if (value.inputToken.chainId !== ORIGIN ||
       String(value.inputToken.address).toLowerCase() !== (source === "spot" ? USDC_SPOT : USDC_PERPS) ||
-      value.inputToken.decimals !== 8 || value.outputToken.chainId !== DESTINATION ||
+      value.inputToken.decimals !== 8) return "input_token";
+  if (value.outputToken.chainId !== DESTINATION ||
       String(value.outputToken.address).toLowerCase() !== ARBITRUM_USDC ||
-      value.outputToken.decimals !== 6 || value.refundToken.chainId !== 999 ||
-      !digits(value.expectedOutputAmount) || !digits(value.minOutputAmount) ||
+      value.outputToken.decimals !== 6 || value.refundToken.chainId !== 999) return "destination_token";
+  if (!digits(value.expectedOutputAmount) || !digits(value.minOutputAmount) ||
       BigInt(value.minOutputAmount) === 0n ||
-      BigInt(value.expectedOutputAmount) < BigInt(value.minOutputAmount) ||
-      !Number.isSafeInteger(value.quoteExpiryTimestamp) ||
+      BigInt(value.expectedOutputAmount) < BigInt(value.minOutputAmount)) return "output_amount";
+  if (!Number.isSafeInteger(value.quoteExpiryTimestamp) ||
       Number(value.quoteExpiryTimestamp) * 1000 <= now + 5_000 ||
-      Number(value.quoteExpiryTimestamp) * 1000 > now + 300_000) return false;
-  return true;
+      Number(value.quoteExpiryTimestamp) * 1000 > now + 300_000) return "expiry";
+  return null;
 }
 
 export async function reconcileAcross(req: Request, client: SupabaseClient, ports: AcrossPorts): Promise<Response> {
@@ -286,9 +293,14 @@ export async function handleAcross(req: Request, client: SupabaseClient, enabled
           if ([401, 403].includes(error.status)) return reply({ error: "provider_not_authorized" }, 503);
           if ([400, 422].includes(error.status)) return reply({ error: "quote_unavailable" }, 422);
         }
+        console.warn("Across quote request failed", error instanceof Error ? error.name : typeof error);
         return reply({ error: "provider_unavailable" }, 503);
       }
-      if (!validQuote(quote, input.sourceDex as "spot" | "perps", units)) return reply({ error: "provider_unavailable" }, 503);
+      if (!validQuote(quote, input.sourceDex as "spot" | "perps", units)) {
+        console.warn("Across quote failed local validation",
+          quoteValidationFailure(quote, input.sourceDex as "spot" | "perps", units));
+        return reply({ error: "provider_unavailable" }, 503);
+      }
       const { data, error: reserveError } = await client.rpc("bsmart_across_withdrawal_reserve", {
         p_account: user.id, p_id: input.id, p_wallet: owner, p_recipient: input.recipient,
         p_source: input.sourceDex, p_amount_units: units, p_quote: quote,
@@ -334,5 +346,8 @@ export async function handleAcross(req: Request, client: SupabaseClient, enabled
       });
     } catch { return reply({ error: "withdrawal_pending" }, 503); }
     return reply({ withdrawal: publicRow(row) });
-  } catch { return reply({ error: "withdrawal_unavailable" }, 503); }
+  } catch (error) {
+    console.warn("Across withdrawal handler failed", error instanceof Error ? error.name : typeof error);
+    return reply({ error: "withdrawal_unavailable" }, 503);
+  }
 }

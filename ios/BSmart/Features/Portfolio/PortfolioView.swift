@@ -24,6 +24,7 @@ struct PortfolioView: View {
     @State private var isAddingEntry = false
     @State private var isShowingSettings = false
     @State private var isShowingBrokerageConnections = false
+    @State private var isShowingWithdrawal = false
     @State private var section: PortfolioSection = .holdings
     @State private var isSearchingCatalog = false
     @State private var activityRefresh = 0
@@ -82,6 +83,7 @@ struct PortfolioView: View {
             .sheet(isPresented: $isShowingBrokerageConnections) { BrokerageConnectionView().environmentObject(model) }
         }
         .bSmartPage()
+        .sheet(isPresented: $isShowingWithdrawal) { AcrossWithdrawalSheet() }
         .task { if trading.marketCatalog.isEmpty { await trading.loadFullCatalog() } }
     }
 
@@ -194,7 +196,7 @@ struct PortfolioView: View {
     }
 
     private var appHoldings: some View {
-        PortfolioTradingHoldingsView()
+        PortfolioTradingHoldingsView(isShowingWithdrawal: $isShowingWithdrawal)
     }
 
     private func entriesPanel(entries: [PortfolioPosition], emptyTitle: String, symbol: String) -> some View {

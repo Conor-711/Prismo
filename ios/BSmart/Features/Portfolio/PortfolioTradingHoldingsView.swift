@@ -4,8 +4,8 @@ struct PortfolioTradingHoldingsView: View {
     @EnvironmentObject private var account: AccountAccessStore
     @EnvironmentObject private var wallet: DeviceWalletStore
     @Environment(\.scenePhase) private var scenePhase
+    @Binding var isShowingWithdrawal: Bool
     @State private var isShowingDeposit = false
-    @State private var isShowingWithdrawal = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -67,7 +67,6 @@ struct PortfolioTradingHoldingsView: View {
             }
             .presentationDetents([.large])
         }
-        .sheet(isPresented: $isShowingWithdrawal) { AcrossWithdrawalSheet() }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("portfolio.app.positions")
         .task(id: "\(account.walletAccountID?.uuidString ?? "")-\(account.isBusy)-\(scenePhase == .active)") {

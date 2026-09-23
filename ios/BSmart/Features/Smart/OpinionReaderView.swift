@@ -1,8 +1,10 @@
 import SwiftUI
+import UIKit
 
 struct OpinionReaderView: View {
     let update: SmartAccountUpdate
     @State private var prefersOriginal = false
+    @State private var selectedPhoto: OpinionPhotoSelection?
     @ScaledMetric(relativeTo: .body) private var fontSize = 17.0
 
     private var content: OpinionReadingContent {
@@ -12,7 +14,7 @@ struct OpinionReaderView: View {
     private var displayedText: String? { showingTranslation ? content.translation : content.original }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 22) {
+        VStack(alignment: .leading, spacing: 0) {
             if let summary = content.summary {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Summary".bSmartLocalized)
@@ -26,6 +28,7 @@ struct OpinionReaderView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .accessibilityIdentifier("opinion.reader.summary")
                 }
+                .padding(.bottom, 22)
             }
 
             VStack(alignment: .leading, spacing: 20) {
@@ -60,37 +63,26 @@ struct OpinionReaderView: View {
                 }
             }
             if let imageURLs = update.imageURLs, !imageURLs.isEmpty {
-                ScrollView(.horizontal) {
-                    HStack(alignment: .top, spacing: 10) {
-                        ForEach(imageURLs, id: \.self) { url in
-                            AsyncImage(url: url) { phase in
-                                switch phase {
-                                case .success(let image):
-                                    image.resizable().scaledToFit()
-                                case .failure:
-                                    Image(systemName: "photo")
-                                        .foregroundStyle(BSmartColor.secondaryText)
-                                case .empty:
-                                    ProgressView()
-                                @unknown default:
-                                    EmptyView()
-                                }
-                            }
-                            .frame(width: imageURLs.count == 1 ? 320 : 260, height: 260)
-                            .background(BSmartColor.line.opacity(0.12))
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                VStack(spacing: 10) {
+                    ForEach(imageURLs, id: \.self) { url in
+                        OpinionInlinePhoto(url: url) { image in
+                            selectedPhoto = OpinionPhotoSelection(url: url, image: image)
                         }
                     }
                 }
-                .scrollIndicators(.hidden)
+                .padding(.top, 14)
                 .accessibilityIdentifier("opinion.reader.photos")
             }
             Divider().overlay(BSmartColor.line)
+                .padding(.top, 20)
         }
         .frame(maxWidth: 680, alignment: .leading)
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("opinion.reader")
+        .fullScreenCover(item: $selectedPhoto) { photo in
+            OpinionPhotoViewer(image: photo.image)
+        }
     }
 
     private var controls: some View {
@@ -186,5 +178,163 @@ struct OpinionReaderView: View {
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.top, block.startsNewParagraph && block.id > 0 ? 14 : 0)
+    }
+}
+
+private struct OpinionPhotoSelection: Identifiable {
+    let url: URL
+    let image: UIImage
+    var id: URL { url }
+}
+
+private struct OpinionInlinePhoto: View {
+    let url: URL
+    let onSelect: (UIImage) -> Void
+    @State private var image: UIImage?
+    @State private var failed = false
+
+    var body: some View {
+        Group {
+            if let image {
+                Button { onSelect(image) } label: {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(image.size.width / max(image.size.height, 1), contentMode: .fit)
+                        .frame(maxWidth: .infinity)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("View image".bSmartLocalized)
+            } else if failed {
+                Image(systemName: "photo")
+                    .foregroundStyle(BSmartColor.secondaryText)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 64)
+            } else {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 120)
+            }
+        }
+        .task(id: url) {
+            if image != nil { return }
+            image = nil
+            failed = false
+            do {
+                let (data, response) = try await URLSession.shared.data(from: url)
+                guard !Task.isCancelled else { return }
+                guard let response = response as? HTTPURLResponse,
+                      (200...299).contains(response.statusCode),
+                      let decoded = UIImage(data: data) else {
+                    failed = true
+                    return
+                }
+                image = decoded
+            } catch {
+                if !Task.isCancelled { failed = true }
+            }
+        }
+    }
+}
+
+private struct OpinionPhotoViewer: View {
+    @Environment(\.dismiss) private var dismiss
+    let image: UIImage
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            Color.black.ignoresSafeArea()
+            GeometryReader { geometry in
+                ZoomableOpinionPhoto(image: image, viewport: geometry.size)
+            }
+            Button { dismiss() } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 44, height: 44)
+                    .background(.black.opacity(0.55), in: Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Close".bSmartLocalized)
+            .padding(16)
+        }
+        .statusBarHidden()
+        .accessibilityIdentifier("opinion.photo.viewer")
+    }
+}
+
+private struct ZoomableOpinionPhoto: UIViewRepresentable {
+    let image: UIImage
+    let viewport: CGSize
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    func makeUIView(context: Context) -> UIScrollView {
+        let scrollView = UIScrollView()
+        scrollView.backgroundColor = .black
+        scrollView.delegate = context.coordinator
+        scrollView.minimumZoomScale = 1
+        scrollView.maximumZoomScale = 6
+        scrollView.showsHorizontalScrollIndicator = false
+        scrollView.showsVerticalScrollIndicator = false
+        context.coordinator.scrollView = scrollView
+        scrollView.addSubview(context.coordinator.imageView)
+        let doubleTap = UITapGestureRecognizer(
+            target: context.coordinator, action: #selector(Coordinator.doubleTap(_:))
+        )
+        doubleTap.numberOfTapsRequired = 2
+        scrollView.addGestureRecognizer(doubleTap)
+        return scrollView
+    }
+
+    func updateUIView(_ scrollView: UIScrollView, context: Context) {
+        let coordinator = context.coordinator
+        guard coordinator.displayedImage !== image || coordinator.viewport != viewport else { return }
+        coordinator.displayedImage = image
+        coordinator.viewport = viewport
+        coordinator.imageView.image = image
+        let width = max(viewport.width, 1)
+        let height = max(viewport.height, 1)
+        let fit = min(width / max(image.size.width, 1), height / max(image.size.height, 1))
+        let size = CGSize(width: image.size.width * fit, height: image.size.height * fit)
+        scrollView.zoomScale = 1
+        coordinator.imageView.frame = CGRect(origin: .zero, size: size)
+        scrollView.contentSize = size
+        coordinator.centerImage()
+    }
+
+    final class Coordinator: NSObject, UIScrollViewDelegate {
+        let imageView = UIImageView()
+        weak var scrollView: UIScrollView?
+        var displayedImage: UIImage?
+        var viewport: CGSize = .zero
+
+        func viewForZooming(in scrollView: UIScrollView) -> UIView? { imageView }
+
+        func scrollViewDidZoom(_ scrollView: UIScrollView) { centerImage() }
+
+        func centerImage() {
+            guard let scrollView else { return }
+            imageView.center = CGPoint(
+                x: max(scrollView.contentSize.width, scrollView.bounds.width) / 2,
+                y: max(scrollView.contentSize.height, scrollView.bounds.height) / 2
+            )
+        }
+
+        @objc func doubleTap(_ gesture: UITapGestureRecognizer) {
+            guard let scrollView else { return }
+            if scrollView.zoomScale > 1 {
+                scrollView.setZoomScale(1, animated: true)
+            } else {
+                let scale: CGFloat = 3
+                let point = gesture.location(in: imageView)
+                scrollView.zoom(to: CGRect(
+                    x: point.x - scrollView.bounds.width / (2 * scale),
+                    y: point.y - scrollView.bounds.height / (2 * scale),
+                    width: scrollView.bounds.width / scale,
+                    height: scrollView.bounds.height / scale
+                ), animated: true)
+            }
+        }
     }
 }

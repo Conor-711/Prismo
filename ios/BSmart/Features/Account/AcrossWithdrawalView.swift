@@ -81,8 +81,9 @@ struct AcrossWithdrawalView: View {
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Recipient address".bSmartLocalized).font(.subheadline.weight(.medium))
-                    TextField("0x…", text: $recipient, axis: .vertical)
+                    TextField("0x…", text: $recipient)
                         .font(.body.monospaced()).textInputAutocapitalization(.never).autocorrectionDisabled()
+                        .keyboardType(.asciiCapable)
                         .focused($focused, equals: .recipient).padding(14)
                         .bSmartInputSurface(focused: focused == .recipient)
                         .accessibilityIdentifier("withdraw.recipient")
