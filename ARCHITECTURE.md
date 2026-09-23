@@ -2,9 +2,207 @@
 
 > **维护约定**：本文件是项目的「活地图」。**每次对项目结构或功能有实质改动后，必须同步更新本文件对应章节**
 > （新增/删除模块、改数据流、改命令、改部署方式、改 schema 等）。详见根目录 `CLAUDE.md`。
-> 最近更新：2026-09-12。
+> 最近更新：2026-09-23。
 
-**真实交易面板样式恢复（2026-09-12）**：`LiveMarketOrderView` 恢复大金额、快捷金额、数字键盘/K 线切换和底部滑动确认；复用 `TradeLeveragePicker`/`TradeSlideToConfirm`，不重新接入 `PaperTradingEngine`。`LiveOrderAmountPanel/EntrySummary` 仅组装显示；真实账户余额、杠杆和费率来自 `HyperliquidMarketOrderStore.loadEntry` 的只读查询。输入金额仍是 USDC 名义仓位价值，MAX 只预填保守估值，提交仍重新验证完整订单。杠杆显示真实值且只读，未实现真实调整时不允许模拟滑动修改。行情图使用独立会话；钱包、入金路径和签名/日志不变。
+**公共聊天室预览与首页持仓加载（2026-09-23）**：Friends 列表复用根页面按账户轮询的 Global Chat 消息，显示最新发送者和消息；进入 Friends 时立即刷新，切换账户清空预览，聊天室内继续独立轮询及已读更新。Today 持仓首页预览改为即时布局，避免嵌套懒加载出现空白；已验证的钱包登记只用于本次只读持仓查询，交易市场以最多四路并发逐个补位，优先读取常用 `xyz` 市场并向首页渐进返回仓位，全部市场结束后才标记完整，失败仍显式提示且不影响交易核验。
+
+**按关注与持仓汇总的 APNs 通知（2026-09-23，待迁移与真机验收）**：原有按 revision 的通用广播由按新内容 ID 匹配的用户去重账本替代；`content_release/push_queue.py` 在发布事务内记录匹配关注作者、Smart Money、关注标的或持仓标的的新观点/动态，并由常驻 `content_release.push --watch` 工作进程在北京时间 08:00、18:00、22:00 每用户每时段汇总为最多一条，全天至多三条（本地单次命令 `make content-push-dispatch`）。`bsmart_interest_push_events` 以用户/类型/内容 ID 唯一，`bsmart_interest_push_batches` 以用户/时段唯一；APNs 请求一经开始不做模糊重试，避免重复但可能漏发。iOS 的 `NotificationService` 将账户隔离的关注与真实钱包只读持仓快照同步到受 Auth 保护的 `/interests`，设置页提供总开关及作者、标的、持仓分类开关；点击汇总推送刷新 Today 并打开通知列表。新迁移 `202609230001_interest_push.sql` 须用户手动执行，Edge 需部署，新 iOS 构建与服务端 APNs 工作进程须配置并真机验收；现有三小时内容任务本身不负责准点发通知。见 `docs/contracts/content_notifications.md`、`docs/operations/testflight-notifications-apple.md`。
+
+**公共用户主页（2026-09-23）**：Global Chat 的发送者头像与名称可进入现有公开用户主页；主页复用 `bsmart-social` 单向关注与私信，新增 `bsmart-feed/profiles/{id}/portfolio` 只读接口。服务端以公开用户 ID 映射不可变的钱包注册，从 Hyperliquid 读取各永续市场真实仓位、合约权益历史及独立现货 USDC；客户端不传钱包地址、不把共享抵押品重复相加，交易所失败与未关联钱包分别显示。新增 `FeedPublicPortfolio` 模型和主页图表/仓位区域；无新数据库表、无签名或下单改动，部署服务端函数后新 App 才会显示资产。契约见 `docs/contracts/supabase_trade_feed.md`。
+
+**Telegram X 文件接收（2026-09-23，数据库与设备读取已验收）**：`platforms/telegram/x_packages.py` 只负责目标频道 `channel_post` 文档接收和有界本地下载；`domain/smart_voice/x_delivery_scope.py` 提供正式 X 榜单 Top 25% 作者及固定名单读取。当前用户指定复用旧版名单，`data/inbox/x/ranking-snapshot.json` 固定之前验收的 58 个作者 ID，自动接收与手动补包均不重排名；`jobs/x_delivery/prepare_ranked.py` 对用户原包分块筛选，原包保留。`jobs/telegram_x_delivery` 保存 offset/回执，筛出原帖后进入原 X 发布队列，保留 Qwen 完整翻译。统一 `make content-delivery` 会先同步一份再处理原有 X 队列；仅在云端数据库发布验证后，按文件身份清理自动接收的本地原包及 Bot 缓存，不动频道原件或手动提供的原包。小于 20 MB 的文件默认使用公共 Bot API，大文件才依赖 localhost Local Bot API 和本机 Docker；真实频道文件已完成接收、翻译、发布、数据库校验和设备同版读取。统一命令对来源重试或阻断返回失败退出码，供三小时任务告警；后续定时稳定性仍需观察。见 `docs/operations/telegram-x-delivery.md`。
+
+**首页平台更新预览（2026-09-23）**：`TodayInvestorActivity.previewAccounts` 在首页 Smart updates 的三个预览位优先覆盖各平台最新作者，再按发表时间显示；完整列表继续纯时间排序与原筛选，不改内容来源、作者排名或观点契约。解决 YouTube 连续更新把唯一新 X 观点挤出首页预览的问题。
+
+**交易只读故障恢复（2026-09-23）**：Hyperliquid info WebSocket 的无响应回退从 4 秒缩短到 1.2 秒；只读 post 的服务端 5xx 可走原有有界 HTTP 查询，4xx/无效响应仍拒绝。下单账户快照以独立 5 秒任务期限取消卡住的读取，过期后只重取一次只读快照；已有订单的 cloid、nonce、签名和一次性提交授权不重建也不重发。签名后继续重新核验账户、仓位、价格和费用。诊断与限制见 `docs/operations/trading-latency.md`。
+
+**Monad 原生 USDC 入金（2026-09-23）**：Relay managed address 的来源增加 Monad 主网链 ID 143 和 Circle 原生 USDC 合约，目标仍是现有 owner 的 HyperCore Perps USDC；iOS 网络选项、服务端币种/链校验与 OpenAPI 契约同步。Relay 实时公开报价已确认该路线可生成地址；真实资金到账与退款仍需主网验收，不能使用 Hyperliquid 仅接收 MON 的 Monad 官方地址发送 USDC。
+
+**入金网络扩展（2026-09-23）**：原生网络 tab 按 Arbitrum、Monad、Base、Ethereum、BNB Chain 排列并显示网络 Logo。Relay 报价已验证 Ethereum 原生 USDC（6 位）与 BNB Binance-Peg USDC（BEP-20，18 位）可路由到现有 HyperCore Perps 目标；服务端按各自合约和精度验证报价。Robinhood Chain 当前未出现在 Relay 的 USDC 来源币种列表，暂不开放。报价验证不等于真实资金到账；新网络须部署 Edge Function 和新 App 构建后进行小额主网验收。
+
+**YouTube / Reddit 三小时管道（2026-09-23）**：新增 `platforms/{youtube,reddit}/incremental.py` 采集官方频道上传列表及 Arctic Shift 公开镜像；`jobs/social_delivery` 分平台断点、三次重试、共享 X 本地锁、磁盘/预算/超时门禁，Reddit 查询还按板块/作者保存短期采集断点。`make content-delivery` 统一三来源周期，现有本机 heartbeat 已切换此命令；`content_release/partition.py` 校验平台增量并原子合并，保留其他来源及旧观点/证据，信号标识使用实际平台。完整口播缺失不提取 YouTube 观点；经数据库复核后清理超过 48 小时且不在最近 4 版/当前版/基线保护范围内的重复云端快照。不运行 DDL、不复制数据库或保存视频。来源覆盖及验收限制见 `docs/operations/social-content-delivery.md`。
+
+**三小时内容发布接通（2026-09-22，真机刷新已验收）**：iOS 1.0 (9) 默认使用 Supabase 内容源，bSmart 运行启用在线内容，Local scheme 仍连接本机 legacy。`pipeline/jobs/x_delivery` + 薄 CLI 提供哈希登记、串行队列、磁盘检查、限时处理和三次重试；Codex 当前任务每 3 小时运行统一的 `make content-delivery`（YouTube、Reddit、已登记的 X 包），依赖本机在线。`content_release.verify_database` 回读全部集合校验数量和哈希；客户端成功加载真实鉴权内容写入不含账号/令牌的 `ContentVerification.json` 用于设备验收。已用用户授权旧包在同一真机 build 9 验证观点 267→737，无需重装；历史日期保留、不推送。原包不自动删除；云端旧版本按上方保留策略清理。操作和限制见 `docs/operations/content-delivery.md`。
+
+**标的真实持仓（2026-09-22）**：`TickerOwnHoldingsSection` 移除模拟账户读取，复用个人页 `TradingPositionsView` / `TradingPositionsStore`，按已验证的当前钱包读取真实持仓并筛选标的；保留外部持仓、加载/失败/恢复状态，成交后刷新。展示筛选不改变完整 coin 身份，加减仓仍使用原合约与原确认链路。
+
+**标的交易页直接平仓（2026-09-22）**：`LiveOrderComposer` 在当前市场有真实持仓时显示开仓/平仓分段切换，原持仓入口仍默认平仓。切换重置金额输入并使旧预览失效；平仓支持 25/50/75/100% 快捷项及 1–100 整数比例，复用原 reduce-only 执行和最新持仓校验，100% 保留完整精确数量，部分平仓按市场步长向下取整，不修改杠杆或反向开仓。内容免发版更新现状见 `docs/operations/content-rollout-status-20260922.md`。
+
+**交易签名前报价过期（2026-09-22）**：滑动确认过程中，观点关联/账户鉴权等待可能耗尽已生成报价的 5 秒有效期；`HyperliquidMarketOrderStore` 仅在同次滑动、尚未预留日志或签名且错误为报价/快照过期时重新读取一次，并保留原订单及原仓位、杠杆、模式、费用上限校验。过期订单不可续命，签名后或未知提交状态不重试。`HyperliquidOrderFailure` 将网络、快照超时、报价过期、杠杆和额度错误分开显示，OrderLatency 只记录固定类型错误码；不放宽任何有效期或交易校验。
+
+**钱包归档符号（2026-09-22）**：`scripts/ios_wallet_symbols.sh` 在 iOS Archive 的 post-build 阶段补入 WalletCore 4.8.1 官方单独发布的两份 dSYM；固定 SHA-256、与嵌入框架逐个校验 UUID，缓存于用户 Library/Caches，不进入 App 或 Git。首次需访问 GitHub，失败中止归档；支持 `--archive` 修补已有归档。不修改钱包二进制、签名或交易逻辑。
+
+**首页滚动稳定性（2026-09-22）**：真机三份当日 `0x8BADF00D` watchdog 日志显示主线程滞留 SwiftUI/Charts 布局，其中两份定位到代表作价格范围及注释布局。`TodayRepresentativeStoryChart` 移除 Chart 几何 Preference → State → 重绘反馈，域范围和节点日期按 story 一次准备，注释使用与图表一致的显式坐标域及本地尺寸投影；不再逐个价格标记扫描整组价格。`BSmartCollapsingPager` 将滚动状态订阅限制在顶部位移 modifier，避免每帧重建分页内容及图表。保留分页独立滚动位置、顶部折叠、价格数值和观点节点跳转；无接口或交易变动。
+
+**关注通知统一入口（2026-09-22）**：好友页移除「关注」Tab，其「动态」仅保留未读私聊；首页通知新增「新增关注」筛选，并合并到全部通知和未读红点。`NotificationEntryView` 通过既有 `bsmart-social` 快照读取当前关注者及关注时间，前台首页每 30 秒和下拉刷新时更新，按账号隔离并丢弃过期请求；`ActivityNotification` 新增 follower 类型，沿用 30 天/200 条窗口及本机按账号保存的已读版本。点击通知进入公开资料。无需新 API、迁移或推送配置；取消关注后记录随当前关系快照移除，不宣称不可变通知历史。
+
+**AI 页新版布局（2026-09-22）**：`Features/AI/AIAssistantView` 使用原生紧凑导航和底部安全区输入栏；`AIAssistantWelcome` / `AIAssistantAnswer` / `AIAssistantComposer` 分离欢迎页、全宽阅读回答和输入控件。建议问题改为分隔列表，移除旧大聊天头、在线装饰、说明副标题与层层回答卡片；沿用品牌色、动态字号、44pt 操作目标和全局收键盘。证据展开、研究详情跳转、会话上下文、远程请求与本地回退保留，不改 API、模型或交易流程。
+
+**加密标的官方图标（2026-09-22）**：`scripts/sync_ios_crypto_logos.py` 从 Hyperliquid 官方 `info/meta` 与 `app.hyperliquid.xyz/coins/` 同步原色 SVG，转换为 256px 无损 PNG，避免复杂矢量图的编译/渲染开销；来源、原图及安装文件 SHA-256 记入 `ios/asset-sources/crypto-logos.json`。231 个原生合约图标内置到独立 `Crypto_` 命名空间（177/178 个活跃市场）；CANTO/MYRO/PEOPLE 暂缺，显示 ticker 缩写而非猜测图案。共享标的组件取消加密图标模板染色，沿用官方透明图底色规则；交易页/选择器按实际市场身份选图，不改订单或资金逻辑。
+
+**发现页热门榜单（2026-09-22）**：`PopularOpinionsView` 改为热门观点、热门投资者两个纵向 Top 3 预览，共用人数/成交额排序与 24h/7d/30d/全部周期；`DiscoveryRankingDetailView` 承接完整分页榜单与独立筛选。`DiscoveryRankingsStore` 隔离筛选、账号及过期请求；`bsmart-feed/rankings` 经 service-role RPC `bsmart_discovery_rankings` 汇总已核验订单，作者按平台+authorId 聚合跨观点去重人数，金额精确累加。旧 `/popular` 保留兼容。迁移 `202609220003_discovery_rankings.sql` 需先在 iOS 账户项目应用，再部署 Edge Function；统计规则见 `docs/contracts/supabase_trade_feed.md`。
+
+**公共聊天室与富媒体消息（2026-09-22）**：好友的聊天页新增常驻 Global Chat；所有已登录并完成资料的用户均可发言，私聊仍无需互关。`SocialChatComposer` 隔离输入状态并后台压缩图片，`SocialMessageRow` 提供气泡内时间、左滑引用和长按回复/复制/分享；`bsmart-social/chat.ts` 使用同一鉴权边界，消息 UUID 幂等重试，引用严格限制同会话，图片存私有 bucket 并按会话权限签名。`202609220002_social_chat.sql` 扩展既有消息表、增加限额上传预留和 RPC；操作者已确认手动迁移成功，函数已部署到 iOS 账户项目。契约见 `docs/contracts/social_chat.md` 与 `contracts/openapi/supabase-social.yaml`。未改交易及钱包链路。
+
+**成交后理论入口修复（2026-09-22）**：写理论与 Done 同为 52pt 全宽按钮，写理论在上方；先读取已核验成交，仅待核验时调用同步。缺少理论 RPC 明确返回 `thesis_not_ready`，不再与发布失败混淆。本日只读检查定位到缺失 RPC（`PGRST202`）；用户已手动应用 `202609220004_trade_theses.sql`，复查返回 200，配套 `bsmart-feed` 已部署。
+
+**成交理论与点赞（2026-09-22，服务端已上线）**：iOS 成交结果增加发表理论入口，个人页末尾增加「交易历史」Tab，发现最近成交/公开个人页共用原成交卡片与服务端观点引用。`TradeThesis` / `NativeTradeThesisClient` 承载原文与点赞，`bsmart-feed` 新增所有者成交读取、单笔理论发布与幂等点赞 API；独立 `bsmart_trade_theses` / `bsmart_trade_thesis_likes` 只经服务端核验成交归属后写入，一笔一条、不可改写。普通成交保留 Top 25% 规则，带理论的 Smart Account 观点成交不受原作者排名限制；自己的记录包含全部已核验 Smart Account 观点成交。排序仍按成交时间；切号清理草稿/状态，无交易执行改动。迁移 `202609220004_trade_theses.sql` 已由用户手动应用，服务端已部署，未代用户发表理论；见 `docs/contracts/trade_thesis.md`。
+
+**观点详情阅读布局（2026-09-22）**：观点封面缩短，作者/时间与标的/行情分别同列展示；行情只读现有交易市场报价，15 秒刷新，缺少有效报价时留空不造价。摘要改为正常阅读字号与「摘要」标签；交易人数区收紧，并只在专用 UI 测试场景显示「演示数据」入口。原有头像、标的、来源和交易跳转不变。
+
+**交易钱包续期误报（2026-09-22）**：交易入口的 `DeviceWalletStore.prepare(allowCreation: false)` 在同一账号凭证续期导致 `walletAccountID` 短暂不可用时，等待该会话恢复并最多重试一次已有钱包读取；账户会话版本、设备钱包操作版本或登录账号实际变化时仍拒绝继续，不创建或替换钱包。`AccountWalletServicing` 暴露会话版本与短暂续期状态供钱包准备区分，`AccountAccessStore.walletSessionIsRefreshing` 只反映续期/Apple 凭证检查；签名、资金租约、已登记地址匹配和交易前校验不变。钱包地址有链上资产并不代表 Hyperliquid 永续账户存在可用保证金。
+
+**零余额交易引导（2026-09-22）**：实盘订单弹窗并行读取既有只读交易快照与 `HyperCoreBalanceStore`；仅在账户身份、地址、模式一致且 USDC/永续权益及双向可交易额度都为零时，将开仓滑块改为进入现有 `ManagedDepositView` 的入金按钮。余额读取失败不推断为零；有余额但尚未共享到 HIP-3 市场时保留账户设置提示；减仓和平仓不受零余额引导影响。关闭入金页后重新读取余额和订单展示快照，签名、订单校验及资金路径不变。
+
+**交易市场首次解析（2026-09-22）**：交易弹窗从共享 `HyperliquidTradingStore` 继承 30 秒内的市场快照，只用于立即展示；订单仍独立执行原有报价时效、余额和交易所检查。无缓存时优先请求 XYZ 行情，只有成功返回但确无该标的才查完整永续市场目录；首选场所请求失败直接呈现请求错误，不再吞错后把网络故障报成“未找到市场”。Info HTTP 请求上限 8 秒，失败停止自动重试并提供手动重试，避免重复全市场请求与限流。目录部分请求失败时保留错误，不把不完整目录当作无市场。市场与 K 线分开加载，骨架布局保持不变。
+
+**首页真实持仓关联（2026-09-22）**：`TodayHoldingsActivity` 在保留手动持仓口径的同时，合并已登记账户公开地址上的 Hyperliquid 实盘仓位；按标的关联 Smart Account / Smart Money 动态，并保留多空方向，同标的跨市场去重；两种来源并存时不展示缺乏统一估值基础的权重。首页及持仓动态页通过现有只读 `TradingPositionsStore` 拉取仓位，不解锁钱包、不创建钱包；成交确认、切回首页和下拉刷新后重读。加载失败单独提示，不把网络故障误判为无持仓。成交与资金执行路径不变。
+
+**交易页分区加载（2026-09-22）**：`HyperliquidTradeLoadingView` 在市场元数据到达前先呈现标的、金额面板及图表的固定布局，价格、持仓金额和图表保留占位；钱包准备与订单日志初始化也沿用不可交互的金额骨架。K 线下载期间显示网格，不阻断已知行情、时间周期和其他内容。关闭入口始终可用；真实交易确认仍由已有钱包、余额和市场校验控制。无新服务或交易数据缓存。
+
+**交易日志安装隔离（2026-09-22）**：真机发现 Keychain 中保留非空交易索引、当前容器却无日志数据库，导致平仓构单失败并被误报为行情变化。`FundingJournalInstallation` 用受保护、排除备份的容器标记绑定日志 Keychain 命名空间；已有数据库继续使用原索引，无数据库/无标记的容器建立独立日志且保留旧索引，不恢复或重发历史订单。同安装标记存在时仍禁止丢库、回滚或损坏后的自动重置。订单存储错误改为独立提示，不再冒充行情变化；钱包密钥、账户绑定和 reduce-only 校验不变。
+
+**交易长连接与同次确认去重（2026-09-22）**：`HyperliquidInfoConnection` 通过系统 URLSessionWebSocketTask 复用官方 info 长连接，按请求 ID/类型分发、限制容量与超时，断线仅对只读查询回退 HTTP 并冷却重连，不缓存余额。订单专用 `HyperliquidOrderAccountObservation` 将五项独立读取并行，限制网络观察时间 5 秒；签名前后独立观察并比较精确仓位、模式、杠杆、市场及时间，最终资金检查仍由交易所执行，原多轮 provider 留给其他消费者。滑动下单复用本次未过期 review；手动两步确认和签名后复核保留，普通/变杠杆读取由 31/39 降至 15/20。钱包注册与独立读取并行。签名、托管、单次提交和未知结果禁重发不变。`OrderLatency` / `TradingReadLatency` 记录本机阶段/网络耗时，不记录凭证或钱包数据。调研和验收见 `docs/operations/trading-latency.md`；5 秒为真机验收目标，不是已测成交承诺。
+
+**Apple 登录与推送权限恢复（2026-09-22）**：`ios/project.yml` 的 `BSMART_APPLE_SIGN_IN_ENABLED` / `BSMART_PUSH_ENABLED` 恢复为 `YES`，Debug / InternalAlpha / Release 共用包含 Sign in with Apple 与 `aps-environment` 的 `BSmart.entitlements`。Debug 使用 development APNs，InternalAlpha / Release 使用 production APNs；应用重新展示 Apple 登录入口，并恢复通知授权、APNs 注册及设备 token 上传。`BSmartDeviceTesting.entitlements` 保留为历史测试文件，不再用于签名。
+
+**观点交易关联与提交延迟（2026-09-22）**：`opinion_trades.publish_catalog` 额外收录随包代表作图表的历史观点，沿用可信作者/原帖及摘要，不伪造全文；发布前合并上一目录，避免新版本覆盖旧 App 的观点关联。`bsmart-feed` 并行执行独立读取、缓存不可变目录对象，并区分目录缺失和服务故障。iOS 并行费用/盘口及身份/行情校验，同次构单复用盘口的原始时间戳，移除同次执行的重复钱包读取；保留签名前后快照、双时钟有效期、单次签名提交和未知结果禁止重发。提交栏即时显示阶段和耗时，只有交易所确认才显示结果。此轮不执行真实资金交易；见 `docs/contracts/hyperliquid_execution.md`、`supabase_trade_feed.md`。
+
+**免填金额入金（2026-09-22）**：新增 `POST bsmart-funding/address`，只接收网络，按绑定账户申请 Relay 可重复使用的开放地址；内部注册报价不作为用户应付金额或最低额展示，实际充值按到账金额重报。iOS 选网络后自动显示二维码，移除金额输入及预计到账，提供可展开的费用说明；旧 `/quote` 为已有版本保留。服务可用性与地址请求分别隔离状态，切换网络/账号时隐藏并丢弃旧地址，避免先前输入导致的检查失效。小额费用核验见 `docs/operations/managed-funding.md`；未启用费用补贴。
+
+**服务商直达合约入金（2026-09-22，服务端已部署，待主网到账验收）**：保留现有 Privy 用户钱包，新增 `bsmart-funding` 薄代理与原生 `ManagedDepositView/ManagedFundingStore/Client`，通过 Relay Deposit Addresses 将 Arbitrum/Base 原生 USDC 直接路由到同一 owner 的 HyperCore USDC (Perps)。身份及收款/退款地址来自现有绑定，报价核对目标资产与精度，历史读取 Relay requests v3；跨链执行、重试和退款由服务商处理，无 bSmart 归集 worker、额外签名权限或新数据库。前序未接入的自动归集/旧 Bridge2 草稿已移除。新入口替换分开的收款与转入引导，旧钱包资金/CCTP 历史仍可恢复；到账状态不替代真实可交易余额检查。已在 iOS Supabase 项目部署并开启 `BSMART_RELAY_FUNDING_ENABLED`，密钥仅存 Edge Secrets；云端真实 Relay 双网络报价及历史接口验证通过，未认证请求返回 401，临时验证函数已删除。尚未执行真实资金转账，法币入金未接入。契约 `contracts/openapi/supabase-funding.yaml` / `docs/contracts/managed_funding.md`，操作说明 `docs/operations/managed-funding.md`。
+
+**TestFlight 构建号（2026-09-22）**：iOS 营销版本保持 `1.0`，`CURRENT_PROJECT_VERSION` 从 `7` 更新为 `8`；`ios/project.yml` 与已生成的 `ios/bSmart.xcodeproj` 同步。Release 排除 6 份契约测试 JSON，保留 12 份离线内容快照及头像、公司简介、显式交易动态预览共 3 份实际资源，发布检查脚本同步白名单。新入金入口需要安装新构建；构建号更新不代表已上传 TestFlight。
+
+**首页行情代表作突出（2026-09-16）**：`TodayRepresentativeStoryCard` 将代表作入口改为轻量品牌色信息带，放大标的 Logo、行情峰值与入口层级；`TodayRepresentativeStoryChart` 增加低透明度面积层并强化走势线。首次观点、峰值、观点节点、详情跳转和代表作选择规则不变，不新增收益推断或评分。
+
+**首页 Smart Account 默认来源（2026-09-16）**：Today 首页三个内容 Tab 的预览只展示 Smart Account：持仓与追踪过滤链上钱包活动，市场概览的 Alpha 预览过滤 Smart Money，Smart updates 仅展示平台作者；点击各模块标题进入完整集合后仍保留 Smart Account 与 Smart Money 及原来源筛选。该限制只属于首页展示层，不删除 Smart Money 数据，也不改变完整页面、详情页、通知、搜索或排名算法。
+
+**日更退市行情闸门（2026-09-16）**：日线刷新继续要求活跃证券在最近七天内有有效报价；`ticker_meta.is_active=0` 的并购退市或更名证券只要已有历史日线，可作为终止序列继续参与历史 Call 结算，不再因没有近期报价阻断整批发布。没有任何历史价格仍失败，活跃证券仍失败，不生成收盘价、不跨证券拼接行情；运行回执单列 `terminalTickers`。
+
+**X 日更完整原文抽取（2026-09-16）**：日包的 Call 抽取与摘要提炼显式使用完整原文，修复长帖尾部标的因旧 2,200/2,000 字符前缀丢失的问题；其他历史任务默认长度不变。按运行前正式 X 排名 Top 25% 筛选的数据包须保留原包哈希、排名日期及固定作者名单，不把筛选后结果宣称为全作者覆盖。`READING_PACKAGE_ONLY=1` 将摘要/译文调用限制在输入包，保留其他历史阅读内容，并在质量记录声明范围；续跑不能静默切换。
+
+**X 日包可跳过全文翻译（2026-09-16）**：`make x-daily SKIP_TRANSLATION=1` 仅跳过全文翻译与对应完整性检查，仍校验原文、双语摘要并执行抽取/结算/排名；原有译文不删除，不用原文填造译文。选择持久化到运行记录，续跑不允许静默切换模式，发布质量明确标记 `translationMode: skipped`。模型可通过本次进程的 Qwen 环境配置选择，不改变全局默认模型。
+
+**Smart 榜单视觉统一（2026-09-16）**：`SmartHubView` 复用首页/发现的 `BSmartCollapsingPager`，改为下划线双 Tab、左右滑动、收起式搜索和置顶筛选；`SmartHubTabs`、`SmartHubRows`、`SmartMoneyOverview` 分别承载导航、简洁投资者列表和资金概览。作者突出平台排名与现有代表作，聪明钱突出来源提供的 30 天盈亏及真实持仓；没有数据不补零。不改变评分、筛选交集、追踪、详情入口、API 或交易流程。
+
+**观点封面与阅读精简（2026-09-16）**：`OpinionPortraitHeader` 的标的图取消固定浅色圆底和额外缩小，原图铺满圆形裁切区域，透明及单色 Logo 跟随深浅主题；作者有效 TOP 排名移到头像下沿，署名行不再重复。`OpinionReaderView` 删除字号菜单、独立字号偏好和复制入口/实现，正文仍跟随系统动态字号，保留原文/译文切换及来源跳转；错位叠合、下拉放大与交易入口不变。
+
+**聪明钱本地数据刷新（2026-09-16）**：按用户指定只更新 Xcode 本地 App 数据资源。沿用 Hyperdash Equities Focused / Copy Score，取现有头像池容量对应的头部 54 账户；公开 Hyperliquid 成交补齐 980 条近期动态、39 份同合约 K 线代表作、11 组衍生信号，不将跨月快照差异标成今日成交。五份生成资源已校验并通过原生 Swift 解码，Smart Account 资源未改；需重新 Xcode Run。公开接口每账户最近 2,000 笔上限不等于完整 30 天历史。本轮未更新 Supabase、交易归因目录或 TestFlight；线上仍以原发布回执为准。报告 `reports/smart-money-refresh-2026-09-16.md`，原始证据与压缩回滚副本位于 `data/runtime/smart-money-refresh-20260916/`。
+
+**三步原生 Onboarding（2026-09-16）**：`Features/Onboarding` 将旧的券商绑定门槛替换为“发现 → 追踪 → 交易预览”连续故事。首屏复用 `InvestorEducationAtlas` 的真实头像池和 1,283 位 X 投资者口径，聚焦 Serenity（`@aleabitoreddit`）及打包的 AAOI 代表作；价格线上的作者头像可打开对应历史观点。第二页写入既有 Smart Account 追踪状态并展示 2026-08-24 的同标的新判断；第三页只在本机计算保证金、1–3 倍杠杆和名义仓位，订单预览不调用执行、签名、钱包或资金接口。完成状态按登录账号 UUID 存储，切换到新 Apple/Google 账号必须重新经历引导；首次资料记录 `revision == 0` 时会显式写入该账号的未完成状态，不能继承设备持仓或旧账号状态；升级前的设备级完成状态只迁移给升级后第一个登录的老账号。设置页提供全屏“重新体验新手引导”入口，预览的跳过和完成只关闭页面，不改账号完成状态。完成或跳过引导不再要求持仓、券商绑定或追踪数量；真实交易仍只能在 App 内沿既有账户、余额、费用、风险和确认链路发起。首次资料页仍只展示用户名与可选头像，后续编辑保留昵称/简介/头像；云端资料校验不变。方案与口径见 `docs/product/onboarding-three-step.md`。
+
+**全局输入交互（2026-09-16）**：`Core/DesignSystem/BSmartKeyboardDismissal` 在每个 Scene 的窗口安装一个不吞触摸、不延迟触摸的手势，覆盖页面和弹窗；点击输入区域外结束当前编辑，输入框切换、文本选择与清除按钮保持原生行为。App 根视图统一启用滚动交互式收键盘，隐藏 Tab 不随键盘压缩布局。全部标的目录按数据变化缓存，目录及 Smart 搜索延迟 150ms 合并输入，资料字段仅超限时截断，避免每字重写；不改变签名、交易、表单提交与价格精度。
+
+**登录按钮语言与字号统一（2026-09-16）**：`Features/Account/AccountProviderButton` 统一 Google / Apple 的字体、间距、动态字号和 App 内语言解析；Apple 使用系统 Apple 标识及本地化“使用 Apple 继续”，不再由 `ASAuthorizationAppleIDButton` 单独跟随设备语言/字号。`AccountAppleButton` / `AccountGoogleButton` 保留调用入口，原生 AuthenticationServices 授权、nonce、Supabase 校验及 provider 开关不变。新版 onboarding 仅出方案 `docs/product/onboarding-v2-proposal.md`，本轮不改旧引导流程。
+
+**原生数据通知与 Apple 登录（2026-09-16，待配置/真机验收）**：`Core/Notifications/ContentPushRegistration` 以真实 Supabase 会话登记设备，按安装 ID 处理 token 轮换、通知开关及退出注销；`NotificationService` 接收 APNs 并在点击数据通知时请求首页刷新。新 `bsmart-notifications` Edge 已部署，Auth getUser 校验后只调用受限 RPC，不暴露 token 表；`202609160001_content_notifications.sql` 由用户手动执行。`content_release/push_queue.py` 在新日包发布事务内写 outbox，`push.py` 负责 production/sandbox APNs、租约与指数退避；基线、回滚、重复包和内容不变不群发，开关 `BSMART_UPDATE_PUSH_ENABLED` 默认关闭。`make content-push-retry` 或本机 `--watch` 重试，不声称是 Supabase 常驻任务。`AccountAppleButton` 复用既有 native nonce/token 登录；新增 Apple entitlement，InternalAlpha 改用 production APNs。Supabase Apple provider、APNs key、迁移、真实用户内容通道及 TestFlight 验收仍是上线前置条件，未改变 legacy 默认。契约 `docs/contracts/content_notifications.md` / `contracts/openapi/content-notifications.yaml`，操作清单 `docs/operations/testflight-notifications-apple.md`。
+
+**投资者直接筛选（2026-09-16）**：Smart 榜单的筛选面板改为大尺寸、直接可选的分组选项，`Features/Smart/SmartFilterOptions` 提供自适应网格、平台标识和选中态，替换嵌套 Form/Picker 菜单。平台、排名、周期、赛道、风格继续按既有规则取交集，底部实时显示匹配结果数并返回榜单；重置只清当前 Smart Account / Smart Money 分区的筛选条件，不清搜索或追踪条件，不更改评分、接口或交易流程。
+
+内容发布命令仅加载 `BSMART_CONTENT_DATABASE_URL`：进程环境优先，其次 Git 忽略的 `services/client_api/.env.content.local`，最后根 `.env` 的同名键；不会借用旧 web 的 `DATABASE_URL`。数据库密码由用户在本机配置，助手不输入或重置。
+
+**研究内容部署进度（2026-09-16）**：用户配置的原生 iOS 数据库连接已验证，三张内容表启用 RLS，anon/authenticated 无表权限，service_role 仅 SELECT。现有真实多平台快照含 353 作者、267 近期观点及 1,204 历史证据；保留 X 最新观点 9 月 5 日、Smart Money 快照 8 月 14 日的原始时间，不冒充今日新包。首次回读修复了 JSONB/JavaScript 数值表达造成的哈希差异：内容哈希统一整数浮点数与负零，原始文件校验不变。`--baseline --reencode-baseline` 仅允许对内容/时间完全相同的基线重编码，保留旧版；修正版 `f862986a...d85e6a06` 已发布，380 页内容、八个集合哈希和时间戳通过核对，23 项 Python 测试通过。`bsmart-content` 已部署，无凭证和 service-role 冒充用户均返回 401。回执位于 `data/runtime/supabase-content-20260916/`；真实登录用户接口验收、设备验证及 iOS 通道切换仍待完成，默认保持 legacy，登录/资金/Feed 不变。
+
+**Supabase 研究内容通道（2026-09-15，待生产启用）**：新增 `services/client_api/content_release`，将已审核多平台基线及日常 X 分区输出为不可变版本和按作者分页的研究集合；复用现有 X 包校验、Score 与观点格式，不改变算法。`BSMART_CONTENT_PUBLISH_TARGET=supabase` 将 `x-daily` 发布转向独立 `BSMART_CONTENT_DATABASE_URL`，事务锁内写完页面后原子切换指针，非 X 数据和用户状态不受影响，旧版本保留用于回滚。`bsmart-content` Edge Function 每次通过 Supabase Auth 验证 Google/Apple 用户后只读三张隔离表；RLS 不向 anon/authenticated 开放。`SupabaseContentClient` 使用既有会话、前台版本检查、变更集合下载和完整解码后提交，代表作按固定 revision 懒加载。`BSMART_CONTENT_BACKEND=supabase` 为显式构建开关，生产默认仍 legacy，避免未初始化时误切换；新模式不使用旧安装会话或私有状态云同步，持仓/追踪/已读保留本机持久化，登录/钱包/交易/Feed 不变。迁移 SQL 仅准备、不自动执行；`content_release.verify` 独立验证公网集合哈希及指定作者证据。契约见 `docs/contracts/supabase_content.md`、`contracts/openapi/supabase-content.yaml`，完整启用及日更步骤见 `docs/operations/supabase-content.md`。不把本地测试称为线上已发布或每天两次自动运行。
+
+**官网直接申请与调研（2026-09-15）**：`web/features/landing` 改为上下连续长页面：居中字标叠在财经报刊摄影背景上，下方直接展示编号表单，没有进入表单的前置按钮。`#apply` 保留为滚动锚点，不再切换独立视图。邮箱、信息渠道（至少一项）及 Telegram / 微信 / Twitter 联系账号均必填，“其他”需说明；`shared/validation/waitlistSurvey.ts` 与接口同步拒绝缺失问卷/渠道/联系方式，包括旧客户端不完整请求。沿用 Cloudflare `WAITLIST` KV，原名单不删除、原完整问卷不被匿名覆盖。13 项接口用例覆盖必填、兼容元数据、限流及失败。背景为本地静态摄影素材，来源记于 `docs/operations/beta-landing.md`，不作为实时行情展示。
+
+**首页单行 Tab（2026-09-15）**：`TodayHomeContent` 的三个场景标签保持原字号、靠左、按文字自然宽度单行排列，间距 28；超出屏宽时横向滚动，点击或内容横滑切换后自动露出当前选中标签。取消两行压缩，保留吸顶、下划线和原内容分页。
+
+构建、5 项分页状态测试和英文标签宽度/间距/横向滚动/点击选中测试通过。整页纵向滚动回归被 Charts 主线程持续重绘阻塞，尚未确认归因；本次未改图表或共享分页手势。
+
+**全应用白天模式（2026-09-15）**：`BSmartTokens` 统一浅色页面、白色内容、灰色控件、排名文字、图表与悬浮导航层次，保留原深色基础色值及照片暗色遮罩。`BSmartControlSurfaces` 提供有焦点边界的输入面和可读的浅色禁用操作面，复用到出金、入金、登录及引导；搜索/资料页分隔线不再在浅色下重复降透明度。交易条清除固定黑底白字，图表头像阴影随主题变化，共识与阿尔法保留原尺寸和结构。出金输入与费用布局适配窄屏，资金签名、确认、广播和恢复流程不变。对比度测试覆盖文本、浅色标签、禁用按钮、输入边界和导航选中态。
+
+详情页通过 `BSmartDetailVisibilityObserver` 跟随原生控制器的显示/消失管理导航隐藏令牌，避免共享缩放转场中 SwiftUI 内容短暂离屏导致底栏提前出现、遮挡交易按钮；显式返回仍即时释放当前令牌，嵌套详情不清除彼此状态。
+
+**原生出金入口与记录（2026-09-15）**：持仓交易账户增加与入金并列的出金入口，进入现有 HyperCore → CCTP → Arbitrum USDC 真实签名链路；目标页负责登录/解锁并复用账户钱包。`HyperliquidWithdrawalAvailability` 统一可提余额校验，全部金额按六位小数向下截断，统一账户仍要求所有 DEX 仓位/挂单清空；不将权益当可提现金。出金页在明确确认前展示完整地址、金额及 CCTP 费用，沿用签名前后校验、单次许可和未知状态禁重发。`HyperliquidWithdrawalHistorySection` 从加密 journal 恢复本机记录，已接受只显示转账处理中，不冒充到账；已拒绝/已接受后可显式发起新出金。未执行用户资金转账；完整费用与跨链到账核验仍有单独边界。
+
+**发现轮播头像入口（2026-09-15）**：首页 `TodayInvestorDiscoveryPeople` 区分滑动选择与头像点击；点击任一可见头像直接打开该作者的 `TodayInvestorProfileBrowser`，复用作者详情、追踪和前后作者浏览。头像作为共享放大转场来源，开启减少动态效果时回退；返回保留首页轮播位置，不改变筛选与排名。
+
+**作者顶部排名（2026-09-15）**：`SmartAccountDetailView` 在头像下方的平台/账号信息行右侧显示 `SmartAccountTopRankBadge`，替换原外部平台跳转箭头；排名不叠在头像上，品牌实色底保持深浅模式下的对比。TOP 百分比只取有效的已发布平台 percentile 并向上取整；缺少有效百分位时仅回退到已知平台名次，无有效排名则不补造。保留原头像拉伸/署名淡出、追踪、代表作及评分逻辑。
+
+**教育页文案恢复（2026-09-15）**：按用户最新选择，首页标题行入口固定为「对排名有疑问？」；教育页主标题为「投资，该追踪谁？」并保留原平台说明，X 首屏人数恢复 1000+，YouTube 300、Reddit 192 不变，底层精确人数仍留在折叠记录中。平台顺序 YouTube / X / Reddit，默认居中的 X；上一轮删除的解释小字、案例小字不恢复。取消首页入口的人数读取；入口保留「对排名有疑问？」并使用实色品牌底与高对比文字，不改排名、头像或数据快照。
+
+**悬浮导航滚动避让（2026-09-15）**：`AppRootView` 测量底部导航在屏幕中的实际区域，经 `BSmartFloatingNavigationLayout` 传入共用分页器；首页、发现和个人页的末尾滚动留白按视口与导航重叠高度计算，并额外保留 16 点。留白作为独立尾部区域放在 lazy 内容与最小高度容器之外，保持悬浮透视且让末项能完整滚到导航上方；不改变交易与资料数据。
+
+**首页代表作故事原生版（2026-09-15）**：`Features/Today/TodayRepresentativeStory*` 落地 C 版布局和方案二叙事：紧凑日线折线在上，14pt 高对比可缩放正文在下，仅图内首次看多节点保留点号日期，正文与图下日期行移除；首次看多日期/价格与后续最高价直接标在图内，节点避让标注，正文加粗 ticker、金额和涨幅。文案用“作者”而非姓名，不用“就”；保留第一代表标的的既有选择规则，不按最高涨幅重排，最多标出已收录记录中最早三次看多。`Core/Data/TodayRepresentativeStoryBundle` 负责随包读取，`Resources/representative-stories.plist` 内置 342 份代表作摘要和 268 份有效看多图文（约 1.1 MB），中英文文案也预生成；原证据 fixtures 继续保留。`Loader` 先同步展示随包故事，再于头像选择稳定 650ms 后用完整作者证据刷新，不用零散最新观点替代历史曲线。`scripts/export_ios_representative_stories.sh` 通过显式 XCTest 导出复用同一 Swift 投影，无第二套评分/叙事算法。源价仅取发帖前完成的日线；高点排除首次发布日及未来未完成日线，文案区分高点前后看多，不包装为作者交易收益。标题行右侧「对排名有疑问？」入口替代 Top 25% 并进入既有投资者教育页；卡片右上角突出最高涨幅。卡片及节点经 `TodayRepresentativeOpinionDestination` 共享元素直达标准 `SmartAccountEvidenceDetailView`，按作者/标的/原帖匹配完整观点，不按代表作 ID 误取另一篇；仅有 marker 时摘要仍为摘要，全文/译文/结算不伪造，日线口径在标准详情折叠区保留；做空代表作沿用原方向摘要，缺价保留原帖，不伪造涨幅。目录和其余首页模块不变。
+
+**个人页基础账户（2026-09-15）**：`PortfolioView` 默认选择 bSmart 账户及真实持仓，保留外部账户、估值曲线和券商连接入口。持仓区常驻入金入口，空仓、未入金及未登录均可进入；`PortfolioAppAccountView` 改为入金路径页，复用既有登录、收款与转入交易账户流程，不提交自动转账。个人页不再嵌入 HyperCore 技术余额面板或示例地址，真实钱包地址放在设置中且按当前登录账户校验；加仓/减仓继续使用统一交易面板。
+
+Hyperliquid 账户模块保留精简余额展示，进入后自动查询，缺失时用 `--` 而非 0；不再显示协议模式、查询时间和说明性小字。分账户模式的主账户资产与现金分别呈现，不冒充新订单可用额度。
+
+**Discover 发现页（2026-09-15）**：原 Feed 的用户可见名称统一为 Discover／发现，底部使用叠放卡片图标，内部 `.feed` 路由和统计接口保持兼容。`Features/Feed/DiscoverContent` 复用 `BSmartCollapsingPager`，以应用自定义下划线 Tab 展示“热门观点 / 最近成交”，默认热门观点，支持点击、左右滑动、独立滚动位置和下拉刷新；内容延伸至悬浮导航下方。热门页只在激活时请求既有统计服务；账号校验、最近成交核验及订单链路不变。DEBUG 的 `FeedLayoutPreview` 共用此分页布局，示例成交仅用于显式 UI 测试，不作为正式数据回退。
+
+**首页代表作故事方案稿（2026-09-14）**：`docs/product/prototypes/representative-work-stories` 提供三种离线 HTML 设计，默认已选 C v2：价格图在上、13px 自然语言在下、点号日期；图上按发布时间仅取区间内最早三个看多节点，不足三个则全取，点击进入对应原帖记录。`bundle.mjs` 只读现有作者、证据、更新 fixtures 与 iOS 图片，按作者/标的/原帖去重后内嵌至 `bsmart-representative-work.html`；全文保留已知看多/看空统计，最高涨幅标明区间且不称为真实交易收益。仅方案预览，不改原生首页或评分流程。
+
+**全局搜索 Tab（2026-09-14）**：底部第三槽启用 Search，顺序为 Today / Feed / Search / Profile；Smart 榜单仍从首页发现入口打开。`Features/Search` 提供固定搜索框、双列热门标的、作者头像横列、最新观点与公开用户概览；输入后按标的、观点（含 Smart Money 操作）、作者、用户分组，精确 ticker 优先。`Core/Data/AppSearchIndex` 索引既有已发布研究数据、已加载证据与合约目录，`AppSearchStore` 后台匹配、220ms 防抖、取消旧请求并按登录账户隔离搜索历史。新只读 `bsmart-search/profiles` 使用既有 Supabase 会话查询已完成资料设置的公开用户，仅返回 public ID/昵称/用户名/头像；该函数已独立部署，不改动登录、交易或数据库 schema。范围与接口见 `docs/contracts/app_search.md`、`contracts/openapi/supabase-search.yaml`，不承诺搜索未加载的全部历史内容或全网。
+
+搜索 UI 修复：热门标的使用撑满网格的等宽浅边小卡片，移除误成竖线的 Divider；作者横列使用单行姓名和已发布 TOP 百分位，缺失时仅采用已知名次，不编造排名。搜索路由不再重复加 `bSmartDetailPage`，返回按钮及 Tab 隐藏由各详情页自行管理。AVAV 单色 Logo 随主题适配，其余彩色 Logo 保持原样。
+
+**无字观点头图方案稿（2026-09-14，紧凑双圆）**：`docs/product/prototypes/opinion-cover-options` 提供三种纯图构图。用户确认 A v3：完整头像圆与较小 Logo 圆斜向叠合，无右侧延伸色块或整块灰底；高度 244，头像/Logo 圆分别占构图宽 40%/34%。默认单屏打开 A，其余方案仍可对比。支持深浅色、三组项目样例和下拉放大；`bundle.mjs` 从本地 fixtures/图片与已有 Lucide 生成离线 `opinion-cover-options.html`。示例成交人数明确标记，不连 API/钱包。已据此改造原生观点详情，预览文件继续保留供对照。
+
+**观点详情紧凑双圆头图（2026-09-14）**：`Features/Smart/OpinionDetailLayout` 和 `OpinionPortraitHeader` 落地已确认的 A v3：原色作者头像与较小的浅色 Logo 圆斜向轻叠，背景与页面连成一体，头图不显示任何文字，缺头像用人物图标。构图宽度上限 390、高度 244，两圆共同下拉放大至最多 1.18 倍；图片保留作者/标的入口。复用 `SmartAccountPortraitLayout` 拉伸和收起规则，作者页原有尺寸与署名渐隐不变，仅头图观察滚动。作者名称、平台图标、排名、标的和时间在图下自适应排版；方向/周期之后展示成交人数与展开列表，再进入摘要、原文、引用来源、结算和价格证据。翻译、字号、底部统一交易面板和既有数据契约不变；首页价格图的作者观点入口也使用此页。
+
+**首页通知中心（2026-09-14）**：首页右上角 `NotificationEntryView` 铃铛替代设置入口，设置继续保留在个人页。`Core/Notifications/ActivityNotification` 将既有 Smart Account 观点、已加载作者证据和 Smart Money 操作按追踪/持仓匹配，保留最近 30 天最多 200 条事件；同一事件同时匹配两类只展示一次。持仓包含已录入持仓及通过已登记公开钱包地址读取的真实合约持仓，不解锁钱包、不创建钱包。`ActivityNotificationStore` 按登录账户隔离本机已读版本；`Features/Notifications/NotificationInboxView` 提供全部/追踪/持仓、只看未读、全部已读及原观点/操作详情跳转。应用内数据刷新复用既有取数链路，未接 APNs，不冒充后台实时推送；契约见 `docs/contracts/activity_notifications.md`。
+
+**Smart 入口移至首页（2026-09-14）**：首页“发现聪明投资者”标题按钮直接推入完整 `SmartHubView`，复用首页导航栈和通用详情返回/Tab 隐藏；保留 Smart Account、Smart Money、搜索、筛选和详情跳转。根页移除 Smart 常驻层，第三槽现由 Search 使用，旧 `.smart` 枚举仅保留兼容，DEBUG 旧启动参数回首页。原平台定向发现目录仍供教育等入口使用，不删内容或数据。
+
+**无身份测试登录（2026-09-14）**：按内测需求，根登录页新增“测试登录”；`AccountAccessStore.isTestSession` 仅为当前进程的浏览状态，不生成 Supabase 身份、token 或钱包权限。`AppSessionGate` 和取数调度显式允许该状态，设置/账号页可退出测试登录，清空导航并回根登录页；重启需重新选择。正式 Google 登录成功自动结束测试状态，仍完成云端资料设置；既有交易、钱包、Feed 云端接口继续要求真实会话。此入口同时编入内测 Release，与仅 DEBUG 的旧 fixture 路径分开。
+
+**App 强制登录入口（2026-09-14）**：`App/AppSessionGate` 在根页面依次处理会话恢复、登录、首次云端资料设置及正式内容；`AccountAccessStore.canAccessAppContent` 要求已完成恢复且身份匹配未过期会话，不依赖钱包就绪。内容树按账户 ID 重建；退出/换号由 `AppRouter.resetForAccountChange` 清空路径、待处理链接和 Tab 隐藏令牌。启动取数/前台内容刷新受登录状态控制，Supabase 本机退出清会话后即回登录，远程撤销失败也不重新放行。仅 DEBUG + 显式内置数据场景保留旧 UI fixture 入口，`--ui-auth-gate` 测试实际入口；Release 无此分支。研究 API/数据发布契约不变。
+
+**登录与账号页面整理（2026-09-14）**：`Features/Account/AccountPresentation` 提供无底卡字标、原生中性色 Google 登录按钮、账号操作行及主按钮；登录字标深色模式按原轮廓呈现品牌浅绿，其余字标保持原图。Google 图标取自固定 SDK 资源，授权流程不变。`TradingAccountView` 保留首次资料设置、错误恢复及注销入口；`Features/Portfolio/ProfileEditorPresentation` 统一云端与游客编辑页的头像选择/菜单、焦点字段分隔线及底部保存，沿用原资料校验与存储。账号详情及主页身份布局延续上一版，不修改钱包或资金流程。
+
+**内测一屏官网（2026-09-13，正式域名已上线）**：`web/features/landing` 承接根页及 `/zh/`、`/en/` 的一屏官网，仅保留最新字标、一句中英文品牌文案、Email 输入及申请按钮；中英文正常视口一屏展示，极小屏/放大时允许滚动避免裁切；`BrowserWaitlist` 按浏览器首选语言自动匹配 zh/en（非中文统一英文），仅将品牌及表单文案传给客户端；双语内容在字典 `betaLanding`，默认 `SITE_URL=https://bsmart.today`。`web/functions/api/waitlist.ts` → `web/server/waitlist/handler.ts` 接入生产 Cloudflare KV `WAITLIST`，新版按 `intent: beta-access` 记录主动申请（不伪记隐私勾选），兼容旧 `consent` 请求；校验/去重/粗粒度限流并仅在持久化后确认。完整 `make site` 后，`web/scripts/stage-beta-site.mjs` 仅抽取官网、必要资源及三路由 sitemap 到 `/tmp/bsmart-beta-out-cf`（约 8.7 MB），完整研究页保留在 `web/out`；`cf-deploy` 从 `web/` 使用 Wrangler 4.131.1 发布 Functions 和静态页。Pages 项目 `bsmart` 已部署到 `https://bsmart-501.pages.dev`，生产邮箱提交及 KV 读回通过，测试记录已清理。bsmart.today / www.bsmart.today 已激活，最新一屏部署 `https://2c1f6b82.bsmart-501.pages.dev`；正式域名根页/中英文/www HTTPS、新图标字节校验、邮箱提交与 KV 读回均通过。分享元数据由 `features/landing/metadata.ts` 统一输出：标题 `bSmart`，描述直接复用对应语言的品牌句；卡片字段与浏览器语言切换独立。操作说明见 `docs/operations/beta-landing.md`。
+
+**统一品牌资源（2026-09-13）**：用户确认原图存放 `ios/Brand/bsmart-logo-20260913.png`；`scripts/sync_brand_assets.py` 从原图导出透明字标、iOS AppIcon 与箭头 r 网站 favicon/PWA 图标。`BSmartWordmark` 统一读取 `BSmartWordmark.imageset`，登录、引导、设置和资产设置同步更新。官网使用 `web/public/brand/bsmart-wordmark.png`，分享预览保留完整原图；Service Worker 缓存版本同步更新，避免旧图标驻留。
+
+**作者带动交易与详情精简（2026-09-13）**：新增 Supabase `bsmart_subject_trade_stats` 只读聚合，按真实成交的“用户 × 观点/动态”去重累计，区分作者/聪明钱及平台，不把十条观点的一名用户合并成一次。`SubjectTradeStatsStore/Section` 共用于两类详情页，显示总数与多空比例，账号切换清空，错误不伪装零。私有目录通过 `money_catalog.py` 接入已审核链上动态，动态详情使用原交易面板携带来源和精确 coin，不改签名、成交核验或资金路径。作者详情去除重复参考价、OHLC、说明小字；评分局限集中在折叠说明。007（文件 `202609130001_subject_trade_stats.sql`）须由用户手动执行，部署状态见 `docs/contracts/subject_trade_stats.md`。
+
+**作者详情重排（2026-09-13）**：`Features/Smart/SmartAccountDetailView` 从 Hub 拆出，以可下拉展开的真实头像、名称和代表作作为首屏；只让照片标题随下拉淡出，滚动后显示紧凑导航，追踪沿用原状态并固定于底部安全区。代表作保留三标的选择和共享交互 K 线，突出观点时间/参考价和明确窗口内的股价表现，不伪装账户 ROI。下方采用最近观点时间线、最新标的观点列表、画像与算法说明，历史失误仍可查；`SmartAccountAboutSection` 保留双基准和评分版本，不改数据、算法或交易链路。
+
+作者入口使用共享导航的 `usesZoomTransition: false`，避免系统 Zoom 下拉退出抢占照片展开手势；其他详情页仍默认使用 Zoom。
+
+**首页层级精简（2026-09-13）**：`TodayHomeContent` 复用折叠分页容器，保留“持仓与追踪 / 市场情况 / 聪明动态”三个基础 Tab 和左右切页；发现投资者和市场观点标题去掉前置图标，以留白/分隔线分层。发现滚轮同时显示三位圆形头像，保留手动居中、原候选池/排序与追踪；点击标题通过共享放大转场进入独立发现页，搜索、平台、赛道、已追踪筛选仅在该页提供。持仓和聪明动态首页预览不显示来源 Tab，完整集合页保留来源/标的/搜索能力。全局导航、教育入口、代表作、数据和评分不变。
+
+**交易链路精简（2026-09-13）**：`LiveMarketOrderDestination` 在前台进入/恢复时自动读取并恢复已绑定钱包，`DeviceWalletStore.prepare(allowCreation: false)` 不隐式创建或绑定钱包，保留首次设置与恢复入口。`HyperliquidMarketOrderStore` 复用本次滑动下单刚获取的账户快照，仅在更新杠杆后额外读取确认；不改杠杆开仓的行情/账户请求从 48 降至 32，签名前与提交前仍独立刷新。`HyperliquidTradingSnapshotProvider` 每次最多并行两个独立请求，保留前后模式及两轮仓位一致性检查、双时钟期限。`WalletAuthenticationSession` 前台同账户验证上下文改为最多 5 分钟复用，后台/锁屏/退出即失效；不缓存私钥，不更改 Face ID 设置。共用交易面板显示核对/杠杆/签名/提交状态，不改滑动确认、订单日志或广播边界。
+
+**Privy 恢复限流修复（2026-09-13）**：真机 Xcode 控制台确认 `stage=restoring status=429`。`EmbeddedWalletLookup` 复用认证用户已有的钱包列表，仅在已登记地址缺失或此前创建结果不确定时刷新；不为已绑定账户创建替代钱包。`PrivyEmbeddedWalletClient` 对 429 使用进程内 60–300 秒冷却，重复点击不再请求或延长冷却，不自动重放创建与签名。完整模拟器单元测试 950 项、6 项跳过、0 失败；实际连接仍需新版真机验收。
+
+**首次登录资料与 Privy 错误定位（2026-09-13）**：`TradingAccountView` 在 Google 登录后读取统一云端资料，revision 为 0 时全屏打开共享 `AccountProfileEditor`，设置昵称、唯一用户名与头像后才能从该登录入口继续；保存沿用既有 PUT/revision，不加表、不用本机标记代替云端完成状态。`EmbeddedWalletFailure` 区分 SDK 嵌套认证、权限、网络、创建和超时错误，日志仅记阶段/HTTP 状态/白名单错误码；钱包连接短暂等待正在完成的会话清理，避免直接误报失败。已只读确认用户将 Privy 原生应用标识从空列表补为 `today.bsmart.ios`；真实新账户钱包创建仍需用户验证。
+
+**Privy 嵌入式钱包（2026-09-12，本地接入）**：`Core/Wallet/PrivyEmbeddedWalletClient` 使用现有 Supabase access JWT 和固定 Swift SDK 2.16.2；`HybridTradingWalletVault/Signing` 为新账户创建/恢复用户拥有的 EVM 钱包，旧设备密钥优先保留。所有入金、订单、杠杆、统一余额及出金入口注入同一签名器，复用原交易 UI、日志和提交校验；Privy 仅签名、不广播。provider 与 `recoveryVerified` 分开，账户钱包不要求助记词，不显示本机密钥 Face ID 控件。用户已确认 Custom Auth/JWKS 配置保存，模拟器及真机架构构建通过；完整单元测试 940 项、6 项跳过、0 失败。未自动迁移旧钱包、执行 DDL 或真实资金操作；真机登录/跨设备及资金验收仍待完成。契约与操作步骤见 `docs/contracts/embedded_wallet.md`、`docs/operations/privy-ios-setup.md`。
+
+**会话稳定性、账户持仓及公开 Feed（2026-09-12，本地实现）**：Google/Supabase 前台恢复与刷新遇到网络错误保留会话；使用 Supabase 父 refresh token 恢复未完成轮换，明确凭据拒绝才清除。过期凭据仍不能签名。Tab 顺序为 Today/Feed/Smart/Profile，Feed 移除 Demo 与公开设置入口。`PortfolioTradingHoldingsView` 在 bSmart 账户直接复用真实跨 DEX 持仓查询，加仓/减仓共用 `BSmartTradeSheet`；交易钱包入口移至设置。006 迁移将历史与新账户动态固定公开，旧 sharing API 仅兼容返回公开策略，不修改用户昵称/头像；迁移与函数更新尚需上线，未执行生产 DDL 或交易。
+
+**Feed 行布局简化（2026-09-12）**：单条动态按账号身份、真实成交、引用观点分层，成交金额与标的独立对齐，引用区改为细线和平台图标，去掉固定 Top 25% 标签及重复装饰。底部保留标的 Logo/ticker 与做多/做空，移除四个 100/500 定额按钮；仍走 `BSmartTradeSheet` 并保留精确 coin/观点关联，但不预填金额。Demo 仅展示方向和标的；不改签名、资金或成交统计。
+
+**统一账号资料（2026-09-12，服务已部署）**：将 iOS Supabase 的历史 `bsmart_feed_profiles` 升级为平台统一资料，保留 public ID/昵称/头像/公开同意，新增唯一 handle、bio、并发 revision 和注册自动建档。`bsmart-profile` 独立处理本人资料与私有头像上传；Feed/观点交易名单实时关联同一记录，展示头像、用户名、handle。旧分享 API 只修改同意，不再覆盖账号资料。iOS `AccountProfileStore/NativeAccountProfileClient` 和 `AccountProfileEditor` 负责云端编辑；旧设备资料仅按当前账户显式导入。005 schema/RPC/清理队列已只读确认存在；私有头像 bucket、profile/feed 函数已部署，线上 Feed/观点返回 handle，匿名接口拒绝访问。头像服务不参与订单核验或资金签名；未代替用户编辑真实资料或下单，真机编辑上传仍需用户验收。契约见 `docs/contracts/account_profiles.md`。
+
+**投资者教育页（2026-09-12）**：`Features/InvestorEducation` 通过发现模块底部单一入口打开原生独立页，复用共享放大转场、详情 Tab 隐藏及 AppModel 追踪；原首页布局/筛选不变。X、YouTube、Reddit 独立切换观察人数、头像池、Top 25% 和推荐追踪列表。`InvestorEducationSnapshot` 校验离线历史教材，Resources 内置 1,289 个对应作者头像（X 881、YouTube 295、Reddit 113）的 1.54 MiB 图集及 Wey How SNDK 正贡献案例（原结算区间 +133.28%），不改排名算法、不冒充实际账户收益。重建工具只读 SQLite，公开频道/个人页头像补抓结果和缺失清单在 `ios/asset-sources/investor-education*.json`；详见 `docs/product/investor-education.md`。
+
+**Feed 热门观点与多空人数（2026-09-12）**：Feed 顶部切换最新成交/热门观点；`PopularOpinions` model、store 与独立 SwiftUI 列表消费 Supabase `/popular`，按近 7 天真实成交去重人数排名，不对分页后的成交记录做本地热度推断。004 迁移由用户执行；详情 RPC 新增全时段多空去重人数，最新成交方向决定归类，隐私用户只贡献匿名计数。`OpinionTradeSplitBar` 复用在详情、热门列表与明确 Demo 中；美元金额固定 `$` 前缀。后台只增加聚合查询，未改交易签名、资金或成交核验流程。
+
+**正式观点成交统计（2026-09-12）**：`bsmart-feed` 已部署至 iOS Supabase 账号项目；用户执行 002/003 SQL，统计表、共享核验队列、Vault 密钥与每分钟 pg_cron/pg_net 调度已建立。私有 Storage 目录提供真实观点校验，不依赖 Vultr；`services/client_api/opinion_trades/publish_catalog.py` 发布不可变快照并最后切换目录指针，`inspect_feed.py` 检查权限、统计及 worker 心跳。已发布 1,466 条观点和 58 个核对过的 USDC 股票/ETF 合约映射。所有有效评分作者可关联观点，Feed 仍按前 25% 展示。未核验成交不计数，未替用户下单；新数据需同步发布目录。下方早期「待部署」记载由此更新覆盖。
+
+**钱包验证设置与默认统一余额（2026-09-12）**：设置页增加 Face ID 开关，`KeychainDeviceWalletVault` 在原记录中原子更新 ACL 与策略字段，关闭后仍保持密码保护、本机限定、不云同步；旧记录默认保持 userPresence，失败不删除/替换密钥。`WalletAuthenticationSession` 仅按服务/账户复用 60 秒 LAContext，不缓存私钥；后台、锁屏、登出、验证失败和策略变更立即失效。`UnifiedAccountSetupStore.prepare` 默认自动初始化统一 USDC，每个实例只自动尝试一次，仍保留空仓/挂单/身份及读回核验；失败只显示重试，不自动下单。设置关闭旧钱包验证时可能需要最后一次系统验证。
+
+**跨合约余额衔接（2026-09-12）**：`LiveOrderEntrySummary` 识别非共享账户下 HIP-3 当前方向零额度，`LiveOrderComposer` 就地展示既有 `UnifiedAccountSetupView` 精简入口。用户确认风险后，沿用受保护的账户模式签名和空仓核验；读回 unifiedAccount 才刷新真实 `activeAssetData`，不把默认永续权益伪装成 XYZ 可用资金。保留手动刷新、6 位余额/MAX 精度及下单前最低名义金额/保证金提示，减仓不受开仓最低金额 UI 限制。未替用户改变账户模式或交易。
+
+**统一交易入口（2026-09-12）**：观点、Feed 快捷操作、合约列表及持仓减仓/平仓均打开 `BSmartTradeSheet`，复用 `LiveOrderComposer`，不再推入独立减仓表单，避免全局 Tab 遮挡确认区。减仓使用相同键盘/K 线、底部 MAX 与滑动确认，金额区切为比例，标的和已有杠杆锁定；`executeReduction` 复用真实仓位核验及 reduce-only 签名流程。持仓入口按精确 coin 加载，不回退到其他同名合约；关闭面板刷新持仓。未执行真实交易。
+
+**入金网络费误报修复（2026-09-12）**：`ArbitrumSourceSubmissionCheck` 将重新估算的原始 gas 与用户已确认的 gas 上限比较，不再对新估算重复加 20% 余量；最终模拟仍使用原签名的 gas/单价上限，真实超出报价要求重新确认，不提高硬上限。日志新增源交易 `notSubmitted` 终态：只有尚未发放提交许可的 `signed` 记录、且无冲突链上证据，才可保留签名及历史并解除占用；失败及旧版本恢复均可重新输入金额。`submitting/submitted/uncertain` 不释放、不重发。iOS 构建及 117 项相关测试通过；未发送真实转账。
+
+**入金模拟 gas 与失败恢复修复（2026-09-12）**：只读主网模拟复现 `eth_call` 携带 fee 字段但未设 gas 时，节点按约 5000 万 gas 检查资金，误拒绝足够支付实际交易的 0.0011 ETH。`ArbitrumSourcePreflight` 改为先估算 gas、校验真实费用预算，再用明确 gas 上限模拟；RPC 错误区分余额、合约拒绝和请求错误码。模拟失败且没有源交易的已保存授权记为 `notSubmitted`，保留签名/历史但立即恢复金额输入，旧授权恢复失败同样处理；签名进行中及已存在源交易不释放。历史提供“继续入金”入口，不以“已查看”解锁。核验方法见 `docs/operations/cctp-deposit-simulation-2026-09-12.md`；未执行真实转账。
+
+**观点交易人数精简（2026-09-12）**：`OpinionTradersSection` 生产环境统一走真实 Supabase 账户/成交接口，未登录显示登录入口，加载失败不再自动填入 Demo；演示改为主动打开的独立弹层。真实/演示名单均隐藏杠杆与成交时间，后台仍保留时间用于核验、去重和排序。不改订单、资金执行或数据库结构；服务部署状态沿用下条。
+
+**Feed 接入真实账户与成交（2026-09-12，待部署）**：`NativeTradeFeedClient` 复用 `AccountAccessStore` 的 Supabase 会话，Feed/公开个人页/已登录观点人数切到 `bsmart-feed`；用户明确设置昵称、Google 头像及独立金额公开同意，切账户/撤回后清理旧身份。观点来源通过真实下单页传至签名前注册钩子；普通交易/减仓不依赖 Feed，关联失败不签名不提交。新 Edge Function 只读核验主网 `orderStatus/userFillsByTime`，按订单合并成交、按观点去重人数；不接受客户端虚构成交、不改资金日志。研究 API 增加服务端观点校验入口。SQL、Edge、研究 API 配置需单独上线，本轮不执行迁移或真实交易；契约见 `docs/contracts/supabase_trade_feed.md`。
+
+**交易面板交互恢复（2026-09-12）**：`LiveOrderComposer` 恢复旧版大金额、杠杆滑尺、快捷金额、数字键盘/K 线切换、底部余额/MAX 和一次滑动下单，不再展示中间预览表单。输入重新按旧版保证金口径；Feed 传入的名义金额先转换成保证金。`LiveOrderEntrySummary` 仅计算显示，真实余额/费率来自 `loadEntry`；滑动后 `executeMargin` 校验资金、按需发送固定 `updateLeverage`，读取真实生效值后走既有市价订单签名流程。已有仓位仍锁定杠杆，不使用模拟余额或模拟成交，无法可靠估计强平价时显示空值。`HyperliquidLeverageUpdate/Codec` 与订单共用持久 nonce 序列；行情图使用独立会话。
+
+**入金恢复与路径精简（2026-09-12）**：`CCTPTransferStore` 提供“输入 → 继续（授权及费用准备）→ 确认转入（签名并提交）”；不再要求签名后额外点发送。`CCTPDepositPreparation.restore` 在原页面恢复已保存授权，以原金额/有效期/费用上限重新模拟，不重新签授权；只在链上时间超过授权期限且没有源交易时通过 `FundingAuthorizationRecovery` 将孤立授权记为过期，保留原签名与历史。已签名或已发送的源交易不清空、不重复发送。输入页移除整页 TimelineView，显示投影仅随状态变更缓存，金额输入阶段没有周期刷新；预检错误保留实际原因。新授权仍需新鲜费用，已有授权恢复不延长其期限，提交前重新核对链上资金和网络费。
 
 **入金日志路径兼容修复（2026-09-12）**：`FundingJournalFiles.databasePath` 在 SQLite 打开前使用 POSIX `realpath` 规范化父目录，解决系统 `/var` 别名与 `SQLITE_OPEN_NOFOLLOW` 冲突导致日志无法创建的问题；数据库文件本身仍拒绝符号链接，Keychain 锚点、防回滚、签名和提交门槛不变。不删除或重置已有记录，不修改钱包密钥、地址或注册信息。
 
@@ -16,7 +214,7 @@
 
 **iOS 直连 Supabase 账号（2026-09-12）**：`Core/Data/SupabaseAccountAuthClient` + `SupabaseAccountTransport` 独立于研究 API/安装会话，直接处理 provider ID token、nonce、用户验证、刷新与退出；`auth.users.id` 是新账户 ID，项目独立的 device-only Keychain 保存会话。`AccountIdentityAuthorizer` 使用哈希 nonce；旧 `HTTPAccountAuthClient` / backend `accounts/supabase_identity` 只保留兼容，不再是 iOS 登录依赖，不需 Vultr。公开 publishable key 位于 gitignored `ios/Config/Supabase.xcconfig.local`。`supabase/ios-account` 是新账号项目的独立部署根，包含公开钱包地址 RLS、一次性签名挑战及 `bsmart-wallet` Edge Function；EIP-191 使用 viem 验证，私钥/助记词继续只在设备端，不上传、不从登录信息派生。用户报告钱包 SQL 已执行，Edge Function 已部署；未认证访问实测 401。注册响应以独立 capabilities 控制入金、交易、出金，缺字段/缺地址/验证失败关闭，不因 Google 登录而自动开放。旧钱包不覆盖、不按 email 自动迁移；缺失函数/表显示错误而非未绑定。Apple 和账号删除仍后置，公开发布前须完成。操作步骤见 `supabase/ios-account/README.md`，契约见 `docs/contracts/supabase_account.md`。
 
-当前内测开关：`BSMART_DEPOSITS_ENABLED`、`BSMART_TRADING_ENABLED`、`BSMART_WITHDRAWALS_ENABLED` 已设为 `true`，仍要求当次注册身份、本机已核验钱包、明确确认及签名前后预检；备份门槛见上方内测策略。上阶段 197 项 iOS 回归通过，含 4 项主网只读检查；另 4 项界面回归、11 项 Edge Function 测试及架构/术语检查通过。未执行真实资金操作、未上传 TestFlight，不代表公开发布就绪。
+当时的内测开关与测试结果仅是历史记录，不代表当前线上配置。2026-09-23 起旧版直接出金已退役：钱包能力固定返回 `withdrawalsEnabled=false`，旧提交接口返回 `426`，新出金仅通过 Across 的 `BSMART_ACROSS_WITHDRAWALS_ENABLED` 开关。用户要求保持 Across 开启；尚未确认小额真实出金到账，不能把函数部署或模拟器测试视为真实资金验收。部署及恢复操作见 `docs/operations/across-withdrawals.md`。
 
 Google 上阶段自动验收：43 项账号逻辑测试、3 项 UI 测试通过（模拟器 ad-hoc 签名），SDK 测试停在官方邮箱/手机号输入页，不代填凭据；随后用户提供真机登录成功截图。早期后端路径验证不作为当前直连登录的验收结论。
 
@@ -109,6 +307,8 @@ Google 上阶段自动验收：43 项账号逻辑测试、3 项 UI 测试通过�
 **观点相关依据（2026-09-09）**：`Features/Smart/OpinionSupportingSourcesView.swift` 在原文/译文之后展示有对应事实的资料，点击卡片沿用共享元素转场进入独立详情，保留摘要、对应表述、短摘录与原文链接。支持公司披露、监管文件、媒体、研究、数据等可归属来源；不提供官方渠道追踪/通知，没有有效依据时整块不渲染且不影响作者信任分。`SmartAccountUpdate.supportingSources` 为可选契约；`pipeline/domain/opinions/supporting_sources.py` 从逐帖审核目录匹配平台、作者、原帖、标的及逐字表述，由批量导出和 X realtime job 在发布前投影，Client API 只保存/返回结果，不执行检索或算法。首批关联现有两条历史观点，尚未建设自动全网检索服务；更正/撤回在重新导出发布后生效，Score 与观点算法不变。现行方案见 `docs/product/opinion-supporting-sources.md`，契约见 `docs/contracts/opinion_supporting_sources.md`。原 `official-context` HTML 是历史研究原型，官方频道及缺失提示已明确不采纳。
 
 **本地资料抓取样本（2026-09-09）**：`pipeline/platforms/source_documents/web.py` 负责公开 HTML、robots、限速、公共 IP 固定连接与缓存；`domain/opinions/crawled_sources.py` 校验具体表述、文章标题、事实摘录及时间；`jobs/opinion_source_crawl.py` 仅运行 `local_crawl_samples.json` 指定的少量观点。默认 dry-run，`--apply` 更新独立 `crawled_sources.json` 并与人工目录合并导出本地 fixtures。新增 4 条观点的 5 条资料，旧历史样本保留。来源可选 `updatedAt` 保留修订时间；发布或修订晚于观点的版本标为后续资料，不倒填当时依据。这是人工选题和摘要、规则驱动抓取验证的本地实验，不是通用语义搜索，不启动常驻任务、不部署、不修改数据库或排名。
+
+**官方材料发现渠道（2026-09-22）**：`pipeline/domain/opinions/official_channels.py` 保存首发热门普通股发行人的 CIK（11 只；SOXL ETF 尚未接入）以及 NVDA/MU/NBIS 的官网白名单；Strategy 官网 robots 返回 403，只采 SEC 披露。`pipeline/platforms/source_documents/official.py` 解析 SEC submissions、官方 RSS 与新闻索引；`pipeline/jobs/official_source_refresh.py` 原子维护 `data/runtime/official-sources` 的一年候选索引及逐渠道健康状态，来源失败保留上次成功快照但明确标记过期/未配置。SEC 请求须配置真实运营联系邮箱。候选不直接成为观点依据；只有经人工指定规则、逐句事实及时间核验后，才由现有 `opinion_source_crawl` 和发布管线写入可选 `supportingSources`。本地任务尚未部署调度或线上发布，不新增用户侧官方追踪、通知，也不改变评分或交易。运行边界见 `docs/product/opinion-supporting-sources.md`。
 
 Today 顶部由 `TodayInvestorDiscoveryModule` 替换价格观点图，无持仓用户也能发现投资者；下方 `TodayHomePager` 继续提供“持仓与追踪 / 市场情况 / 聪明动态”三个文字标签页。发现区只有一个实例，不参与横向分页；三个原生垂直滚动页独立保存位置，标签栏在发现区滚出后吸顶。`BSmartCollapsingScrollState` 只协调 UI 滚动，不接管 ScrollView delegate、不改图表数据或排序。方案落点见 `docs/product/today-home-navigation.md`。
 
@@ -245,7 +445,7 @@ iOS 标的导航统一使用 `Features/Research/TickerDestinationView.swift`，�
 
 ### ② 数据真源 = 本地 `data/dev.db`（bSmart）
 - Reddit 核心（14 表）+ **bSmart 独有层** `gr_*`(5 社区)/`yt_*`(YouTube)/`kol_*`/`x_opinion`/`price_daily`/`author_avatar` 等（这些云端**没有**）。
-- **推荐部署路径：Cloudflare Pages Direct Upload**。本地用 Node 22 + `node:sqlite` 读取 `data/dev.db` 构建 `web/out/`，再 `make cf-deploy` 上传 zh/en 静态产物；Cloudflare 运行时不需要 Node 服务，也不重新构建。
+- **推荐部署路径：Cloudflare Pages Direct Upload**。本地用 Node 22 + `node:sqlite` 读取 `data/dev.db` 构建完整 `web/out/`；`make cf-deploy` 仅抽取并上传内测官网三路由及必要资源，名单接口通过 Pages Functions 写生产 KV。Cloudflare 不重新构建，也不需要常驻 Node 服务。
 - Railway/Dockerfile 仍可作为备用部署路径：用**提交进仓库的压缩数据快照**构建（线上=本地）。原始 `data/dev.db` 被 Git 和 Docker context 忽略，不再走 Git LFS。更新数据后运行 `make snapshot-db`：压缩结果不超过 90MB 时只提交 `data/dev.db.xz`，超过时只提交普通 Git 分片 `data/dev.db.xz.part-*` 和 manifest `data/dev.db.xz.parts`。Docker 按 manifest/单文件顺序还原。改数据前用 `make backup-db` 写项目外轮换备份。
 - **Supabase 云端**（`wimipsiwtrqhizgmbxas`，**不是 bSmart 的内容家**）：① redditalpha.xyz 的 Reddit 核心；② bSmart 的 **web 后端**（`app_events`/`ticker_searches`/`user_collections`/`user_profiles`/Auth，走 `NEXT_PUBLIC_*`；`user_collections` 只承接帖子/评论账户收藏，标的/作者/叙事/社区追踪保存在设备 `localStorage`）；③ bSmart 只读的 `tw_*`(X)。见 `CLOUD_DB.md`。
 
@@ -548,7 +748,7 @@ crypto_us/
 | `make restore-db FORCE=1` | 从仓库压缩快照还原本地 `data/dev.db` |
 | `make data-clean` | 清项目内旧备份/抽帧缓存并 checkpoint WAL，不删除主库 |
 | `make site` | 构建静态站 `web/out/`（读**本地 dev.db**；需 **Node 22**） |
-| `make cf-deploy` | Cloudflare Pages Direct Upload：先 `make site`，再把 zh/en 产物复制到 `/tmp/bsmart-out-cf` 并上传到 `bsmart` 的 `main` production；可用 `PROJECT=xxx` 覆盖项目名 |
+| `make cf-deploy` | Cloudflare Pages Direct Upload：先 `make site`，再由 `web/scripts/stage-beta-site.mjs` 抽取内测官网到 `/tmp/bsmart-beta-out-cf`，连同 Functions 上传到 `bsmart` 的 `main` production；可用 `PROJECT=xxx` 覆盖项目名 |
 | `make site-cloud` | **现等同 `make site`**（bSmart 以本地为真源、不再 cloud-pull；保留名字防误清） |
 | `make clean` | 只清 `web/.next-dev`、`web/.next`、`web/out` 构建缓存；用于修复开发热更新或生产构建残留 chunk，不触碰 `data/dev.db` |
 | `make stats` | 打印库内统计 |

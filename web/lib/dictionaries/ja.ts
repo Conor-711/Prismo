@@ -1,8 +1,10 @@
 import type { Dictionary } from "./zh";
+import { en } from "./en";
 
 // Japanese mirror of zh.ts. Proper nouns (tickers, bSmart, r/subreddits, people) stay verbatim.
 // Post content has no JA translation, so it falls back to the English original at render time.
 export const ja: Dictionary = {
+  betaLanding: en.betaLanding,
   meta: {
     title: "bSmart · Reddit 米国株センチメント・インテリジェンス",
     description:

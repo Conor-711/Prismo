@@ -111,6 +111,7 @@ actor CoreBalanceReaderStub: HyperCoreBalanceReading {
         case .mode: return .string((calls.count == 1 ? mode : finalMode).rawValue)
         case .spot: return CoreBalanceFixture.spot
         case .perps: return CoreBalanceFixture.perps(at: perpsTime)
+        case .portfolio: throw HyperCoreBalanceError.unavailable
         }
     }
 }

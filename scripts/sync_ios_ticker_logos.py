@@ -96,8 +96,8 @@ def install(symbol, sources, previous):
 
 
 def needs_template(symbol):
-    """Detect dark monochrome marks on transparency; never recolor brand colors."""
-    if symbol in {"PLTR", "UNITREE"}:
+    """Detect monochrome marks on transparency; never recolor brand colors."""
+    if symbol in {"AVAV", "PLTR", "UNITREE"}:
         return True
     path = ASSETS / f"Ticker_{symbol}.imageset/{symbol}.png"
     if not path.exists():

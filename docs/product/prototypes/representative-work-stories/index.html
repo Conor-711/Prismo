@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <link rel="icon" href="data:,">
+  <title>bSmart · 一句话认识一个投资者</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="review-bar">
+    <div class="review-brand"><b>bSmart</b><span>首页代表作 / 设计对比</span></div>
+    <div class="review-controls">
+      <label class="case-control">案例 <select id="case-select" aria-label="切换真实历史案例"></select></label>
+      <button id="layout-toggle" class="icon-button" title="同时比较三种方案" aria-label="同时比较三种方案"><i data-lucide="columns-3"></i></button>
+      <button id="theme-toggle" class="icon-button" title="切换明暗模式" aria-label="切换明暗模式"><i data-lucide="sun"></i></button>
+    </div>
+  </header>
+  <section class="review-intro">
+    <div><span class="review-eyebrow">REPRESENTATIVE WORK / C V2</span><h1>他不是只看多了一次。</h1></div>
+    <p>沿用第三版：价格图在上，简短故事在下。图上只取最早的 3 个看多节点，点击可查看当时的记录与原帖。</p>
+  </section>
+  <nav class="design-picker" aria-label="设计方案">
+    <button data-design="a" aria-pressed="false">A <span>一句话代表作</span></button>
+    <button data-design="b" aria-pressed="false">B <span>前后对照</span></button>
+    <button data-design="c" aria-pressed="true">C <span>故事与轨迹</span><em>已选</em></button>
+  </nav>
+  <main id="stage" class="stage" data-layout="single"></main>
+  <section class="design-notes">
+    <div><h2>先看图，再读一句人话</h2><p>沿用原有头像、姓名、排名和追踪入口。图表提升到主体位置，故事改用 13px 小字收在下方，价格、次数仍加重突出。日期统一为 2025.12.05。</p></div>
+    <div><h2>只看最早的 3 次判断</h2><p>按发布时间从早到晚，只取最早的 3 次看多，少于 3 次则全部展示，距离太近时合并。文案保留全部看多次数，已知看空记录也保留在统计和详情里。「多次看多」不等于始终看多，更不等于多次真实买入。</p></div>
+  </section>
+  <footer class="review-disclosure">HTML 设计预览，未改动 iOS。头像、原文和行情取自本地项目快照，并非本次联网更新。最高价由各案例的已有日线区间计算；这是回顾性代表作，不代表卖在最高点、整体战绩或未来表现。追踪按钮仅改变此预览的状态。</footer>
+  <script src="../investor-discovery/lucide.min.js"></script>
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

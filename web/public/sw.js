@@ -2,7 +2,7 @@
  *  • 静态资源（/_next/static、字体、图片，文件名带 hash）→ cache-first（永不变）
  *  • 导航/HTML → network-first（始终拿最新内容），离线时回退缓存或首页
  *  站点每日更新，故 HTML 绝不长期缓存。bump CACHE 版本即可整体失效。 */
-const CACHE = "ra-v1";
+const CACHE = "bsmart-tagline-20260913";
 const ASSET_RE = /\/_next\/static\/|\.(?:css|js|woff2?|ttf|png|jpe?g|svg|webp|gif|ico)$/i;
 
 self.addEventListener("install", () => self.skipWaiting());

@@ -86,9 +86,13 @@ marketing/remotion/cap/test/
 /data/runtime/
 /data/.x-daily.lock
 /supabase/ios-account/supabase/.temp/
+/supabase/.temp/
 /data/reports/ui/
 
 # OS / editor
 .DS_Store
 *.log
 /tmp/
+
+# Private package delivery queue and logs
+/data/inbox/

@@ -19,8 +19,10 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import json
 import os
 import re
+import textwrap
 
 from sqlalchemy import bindparam, text, update
 
@@ -41,6 +43,7 @@ TRANS_SYSTEM = (
     "puts/calls=看跌/看涨期权、diamond hands=死拿不卖、paper hands=拿不住就割、printing money=疯狂赚钱、dip=回调。"
     "⚠ 涨跌/盈亏的颜色**一律译成涨跌/盈亏本身**：green / turn green / go green = 上涨/盈利/扭亏(写「转涨」「扭亏」「回到盈利」)、"
     "red / in the red = 下跌/亏损；中文译文里**绝不用「绿/红」表示涨跌**(尤其禁止「转绿/翻绿/飘绿」)——美股绿涨红跌、与 A 股相反，直译颜色会把意思弄反；\n"
+    "若原文说还差 .5% 才达到 +30% 目标，译为距目标还差 0.5 个百分点，不要误写成当前收益只有 0.5%；\n"
     "4) 可去掉转发前缀(RT @xxx:)、@提及堆叠、纯链接等噪声，但正文一字不少；\n"
     "5) 若某语言已是原文语言，该字段输出清理后的原文本身。\n"
     "仅输出 JSON，不要多余文字：{\"zh\":\"完整自然的中文翻译\",\"en\":\"full natural English translation\"}"
@@ -126,7 +129,8 @@ def _messages_json_with(provider: str, system: str, user: str, *, max_tokens: in
         if provider == "deepseek":
             return deepseek.messages_json(system, user, model=settings.deepseek_model_low, max_tokens=max_tokens)
         if provider == "gemini":
-            return gemini.messages_json(system, user, model=settings.gemini_model, max_tokens=max_tokens)
+            return gemini.messages_json(system, user, model=settings.gemini_model,
+                                        max_tokens=max_tokens, max_rate_waits=1)
     except Exception:
         return None
     return None
@@ -225,6 +229,68 @@ def _write_translations(items: list[tuple[dict, dict]]) -> int:
     return written
 
 
+def _translate_whole(source: str, providers: list[str]) -> dict[str, str] | None:
+    from .translation_completeness import missing_numeric_tokens, numeric_tokens, validate_translation
+
+    required = ", ".join(sorted(numeric_tokens(source)))
+    for provider in providers:
+        data = _messages_json_with(provider, TRANS_SYSTEM, source, max_tokens=16000)
+        if not isinstance(data, dict) or not all(isinstance(data.get(k), str) and data[k].strip()
+                                                    for k in ("zh", "en")):
+            continue
+        norm = {key: data[key].strip() for key in ("zh", "en")}
+        if validate_translation(source, norm):
+            return norm
+        missing = {key: sorted(missing_numeric_tokens(source, norm[key]))
+                   for key in ("zh", "en")}
+        print(f"[kol-translate] incomplete {provider}: source={len(source)} "
+              f"zh={len(norm['zh'])} en={len(norm['en'])} missing={missing}", flush=True)
+        repair = ("完整修订下列翻译，不要概括或添加事实。中文 zh 和英文 en 都必须保留原文中"
+                  f"每个阿拉伯数字原样出现：{required}。\n原文：\n{source}\n初稿：\n"
+                  + json.dumps(norm, ensure_ascii=False))
+        revised = _messages_json_with(provider, TRANS_SYSTEM, repair, max_tokens=16000)
+        if isinstance(revised, dict) and all(isinstance(revised.get(k), str) and revised[k].strip()
+                                             for k in ("zh", "en")):
+            corrected = {key: revised[key].strip() for key in ("zh", "en")}
+            if validate_translation(source, corrected):
+                return corrected
+            missing = {key: sorted(missing_numeric_tokens(source, corrected[key]))
+                       for key in ("zh", "en")}
+            print(f"[kol-translate] incomplete repair {provider}: source={len(source)} "
+                  f"zh={len(corrected['zh'])} en={len(corrected['en'])} missing={missing}", flush=True)
+    return None
+
+
+def _translation_chunks(source: str, limit: int = 450) -> list[str]:
+    chunks: list[str] = []
+    current = ""
+    for paragraph in re.split(r"\n\s*\n", source):
+        for piece in textwrap.wrap(paragraph.strip(), width=limit, break_long_words=False,
+                                   break_on_hyphens=False, replace_whitespace=False):
+            if current and len(current) + len(piece) + 2 > limit:
+                chunks.append(current)
+                current = ""
+            current = f"{current}\n\n{piece}" if current else piece
+    if current:
+        chunks.append(current)
+    return chunks
+
+
+def _complete_translation(source: str, providers: list[str]) -> dict[str, str] | None:
+    from .translation_completeness import validate_translation
+
+    if len(source) > 600:
+        chunks = _translation_chunks(source)
+        if len(chunks) >= 2:
+            parts = [_translate_whole(chunk, providers) for chunk in chunks]
+            if all(part is not None for part in parts):
+                combined = {language: "\n\n".join(part[language] for part in parts)
+                            for language in ("zh", "en")}
+                if validate_translation(source, combined):
+                    return combined
+    return _translate_whole(source, providers)
+
+
 def translate(sources: list[str] | None = None, per_source: int = DEFAULT_PER_SOURCE,
               only: list[str] | None = None, force: bool = False, workers: int = 6,
               since_days: int = DEFAULT_SINCE_DAYS, *, rows: list[dict] | None = None,
@@ -295,14 +361,7 @@ def translate(sources: list[str] | None = None, per_source: int = DEFAULT_PER_SO
         src = str(r["txt"] or "").strip()
         if complete_text:
             # Daily publication must never silently truncate a long source post.
-            for provider in providers:
-                data = _messages_json_with(provider, TRANS_SYSTEM, src, max_tokens=16000)
-                if isinstance(data, dict) and all(isinstance(data.get(k), str) and data[k].strip() for k in ("zh", "en")):
-                    from .translation_completeness import validate_translation
-                    norm = {key: data[key].strip() for key in ("zh", "en")}
-                    if validate_translation(src, norm):
-                        return r, norm
-            return r, None
+            return r, _complete_translation(src, providers)
         user_full = f"把下面这条帖子原文完整翻译成中文和英文(不要压缩)：\n\n{src[:2000]}"
         for provider in providers:
             norm = _norm(_messages_json_with(provider, TRANS_SYSTEM, user_full, max_tokens=2000))

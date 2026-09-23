@@ -1,0 +1,64 @@
+{
+  "account_count": 251,
+  "accounts_by_source": {
+    "reddit": 31,
+    "x": 132,
+    "youtube": 88
+  },
+  "price_tickers": 1318,
+  "price_start_day": "2025-06-02",
+  "price_end_day": "2026-08-13",
+  "executable_accounts": 235,
+  "rank_eligible_accounts": 54,
+  "rank_eligible_distribution": {
+    "count": 54,
+    "median": 0.08454499722952757,
+    "p25": -0.23913931378355002,
+    "p75": 0.45675408187868327,
+    "positive_share": 0.5555555555555556,
+    "spy_outperform_share": 0.35185185185185186
+  },
+  "source_summary": [
+    {
+      "source": "reddit",
+      "formal_accounts": 31,
+      "executable_accounts": 18,
+      "rank_eligible_accounts": 0,
+      "count": 0,
+      "median": null,
+      "p25": null,
+      "p75": null,
+      "positive_share": null,
+      "spy_outperform_share": null
+    },
+    {
+      "source": "x",
+      "formal_accounts": 132,
+      "executable_accounts": 132,
+      "rank_eligible_accounts": 41,
+      "count": 41,
+      "median": 0.11906141460575648,
+      "p25": -0.23913931378355002,
+      "p75": 0.5098418091708286,
+      "positive_share": 0.5853658536585366,
+      "spy_outperform_share": 0.36585365853658536
+    },
+    {
+      "source": "youtube",
+      "formal_accounts": 88,
+      "executable_accounts": 85,
+      "rank_eligible_accounts": 13,
+      "count": 13,
+      "median": -0.02736573324157543,
+      "p25": -0.11777808969199866,
+      "p75": 0.24175787714065766,
+      "positive_share": 0.46153846153846156,
+      "spy_outperform_share": 0.3076923076923077
+    }
+  ],
+  "output_rows": {
+    "executable": 251,
+    "descriptive": 251,
+    "trades": 4339
+  }
+}

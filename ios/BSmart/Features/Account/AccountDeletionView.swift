@@ -29,25 +29,25 @@ struct AccountDeletionView: View {
                     status(record)
                 } else {
                     Text("Delete your bSmart account".bSmartLocalized).font(.title2.bold())
-                    Text("Your account and account-linked profile will be deleted. This does not withdraw funds or delete your wallet. Keep your recovery phrase to access your funds without bSmart.".bSmartLocalized)
+                    Text("Deleting your account does not withdraw funds. Move your funds to a wallet you can access independently before deleting this account.".bSmartLocalized)
                         .font(.subheadline).foregroundStyle(BSmartColor.secondaryText)
                     if let registration, registration.accountId == account.identity?.id {
                         if let address = registration.address {
                             Text(address).font(.caption.monospaced()).textSelection(.enabled)
-                            if let local = readyWallet, local.address == address {
+                            if let local = readyWallet, local.address == address, local.provider == .device {
                                 Label((local.recoveryVerified ? "Recovery verified" : "Recovery not verified").bSmartLocalized,
                                       systemImage: local.recoveryVerified ? "checkmark.shield" : "key")
                                     .font(.subheadline).foregroundStyle(BSmartColor.brand)
                                 action("View recovery phrase", icon: "key") { showsRecovery = true }
                             }
-                            Text("Without your recovery phrase, deleting this account may leave you unable to access your wallet. bSmart cannot recover your keys.".bSmartLocalized)
+                            Text("Account deletion can permanently remove access to your wallet, including account-based recovery.".bSmartLocalized)
                                 .font(.subheadline).foregroundStyle(BSmartColor.secondaryText)
                         } else {
                             Label("No wallet linked".bSmartLocalized, systemImage: "wallet.bifold")
                                 .font(.subheadline).foregroundStyle(BSmartColor.secondaryText)
                         }
                         Toggle((registration.address == nil ? "I understand that account deletion is permanent"
-                                : "I have saved my recovery phrase or accept the risk of losing wallet access").bSmartLocalized,
+                                : "I have moved my funds or accept the risk of permanently losing wallet access").bSmartLocalized,
                                isOn: $recoveryConfirmed)
                             .font(.subheadline).tint(BSmartColor.brand)
                         action("Delete account", icon: "trash", destructive: true) { showsConfirmation = true }
@@ -91,7 +91,7 @@ struct AccountDeletionView: View {
         Text(title(record).bSmartLocalized).font(.title2.bold())
             .accessibilityIdentifier("account.deletion-state")
         if record.stage == .completed {
-            Text("Your wallet and on-chain funds remain under your control. Use your saved recovery phrase to access them independently.".bSmartLocalized)
+            Text("Account deletion does not move on-chain funds. Account-based wallet recovery may no longer be available.".bSmartLocalized)
                 .font(.subheadline).foregroundStyle(BSmartColor.secondaryText)
             action("Done", icon: "checkmark") {
                 do { try deletion.acknowledgeOrDiscardPrepared(ticket: record.ticket); dismiss() }

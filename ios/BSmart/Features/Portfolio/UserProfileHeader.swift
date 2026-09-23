@@ -2,73 +2,84 @@ import SwiftUI
 
 struct UserProfileHeader: View {
     @EnvironmentObject private var account: AccountAccessStore
-    @EnvironmentObject private var wallet: DeviceWalletStore
     @StateObject private var store = LocalUserProfileStore()
+    @StateObject private var cloud = AccountProfileStore()
     @State private var editing = false
-    @State private var showingAddress = false
 
-    private var address: ProfileAddress { ProfileAddress(accountID: account.identity?.id, wallet: wallet.state) }
+    private var profile: AccountProfile? { cloud.accountID == account.identity?.id ? cloud.profile : nil }
+    private var name: String { account.identity == nil ? store.profile.displayName : profile?.username ?? "bSmart Investor".bSmartLocalized }
+    private var bio: String { account.identity == nil ? store.profile.bio : profile?.bio ?? "" }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .center, spacing: 16) {
-                UserProfileAvatar(data: store.profile.avatarData, size: 68)
-                    .accessibilityLabel("Profile photo".bSmartLocalized)
+                Group {
+                    if account.identity == nil {
+                        UserProfileAvatar(data: store.profile.avatarData, size: 76)
+                    } else {
+                        BSmartAvatar(url: profile?.avatarURL, name: name, size: 76)
+                    }
+                }
+                .padding(5)
+                .background(BSmartColor.surface, in: Circle())
+                .overlay(Circle().strokeBorder(BSmartColor.brand.opacity(0.16), lineWidth: 1))
+                .accessibilityLabel("Profile photo".bSmartLocalized)
+                .accessibilityIdentifier("profile.avatar")
+                .overlay(alignment: .bottomTrailing) {
+                    Button { editing = true } label: {
+                        Image(systemName: "pencil")
+                            .font(.system(size: 13, weight: .semibold))
+                            .frame(width: 32, height: 32)
+                            .background(BSmartColor.elevated, in: Circle())
+                            .overlay(Circle().strokeBorder(BSmartColor.ink, lineWidth: 2))
+                    }
+                    .buttonStyle(.plain).foregroundStyle(BSmartColor.primaryText)
+                    .accessibilityLabel("Edit profile".bSmartLocalized)
+                    .accessibilityIdentifier("profile.edit")
+                }
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(store.profile.displayName)
-                        .font(.system(size: 23, weight: .semibold))
+                    Text(name)
+                        .font(.system(.title, design: .default, weight: .semibold))
                         .foregroundStyle(BSmartColor.primaryText)
-                        .lineLimit(2).minimumScaleFactor(0.8)
+                        .fixedSize(horizontal: false, vertical: true)
                         .accessibilityIdentifier("profile.nickname")
-                    if !store.profile.bio.isEmpty {
-                        Text(store.profile.bio).font(.subheadline)
-                            .foregroundStyle(BSmartColor.secondaryText)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .accessibilityIdentifier("profile.bio")
+                    if let handle = profile?.handle {
+                        Text("@" + handle).font(.subheadline).foregroundStyle(BSmartColor.secondaryText)
+                            .lineLimit(1).truncationMode(.middle).accessibilityIdentifier("profile.handle")
                     }
                 }
-                Spacer(minLength: 0)
-                Button { editing = true } label: {
-                    Image(systemName: "pencil").font(.system(size: 16, weight: .medium))
-                        .frame(width: 44, height: 44)
-                        .background(BSmartColor.surface, in: Circle())
-                }
-                .buttonStyle(.plain).foregroundStyle(BSmartColor.secondaryText)
-                .accessibilityLabel("Edit profile".bSmartLocalized)
-                .accessibilityIdentifier("profile.edit")
+                .frame(maxWidth: .infinity, alignment: .leading)
+                ProfileAssistantLauncher()
             }
-            Button { showingAddress = true } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "at").foregroundStyle(BSmartColor.secondaryText)
-                    Text(address.shortValue).font(.system(size: 12, weight: .medium, design: .monospaced))
-                    if address.isExample {
-                        Text("Example address".bSmartLocalized).font(.caption2.weight(.medium))
-                            .foregroundStyle(BSmartColor.secondaryText)
-                    }
-                    Spacer(minLength: 0)
-                    Image(systemName: "chevron.right").font(.caption2)
-                }
-                .foregroundStyle(BSmartColor.primaryText)
-                .frame(minHeight: 44).contentShape(Rectangle())
+            if !bio.isEmpty {
+                Text(bio).font(.subheadline)
+                    .foregroundStyle(BSmartColor.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityIdentifier("profile.bio")
             }
-            .buttonStyle(.plain).accessibilityIdentifier("profile.address")
-            Divider().overlay(BSmartColor.line)
+            if account.identity != nil {
+                if cloud.loading { ProgressView() }
+                if cloud.failed {
+                    Button("Profile is unavailable. Please try again.".bSmartLocalized) {
+                        Task { await cloud.load(account: account) }
+                    }.font(.subheadline).foregroundStyle(BSmartColor.secondaryText)
+                }
+            }
         }
-        .padding(.top, 12)
+        .padding(.top, 20).padding(.bottom, 8)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("profile.header")
         .task(id: account.identity?.id) { store.load(accountID: account.identity?.id) }
+        .task(id: "\(account.identity?.id.uuidString ?? "guest"):\(account.feedRevision)") { await cloud.load(account: account) }
         .onChange(of: account.identity?.id) { _, _ in
             editing = false
-            showingAddress = false
             store.load(accountID: account.identity?.id)
+            cloud.clear()
         }
         .sheet(isPresented: $editing) {
-            UserProfileEditor(store: store)
-        }
-        .sheet(isPresented: $showingAddress) {
-            ProfileAddressSheet(address: address)
-                .presentationDetents([.medium])
+            if let id = account.identity?.id { AccountProfileEditorPage(accountID: id) }
+            else { UserProfileEditor(store: store) }
         }
     }
 }
@@ -92,43 +103,5 @@ struct UserProfileAvatar: View {
         }
         .frame(width: size, height: size).clipShape(Circle())
         .overlay(Circle().strokeBorder(BSmartColor.line, lineWidth: 1))
-    }
-}
-
-private struct ProfileAddressSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    let address: ProfileAddress
-    @State private var copied = false
-
-    var body: some View {
-        NavigationStack {
-            VStack(alignment: .leading, spacing: 20) {
-                Text((address.isExample ? "Example address" : "Account address").bSmartLocalized)
-                    .font(.headline)
-                Text(address.value).font(.system(.body, design: .monospaced))
-                    .fixedSize(horizontal: false, vertical: true)
-                    .accessibilityIdentifier("profile.address.full")
-                if address.isExample {
-                    Label("Display example only. Do not send funds to this address.".bSmartLocalized,
-                          systemImage: "exclamationmark.triangle")
-                        .font(.subheadline).foregroundStyle(BSmartColor.secondaryText)
-                        .accessibilityIdentifier("profile.address.example-warning")
-                } else {
-                    Button {
-                        UIPasteboard.general.string = address.value
-                        copied = true
-                    } label: {
-                        Label((copied ? "Copied" : "Copy address").bSmartLocalized,
-                              systemImage: copied ? "checkmark" : "doc.on.doc")
-                    }.tint(BSmartColor.brand).accessibilityIdentifier("profile.address.copy")
-                }
-                Spacer(minLength: 0)
-            }
-            .padding(24).frame(maxWidth: .infinity, alignment: .leading)
-            .background(BSmartColor.ink)
-            .navigationTitle("Account address".bSmartLocalized).navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done".bSmartLocalized) { dismiss() } } }
-        }
-        .bSmartPage()
     }
 }

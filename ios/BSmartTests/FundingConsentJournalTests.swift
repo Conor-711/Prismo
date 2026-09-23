@@ -2,6 +2,70 @@ import XCTest
 @testable import BSmart
 
 final class FundingConsentJournalTests: XCTestCase {
+    func testUnsubmittedAuthorizationRetainsEvidenceReleasesOwnerAndCannotBeRevived() async throws {
+        let context = FundingJournalTestContext(); defer { context.cleanup() }
+        let journal = try context.journal(), transaction = try await context.transaction(), id = UUID()
+        _ = try await journal.beginConsent(id: id, plan: transaction.preflight.plan, wallet: context.wallet)
+        _ = try await journal.beginAuthorization(id: id, wallet: context.wallet)
+        let inFlight = try await journal.finishUnsubmittedAuthorization(id: id, wallet: context.wallet)
+        XCTAssertFalse(inFlight)
+        _ = try await journal.recordAuthorization(id: id, signature: transaction.preflight.authorization, wallet: context.wallet)
+        let finished = try await journal.finishUnsubmittedAuthorization(id: id, wallet: context.wallet)
+        XCTAssertTrue(finished)
+        let reopened = try context.journal()
+        let records = try await reopened.consents(wallet: context.wallet)
+        XCTAssertEqual(records.first?.state, .notSubmitted)
+        XCTAssertEqual(records.first?.signature, transaction.preflight.authorization)
+        await expectJournalFailure { try await reopened.reserve(id: id, transaction: transaction, wallet: context.wallet) }
+        await expectJournalFailure { try await reopened.beginAuthorization(id: id, wallet: context.wallet) }
+        await expectJournalFailure { try await reopened.beginConsent(id: UUID(), plan: transaction.preflight.plan, wallet: context.wallet) }
+        let next = try await context.transaction(authorizationNonce: 18)
+        _ = try await reopened.beginConsent(id: UUID(), plan: next.preflight.plan, wallet: context.wallet)
+    }
+
+    func testUnsubmittedRecoveryCannotReleaseSourceTransactions() async throws {
+        let context = FundingJournalTestContext(); defer { context.cleanup() }
+        let journal = try context.journal(), transaction = try await context.transaction(), id = UUID()
+        _ = try await context.readyWithConsent(transaction, id: id, journal: journal)
+        let before = try await journal.records(wallet: context.wallet)
+        let finished = try await journal.finishUnsubmittedAuthorization(id: id, wallet: context.wallet)
+        XCTAssertFalse(finished)
+        let after = try await journal.records(wallet: context.wallet)
+        XCTAssertEqual(before, after)
+        let next = try await context.transaction(authorizationNonce: 18)
+        await expectJournalFailure { try await journal.beginConsent(id: UUID(), plan: next.preflight.plan, wallet: context.wallet) }
+    }
+
+    func testOrphanAuthorizationExpiresOnlyAfterChainTimeAndRetainsSignature() async throws {
+        let context = FundingJournalTestContext(); defer { context.cleanup() }
+        let journal = try context.journal(), transaction = try await context.transaction(), id = UUID()
+        _ = try await journal.beginConsent(id: id, plan: transaction.preflight.plan, wallet: context.wallet)
+        _ = try await journal.beginAuthorization(id: id, wallet: context.wallet)
+        _ = try await journal.recordAuthorization(id: id, signature: transaction.preflight.authorization, wallet: context.wallet)
+        try await journal.expireAuthorizations(wallet: context.wallet, source: transaction.preflight.source)
+        var records = try await journal.consents(wallet: context.wallet)
+        XCTAssertEqual(records.first?.state, .authorized)
+        context.clock.advance(301)
+        let next = try await context.transaction(authorizationNonce: 18)
+        try await journal.expireAuthorizations(wallet: context.wallet, source: next.preflight.source)
+        records = try await context.journal().consents(wallet: context.wallet)
+        XCTAssertEqual(records.first?.state, .expired)
+        XCTAssertEqual(records.first?.signature, transaction.preflight.authorization)
+        _ = try await journal.beginConsent(id: UUID(), plan: next.preflight.plan, wallet: context.wallet)
+    }
+
+    func testRecoveryNeverExpiresAuthorizationLinkedToSignedTransaction() async throws {
+        let context = FundingJournalTestContext(); defer { context.cleanup() }
+        let journal = try context.journal(), transaction = try await context.transaction(), id = UUID()
+        _ = try await context.readyWithConsent(transaction, id: id, journal: journal)
+        context.clock.advance(301)
+        let next = try await context.transaction(authorizationNonce: 18)
+        try await journal.expireAuthorizations(wallet: context.wallet, source: next.preflight.source)
+        let records = try await journal.consents(wallet: context.wallet)
+        XCTAssertEqual(records.first?.state, .authorized)
+        await expectJournalFailure { try await journal.beginConsent(id: UUID(), plan: next.preflight.plan, wallet: context.wallet) }
+    }
+
     func testConsentAndAuthorizationLinkAtomicallyToTheExactSourceIntent() async throws {
         let context = FundingJournalTestContext(); defer { context.cleanup() }
         let journal = try context.journal()

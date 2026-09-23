@@ -36,6 +36,24 @@ struct TodayInvestorActivity: Identifiable, Hashable {
         }
     }
 
+    static func previewAccounts(from groups: [Self], limit: Int = 3) -> [Self] {
+        guard limit > 0 else { return [] }
+        let accounts = groups.filter { $0.source == .accounts }
+        var selectedIDs = Set<String>()
+        var platforms = Set<String>()
+        for group in accounts {
+            guard case let .account(account) = group.latest else { continue }
+            if platforms.insert(accountPlatform(account.latest.platform)).inserted {
+                selectedIDs.insert(group.id)
+                if selectedIDs.count == limit { break }
+            }
+        }
+        for group in accounts where selectedIDs.count < limit {
+            selectedIDs.insert(group.id)
+        }
+        return accounts.filter { selectedIDs.contains($0.id) }
+    }
+
     func matches(source: TodayActivityFilter, query: String) -> Bool {
         guard source == .all || self.source == source else { return false }
         let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -47,15 +65,17 @@ struct TodayInvestorActivity: Identifiable, Hashable {
         switch activity {
         case let .account(account):
             let update = account.latest
-            let rawPlatform = normalized(update.platform)
-            let platform: String
-            switch rawPlatform {
-            case "twitter", "twitter.com", "x.com": platform = "x"
-            case "youtu.be", "youtube.com": platform = "youtube"
-            default: platform = rawPlatform
-            }
-            return "account:\(platform):\(normalized(update.authorId))"
+            return "account:\(accountPlatform(update.platform)):\(normalized(update.authorId))"
         case let .money(money): return "money:\(normalized(money.accountId))"
+        }
+    }
+
+    private static func accountPlatform(_ value: String) -> String {
+        let platform = normalized(value)
+        switch platform {
+        case "twitter", "twitter.com", "x.com": return "x"
+        case "youtu.be", "youtube.com": return "youtube"
+        default: return platform
         }
     }
 

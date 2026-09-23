@@ -4,14 +4,15 @@ struct DeviceWalletPanel: View {
     @EnvironmentObject private var wallet: DeviceWalletStore
     @EnvironmentObject private var account: AccountAccessStore
     @State private var showsRecovery = false
+    @State private var showsWithdrawal = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             switch wallet.state {
             case .locked:
-                Label("Device wallet".bSmartLocalized, systemImage: "lock.shield")
+                Label("Trading wallet".bSmartLocalized, systemImage: "lock.shield")
                     .font(.headline)
-                action("Set up / Unlock wallet", icon: "lock.open") { Task { await wallet.prepare() } }
+                action("Connect wallet", icon: "lock.open") { Task { await wallet.prepare() } }
                     .accessibilityIdentifier("wallet.unlock")
             case .loading:
                 HStack(spacing: 12) {
@@ -24,18 +25,23 @@ struct DeviceWalletPanel: View {
                 Text("Restore the wallet already linked to this account.".bSmartLocalized)
                     .font(.subheadline).foregroundStyle(BSmartColor.secondaryText)
                 action("Restore wallet", icon: "key") { showsRecovery = true }
+                action("Reconnect account wallet", icon: "arrow.clockwise") { Task { await wallet.prepare() } }
             case .verified(let local):
                 HStack(spacing: 12) {
                     Image(systemName: "lock.shield.fill").font(.title2).foregroundStyle(BSmartColor.brand)
                     VStack(alignment: .leading, spacing: 5) {
-                        Text("Device wallet".bSmartLocalized).font(.headline)
+                        Text((local.provider == .privy ? "Account wallet" : "Device wallet").bSmartLocalized).font(.headline)
                         Text(String(local.address.prefix(6)) + "..." + String(local.address.suffix(4)))
                             .font(.subheadline.monospaced()).foregroundStyle(BSmartColor.secondaryText)
                     }
                     Spacer()
                     Image(systemName: "checkmark.circle.fill").foregroundStyle(BSmartColor.brand)
                 }
-                if DeviceWalletBackupPolicy.current == .required {
+                if local.provider == .privy {
+                    Label("Privy", systemImage: "checkmark.shield")
+                        .font(.subheadline).foregroundStyle(BSmartColor.brand)
+                        .accessibilityIdentifier("wallet.privy")
+                } else if DeviceWalletBackupPolicy.current == .required {
                     Label((local.recoveryVerified ? "Recovery verified" : "Back up before depositing").bSmartLocalized,
                           systemImage: local.recoveryVerified ? "checkmark.shield" : "exclamationmark.shield")
                         .font(.subheadline)
@@ -52,10 +58,10 @@ struct DeviceWalletPanel: View {
                         .accessibilityIdentifier("wallet.device-only-warning")
                 }
                 NavigationLink {
-                    ArbitrumReceiveView(service: account)
+                    ManagedDepositView(account: account)
                 } label: {
                     HStack {
-                        Label("Receive USDC".bSmartLocalized, systemImage: "qrcode")
+                        Label("Add funds".bSmartLocalized, systemImage: "qrcode")
                         Spacer()
                         Image(systemName: "chevron.right").font(.caption.weight(.semibold))
                     }
@@ -65,14 +71,14 @@ struct DeviceWalletPanel: View {
                 .accessibilityIdentifier("wallet.receive")
                 NavigationLink { CCTPTransferDestination() } label: {
                     HStack {
-                        Label("Transfer to Hyperliquid".bSmartLocalized, systemImage: "arrow.right.arrow.left")
+                        Label("Existing wallet funds".bSmartLocalized, systemImage: "arrow.right.arrow.left")
                         Spacer()
                         Image(systemName: "chevron.right").font(.caption.weight(.semibold))
                     }.font(.subheadline.weight(.semibold)).frame(minHeight: 48)
                         .foregroundStyle(BSmartColor.primaryText)
                 }
                 .accessibilityIdentifier("wallet.transfer")
-                NavigationLink { HyperliquidWithdrawalDestination() } label: {
+                Button { showsWithdrawal = true } label: {
                     HStack {
                         Label("Withdraw USDC".bSmartLocalized, systemImage: "arrow.up.right")
                         Spacer()
@@ -81,7 +87,7 @@ struct DeviceWalletPanel: View {
                         .foregroundStyle(BSmartColor.primaryText)
                 }
                 .accessibilityIdentifier("wallet.withdraw")
-                if DeviceWalletBackupPolicy.current == .optionalForInternalTesting {
+                if local.provider == .device && DeviceWalletBackupPolicy.current == .optionalForInternalTesting {
                     DisclosureGroup("Optional wallet backup".bSmartLocalized) {
                         action("View recovery phrase", icon: "key") { showsRecovery = true }
                             .accessibilityIdentifier("wallet.backup")
@@ -104,6 +110,7 @@ struct DeviceWalletPanel: View {
         .fullScreenCover(isPresented: $showsRecovery) {
             NavigationStack { DeviceWalletRecoveryView() }
         }
+        .sheet(isPresented: $showsWithdrawal) { AcrossWithdrawalSheet() }
         .accessibilityIdentifier("wallet.panel")
     }
 

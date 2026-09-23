@@ -1,0 +1,46 @@
+.landing{--forest:#124c3e;--green:#147b57;box-sizing:border-box;min-height:100svh;color:#223a32;background:#edf1f1;color-scheme:light;font-family:"Figtree","PingFang SC","Microsoft YaHei",sans-serif;-webkit-font-smoothing:antialiased;letter-spacing:0}
+.landing *{box-sizing:border-box}
+.landing button,.landing input,.landing select{font:inherit}
+.landing :focus-visible{outline:2px solid var(--green);outline-offset:4px}
+.main{width:100%;margin:auto;max-width:1600px;background:#fff;min-height:100svh}
+.brandHeader{position:relative;isolation:isolate;overflow:hidden;display:grid;place-items:center;min-height:300px;height:36svh;max-height:400px;padding:44px 24px;border-bottom:1px solid #cbd6d5;background:#e5eae9}
+.cover{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 48%;z-index:-2}
+.brandHeader:after{content:"";position:absolute;inset:0;background:rgba(247,250,248,.82);z-index:-1}
+.brandContent{text-align:center;width:100%;max-width:560px}
+.brand{display:block;width:100%;max-width:420px;margin:0 auto}
+.brand img{display:block;width:100%;height:auto}
+.tagline{margin:24px 0 0;color:#314e4b;font-size:16px;font-weight:400;line-height:1.65;text-wrap:balance}
+.application{width:100%;max-width:740px;margin:0 auto;padding:38px 40px 64px;scroll-margin-top:24px}
+.formHeading{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding-bottom:24px;border-bottom:2px solid #24483c}
+.formHeading h1{font-size:22px;line-height:1.4;font-weight:500;margin:0;letter-spacing:0}
+.formHeading>span{font-size:12px;line-height:1.5;color:#707c77;white-space:nowrap}
+.waitlistForm{width:100%;margin-top:28px;text-align:left;position:relative}
+.fieldTitle,.question legend{display:block;font-size:15px;font-weight:500;line-height:1.6;margin-bottom:14px;color:#263c32}
+.fieldNumber{display:inline-block;margin-right:14px;font-size:11px;font-weight:400;font-variant-numeric:tabular-nums;color:#75867b;vertical-align:1px}
+.textInput,.contactRow select{width:100%;min-width:0;border:1px solid #cbd4d0;background:#fbfcfc;color:#253e32;padding:13px 14px;font-size:16px;border-radius:4px;min-height:50px}
+.textInput::placeholder{color:#7b8680;font-size:14px}
+.textInput:focus,.contactRow select:focus{border-color:var(--green);background:#fff}
+.textInput[aria-invalid=true]{border-color:#a43429}
+.question{border:0;border-top:1px solid #e0e5e2;padding:26px 0 0;margin:28px 0 0;min-width:0}
+.question legend{float:left;width:100%;padding:0}
+.question legend small{font-size:12px;font-weight:400;color:#78877e;margin-left:12px;display:inline-block}
+.channelGrid{clear:both;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 28px}
+.channelOption{display:flex;align-items:center;gap:12px;padding:13px 10px;min-height:68px;border-bottom:1px solid #e8ece9;cursor:pointer;font-size:14px;line-height:1.5;color:#304739;transition:background .15s}
+.channelOption:hover{background:#f3f7f5}
+.channelOption:has(input:checked){background:#edf5ef;border-bottom-color:#b7d5c0}
+.channelOption:has(input:focus-visible){outline:2px solid var(--green);outline-offset:2px}
+.channelOption input{width:17px;height:17px;flex:0 0 17px;accent-color:var(--green);margin:0}
+.channelOption span{min-width:0;overflow-wrap:anywhere}
+.channelOption small{display:block;color:#728078;font-size:11px;line-height:1.5;margin-top:2px}
+.question>.textInput{margin-top:14px}
+.contactRow{clear:both;display:flex;gap:10px}
+.contactRow select{width:148px;flex-shrink:0;padding:12px 10px;font-size:14px}
+.submitButton{display:flex;width:100%;align-items:center;justify-content:center;gap:16px;border:0;border-radius:4px;background:var(--forest);color:#fff;cursor:pointer;padding:16px 20px;font-size:15px;font-weight:500;min-height:52px;transition:background .15s;margin-top:32px}
+.submitButton:hover{background:var(--green)}
+.submitButton:disabled{opacity:.7;cursor:default}
+.question:disabled label{cursor:default}
+.formError{font-size:13px;line-height:1.6;color:#a43429;margin:12px 0 0}
+.srOnly,.honeypot{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(max-width:600px){.brandHeader{height:30svh;min-height:220px;max-height:290px;padding:32px 24px}.brand{max-width:300px}.tagline{font-size:14px;max-width:310px;margin:20px auto 0}.application{padding:28px 22px 44px}.formHeading{align-items:flex-start;flex-direction:column;gap:6px;padding-bottom:20px}.formHeading h1{font-size:20px}.waitlistForm{margin-top:24px}.channelGrid{gap:4px 12px}.channelOption{padding:12px 4px;gap:8px}.contactRow select{width:118px}.question{padding-top:24px;margin-top:24px}.fieldNumber{margin-right:10px}.question legend small{margin-left:25px;display:block}}
+@media(max-width:350px){.channelGrid{grid-template-columns:1fr}.channelOption{min-height:56px}.contactRow{flex-direction:column}.contactRow select{width:100%}}
+@media(prefers-reduced-motion:reduce){.landing *{transition:none!important}}

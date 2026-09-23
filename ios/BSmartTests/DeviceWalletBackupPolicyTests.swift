@@ -2,6 +2,13 @@ import XCTest
 @testable import BSmart
 
 final class DeviceWalletBackupPolicyTests: XCTestCase {
+    func testEmbeddedRecoveryDoesNotPretendToVerifyMnemonic() {
+        let wallet = DeviceWalletSummary(accountID: UUID(), address: HyperliquidOrderTestSupport.wallet.address,
+            recoveryVerified: false, provider: .privy)
+        XCTAssertTrue(DeviceWalletBackupPolicy.required.permits(wallet))
+        XCTAssertFalse(wallet.recoveryVerified)
+    }
+
     func testBackupRemainsTruthfulAndRequiredPolicyRejectsUnbackedWallet() {
         let wallet = DeviceWalletSummary(accountID: UUID(), address: HyperliquidOrderTestSupport.wallet.address,
                                          recoveryVerified: false)

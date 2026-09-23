@@ -4,6 +4,465 @@ bSmart iOS is the primary MVP client. It is built from scratch in SwiftUI and
 shares the existing backend, database, pipeline algorithms, product contracts,
 and design language. It does not embed the website with `WKWebView`.
 
+### Home Scroll Stability (2026-09-22)
+
+Device watchdog reports identified main-thread stalls in representative-story
+Chart layout. `TodayRepresentativeChartData` prepares domains and marker dates
+once per story. `TodayRepresentativeStoryChart` projects its accessible annotation
+overlay from local size with explicit matching chart scales, without geometry
+preferences writing back into view state. Domain scans no longer run per mark.
+`BSmartCollapsingPager` owns its scroll coordinator without subscribing the entire
+pager; only `BSmartCollapsingHeaderOffset` observes per-frame collapse updates.
+Regression coverage checks header/page build counts, all bundled chart domains,
+marker placement and navigation, repeated scrolling, paging and background return.
+
+### Friends Chat (2026-09-22)
+
+Friends now has Chats and Activity (unread direct messages), without a Follows tab.
+Incoming follows move to Today notifications under New followers and All.
+`NotificationEntryView` polls the existing social snapshot every 30 seconds only
+while Today is foreground, and on inbox pull-to-refresh. It guards request/account
+identity; `ActivityNotification.follower` reuses account-scoped read versions and
+the existing 30-day/200-item inbox. Rows open the public profile. This reflects
+current follower relationships, not immutable follow history or new APNs events.
+
+`SocialChatView` shares a room-aware message list between Global Chat and direct
+messages. `SocialChatComposer` owns local draft, focus and attachment state so
+keystrokes do not rebuild the list; ImageIO resizing/JPEG encoding runs off the
+main actor. Refresh merges stable IDs without replacing unchanged messages.
+`SocialMessageRow` provides avatars, sender, quoted reply, image viewing and
+bottom-right timestamps, with a horizontal left-swipe reply gesture and native
+long-press menu. Failed sends retain the same UUID and draft for safe retry.
+Server room isolation, private image URLs, upload quotas and migration order are
+specified in `docs/contracts/social_chat.md`. This is not voice or E2EE messaging.
+
+### Managed Perpetual Deposits (2026-09-22, Pending Configuration)
+
+`ManagedDepositView` replaces the new-money receive/transfer sequence with a native
+Relay deposit-address flow. `ManagedFundingClient` uses the current Supabase
+session; `bsmart-funding` fixes the recipient/refund wallet from the existing
+binding and targets HyperCore perps USDC. `ManagedFundingStore` discards stale
+quote responses across input/account changes and displays provider-owned history.
+Relay handles bridging, execution and refunds while Privy retains the owner wallet.
+No bSmart signer, watcher or funding schema is introduced. Existing CCTP and wallet
+funds retain their recovery entry. Provider API key and explicit server flags are
+required; no mainnet transfer or end-to-end funding acceptance has occurred.
+See `docs/contracts/managed_funding.md` and `docs/operations/managed-funding.md`.
+
+### Supabase Research Delivery (2026-09-15, Opt-In)
+
+`BSMART_CONTENT_BACKEND=supabase` selects `SupabaseContentClient`, bound to the
+existing `AccountAccessStore` after composition. It uses the same verified user
+session as the native Feed without exposing management credentials. Before initial
+load or foreground refresh, `BSmartContentRefreshing` stages one immutable revision;
+unchanged collection hashes reuse decoded arrays, and all required arrays decode
+before committing. Evidence reads capture the revision and reject obsolete responses.
+`SupabaseContentFreshness` commits only with a successful snapshot. Existing disk
+cache and bundle bootstrap stay available; an offline failure never stamps now.
+No legacy installation registration or state sync is created in this mode;
+portfolio/follows/read states remain in existing local storage. Auth, trading and
+native Feed clients are unchanged. The default remains legacy until manual schema
+provisioning, a complete content baseline and API/device verification are done.
+See `docs/operations/supabase-content.md` and `contracts/openapi/supabase-content.yaml`.
+
+### Representative Price Stories (2026-09-15)
+
+The homepage discovery focus uses `TodayRepresentativeStoryLoader/Card/Chart`.
+Its education entry sits beside the discovery heading instead of the Top 25% label;
+the existing education destination is unchanged. Peak stock appreciation replaces
+the card's upper-right arrow. Only the first chart annotation shows a visible date:
+the narrative prefix and chart footer dates are removed to compact the card.
+It preserves the existing representative-ticker selection and loads full evidence
+through `AppModel` after a 650ms portrait-selection debounce. The directory keeps
+its lightweight introduction. `TodayRepresentativeStory` projects available daily
+bars and source-linked calls without changing Score, settlements or API contracts.
+The compact chart precedes the 14pt Dynamic Type story, uses dotted dates and at most the
+earliest three bullish nodes; short leaders and 44pt targets keep clustered calls
+readable. Cards and nodes use shared-element navigation through
+`TodayRepresentativeOpinionDestination` to the standard `SmartAccountEvidenceDetailView`.
+Resolution matches author, ticker and source URL, not a representative ID that may
+refer to a different call. Marker-only summaries retain their actual horizon and
+source, never invented original text, translations or settlement results; full
+author evidence enriches the same screen when available.
+Missing history stays absent and remains retryable.
+
+Copy option two follows chronological price milestones, including calls after a
+historical high. Prices use completed closes before publication, no more than
+seven days old. The later high excludes the first publication day and cannot
+include uncompleted/future bars. Returns describe stock appreciation, not fills or
+investor profits. Text uses "the author" rather than names, with ticker, prices and
+percentages emphasized. The initial date/price and later high are chart annotations;
+marker targets avoid their bounds. Data limits and cutoff remain in an optional
+price-method disclosure on the standard opinion detail; other opinion routes are unchanged.
+Fixture tests cover MU, LITE and NVDA, plus source identity, deduplication, invalid
+prices and node geometry; targeted accessibility tests cover layout and navigation.
+
+`Core/Data/TodayRepresentativeStoryBundle` reads the versioned offline snapshot.
+`Resources/representative-stories.plist` preloads all 342 current representative
+introductions and 268 valid bullish stories, including English/Chinese copy, in
+about 1.1 MB. Bearish cases retain their original direction; PLG's missing initial
+price is not invented. The existing full evidence fixture remains bundled. A matching
+introduction ID, price and timestamp are required before reusing a bundled story.
+The loader displays it synchronously, then refreshes from complete author evidence;
+partial latest-update data cannot replace the preloaded historical chart.
+
+To regenerate after fixture/copy changes, run `make ios-generate`, then the current
+scheme's `xcodebuild ... build-for-testing` for a simulator. Run:
+
+```sh
+bash scripts/export_ios_representative_stories.sh /path/to/Build/Products/bSmart_iphonesimulator26.5-arm64.xctestrun SIMULATOR_UUID
+```
+
+The explicit exporter invokes `TodayRepresentativeStoryBundleTests/testExportSnapshot`
+with an output path on a temporary copy of the test manifest, then installs the binary
+plist. Normal test runs skip exporting. Regenerate the project and rebuild afterward.
+This reuses the production Swift projection and localization rather than duplicating
+price/chronology logic in a separate generation language. Shipping this baseline does
+not disable daily server updates or require app updates for refreshed evidence.
+
+### Profile Basics (2026-09-15)
+
+The profile defaults to the bSmart account and live holdings. External accounts,
+valuation history and brokerage connections remain available. A persistent Deposit
+entry in the app holdings section covers empty positions and first-time funding
+without inferring deposit history from a balance or presenting a failed query as zero.
+`PortfolioAppAccountView` routes to the existing sign-in, receive and transfer
+destinations; it does not submit transactions. Position adjustments retain the
+shared trade sheet. The Hyperliquid module remains with a compact, automatically
+loaded balance presentation, omitting protocol mode, timestamps and helper copy.
+Separate main-account equity and cash are not relabeled as order buying power.
+Unavailable balances use a dash, not zero. Settings displays only the current account's verified wallet address and
+routes address actions through the existing receive verification flow. Guest
+example addresses are no longer shown in the UI.
+
+Verification: signed simulator build and 20 targeted tests passed across the
+position stores/models, balance layouts and profile/portfolio navigation. UI checks
+cover the default account, reachable Deposit, settings navigation, external account
+switching, profile edits, whole-page scrolling and horizontal paging. No real login,
+funding, key changes or orders were performed.
+
+### Global Search
+
+The third root tab is `Search`, with a fixed native input above a mixed overview:
+two-column ticker quotes, a horizontal investor rail, opinion summaries and public
+community profiles. Query results have a fixed category order: tickers, opinions
+(including Smart Money movements), authors, users. Exact ticker matches precede
+prefix/substring matches. Category filters and pagination preserve this ordering.
+Each result opens its existing detail destination; no separate trading UX is added.
+The overview uses full-width, equal-grid ticker tiles with explicit rounded
+borders, not context-dependent Dividers inside horizontal rows. Investor names
+stay on one line above their published Top percentile (or known ordinal rank);
+missing ranks are not inferred. `AppSearchDestination` only selects the existing
+destination and exposes its navigation bar: the destination itself owns the
+single `bSmartDetailPage` back control and tab-visibility token. AVAV's bundled
+monochrome logo is a theme-adaptive template; colored brand logos stay original.
+
+`Core/Data/AppSearchIndex` builds a deduplicated index of the published in-memory
+research catalog, loaded author evidence and the existing merged perpetual ticker
+catalog. It is not an all-time archive or internet index. `AppSearchStore` performs
+background matching, debounces input by 220ms and fences obsolete responses by
+request generation and account. Recent explicit searches are capped at eight and
+stored per account; transient keyboard edits are not saved.
+
+`PublicProfileSearchClient` uses `withFeedSession` and the independent, read-only
+`bsmart-search/profiles` Edge Function. It searches completed public profiles from
+the existing `bsmart_feed_profiles` table, with bounded, literal-escaped matching
+and stable paging. Responses expose only public identity fields; stored avatars
+reuse the existing signed-URL resolver. User lookup errors do not erase local
+research results. Signed-out test browsing keeps research search but requires
+sign-in for public users. Debug users are available only with both a fixture
+scenario and `--ui-search-fixture`, never as a live-service fallback.
+
+The new function was independently deployed to the account project on 2026-09-14;
+an unauthenticated live request returned 401. No DDL or changes to deployed
+authentication, wallet, profile or trading functions were performed. Contract:
+`docs/contracts/app_search.md`, `contracts/openapi/supabase-search.yaml`.
+
+Search validation (2026-09-14): ad-hoc signed simulator build and 20 native tests
+passed (14 model tests, six UI tests). Coverage includes exact BTC priority,
+same-name ticker collisions, aliases, cancellation/account isolation, mixed
+overview, ticker/opinion/user destinations, keyboard dismissal, light/Chinese large text,
+market-directory failure/retry and the existing Today-to-Smart route. Seven Edge
+Function tests and Deno type checking passed; temporary Auth failures return 503,
+not a 401 that would clear the app session. Architecture, terminology, strings
+and whitespace checks passed. Public user lookup still needs a signed-in physical
+device acceptance pass; no real profile writes, wallet changes or trades occurred.
+
+Search UI refinement validation (2026-09-14): signed simulator build and 19 tests
+passed (13 model/asset tests, six UI cases). Tests verify equal-width ticker tiles,
+contained symbol/price text, published Top badges, theme-adaptive AVAV assets,
+and exactly one back control for ticker, opinion, author, Smart Money, movement
+and user destinations. Search state and tab visibility survive returning from
+details; Chinese large text and light/dark cases remain covered. No backend or
+distribution deployment was needed for these UI fixes.
+
+### Brand assets
+
+`BSmartWordmark` reads the approved full-color `BSmartWordmark.imageset` across onboarding, account, settings and portfolio setup. `scripts/sync_brand_assets.py` packages the user-supplied image in `ios/Brand/bsmart-logo-20260913.png` into the transparent wordmark and opaque 1024px AppIcon. No runtime font reconstruction or symbol tinting.
+
+### Subject-attributed trades
+
+`Core/Models/SubjectTradeStats`, `Core/Data/SubjectTradeStatsStore` and
+`Features/Smart/SubjectTradeStatsSection` consume the authenticated Supabase
+subject aggregate on Smart Account and Smart Money detail pages. Counts are
+distinct user/source pairs, not distinct users across an author. Native UI never
+sums a partial Feed page or substitutes examples for errors. The info control
+holds the counting definition, without adding permanent helper text.
+`SmartMoneySourceActivity` links reviewed movements to their source-aware trade
+dock, forwarding the exact market coin through the existing shared trade sheet.
+See `docs/contracts/subject_trade_stats.md` and `contracts/openapi/supabase-feed.yaml`.
+
+### Account presentation
+
+`Features/Account/AccountPresentation` contains a card-free wordmark, native
+neutral Google button, account action rows and primary buttons. The login
+wordmark renders the original silhouette in the adaptive brand color in dark
+mode; other usages keep the full-color image. `GoogleSignInMark.imageset` contains
+unmodified icons from the pinned Google SDK (provenance in
+`ios/asset-sources/google-signin-mark.md`). The button calls the existing identity
+authorizer, retains provider availability and busy guards, and localizes its CTA.
+
+`Features/Portfolio/ProfileEditorPresentation` shares photo picker/menu and
+focus-aware underlined fields between cloud and guest editors. Photo errors and
+provider-photo selection stay explicit; both editors use the bottom save action.
+Cloud validation, session fencing, first-sign-in setup and guest scope checks stay
+in their original clients/stores. No new credentials, scopes or profile API.
+
+The sign-in UI tests require an ad-hoc signed simulator build
+(`CODE_SIGNING_ALLOWED=YES`, `CODE_SIGN_IDENTITY=-`): unsigned builds enter the
+existing Keychain storage-protection branch. This was confirmed by accessibility
+hierarchy and signed/unsigned comparison on the same simulator on 2026-09-14.
+
+Current refinement validation (2026-09-14): `make ios-build` passed; signed
+simulator tests passed all nine cloud/local profile model tests and three UI
+tests (Chinese/light and English/dark sign-in; guest edit/save/cancel). Architecture,
+terminology, localization syntax and whitespace checks passed. No real profile
+writes or distribution build was published.
+
+### Smart navigation
+
+The Today investor focus gives the existing representative market story a
+stronger visual entry: a restrained brand-tinted identity band emphasizes the
+ticker and historical peak move, while the chart adds a low-opacity area layer
+and a heavier price line. This is presentation only. The selected story, source
+prices, call nodes, opinion destination and ranking logic remain unchanged.
+
+`SmartHubView` shares Today/Discover's `BSmartCollapsingPager`: the search field
+collapses above pinned underline tabs and filter controls, with horizontal paging
+between Smart Account and Smart Money. `SmartHubTabs`, `SmartHubRows` and
+`SmartMoneyOverview` own presentation only. Rows use existing platform ranks,
+representative-work introductions and source P&L; they never synthesize returns,
+holdings or new scores. Missing P&L stays unavailable, not zero. Filters retain
+their separate state per section, and existing detail navigation/following and
+trade flows are unchanged. Native `SmartFiltersUITests` cover combined filters,
+reset, large text and swipe navigation with preserved filters.
+
+Validation (2026-09-16): signed iPhone 16 / iOS 18.5 simulator build and all four
+`SmartFiltersUITests` passed, including Chinese XXXL row bounds and opening an
+author detail. Architecture, localization syntax and scoped whitespace checks
+passed. No live account writes, orders or distribution upload were performed.
+
+Opinion details use `Features/Smart/OpinionDetailLayout` with a full-width
+`OpinionPortraitHeader`, matching the approved A v3 HTML prototype: a full-color
+author circle lightly overlaps a smaller, diagonally offset ticker-logo circle.
+The header has no visible text, extended color strip or separate gray background.
+Images use existing cached/bundled components and destinations; the avatar has a
+header-only symbol fallback, and the light logo mount preserves brand contrast.
+The composition is capped at 390 points wide, reserves 244 points of height, and
+scales both circles together up to 1.18 on pull. `SmartAccountPortraitLayout`
+shares stretch/collapse mechanics without changing author-page sizing or fading.
+Author name, platform mark, ranking, ticker/company and date live below the image,
+with adaptive rows for narrow screens and Dynamic Type.
+Only the header observes scroll geometry; the reader is not rebuilt per drag.
+Trader count and its expandable list follow attribution, before the opinion
+summary and original text. Original/translation, text size, supporting sources,
+outcomes and price evidence remain available, with the existing source-attributed trade dock below the safe
+area. Historical home chart account markers now route to this same opinion page.
+No API schema or wallet behavior changes.
+
+Compact-cover validation (2026-09-14): the ad-hoc signed iOS 26.5 simulator build
+passed six layout tests and four UI regressions. These cover circle bounds and
+overlap from 320 to 1024 points, pull/release and collapse, dark/light appearance,
+large text, both image destinations, trader-count ordering, reader controls and
+the existing trade dock. The author-page pull/history regression also passed.
+No real transactions or distribution upload were performed.
+
+The Today “Smart investors” button now pushes `SmartHubView` on the existing
+Today navigation stack. SmartHub no longer owns a nested root NavigationStack;
+it uses the shared detail-page back control and tab visibility token, including
+returning from author/money details and filter sheets. Both Smart Account and
+Smart Money, search, rankings and filters retain their existing behavior.
+
+The root no longer instantiates a hidden Smart tab layer. The tab bar has four
+equal slots: Today, Feed, Search, Profile. `.smart` is
+retained only as a compatibility identifier; legacy DEBUG launch selection for
+Smart falls back to Today. Platform-scoped discovery directories remain available
+to education routes.
+
+### Identity-free test login
+
+The internal app offers an explicit Test login button in the root login screen,
+including Release builds. `AccountAccessStore.isTestSession` grants browsing only,
+separately from `canAccessAppContent`, which still requires a real session. Entry
+requires completed restore, no active identity/session and no account operation.
+No credentials, account IDs, wallet registration or cloud profile are fabricated.
+Cloud Feed and wallet calls retain their existing verified-session requirements.
+
+Test mode lives only in memory. Exit from Settings or Account unmounts content,
+resets the router and returns to root login; relaunch requires another selection.
+Successful Google login ends test mode and enters canonical profile setup. Research
+loading/live refresh accept either a real session or the explicit test state.
+This is the user-visible internal test entry, distinct from DEBUG fixture bypass.
+
+Test-login validation (2026-09-14): simulator build and 24 selected tests passed
+(22 account/access unit tests, two root UI tests). Verified explicit entry,
+settings-sheet logout returning to the root, no session persistence after restart,
+no identity/credential/wallet/cloud access fabrication, and verified Google login
+ending the test state. No real credentials or funds were used.
+
+### Root authentication gate
+
+`AppSessionGate` owns access to the content tree, ahead of research bootstrap,
+portfolio onboarding and all four tabs. `canAccessAppContent` requires restoration
+to have completed, a matching session identity and unexpired access. A cached
+Supabase identity published during restoration does not unlock content. Profile
+load/setup uses the canonical cloud profile; failures offer retry and sign out.
+The root editor owns onboarding completion so it cannot disappear on sign-in
+before its first save. `TradingAccountView(isAppEntry: true)` only handles login;
+its optional in-app account variant retains profile/wallet management.
+
+On local logout or account change, the content subtree is destroyed and the router
+resets paths, pending links and hidden-tab tokens. Startup data loading and live
+refresh are login-gated; account maintenance still runs while signed out to restore
+the session. OAuth callbacks remain reachable. Links received while signed out
+cannot instantiate content and may be resolved after login. Wallet keys are kept.
+This is a native presentation boundary; installation-auth research API contracts
+and Supabase authorization are unchanged.
+
+Only DEBUG builds with an explicitly launched bundled `DebugDataScenario` allow
+existing fixture UI tests to view demo content without a real account. Live data
+never uses this route; `--ui-auth-gate` exercises the actual gate with those same
+fixtures, and Release contains no fixture bypass.
+
+Root-gate validation (2026-09-14): simulator build and 65 targeted tests passed
+(62 account/session/profile unit tests, three UI tests). Covered cached identity
+while restore is suspended, token expiry, local logout before delayed remote
+revocation, offline revocation failure, route clearing, bilingual logged-out
+cold launch/relaunch and inability to swipe-dismiss the root login. No real Google
+credentials, wallet operations or production profile writes were used.
+
+### Session and account navigation
+
+`Core/Wallet/PrivyEmbeddedWalletClient` integrates pinned Privy Swift 2.16.2 using
+the current Supabase access JWT (`sub` UUID), not a second OAuth login. The app
+owns one SDK instance; account revision checks reject late results and logout
+cleans up the old SDK identity, including when a request was in progress.
+`HybridTradingWalletVault` preserves matching device keys, resolves exact bound
+Privy addresses across devices, and creates only for unbound accounts. Provider
+failure never falls back to device-key creation. `HybridTradingWalletSigning`
+is injected into CCTP, market orders, leverage, unified setup and withdrawals;
+the existing trade sheet and durable permits/verification/broadcasting remain.
+Privy uses typed signing or raw transaction-digest signing, never generic RPC
+broadcasting. Account wallets have no local mnemonic and keep recoveryVerified
+false; legacy keys retain their optional backup/Face ID policy. No registry DDL,
+automatic legacy import or address replacement. See `embedded_wallet.md` and
+`operations/privy-ios-setup.md` for dashboard configuration and live acceptance.
+
+Supabase sessions survive transient foreground/refresh failures. Pending rotation
+is recoverable using Supabase's parent-token semantics; legacy session authorities
+retain their no-replay policy. Definitive refresh rejection clears credentials;
+expired access never grants signing permission. Refresh uses the token endpoint's
+authoritative user rather than a second request that could revoke a valid rotation.
+
+Root slots are Today, Feed, Search, Profile; Smart opens from Today. The bSmart account holdings pane uses
+`PortfolioTradingHoldingsView` and `TradingPositionsView` for real default/HIP-3
+positions. Increase and reduce/close use the same exact-coin `BSmartTradeSheet` and
+refresh on dismissal. Trading wallet management lives in Settings; guest/external
+holdings remain separate and never substitute for real account positions.
+
+### Smart Account Author Detail
+
+`Features/Smart/SmartAccountDetailView` is a portrait-first, continuous native
+profile, extracted from the Smart hub. `SmartAccountPortraitHeader` expands the
+existing cached source image during scroll overshoot and fades only its title;
+the parent changes state only at the compact-navigation threshold. No custom
+drag recognizer competes with chart zoom or scrolling. Author entry points
+use ordinary push navigation: the shared link's optional
+`usesZoomTransition: false` avoids the system Zoom pull-to-dismiss recognizer
+stealing the portrait pull. All other destinations keep their existing transition.
+The fixed follow action
+uses a bottom safe-area inset and the existing AppModel tracking state.
+Representative works precede recent-view timelines, latest available ticker
+stances, profile characteristics and `SmartAccountAboutSection`. The latter
+retains benchmark scores, sample coverage, version metadata and historical misses.
+`RepresentativeWorkPerformance` uses published stock returns from the exact
+settlement window (or dated price-evidence window), never annualizes,
+recomputes Score or treats a bearish call's stock loss as positive account ROI.
+The same `BSmartPriceChart`, markers, source drilldowns and trade evidence remain.
+Public calls are not labeled as verified holdings. The main representative-work
+surface omits repeated reference-price, date, OHLC-source and disclaimer captions;
+chart interaction and full evidence retain the data, while methodology is collapsed.
+The new subject trade aggregate and money attribution are documented separately above.
+
+### Platform Profiles
+
+`AccountProfile` is the canonical Supabase account profile. `NativeAccountProfileClient`
+uses the existing validated account session without requiring a wallet. `AccountProfileStore`
+fences late responses; signed-in `UserProfileHeader` and `AccountProfileEditor` use cloud
+username, unique handle, bio and private uploaded avatar. Local guest editing is unchanged;
+old account-local data is imported only explicitly. Feed privacy no longer edits identity.
+`FeedPublicProfile` and `OpinionTrader` carry the same handle alongside name/avatar;
+legacy fixtures without a handle remain readable. Profile-only 409 errors do not trigger
+wallet recovery. See `docs/contracts/account_profiles.md` and the isolated profile OpenAPI.
+
+### Investor Education
+
+`Features/InvestorEducation` adds an isolated native page reached through one
+compact entry below the existing homepage investor focus. Shared zoom navigation,
+detail tab visibility and AppModel following are reused. The offline, validated
+`InvestorEducationSnapshot` and 1,289-author JPEG atlas live in `Resources`, separate
+from live recommendations and scores. Only a selected positive Wey How SNDK case
+is featured, with original-source access and its unchanged settlement window.
+Portrait filtering has no autoplay; Swift Charts supplies price selection.
+X, YouTube and Reddit have independent platform scopes, observed/ranked/Top-25
+counts and identity-matched atlas tiles (881/295/113 portraits). Platform switching
+also scopes live recommendations and the existing follow directory. Public avatar
+enrichment is build-time only; it never changes ranks or adds invented authors.
+See `docs/product/investor-education.md` for provenance and rebuild requirements.
+
+### Native real trade Feed
+
+`NativeTradeFeedClient` uses a validated Supabase session via `AccountAccessStore`,
+not research installation auth. Feed has no Demo or sharing-settings UI. Migration
+006 fixes activity visibility to public for existing/new profiles; legacy sharing
+requests cannot hide activity or overwrite identity. Account/profile revisions
+invalidate public UI records. The optional
+`OpinionOrderAttributing` hook registers an immutable source before real signing,
+then requests independent reconciliation without resending orders. Ordinary and
+reduce-only trading remain independent of Feed. Server code lives in the isolated
+`supabase/ios-account` deployment; its schema and rollout are operator-managed.
+The deployed service uses a private Supabase Storage opinion catalog, not Vultr.
+`publish_catalog.py` publishes reviewed real snapshots; the pg_cron/Vault worker
+and native sync share `bsmart_feed_claim` leases. `inspect_feed.py` checks live
+schema counts, authentication and worker heartbeat without touching funds.
+See `docs/contracts/supabase_trade_feed.md`. No device receipt publishes itself.
+
+`OpinionTradersSection` uses this same authenticated service, with a sign-in entry
+when logged out. It never falls back to demo on network failure; demo is a separate
+explicit sheet. Trader rows omit leverage and time, retaining timestamps only in
+the contract for ordering/verification. Legacy fixtures are DEBUG UI-test-only.
+
+Feed switches between newest executions and `PopularOpinionsView`. The latter
+uses `PopularOpinionsStore` and `/popular` server aggregates, ranking opinions by
+seven-day distinct verified traders rather than ordering a partial Feed page.
+Account, consent, tab and scene changes fence late results and clear stale state.
+`OpinionTradeSplitBar` displays counts and proportional long/short segments without
+requiring the trader list to expand. Detail totals are all-time; popular totals
+are seven-day counts. A person's latest eligible fill determines one direction.
+Missing legacy direction fields do not become fabricated zeroes. Explicit Demo
+groups only its isolated records; it is never used when live statistics fail.
+Feed dollar formatting is fixed to `$`, independent of the device currency locale.
+
 ### Home component cleanup
 
 The September 12 cleanup removes the unreferenced `TodayInterludeDeck`,
@@ -46,14 +505,80 @@ Daily package operations and the required one-time TestFlight/API rollout are in
 
 ### Account and funding preparation
 
-The live order composer restores the earlier amount/keypad/chart presentation in
-`LiveOrderAmountPanel`, with display-only exact estimates in `LiveOrderEntrySummary`.
-`HyperliquidMarketOrderStore.loadEntry` reads authenticated balance, leverage and
-fees without creating a quote, journal intent or signature. Amounts remain USDC
-notional values. The real leverage is read-only until a signed leverage-change
-flow exists; no paper balance or synthetic liquidation price is used. Review is
-read-only and a separate slide confirms the real order through the existing
-preflight, signature and journal. Backgrounding clears entry data and permissions.
+Wallet authentication is configurable in Settings. `DeviceWalletStore` publishes
+the setting only after the vault updates the existing item's access control and
+encoded policy atomically. Legacy/new wallets default to user presence. Disabling
+presence retains `WhenPasscodeSetThisDeviceOnly` and no synchronization; it never
+deletes/recreates or exports a key. Re-enabling restores presence on the same item.
+`WalletAuthenticationSession` shares only LAContext, scoped by service/account for
+60 seconds in foreground; background, protected-data lock, sign-out, authentication
+failure and policy changes invalidate it. Key bytes remain temporary and wiped.
+
+Unified USDC is now automatically prepared by the wallet/setup entry, with one
+automatic attempt per setup store. Existing positions/open orders still prevent
+switching, portfolio margin is untouched, and only read-back confirms success.
+The compact order setup observes mode changes directly and reloads capacity. No
+extra enable/confirmation step or automatic order accompanies initialization.
+
+`LiveOrderComposer` restores the original margin amount, leverage strip, presets,
+keypad/chart toggle, balance/MAX and slide-to-order presentation. Display estimates
+remain in `LiveOrderEntrySummary`; `loadEntry` reads balance/leverage/fees without
+signing. A slide invokes `executeMargin`, applies the selected leverage only when
+no position exists, verifies its exchange value, then runs the existing fresh
+order checks and one-shot submission. `HyperliquidLeverageUpdate/Codec` encode only
+the fixed mainnet updateLeverage action and share the persisted owner nonce space.
+There is no paper balance, synthetic liquidation price or invented fill.
+
+For a HIP-3 market with zero directional capacity in a non-shared account,
+`LiveOrderComposer` embeds the compact `UnifiedAccountSetupView`. Its existing
+risk confirmation and flat-account checks remain mandatory. A verified unified
+mode callback reloads the market's actual entry capacity; default-perp equity is
+never substituted for `activeAssetData.availableToTrade`. Already funded separate
+markets, shared accounts and reduction do not show this setup gate. The composer
+also offers explicit balance refresh and six-decimal display/MAX; minimum opening
+notional and fee-inclusive margin errors appear before the slide. The authoritative
+order book and signing checks are unchanged.
+
+All live order entries now present the same `BSmartTradeSheet`: opinion actions,
+Feed shortcuts, the contract catalog and wallet position reduction/close. The
+sheet sits above the root floating tabs; its shared composer keeps the slide
+action outside the scrolling input area. There is no separate reduction form.
+Reduction uses percentage input/presets and the same keypad/chart/MAX controls,
+locks the position coin and leverage, and calls `executeReduction` through the
+existing reduce-only pipeline. Exact-coin loading cannot fall back to a different
+venue, and late market requests cannot overwrite a newer selection. Dismissing
+the position sheet refreshes the wallet positions.
+
+Funding now uses two actions: Continue prepares authorization/gas, Confirm transfer
+signs and submits. Recovery happens on the same page. A saved authorization may be
+reused within its original deadline with unchanged amount and fee ceiling, a fresh
+simulation and fresh gas estimate. An orphan authorization whose simulation fails
+is retained as `notSubmitted`, releasing the local attempt immediately; the fixed
+extension requires an owner-signed source transaction, and no source record may
+exist for this transition. Authorizations with unknown signer outcomes still need
+chain-proven expiry. All evidence remains. Signed/source transactions
+are never cleared or automatically resent. Input has no whole-screen periodic
+refresh; the transfer display is computed only when the state changes.
+
+A source signature that never received a submission permit can now finish as
+`notSubmitted`, retaining its exact signature/raw bytes and permanently preventing
+that intent from submitting. `beginSubmission` durably records `submitting` before
+issuing the only broadcast capability; recovery and submission compete under the
+same journal lock. Pre-submit failure and screen restoration use this boundary,
+not a user "reviewed" flag. Missing-transaction observations do not trap recovery,
+but pending/executed/conflicting observations do. Signing in progress and every
+permit-issued or ambiguous submission remain reserved.
+
+Source preflight estimates gas before calling `eth_call`, then explicitly uses
+the estimated gas plus the existing budget buffer. Never send fee-bearing
+`eth_call` transactions without a gas limit: the Arbitrum node's default cap can
+incorrectly demand substantially more ETH than this transaction needs. RPC
+failures retain classified reasons or method/error code, never raw signed payloads.
+
+Submission rechecks compare raw gas estimates against the original approved limit,
+including the final bounded estimate. The 20% headroom is applied only when quoting,
+not applied again to each new estimate. Exact signed gas/fee caps and hard limits
+stay unchanged; a genuine quote overrun requests a new quote and confirmation.
 
 bSmart is a Hyperliquid builder-code frontend, not a DEX/HIP-3 deployer.
 `HyperliquidBuilderFee` binds an explicitly configured public recipient and perps
@@ -143,11 +668,14 @@ flow from `Core/Trading/Funding/CCTPTransferStore`, the existing preparation and
 device journal/signer. `CCTPTransferDisplay` projects only display-safe values from
 durable states, retaining the original amount, owner and fee ceilings after submission;
 confirmation deadlines are visible and expired actions cannot advance.
-Amount review, USDC authorization, network-fee signing and submission
-are separate explicit actions. The preparation operation gate is deny-by-default;
+Authorization, network-fee preparation, signing and submission remain separate
+internal states, but the UI uses Continue and Confirm transfer only. Abandoned
+unsigned source previews are cancelled without waiting, preserving their history.
+The preparation operation gate is deny-by-default;
 the live app gate checks current configuration and device-wallet identity throughout.
-History is the recovery path after a possible side effect; no automatic retry or
-balance credit is introduced. `BSmartApp` maintains account sessions across transient
+Saved authorization recovery runs on the same page; signed/sent source records
+remain in history and are not resent or credited speculatively.
+`BSmartApp` maintains account sessions across transient
 inactive states, but restores again after background, so system authentication UI
 does not itself reset the wallet. Physical-device authentication acceptance remains
 required. Funding, trading and withdrawals retain separate registry gates.
@@ -163,7 +691,9 @@ perpetual venues with bounded concurrency; partial failures remain visible.
 uses fixed-purpose `UnifiedAccountSetupCodec`, records a shared owner nonce in
 the existing encrypted journal, and reads the authoritative mode after submission.
 Biometric inactive transitions do not cancel wallet preparation; background does.
-Apple UI and capability remain disabled. See `docs/contracts/native_perpetual_mvp.md`.
+Apple UI and capability are enabled in the native build; the button is usable
+only when Supabase Auth advertises the Apple provider. See
+`docs/contracts/native_perpetual_mvp.md`.
 Internal build 1.0(6) sets `BSMART_INTERNAL_OPTIONAL_WALLET_BACKUP=YES` in
 `project.yml`, including Release archives. `Core/Wallet/DeviceWalletBackupPolicy`
 centralizes UI/funding/order/withdrawal eligibility without changing the stored
@@ -373,7 +903,7 @@ The first iOS release owns four user-facing scenes:
    independent user, author, opinion and ticker navigation. `Mr Collie` opens from
    the profile’s lower-right circular launcher as a full-screen research assistant.
 
-The root tab order is `Today / Smart / Feed / My profile`. The last tab uses
+The root tab order is `Today / Feed / Search / My profile`. The last tab uses
 a person icon and preserves the `portfolio` route and accessibility IDs. Local
 profile data lives in `Core/Data/LocalUserProfileStore`, separated by authenticated
 account UUID (or guest); it does not alter authentication or wallet identity.
@@ -391,6 +921,20 @@ they directly support one of these scenes.
 
 ### Trade Feed and profile assistant
 
+The 2026-09-22 AI layout uses the same compact native navigation as other detail
+pages. `AIAssistantWelcome`, `AIAssistantAnswer` and `AIAssistantComposer` keep
+presentation inside `Features/AI`; the parent retains conversation orchestration.
+Suggested questions are divider-separated rows, answers use full-width body text
+with collapsible evidence, and the keyboard-aware composer is a bottom safe-area
+inset. Status decorations and redundant helper subtitles are removed. Source data
+times and actual service-failure notices remain. Requests, grounded fallback,
+conversation context and evidence navigation use their existing implementations.
+
+Validation: simulator build and four UI regression cases pass (Chinese light-mode
+large text, typed submission/reset, evidence round trip, repeated profile opening
+and tab restoration), along with the existing grounded-answer unit case.
+Architecture, terminology and diff whitespace checks pass.
+
 `ProfileAssistantLauncher` owns the circular avatar, full-screen presentation and
 one tab-visibility token. The existing `AIAssistantView` accepts a close action;
 its composer no longer reserves root-tab space. Native zoom expands from the
@@ -405,36 +949,37 @@ fallback, and existing author/opinion/ticker destinations. Public profiles show
 only their current consented trades. Pagination de-duplicates, refresh replaces,
 and failed refresh or leaving the tab clears public rows. Debug examples require
 `--ui-trade-feed-fixture`; production never substitutes example users for 503.
-The explicit Demo toolbar button additionally offers six local examples in all
-builds, labelled on Feed, rows and sample profiles. `TradeFeedDemoData` owns the
-separate fixture/timeline/pagination; demo quick actions open the display-only
-`FeedDemoTradePreview` without contacting an execution service. Returning to live
-mode clears the preview records.
+Production no longer has a Demo toolbar entry. Debug layout tests can explicitly
+use `--ui-feed-layout-preview`; the isolated `FeedLayoutPreview` is excluded from
+Release builds. `TradeFeedDemoData` supplies labelled examples, and test quick
+actions open `FeedDemoTradePreview` without contacting an execution service.
 
-`Core/Trading/FeedQuickTrade` defines the red $100/$500 and green $500/$100
-blocks as USD notional. Live cards prefill `LiveMarketOrderDestination` for the
-exact market and direction; opening a sheet does not execute an order. Demo cards
-show only the chosen direction and position value, without an execution service.
+`FeedQuickTradeBar` now exposes only asset logo/ticker, Long and Short. The shared
+`BSmartTradeSheet` receives the exact market, direction and opinion source but no
+preset amount; opening a sheet does not execute an order. Demo cards show only
+the chosen direction/ticker without an execution service. `Core/Trading/FeedQuickTrade`
+remains a legacy paper-only regression helper, not the live Feed's action model.
 The server only exposes Top 25% author contexts and separately consented public
 amounts. The real reconciler and authenticated consent service remain required;
 `feed_migration.sql` is prepared but unapplied. See `docs/contracts/trade_feed.md`.
 
-### Today scene navigation
+### Today home navigation
 
-`TodayHomePager` hosts `TodayInvestorDiscoveryModule` as one shared header,
+`TodayHomeContent` hosts `TodayInvestorDiscoveryModule` above three scene pages,
 replacing the home price/opinion chart. The header discovers people only; opinions
-remain in the lower home sections. Author-specialty filters and the searchable
-directory retain the complete published platform Top 25% cohort. `TodayInvestorPool`
-arranges a single horizontal line with one large centered portrait and its actual
-platform percentile. Side portraits get smaller with distance, with source marks on
-every portrait; there is no orbit layout. The existing X identity for @aleabitoreddit
+remain in the lower home sections. Clicking the text-only discovery heading opens
+`TodayInvestorDiscoveryPage` with shared zoom navigation and detail tab hiding.
+Its search, platform, specialty and following filters retain the complete published
+platform Top 25% cohort; homepage filters are hidden. Education reuses the same
+directory content within its platform-scoped modal. `TodayInvestorPool` arranges
+three visible circular portraits with a larger centered selection and actual
+platform percentile. Every portrait retains its source mark. The existing X identity for @aleabitoreddit
 is the initial focus only when eligible; three eligible YouTube authors with images
 are placed beside it as editorial discovery, not a new ranking.
 `TodayInvestorDiscoveryPeople` uses a native horizontal ScrollView with center
-snapping. After a 10-second dwell it moves to the next person over 2.4 seconds,
-reversing direction at the boundary; touch delays movement. A pause control,
-Reduce Motion, VoiceOver, background, offscreen and presented-detail states stop
-automatic paging. No Score is recalculated and no candidate is removed.
+snapping and three equal-width slots. Paging is manual only, with no autoplay or
+page counter. Reduce Motion suppresses tap-to-center animation. No Score is
+recalculated and no candidate is removed. Portraits use the shared circular `BSmartAvatar`.
 The focus card hides raw Score and repeated platform text. In roughly 94pt it shows
 the ticker logo, ticker, direction/date/reference price and **stock** return. The
 pipeline keeps cumulative ticker contribution ranking, but anchors each work to
@@ -450,19 +995,17 @@ projection without recalculating Score. Missing work falls back to actual covera
 Profile browsing snapshots the current sector/search cohort and reuses
 `SmartAccountDetailView`, including representative works and persisted tracking.
 Empty portfolios do not block discovery. See `docs/product/investor-discovery-home.md`.
-Directly below it, equal-width text tabs use a lime selection underline:
+Directly below it, the text-only market heading introduces three custom scene tabs:
 
 - Holdings & Tracking: holdings-related activity and tracked accounts.
 - Market overview: two Trending Tickers and two Alpha Tickers with full-list links.
 - Smart updates: investor-grouped activity across Smart Account and Smart Money.
 
-Native horizontal paging affects only these scenes. Each scene has its own vertical
-scroll position; the header scrolls away and tabs pin beneath the safe area.
-The shared `BSmartCollapsingPager` / `BSmartCollapsingScrollState` in DesignSystem
-also serve Portfolio and observe each vertical scroll view without replacing its
-delegate, and forwards vertical drags on the shared header. Discovery sector and
-selected person remain local to its single shared instance; its horizontal pool
-gesture does not change the lower home scene.
+The three basic scene tabs remain on Today; nested source pickers do not. Holdings and Smart updates
+heading links open their existing collections, where source/ticker/search filters
+remain available. `BSmartCollapsingPager` / `BSmartCollapsingScrollState` preserve the
+shared collapsing header, scene scroll offsets and horizontal page swipes. Detail
+return retains selection; the portrait gesture changes only the chosen investor.
 Preview cards are vertical, avoiding an inner horizontal carousel. Market discovery
 and Smart updates remain accessible without a portfolio. Bottom clearance keeps the
 final row above the floating root navigation. No data contracts or scoring change.
@@ -470,7 +1013,7 @@ See `docs/product/today-home-navigation.md` for the confirmed interaction bounda
 
 ### Holdings-related activity
 
-Today places `TodayHoldingsActivityModule` in the first scene, above Tracked activity.
+Today places `TodayHoldingsActivityModule` in the first section, above Tracked activity.
 Its pure `TodayHoldingsActivity` projection consumes existing
 `AppModel.positions`, `smartAccountUpdates`, and `smartMoneyMovements`; it performs
 no requests or Smart score calculations. Only declared external/manual positions
@@ -598,7 +1141,11 @@ is introduced; scores, feed layout and data-source composition are unchanged.
 - `BSmartClientFactory` is the only data-source composition root. Unflagged
   Debug builds use `BundleBSmartAPIClient`; `--use-live-api` opts Debug into the
   configured API. Release builds always use `HTTPBSmartAPIClient`.
-- Fixture JSON is a development asset and must not exist in a Release archive.
+- Release retains the 12 offline bootstrap snapshots, Reddit avatar lookup,
+  ticker descriptions and the explicitly selected trade-feed preview. Six
+  contract-only fixtures (auth configuration, deletion status, opinion traders,
+  subject trade stats, trade feed and wallet registration) are excluded by the
+  Release build settings. `check_ios_release_bundle.py` enforces this allowlist.
   Feature code must never select a fixture or live client directly.
 - Before account login exists, the app persists a stable installation UUID in
   `UserDefaults`, exchanges it at `POST /v1/installations`, stores the opaque
@@ -678,14 +1225,14 @@ is introduced; scores, feed layout and data-source composition are unchanged.
   realtime `smart-account-updates` pool. Views keep structured interpretation,
   exact source evidence, settlement benchmarks, and audit provenance visually
   distinct; the client never derives historical performance from chart pixels.
-  The detail presentation is split into `Overview / Views / Track record`.
-  Overview puts the published specialty, strongest horizon, investment style,
-  coverage and the latest 30-day ticker views before ranking provenance. For a
+  The detail presentation is now a continuous portrait/representative-work profile,
+  followed by recent views, ticker stances, characteristics and collapsed methodology.
+  For a
   current ticker view, iOS may select the newest published Call per ticker and
   omit a newest `closed` or `invalidated` Call, but it must not infer a sector,
-  style, direction or score that is absent from the read models. `Views` is
+  style, direction or score that is absent from the read models. Recent views are
   limited to that same 30-day publication window; older settled evidence stays
-  under `Track record`.
+  available in the historical evidence disclosure.
   Representative works are the three tickers with the author's highest summed
   positive settled Score contribution. Each ticker chart uses real daily OHLC
   and up to ten contributing Call markers; the client displays this projection
@@ -793,6 +1340,19 @@ Before SQLite opens a ledger, `FundingJournalFiles.databasePath` resolves only i
 parent using POSIX `realpath` and preserves the resulting string. This supports
 iOS `/var` container aliases without removing `SQLITE_OPEN_NOFOLLOW` on the
 database file or resetting the ledger/Keychain anchor.
+
+`FundingJournalInstallation` binds the production journal to an installation-scoped
+Keychain service. The protected, backup-excluded `FundingJournalInstallation.json`
+marker lives beside (not inside) the ledger directory, and is read/created under
+the ledger lock. Existing legacy databases keep their legacy service. A container
+with neither marker nor database receives a fresh namespace without deleting or
+rewriting surviving Keychain anchors. This also handles the one-time legacy case
+where only an orphan anchor remains; pre-marker versions cannot distinguish a
+reinstall from loss of all local journal files. This does not restore lost history
+or reconcile old orders. Fresh user intent and authoritative venue checks remain
+required; no archived transaction is replayed. Once the marker exists, a missing
+database with a committed anchor still fails closed. Corrupt/symlinked markers
+cannot trigger rotation. Wallet keys and wallet registration are unaffected.
 
 Only fresh preflight can reserve/sign/submit. Already-created signatures and node
 results can be archived after expiry/task cancellation, but cannot produce another
@@ -986,7 +1546,7 @@ and interaction, not the data or ranking contracts:
   changes must not animate the full chart or feed subtree.
 - Every executable Smart context uses the same Trading-owned surface:
   research cards do not expose trading buttons. The Feed has the explicitly
-  requested four quick-trade blocks described in the Feed section. Ticker, consensus, alpha, price-evidence,
+  requested direction-only Long / Short actions described in the Feed section. Ticker, consensus, alpha, price-evidence,
   Call-evidence, and event detail pages expose a pinned Short / Long dock.
   The market page is chart-first, with timeframe/style controls beneath the
   chart and account/market statistics in the secondary context.
@@ -1018,7 +1578,7 @@ and interaction, not the data or ranking contracts:
   identifiers are part of the UI test contract and survive layout refactors.
 - Tab badges may expose unread portfolio-event counts. They must not represent
   raw platform-post volume.
-- The second `Smart` tab uses the same native icon and selected-state treatment
+- The third `Search` tab uses the same native icon and selected-state treatment
   as the other tabs. Do not place a custom control over a native tab item.
 - `Smart`, `Smart Account`, and `Smart Money` are untranslated product terms in every locale.
   Localized explanatory sentences may translate the surrounding copy, but must
@@ -1054,3 +1614,28 @@ and regenerated.
 - TestFlight is the default internal distribution channel.
 - Feature work uses normal pull requests in the same repository, allowing API,
   pipeline, and iOS contract changes to be reviewed together.
+
+## Trade theses (2026-09-22, backend deployed)
+
+`Core/Models/TradeThesis` and `Core/Data/NativeTradeThesisClient` extend verified
+trade activity with original reasoning and per-user like state. UI stays in
+`Features/Feed/TradeThesisComposer`, `TradeThesisActions`,
+`Features/Trading/TradeThesisAfterFill` and `Features/Portfolio/ProfileTradeActivity`.
+The fill screen reads verified activity first, requesting independent verification only while pending;
+my profile also lists owned verified trades for later publication. Existing
+`TradeFeedRow` quotes the registered opinion beneath the user text and is shared
+by Discover and public profiles. No signer, balance or order execution changes.
+See `docs/contracts/trade_thesis.md` and `supabase-feed.yaml`. The operator confirmed
+the manual migration; a read-only projection check returned 200 and bsmart-feed
+was deployed. No production thesis or real order was created during verification.
+
+## Supabase content activation (2026-09-22)
+
+Build 1.0 (9) defaults to SupabaseContentClient. The main run scheme opts into live
+content; bSmart Local explicitly keeps legacy for localhost development. Fixture
+arguments for automated UI tests still take precedence. A successful authenticated
+snapshot commit writes a non-sensitive Application Support/ContentVerification.json
+receipt containing revision, verification time and collection counts. It does not
+contain account IDs, tokens, wallet data or content bodies. Foreground polling stays
+at 60 seconds; the separate local delivery queue publishes supplied packages every
+three hours when the host and Codex are available.

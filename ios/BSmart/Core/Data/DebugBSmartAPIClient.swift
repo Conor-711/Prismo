@@ -64,7 +64,9 @@ struct DebugBSmartAPIClient: BSmartAPIClient {
         let fixture = try decoder.decode(OpinionTradersPage.self, from: Data(contentsOf: url))
         let rows = Array(fixture.traders.dropFirst(offset).prefix(1))
         return OpinionTradersPage(totalTraders: fixture.totalTraders, publicTraders: fixture.publicTraders,
-                                  traders: rows, nextOffset: offset + rows.count < fixture.publicTraders ? offset + rows.count : nil)
+                                  traders: rows, nextOffset: offset + rows.count < fixture.publicTraders ? offset + rows.count : nil,
+                                  longTraders: fixture.longTraders, shortTraders: fixture.shortTraders,
+                                  totalNotionalUSD: fixture.totalNotionalUSD)
     }
 
     func fetchTradeFeed(offset: Int, profileID: UUID?) async throws -> TradeFeedPage {

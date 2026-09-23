@@ -14,6 +14,7 @@ final class UnifiedAccountSetupStore: ObservableObject {
     private let enabled: () -> Bool
     private var revision = UUID()
     private var lease: FundingSigningLease?
+    private var attemptedAutomaticSetup = false
 
     init(service: any AccountWalletServicing, journal: FundingTransactionJournal,
          reader: any HyperliquidExecutionReading = HyperliquidExecutionReader(),
@@ -24,6 +25,13 @@ final class UnifiedAccountSetupStore: ObservableObject {
     }
 
     func invalidate() { revision = UUID(); lease?.invalidate(); lease = nil; mode = nil }
+
+    func prepare(wallet: DeviceWalletSummary) async {
+        await refresh(wallet: wallet)
+        guard !Task.isCancelled, !attemptedAutomaticSetup, let mode, !mode.usesSharedBalance else { return }
+        attemptedAutomaticSetup = true
+        await enable(wallet: wallet)
+    }
 
     func refresh(wallet: DeviceWalletSummary) async {
         guard !isBusy else { return }

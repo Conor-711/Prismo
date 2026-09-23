@@ -13,6 +13,11 @@ private struct SmartSubjectDestination: ViewModifier {
         }
     }
 
+    private var usesZoomTransition: Bool {
+        if case .account = payload { return false }
+        return true
+    }
+
     func body(content: Content) -> some View {
         content
             .contentShape(Rectangle())
@@ -37,7 +42,7 @@ private struct SmartSubjectDestination: ViewModifier {
                         }
                     }
                 }
-                .bSmartZoomNavigationTransition(sourceID: identity, in: transition)
+                .bSmartZoomNavigationTransition(sourceID: identity, in: transition, enabled: usesZoomTransition)
             }
     }
 }

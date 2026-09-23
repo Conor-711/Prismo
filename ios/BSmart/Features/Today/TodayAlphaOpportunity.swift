@@ -454,6 +454,7 @@ struct TodayAlphaOpportunityCard: View {
             RoundedRectangle(cornerRadius: BSmartRadius.card, style: .continuous)
                 .stroke(accent.opacity(0.48), lineWidth: 0.8)
         }
+        .shadow(color: BSmartColor.cardShadow, radius: 5, y: 2)
         .contentShape(RoundedRectangle(cornerRadius: BSmartRadius.card, style: .continuous))
     }
 

@@ -38,9 +38,30 @@ final class ArbitrumSourcePreflightTests: XCTestCase {
         XCTAssertEqual(transaction["value"], .string("0x0"))
         XCTAssertEqual(transaction["data"], .string(FundingHex.encode(result.callData)))
         XCTAssertEqual(estimate.params[1], .string(result.source.block.number.rpc))
-        let simulation = try XCTUnwrap(requests.first(where: { $0.method == .call && $0.params.first == estimate.params.first }))
+        let simulation = try XCTUnwrap(requests.first(where: {
+            guard $0.method == .call, case .object(let call) = $0.params.first else { return false }
+            return call["data"] == transaction["data"]
+        }))
+        guard case .object(let simulated) = simulation.params.first else { return XCTFail() }
+        XCTAssertEqual(simulated["gas"], .string(result.gasLimit.rpc))
+        XCTAssertEqual(simulated["maxFeePerGas"], .string(result.maximumFeePerGas.rpc))
+        XCTAssertLessThan(try XCTUnwrap(requests.firstIndex(where: { $0.id == estimate.id })),
+                          try XCTUnwrap(requests.firstIndex(where: { $0.id == simulation.id })))
         XCTAssertEqual(simulation.params.last, result.source.block.reference)
         XCTAssertThrowsError(try result.validate(wallet: wallet, now: result.expiresAt))
+    }
+
+    func testSmallFundedWalletDoesNotUseNodesFiftyMillionGasDefault() async throws {
+        let rpc = try PreflightStubRPC(overrides: ["eth": .string("0x3e871b540c000")]) // 0.0011 ETH
+        let result = try await service(rpc).prepare(plan: PreflightTestFixture.plan(), wallet: wallet,
+                                                   authorization: PreflightTestFixture.signature())
+        XCTAssertLessThan(result.maximumNetworkFee, result.source.eth)
+        let requests = await rpc.requests
+        for request in requests where request.method == .call {
+            guard case .object(let transaction) = request.params.first,
+                  transaction["maxFeePerGas"] != nil else { continue }
+            XCTAssertEqual(transaction["gas"], .string(result.gasLimit.rpc))
+        }
     }
 
     func testWrongChainCannotReceiveOwnerAddress() async throws {

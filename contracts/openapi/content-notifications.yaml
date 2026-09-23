@@ -1,0 +1,75 @@
+openapi: 3.1.0
+info:
+  title: bSmart Native Content Notifications
+  version: 1.0.0
+servers:
+  - url: https://dzyitinagewdfkzjkuiz.supabase.co/functions/v1/bsmart-notifications
+security: [{ accountBearer: [] }]
+paths:
+  /device:
+    put:
+      operationId: registerContentPushDevice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Device' }
+      responses:
+        '200': { description: Device registered for verified Apple or Google user. }
+        '401': { description: Real Supabase login required; anonymous and service roles rejected. }
+        '422': { description: Invalid or oversized body. }
+        '503': { description: Retryable registration failure. }
+    delete:
+      operationId: unregisterContentPushDevice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [installationId]
+              properties:
+                installationId: { type: string, format: uuid }
+      responses:
+        '200': { description: This user's installation disabled. }
+        '401': { description: Real Supabase login required. }
+        '422': { description: Invalid or oversized body. }
+        '503': { description: Retryable failure. }
+  /interests:
+    put:
+      operationId: setContentPushInterests
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Interests' }
+      responses:
+        '200': { description: Current account installation interests and switches replaced. }
+        '401': { description: Real Supabase login required. }
+        '422': { description: Invalid or oversized interests. }
+        '503': { description: Device not registered or backend unavailable. }
+components:
+  securitySchemes:
+    accountBearer: { type: http, scheme: bearer, bearerFormat: Supabase JWT }
+  schemas:
+    Device:
+      type: object
+      required: [installationId, apnsToken, environment, locale, enabled]
+      properties:
+        installationId: { type: string, format: uuid }
+        apnsToken: { type: string, pattern: '^[a-f0-9]{64,200}$' }
+        environment: { type: string, enum: [development, production] }
+        locale: { type: string, minLength: 1, maxLength: 64 }
+        enabled: { type: boolean }
+    Interests:
+      type: object
+      required: [installationId, authors, money, tickers, holdings, notifyAuthors, notifyTickers, notifyHoldings]
+      properties:
+        installationId: { type: string, format: uuid }
+        authors: { type: array, maxItems: 150, items: { type: string, minLength: 1, maxLength: 160 } }
+        money: { type: array, maxItems: 150, items: { type: string, minLength: 1, maxLength: 160 } }
+        tickers: { type: array, maxItems: 150, items: { type: string, minLength: 1, maxLength: 160 } }
+        holdings: { type: array, maxItems: 150, items: { type: string, minLength: 1, maxLength: 160 } }
+        notifyAuthors: { type: boolean }
+        notifyTickers: { type: boolean }
+        notifyHoldings: { type: boolean }

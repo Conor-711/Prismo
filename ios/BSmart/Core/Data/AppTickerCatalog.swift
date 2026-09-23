@@ -6,6 +6,7 @@ struct AppTickerCatalogEntry: Identifiable, Hashable {
     var price: Double?
     var dayChange: Double?
     var venue: String?
+    var isCrypto = false
     var volume24h: Double?
     var maxLeverage: Int?
     var id: String { symbol }
@@ -27,6 +28,7 @@ struct AppTickerCatalogEntry: Identifiable, Hashable {
                 next.volume24h = entry.volume24h.flatMap { $0.isFinite && $0 >= 0 ? $0 : nil }
                 next.maxLeverage = entry.maxLeverage.flatMap { $0 > 0 ? $0 : nil }
                 next.venue = entry.venue
+                next.isCrypto = entry.isCrypto
             }
             result[symbol] = next
         }
@@ -52,6 +54,7 @@ extension AppModel {
         entries += markets.filter { !$0.isDelisted }.sorted { $0.dayNotionalVolume < $1.dayNotionalVolume }.map {
             AppTickerCatalogEntry(symbol: $0.symbol, companyName: $0.symbol,
                                   price: $0.markPrice, dayChange: $0.dayChangePercent, venue: $0.dexDisplayName,
+                                  isCrypto: $0.dex.isEmpty,
                                   volume24h: $0.dayNotionalVolume, maxLeverage: $0.maxLeverage)
         }
         return AppTickerCatalogEntry.merge(entries)

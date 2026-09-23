@@ -3,14 +3,23 @@ import Foundation
 
 struct DebugTradingMarketClient: HyperliquidMarketDataClient {
     func fetchDexs() async throws -> [HyperliquidDex] {
-        [HyperliquidDex(name: "xyz", displayName: "XYZ"), HyperliquidDex(name: "test", displayName: "Test venue")]
+        if ProcessInfo.processInfo.arguments.contains("--ui-search-market-error") { throw URLError(.notConnectedToInternet) }
+        var dexs = [HyperliquidDex(name: "xyz", displayName: "XYZ"), HyperliquidDex(name: "test", displayName: "Test venue")]
+        if ProcessInfo.processInfo.arguments.contains("--ui-search-fixture") {
+            dexs.append(HyperliquidDex(name: "", displayName: "Hyperliquid"))
+        }
+        return dexs
     }
 
     func fetchMarkets(dex: HyperliquidDex) async throws -> [HyperliquidPerpMarket] {
-        (dex.name == "xyz" ? ["NVDA", "SPCX", "SNDK"] : ["MSTR"]).map { symbol in
+        if ProcessInfo.processInfo.arguments.contains("--ui-trading-delayed-market") {
+            try await Task.sleep(for: .seconds(2))
+        }
+        let symbols = dex.name.isEmpty ? ["BTC"] : dex.name == "xyz" ? ["NVDA", "SPCX", "SNDK"] : ["MSTR"]
+        return symbols.map { symbol in
             let price: Double = symbol == "SPCX" ? 149.45 : symbol == "SNDK" ? 1765.4 : 200
             return HyperliquidPerpMarket(
-                coin: "\(dex.name):\(symbol)", symbol: symbol, dex: dex.name, dexDisplayName: dex.displayName,
+                coin: dex.name.isEmpty ? symbol : "\(dex.name):\(symbol)", symbol: symbol, dex: dex.name, dexDisplayName: dex.displayName,
                 sizeDecimals: 4, maxLeverage: 20, marginTableID: nil, isIsolatedOnly: true,
                 isDelisted: false, markPrice: price, midPrice: price, oraclePrice: price,
                 previousDayPrice: price * 0.975, dayNotionalVolume: 10_000_000, openInterest: 5_000,

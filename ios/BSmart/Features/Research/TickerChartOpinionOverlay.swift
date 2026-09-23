@@ -43,7 +43,7 @@ struct TickerChartOpinionOverlay: View {
         VStack(spacing: 2) {
             TickerActivityAvatar(activity: opinion.activity, size: policy.avatarSize)
                 .overlay { Circle().stroke(opinion.activity.direction.color, lineWidth: 2) }
-                .shadow(color: .black.opacity(0.4), radius: 3, y: 2)
+                .shadow(color: BSmartColor.chartMarkerShadow, radius: 3, y: 2)
             Text(opinion.rankLabel)
                 .font(.system(size: 9, weight: .bold)).monospacedDigit()
                 .foregroundStyle(BSmartColor.primaryText)

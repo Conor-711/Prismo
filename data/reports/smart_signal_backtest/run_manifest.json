@@ -1,0 +1,45 @@
+{
+  "start_day": "2025-07-28",
+  "end_day": "2026-07-27",
+  "point_in_time_calls": 8493,
+  "events": 1236,
+  "event_first_day": "2025-09-10",
+  "event_last_day": "2026-07-27",
+  "outcomes": 3713,
+  "coverage": {
+    "calls": {
+      "n": 129403,
+      "first_day": "2025-07-01T01:58:25.000Z",
+      "last_day": "2026-08-13T04:09:43.000Z"
+    },
+    "scores": {
+      "n": 345998,
+      "days": 350,
+      "first_day": "2025-07-07",
+      "last_day": "2026-07-27"
+    },
+    "prices": {
+      "n": 259465,
+      "tickers": 1318,
+      "first_day": "2025-06-02",
+      "last_day": "2026-09-01"
+    },
+    "benchmark_prices": {
+      "n": 311,
+      "first_day": "2025-06-02",
+      "last_day": "2026-09-01"
+    },
+    "wallet_scores": {
+      "n": 841,
+      "days": 4,
+      "first_day": "2026-07-31",
+      "last_day": "2026-08-06"
+    },
+    "wallet_fills": {
+      "n": 443837,
+      "addresses": 258,
+      "first_day": "2026-07-01",
+      "last_day": "2026-08-06"
+    }
+  }
+}

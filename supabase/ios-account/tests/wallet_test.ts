@@ -90,7 +90,7 @@ Deno.test("registry missing is an error, only a successful empty read returns nu
 });
 
 Deno.test("capabilities default closed and require a bound wallet", async () => {
-  const open = { depositsEnabled: true, tradingEnabled: true, withdrawalsEnabled: true };
+  const open = { depositsEnabled: true, tradingEnabled: true, withdrawalsEnabled: false as const };
   for (const bound of [false, true]) {
     const result = await handle(request(), fixture({ bound }).client, open);
     assert.deepEqual((await result.json()).capabilities, bound ? open : closedCapabilities);
@@ -100,7 +100,7 @@ Deno.test("capabilities default closed and require a bound wallet", async () => 
 });
 
 Deno.test("capability switches are independent and proof success receives them", async () => {
-  const flags = { depositsEnabled: true, tradingEnabled: false, withdrawalsEnabled: true };
+  const flags = { depositsEnabled: true, tradingEnabled: false, withdrawalsEnabled: false as const };
   const f = fixture();
   const signature = await wallet.signMessage({ message: bindingMessage(f.pending, account) });
   const response = await handle(request("PUT", { challengeId: f.pending.id, signature }), f.client, flags);
@@ -108,6 +108,16 @@ Deno.test("capability switches are independent and proof success receives them",
   assert.deepEqual((await response.json()).capabilities, flags);
   const read = await handle(request(), fixture({ bound: true }).client, flags);
   assert.deepEqual((await read.json()).capabilities, flags);
+});
+
+Deno.test("Across withdrawal capability never opens the legacy withdrawal capability", async () => {
+  const flags = { depositsEnabled: true, tradingEnabled: true,
+    withdrawalsEnabled: false as const, acrossWithdrawalsEnabled: true };
+  const response = await handle(request(), fixture({ bound: true }).client, flags);
+  assert.equal(response.status, 200);
+  assert.deepEqual((await response.json()).capabilities, flags);
+  const missing = await handle(request(), fixture().client, flags);
+  assert.deepEqual((await missing.json()).capabilities, closedCapabilities);
 });
 
 Deno.test("a valid wallet proof commits once, replay cannot commit again", async () => {

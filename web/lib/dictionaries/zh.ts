@@ -1,6 +1,42 @@
 // 中文字典 = 结构真源。en.ts 必须满足 `Dictionary = typeof zh`。
 // 专有名词（ticker、bSmart、r/子版、人名）不放进字典，保持原样。
 export const zh = {
+  betaLanding: {
+    survey: {
+      title: "申请体验 bSmart", required: "所有项目均为必填",
+      channels: "你平时关注哪些投资信息渠道？", multiple: "可多选",
+      channelsRequired: "请至少选择一个信息渠道。", contactRequired: "请填写你的联系方式。",
+      accounts: "投资账号", accountsDetail: "Twitter/X、YouTube、Reddit 等",
+      politicians: "政客", politiciansDetail: "佩洛西、Trump 等", institutions: "机构",
+      onchain: "链上聪明钱", insiders: "内部人员", insidersDetail: "CEO、高管等", other: "其他",
+      otherPlaceholder: "你关注的其他渠道", contact: "还可以通过哪里联系你？",
+      platform: "联系平台", handle: "联系方式", handlePlaceholder: "你的账号或个人主页链接", wechat: "微信",
+      invalid: "请检查填写内容，选择其他渠道后请补充说明。",
+    },
+    tagline: "追踪最聪明投资者的最佳方式",
+    apply: "申请加入", applied: "已申请",
+    screenTitle: "先看过往判断，\n再决定关注谁。", screenFeatures: ["历史观点", "标的动态", "聪明钱追踪"], screenFeaturesLabel: "bSmart 产品",
+    title: "bSmart · 让值得关注的观点，来到你面前",
+    description: "发现有历史记录可查的投资者，追踪你关心的标的与公开观点。bSmart 正在内测，留下邮箱申请体验。",
+    beta: "正在内测", navStory: "为什么 bSmart", navProduct: "产品体验", join: "申请内测", skip: "跳到正文",
+    heroTop: "市场从不缺声音。", heroBottom: "你需要，值得听的。", heroAccent: "值得听的。",
+    heroStory: "刷过很多观点，却依然不知道该关注谁。我们也有过这样的时刻。",
+    heroPromise: "所以，我们做了 bSmart。", explore: "向下，认识 bSmart", demo: "产品演示",
+    noiseKicker: "01 / 从信息过载开始", noiseTitle: "看得更多，\n不一定看得更清楚。",
+    noiseStory: "一条推文、一段视频、一场讨论。声音越来越多，真正值得你花时间的判断，却散落在不同的地方。",
+    noiseWords: ["现在是买入时机？", "目标价再次上调", "市场还有多少空间", "这次真的不一样？", "下一个机会在哪里", "看多，还是看空？"],
+    peopleKicker: "02 / 先找到值得关注的人", peopleTitle: "他说了什么，\n也看他曾经说过什么。",
+    peopleStory: "从公开观点出发，看一个人的历史判断、擅长的方向，以及看对和看错的时刻。关注谁，多一点依据。",
+    peopleNote: "用历史记录认识投资者。", history: "历史观点", evidence: "原文可追溯", expertise: "关注领域", semiconductor: "半导体", consumer: "消费科技", researcher: "研究者 A", researcherB: "研究者 B", researcherC: "研究者 C", profile: "Smart Account", follow: "已关注",
+    yoursKicker: "03 / 再把与你有关的动态带回来", yoursTitle: "你关心的，\n才值得来到你面前。",
+    yoursStory: "关注的标的有了新观点，关注的投资者有了新判断。不必再逐个打开不同的平台。",
+    assetTab: "我关注的标的", peopleTab: "我关注的人", newOpinion: "新观点", original: "原观点", source: "公开来源", today: "今天", following: "我的关注", all: "全部动态", assetActivity: "围绕你关注的标的", peopleActivity: "来自你关注的投资者",
+    demoOpinion1: "需求之外，也要看交付能力。", demoOpinion2: "新产品周期，需要更多兑现。", demoOpinion3: "增长的质量，比速度更重要。", demoPosition1: "关注交付", demoPosition2: "关注产品周期", demoPosition3: "关注现金流", updatedView: "更新了观点", firstView: "发表了新观点", originalLabel: "示例观点 · 非真实投资建议",
+    proofKicker: "04 / 保留观点的来处", proofTitle: "从别人的观点，\n走到自己的判断。",
+    proofStory: "bSmart 聚合公开观点，保留作者、时间和来源。先看清依据，再决定是否行动。决定权，始终在你。",
+    proofSteps: ["找到观点", "回到原文", "自己判断"], proofQuote: "观点属于作者。\n判断属于你。", proofTag: "有来源，才有下一步。",
+    ctaKicker: "给下一次判断，一个更好的开始", ctaTitle: "少一点噪音。\n多一点自己的判断。", ctaStory: "bSmart 正在小范围内测。留下邮箱，加入等候名单。", email: "邮箱地址", emailPlaceholder: "你的 Email", submitting: "正在提交…", successTitle: "已加入内测等候名单。", successBody: "有体验名额时，我们会通过邮件联系你。", another: "使用其他邮箱", consent: "我同意接收 bSmart 内测邀请，并已阅读", privacy: "隐私说明", consentRequired: "请先阅读隐私说明并同意接收内测邀请。", invalidEmail: "请输入有效的邮箱地址。", unavailable: "邮件收集暂不可用，请稍后重试。", networkError: "暂时无法提交，请检查网络后重试。", tooMany: "提交较频繁，请稍后再试。", retry: "重新提交", privacyTitle: "你的邮箱，只用于内测联系", privacyBody: "我们收集你的邮箱、申请时间和页面语言，用于管理内测名单及发送体验邀请。名单存储于 Cloudflare，不会公开展示，也不用于广告营销。为防止滥用，短期保存网络标识的散列值。申请不保证获得名额。", privacyDelete: "如需删除申请或停止联系，请发送邮件至 zfy3712z@gmail.com。", close: "关闭", disclaimer: "公开观点仅供参考，不构成投资建议。历史表现不代表未来结果。", footer: "Stay curious. Think for yourself.", contact: "联系我们", backTop: "回到顶部",
+  },
   meta: {
     title: "bSmart · Reddit 美股舆情情报",
     description:

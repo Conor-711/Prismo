@@ -3,6 +3,46 @@ import Security
 @testable import BSmart
 
 final class FundingTransactionJournalTests: XCTestCase {
+    func testNeverSubmittedSourceRetainsSignatureButCannotIssuePermitAndAllowsFreshAuthorization() async throws {
+        let context = FundingJournalTestContext(); defer { context.cleanup() }
+        let journal = try context.journal(), id = UUID()
+        let signed = try await context.readyWithConsent(context.transaction(), id: id, journal: journal)
+        let check = try await context.recordedSubmissionCheck(signed)
+        let finished = try await journal.finishUnsubmittedSource(id: id, wallet: context.wallet)
+        XCTAssertTrue(finished)
+        let reopened = try context.journal()
+        let sources = try await reopened.records(wallet: context.wallet)
+        let source = try XCTUnwrap(sources.first)
+        XCTAssertEqual(source.state, .notSubmitted)
+        XCTAssertEqual(source.signed?.raw, signed.raw)
+        XCTAssertEqual(source.signed?.hash, signed.hash)
+        XCTAssertFalse(source.reservesNonce)
+        await expectJournalFailure { try await reopened.beginSubmission(id: id, signed: signed, wallet: context.wallet, check: check) }
+        await expectJournalFailure { try await reopened.reserve(id: UUID(), transaction: signed.transaction, wallet: context.wallet) }
+        let next = try await context.transaction(authorizationNonce: 18)
+        _ = try await reopened.beginConsent(id: UUID(), plan: next.preflight.plan, wallet: context.wallet)
+        let history = try await reopened.history(wallet: context.wallet)
+        XCTAssertEqual(history.first(where: { $0.id == id })?.stage, .notSubmitted)
+    }
+
+    func testSubmissionPermitAndUnknownResultCanNeverBeReleasedAsUnsubmitted() async throws {
+        for state in [FundingJournalRecord.State.submitting, .submitted, .uncertain] {
+            let context = FundingJournalTestContext(); defer { context.cleanup() }
+            let journal = try context.journal(), id = UUID()
+            let signed = try await context.readyWithConsent(context.transaction(), id: id, journal: journal)
+            _ = try await journal.beginSubmission(id: id, signed: signed, wallet: context.wallet, check: context.recordedSubmissionCheck(signed))
+            if state != .submitting {
+                _ = try await journal.recordSubmissionResult(id: id, wallet: context.wallet,
+                    reportedHash: state == .submitted ? signed.hash : nil)
+            }
+            let finished = try await journal.finishUnsubmittedSource(id: id, wallet: context.wallet)
+            XCTAssertFalse(finished)
+            let sources = try await context.journal().records(wallet: context.wallet)
+            XCTAssertEqual(sources.first?.state, state)
+            XCTAssertEqual(sources.first?.reservesNonce, true)
+        }
+    }
+
     func testDurableIntentSignatureAndUnknownSubmissionSurviveReopenAndExpiry() async throws {
         let context = FundingJournalTestContext(); defer { context.cleanup() }
         let journal = try context.journal()

@@ -1,19 +1,6 @@
 import Charts
 import SwiftUI
 
-private enum SmartSection: String, CaseIterable, Identifiable {
-    case accounts = "Smart Account"
-    case money = "Smart Money"
-
-    var id: Self { self }
-
-    var subtitle: String {
-        switch self {
-        case .accounts: "Qualified investors from public social platforms"
-        case .money: "Scored capital accounts in tokenized US equities"
-        }
-    }
-}
 
 private enum SmartAccountRankBand: String, CaseIterable, Identifiable {
     case all = "All ranks"
@@ -137,244 +124,180 @@ struct SmartHubView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                hubHeader
-
-                List {
-                    switch selection {
-                    case .accounts:
-                        accountRows
-                    case .money:
-                        moneyRows
-                    }
+        BSmartCollapsingPager(
+            selection: $selection, sections: SmartSection.allCases,
+            pageIdentifier: { "smart.page.\($0.key)" },
+            header: { _ in searchHeader }, tabs: { hubControls },
+            content: { section in
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    if section == .accounts { accountRows } else { moneyRows }
                 }
-                .listStyle(.plain)
-                .scrollContentBackground(.hidden)
-                .background(BSmartColor.ink)
-            }
-            .background(BSmartColor.ink)
-            .toolbar(.hidden, for: .navigationBar)
-            .accessibilityIdentifier("smart.screen")
-            .sheet(isPresented: $isShowingFilters) {
-                smartFilterSheet
-                    .presentationDetents([.medium, .large])
-                    .presentationDragIndicator(.visible)
-            }
-        }
-        .bSmartPage()
-    }
-
-    private var hubHeader: some View {
-        VStack(alignment: .leading, spacing: BSmartSpacing.medium) {
-            HStack(alignment: .center, spacing: BSmartSpacing.medium) {
-                BSmartPageTitle(
-                    eyebrow: "Tracked intelligence",
-                    title: "Smart",
-                    subtitle: "Qualified public views and observable capital"
-                )
-
-                Spacer()
-
-                Button {
-                    followingOnly.toggle()
-                } label: {
+            }, refresh: { await model.refreshLiveIntelligence() }
+        )
+        .background(BSmartColor.ink)
+        .navigationTitle("Smart")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.visible, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { followingOnly.toggle() } label: {
                     Image(systemName: followingOnly ? "star.fill" : "star")
-                        .font(.subheadline.weight(.bold))
-                        .foregroundStyle(followingOnly ? BSmartColor.gold : BSmartColor.primaryText)
-                        .frame(width: 38, height: 38)
-                        .background(BSmartColor.surface)
-                        .clipShape(Circle())
-                        .overlay {
-                            Circle().stroke(followingOnly ? BSmartColor.gold : BSmartColor.line, lineWidth: 0.75)
-                        }
+                        .foregroundStyle(followingOnly ? BSmartColor.brand : BSmartColor.primaryText)
+                        .frame(minWidth: 44, minHeight: 44)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(
-                    (followingOnly ? "Show all intelligence" : "Show followed intelligence only")
-                        .bSmartLocalized
-                )
+                .accessibilityLabel((followingOnly ? "Show all intelligence" : "Show followed intelligence only").bSmartLocalized)
+                .accessibilityIdentifier("smart.following")
+                .accessibilityAddTraits(followingOnly ? .isSelected : [])
             }
+        }
+        .onChange(of: selection) { _, _ in searchText = "" }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("smart.screen")
+        .sheet(isPresented: $isShowingFilters) {
+            smartFilterSheet.presentationDetents([.large]).presentationDragIndicator(.visible)
+        }
+        .bSmartPage()
+        .bSmartDetailPage()
+    }
 
-            HStack(spacing: BSmartSpacing.small) {
-                HStack(spacing: 7) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(BSmartColor.tertiaryText)
-                    TextField(searchPrompt.bSmartLocalized, text: $searchText)
-                        .font(.subheadline)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                    if !searchText.isEmpty {
-                        Button {
-                            searchText = ""
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundStyle(BSmartColor.tertiaryText)
-                        }
-                        .accessibilityLabel("Clear")
-                    }
-                }
-                .padding(.horizontal, BSmartSpacing.medium)
-                .frame(maxWidth: .infinity, minHeight: 38)
-                .background(BSmartColor.surface)
-                .clipShape(RoundedRectangle(cornerRadius: BSmartRadius.control, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: BSmartRadius.control, style: .continuous)
-                        .stroke(BSmartColor.line, lineWidth: 0.6)
-                }
-            }
+    private var searchHeader: some View {
+        SmartHubSearchField(prompt: searchPrompt, query: $searchText)
+            .id(selection)
+            .padding(.horizontal, 14)
+            .frame(minHeight: 46)
+            .background(BSmartColor.surface, in: RoundedRectangle(cornerRadius: 8))
+            .padding(.horizontal, BSmartSpacing.large)
+            .padding(.top, 8).padding(.bottom, 12)
+    }
 
-            HStack(spacing: BSmartSpacing.small) {
-                ForEach(SmartSection.allCases) { section in
-                    Button {
-                        withAnimation(BSmartMotion.quick) {
-                            selection = section
-                            searchText = ""
-                        }
-                    } label: {
-                        HStack(spacing: 6) {
-                            Text(section.rawValue.bSmartLocalized)
-                                .font(.caption.weight(.bold))
-                            Text(sectionCount(section).formatted())
-                                .font(.caption2.weight(.bold))
-                                .foregroundStyle(selection == section ? BSmartColor.brand : BSmartColor.tertiaryText)
-                        }
-                        .frame(maxWidth: .infinity, minHeight: 38)
-                        .foregroundStyle(selection == section ? BSmartColor.primaryText : BSmartColor.secondaryText)
-                        .background(selection == section ? BSmartColor.pulse.opacity(0.09) : Color.clear)
-                        .clipShape(RoundedRectangle(cornerRadius: BSmartRadius.control, style: .continuous))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: BSmartRadius.control, style: .continuous)
-                                .stroke(selection == section ? BSmartColor.pulse.opacity(0.72) : BSmartColor.line, lineWidth: 0.75)
+    private var hubControls: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            SmartHubTabs(selection: $selection, accountCount: model.smartAccounts.count, moneyCount: model.smartMoney.count)
+            HStack(spacing: 12) {
+                Text(summaryLabel).font(.caption).foregroundStyle(BSmartColor.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("smart.results-count")
+                Spacer(minLength: 0)
+                Button { isShowingFilters = true } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "slider.horizontal.3")
+                        Text("Filters".bSmartLocalized)
+                        if !activeFilters.isEmpty {
+                            Text("\(activeFilters.count)").monospacedDigit()
                         }
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(section.rawValue.bSmartLocalized)
-                    .accessibilityAddTraits(selection == section ? .isSelected : [])
-                }
-            }
-
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(activeFilterSummary)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(BSmartColor.secondaryText)
-                        .lineLimit(1)
-                    Text(summaryLabel)
-                        .font(.caption2)
-                        .foregroundStyle(BSmartColor.tertiaryText)
-                        .monospacedDigit()
-                }
-                Spacer()
-                Button {
-                    isShowingFilters = true
-                } label: {
-                    Label("Filters", systemImage: "slider.horizontal.3")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(BSmartColor.pulse)
-                        .padding(.horizontal, BSmartSpacing.medium)
-                        .frame(height: 34)
-                        .background(BSmartColor.surface)
-                        .clipShape(RoundedRectangle(cornerRadius: BSmartRadius.control, style: .continuous))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: BSmartRadius.control, style: .continuous)
-                                .stroke(BSmartColor.pulse.opacity(0.52), lineWidth: 0.75)
-                        }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(activeFilters.isEmpty ? BSmartColor.primaryText : BSmartColor.brand)
+                    .frame(minHeight: 44)
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier(selection == .accounts ? "smart.account.filters" : "smart.money.filters")
             }
-
-            if let freshness = selectedFreshness {
-                HStack(spacing: 6) {
-                    Circle()
-                        .fill(BSmartColor.brand)
-                        .frame(width: 5, height: 5)
-                    Text("Checked %@".bSmartLocalized(freshness.checkedAt.bSmartDataTimestamp))
-                    if let latestContentAt = freshness.latestContentAt {
-                        Text("·")
-                        Text(latestContentLabel(latestContentAt))
+            .padding(.horizontal, BSmartSpacing.large)
+            if !activeFilters.isEmpty {
+                HStack(spacing: 8) {
+                    Text(activeFilters.map { $0.bSmartLocalized }.joined(separator: " · "))
+                        .font(.caption).foregroundStyle(BSmartColor.brand)
+                        .lineLimit(2)
+                    Spacer(minLength: 0)
+                    Button { resetSelectedFilters() } label: {
+                        Image(systemName: "xmark.circle.fill").frame(width: 44, height: 44)
                     }
-                    Spacer(minLength: BSmartSpacing.small)
-                    if selection == .accounts, freshness.hasNoNewQualifiedContent {
-                        Text("No newer qualified view".bSmartLocalized)
-                            .foregroundStyle(BSmartColor.secondaryText)
-                    }
+                    .buttonStyle(.plain).foregroundStyle(BSmartColor.secondaryText)
+                    .accessibilityLabel("Reset".bSmartLocalized)
+                    .accessibilityIdentifier("smart.filters.clear")
                 }
-                .font(.caption2)
-                .foregroundStyle(BSmartColor.tertiaryText)
-                .monospacedDigit()
-                .accessibilityIdentifier("smart.source-freshness")
+                .padding(.horizontal, BSmartSpacing.large)
             }
-        }
-        .padding(.horizontal, BSmartSpacing.large)
-        .padding(.vertical, BSmartSpacing.medium)
-        .background(BSmartColor.ink)
+            if let freshness = selectedFreshness {
+                Text("Checked %@".bSmartLocalized(freshness.checkedAt.bSmartDataTimestamp))
+                    .font(.caption2).foregroundStyle(BSmartColor.tertiaryText)
+                    .padding(.horizontal, BSmartSpacing.large).padding(.bottom, 8)
+                    .accessibilityIdentifier("smart.source-freshness")
+            }
+        }.background(BSmartColor.ink)
     }
 
-    private var activeFilterSummary: String {
+    private var activeFilters: [String] {
         switch selection {
         case .accounts:
-            let values = [
-                accountPlatform,
-                accountRankBand.rawValue,
-                accountHorizon.rawValue,
-                accountSpecialty,
-                accountStyle,
-            ].filter { !$0.hasPrefix("All ") }
-            return values.isEmpty ? "Official ranking · all qualified accounts".bSmartLocalized : values.joined(separator: " · ")
+            [accountPlatform, accountRankBand.rawValue, accountHorizon.rawValue, accountSpecialty, accountStyle]
+                .filter { !$0.hasPrefix("All ") }
         case .money:
-            let values = [moneyStyle, moneySize, moneySide].filter { !$0.hasPrefix("All ") }
-            return values.isEmpty ? "Scored capital accounts".bSmartLocalized : values.joined(separator: " · ")
+            [moneyStyle, moneySize, moneySide].filter { !$0.hasPrefix("All ") }
         }
     }
 
     private var smartFilterSheet: some View {
         NavigationStack {
-            Form {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 28) {
                 if selection == .accounts {
-                    Section("Smart Account".bSmartLocalized) {
-                        Picker("Platform".bSmartLocalized, selection: $accountPlatform) {
-                            ForEach(accountPlatforms, id: \.self) { Text($0.bSmartLocalized).tag($0) }
-                        }
-                        Picker("Rank band".bSmartLocalized, selection: $accountRankBand) {
-                            ForEach(SmartAccountRankBand.allCases) { Text($0.rawValue.bSmartLocalized).tag($0) }
-                        }
-                        Picker("Best horizon".bSmartLocalized, selection: $accountHorizon) {
-                            ForEach(SmartAccountHorizonFilter.allCases) { Text($0.rawValue.bSmartLocalized).tag($0) }
-                        }
-                        Picker("Sector".bSmartLocalized, selection: $accountSpecialty) {
-                            ForEach(accountSpecialties, id: \.self) { Text($0.bSmartLocalized).tag($0) }
-                        }
-                        Picker("Style".bSmartLocalized, selection: $accountStyle) {
-                            ForEach(accountStyles, id: \.self) { Text($0.bSmartLocalized).tag($0) }
-                        }
-                    }
+                    SmartFilterOptions(title: "Platform", identifier: "platform", options: accountPlatforms,
+                                       selection: $accountPlatform, optionTitle: { $0 }, showsPlatform: true)
+                    SmartFilterOptions(title: "Rank band", identifier: "rank", options: SmartAccountRankBand.allCases,
+                                       selection: $accountRankBand, optionTitle: { $0.rawValue })
+                    SmartFilterOptions(title: "Best horizon", identifier: "horizon", options: SmartAccountHorizonFilter.allCases,
+                                       selection: $accountHorizon, optionTitle: { $0.rawValue })
+                    SmartFilterOptions(title: "Sector", identifier: "sector", options: accountSpecialties,
+                                       selection: $accountSpecialty, optionTitle: { $0 })
+                    SmartFilterOptions(title: "Style", identifier: "account-style", options: accountStyles,
+                                       selection: $accountStyle, optionTitle: { $0 })
                 } else {
-                    Section("Smart Money".bSmartLocalized) {
-                        Picker("Style".bSmartLocalized, selection: $moneyStyle) {
-                            ForEach(moneyStyles, id: \.self) { Text($0.bSmartLocalized).tag($0) }
-                        }
-                        Picker("Account size".bSmartLocalized, selection: $moneySize) {
-                            ForEach(moneySizes, id: \.self) { Text($0.bSmartLocalized).tag($0) }
-                        }
-                        Picker("Direction".bSmartLocalized, selection: $moneySide) {
-                            ForEach(["All sides", "Long", "Short"], id: \.self) { Text($0.bSmartLocalized).tag($0) }
-                        }
-                    }
+                    SmartFilterOptions(title: "Style", identifier: "money-style", options: moneyStyles,
+                                       selection: $moneyStyle, optionTitle: { $0 })
+                    SmartFilterOptions(title: "Account size", identifier: "size", options: moneySizes,
+                                       selection: $moneySize, optionTitle: { $0 })
+                    SmartFilterOptions(title: "Direction", identifier: "direction", options: ["All sides", "Long", "Short"],
+                                       selection: $moneySide, optionTitle: { $0 })
                 }
+                }
+                .padding(20)
             }
-            .scrollContentBackground(.hidden)
+            .accessibilityIdentifier("smart.filters.options")
             .background(BSmartColor.ink)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                Button { isShowingFilters = false } label: {
+                    Text("View %d results".bSmartLocalized(selection == .accounts ? filteredAccounts.count : filteredMoney.count))
+                        .font(.headline)
+                        .frame(maxWidth: .infinity, minHeight: 52)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(BSmartColor.ink)
+                .background(BSmartColor.brand)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .accessibilityIdentifier("smart.filters.results")
+                .accessibilityValue(String(selection == .accounts ? filteredAccounts.count : filteredMoney.count))
+                .padding(16)
+                .background(BSmartColor.ink)
+            }
             .navigationTitle("Filters".bSmartLocalized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Reset".bSmartLocalized) { resetSelectedFilters() }
+                        .accessibilityIdentifier("smart.filters.reset")
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done".bSmartLocalized) { isShowingFilters = false }
                 }
             }
+            .bSmartPage()
+        }
+    }
+
+    private func resetSelectedFilters() {
+        if selection == .accounts {
+            accountPlatform = "All platforms"
+            accountRankBand = .all
+            accountHorizon = .all
+            accountSpecialty = "All sectors"
+            accountStyle = "All styles"
+        } else {
+            moneyStyle = "All styles"
+            moneySize = "All sizes"
+            moneySide = "All sides"
         }
     }
 
@@ -385,87 +308,6 @@ struct SmartHubView: View {
         }
     }
 
-    private func latestContentLabel(_ date: Date) -> String {
-        switch selection {
-        case .accounts:
-            "Latest qualified view %@".bSmartLocalized(date.bSmartDataTimestamp)
-        case .money:
-            "Latest capital move %@".bSmartLocalized(date.bSmartDataTimestamp)
-        }
-    }
-
-    private var accountFilters: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: BSmartSpacing.small) {
-                rankingMenu(title: accountPlatform, options: accountPlatforms, selection: $accountPlatform)
-
-                Menu {
-                    Picker("Rank band", selection: $accountRankBand) {
-                        ForEach(SmartAccountRankBand.allCases) { band in
-                            Text(band.rawValue.bSmartLocalized).tag(band)
-                        }
-                    }
-                } label: {
-                    rankingFilterLabel(accountRankBand.rawValue, isActive: accountRankBand != .all)
-                }
-
-                Menu {
-                    Picker("Best horizon", selection: $accountHorizon) {
-                        ForEach(SmartAccountHorizonFilter.allCases) { horizon in
-                            Text(horizon.rawValue.bSmartLocalized).tag(horizon)
-                        }
-                    }
-                } label: {
-                    rankingFilterLabel(accountHorizon.rawValue, isActive: accountHorizon != .all)
-                }
-
-                rankingMenu(title: accountSpecialty, options: accountSpecialties, selection: $accountSpecialty)
-                rankingMenu(title: accountStyle, options: accountStyles, selection: $accountStyle)
-            }
-        }
-        .accessibilityIdentifier("smart.account.filters")
-    }
-
-    private var moneyFilters: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: BSmartSpacing.small) {
-                rankingMenu(title: moneyStyle, options: moneyStyles, selection: $moneyStyle)
-                rankingMenu(title: moneySize, options: moneySizes, selection: $moneySize)
-                rankingMenu(title: moneySide, options: ["All sides", "Long", "Short"], selection: $moneySide)
-            }
-        }
-        .accessibilityIdentifier("smart.money.filters")
-    }
-
-    private func rankingMenu(title: String, options: [String], selection: Binding<String>) -> some View {
-        Menu {
-            Picker(title, selection: selection) {
-                ForEach(options, id: \.self) { option in
-                    Text(option.bSmartLocalized).tag(option)
-                }
-            }
-        } label: {
-            rankingFilterLabel(title, isActive: !title.hasPrefix("All "))
-        }
-    }
-
-    private func rankingFilterLabel(_ title: String, isActive: Bool) -> some View {
-        HStack(spacing: 5) {
-            Text(title.bSmartLocalized)
-                .font(.caption.weight(.semibold))
-            Image(systemName: "chevron.down")
-                .font(.caption2.weight(.bold))
-        }
-        .foregroundStyle(isActive ? BSmartColor.brand : BSmartColor.secondaryText)
-        .padding(.horizontal, BSmartSpacing.small)
-        .frame(height: 30)
-        .background(isActive ? BSmartColor.brand.opacity(0.1) : BSmartColor.surface)
-        .clipShape(RoundedRectangle(cornerRadius: BSmartRadius.control, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: BSmartRadius.control, style: .continuous)
-                .stroke(isActive ? BSmartColor.brand : BSmartColor.line, lineWidth: 0.75)
-        }
-    }
 
     @ViewBuilder
     private var accountRows: some View {
@@ -474,7 +316,7 @@ struct SmartHubView: View {
             smartEmptyState
         } else {
             ForEach(Array(filteredAccounts.enumerated()), id: \.element.id) { index, account in
-                BSmartDetailNavigationLink(id: "smart-account-\(account.id)") {
+                BSmartDetailNavigationLink(id: "smart-account-\(account.id)", usesZoomTransition: false) {
                     SmartAccountDetailView(account: account)
                 } label: {
                     SmartAccountRow(
@@ -485,8 +327,7 @@ struct SmartHubView: View {
                     )
                 }
                 .accessibilityIdentifier(index == 0 ? "smart.account.row.first" : "smart.account.row.\(account.id)")
-                .listRowBackground(BSmartColor.ink)
-                .listRowSeparatorTint(BSmartColor.line)
+                Divider().overlay(BSmartColor.line)
             }
         }
     }
@@ -496,16 +337,6 @@ struct SmartHubView: View {
         if !model.smartMoney.isEmpty {
             SmartMoneySourceStatus(signals: model.smartMoney)
                 .accessibilityIdentifier("smart.money.source-status")
-                .listRowBackground(BSmartColor.ink)
-                .listRowSeparator(.hidden)
-                .listRowInsets(
-                    EdgeInsets(
-                        top: BSmartSpacing.small,
-                        leading: BSmartSpacing.large,
-                        bottom: 0,
-                        trailing: BSmartSpacing.large
-                    )
-                )
         }
 
         if filteredMoney.isEmpty {
@@ -513,16 +344,6 @@ struct SmartHubView: View {
         } else {
             SmartMoneyCohortSummary(signals: filteredMoney)
                 .accessibilityIdentifier("smart.money.cohort")
-                .listRowBackground(BSmartColor.ink)
-                .listRowSeparator(.hidden)
-                .listRowInsets(
-                    EdgeInsets(
-                        top: BSmartSpacing.small,
-                        leading: BSmartSpacing.large,
-                        bottom: BSmartSpacing.medium,
-                        trailing: BSmartSpacing.large
-                    )
-                )
 
             ForEach(Array(filteredMoney.enumerated()), id: \.element.id) { index, signal in
                 BSmartDetailNavigationLink(id: "smart-money-\(signal.id)") {
@@ -534,8 +355,7 @@ struct SmartHubView: View {
                     )
                 }
                 .accessibilityIdentifier(index == 0 ? "smart.money.row.first" : "smart.money.row.\(signal.id)")
-                .listRowBackground(BSmartColor.ink)
-                .listRowSeparatorTint(BSmartColor.line)
+                Divider().overlay(BSmartColor.line)
             }
         }
     }
@@ -547,17 +367,13 @@ struct SmartHubView: View {
                 .foregroundStyle(BSmartColor.tertiaryText)
             Text((followingOnly ? "Nothing followed yet" : "No matching results").bSmartLocalized)
                 .font(.headline)
-            Text((followingOnly
-                 ? "Open an account and follow it to monitor future changes."
-                 : "Try a different account, ticker or specialty.").bSmartLocalized)
-                .font(.caption)
-                .foregroundStyle(BSmartColor.secondaryText)
-                .multilineTextAlignment(.center)
+            if !activeFilters.isEmpty {
+                Button("Reset".bSmartLocalized) { resetSelectedFilters() }
+                    .frame(minHeight: 44).tint(BSmartColor.brand)
+            }
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, BSmartSpacing.xxxLarge)
-        .listRowBackground(BSmartColor.ink)
-        .listRowSeparator(.hidden)
     }
 
     private var summaryLabel: String {
@@ -575,13 +391,6 @@ struct SmartHubView: View {
         }
     }
 
-    private func sectionCount(_ section: SmartSection) -> Int {
-        switch section {
-        case .accounts: model.smartAccounts.count
-        case .money: model.smartMoney.count
-        }
-    }
-
     private func displayedRank(for account: SmartAccountProfile, fallback: Int) -> Int {
         let rank = accountPlatform == "All platforms"
             ? account.resolvedRank
@@ -594,448 +403,6 @@ struct SmartHubView: View {
     }
 }
 
-private struct SmartMoneySourceStatus: View {
-    let signals: [SmartMoneySignal]
-
-    private var sourceUpdatedAt: Date? {
-        signals.compactMap(\.sourceUpdatedAt).max()
-    }
-
-    private var sourceLabel: String {
-        let sources = Set(signals.map(\.resolvedSource))
-        guard sources.count == 1, let source = sources.first else { return "Mixed sources" }
-        switch source {
-        case "hyperdash": return "Hyperdash"
-        case "hyperdash_cached": return "Hyperdash cache"
-        case "hyperliquid_fallback": return "Hyperliquid fallback"
-        default: return "Unverified"
-        }
-    }
-
-    private var isDelayed: Bool {
-        guard let sourceUpdatedAt else { return true }
-        return Date().timeIntervalSince(sourceUpdatedAt) > 1_800
-    }
-
-    var body: some View {
-        HStack(spacing: BSmartSpacing.small) {
-            Image(systemName: isDelayed ? "clock.badge.exclamationmark" : "checkmark.shield.fill")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(isDelayed ? BSmartColor.gold : BSmartColor.brand)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Scored capital accounts · Copy Score".bSmartLocalized)
-                    .font(.caption.weight(.bold))
-                if let sourceUpdatedAt {
-                    Text("%@ data · as of %@ · %d accounts".bSmartLocalized(
-                        sourceLabel,
-                        sourceUpdatedAt.formatted(date: .omitted, time: .shortened),
-                        signals.count
-                    ))
-                        .font(.caption2)
-                        .foregroundStyle(BSmartColor.secondaryText)
-                        .monospacedDigit()
-                }
-            }
-
-            Spacer()
-
-            BSmartTag(
-                text: (isDelayed ? "Delayed" : "Current").bSmartLocalized,
-                color: isDelayed ? BSmartColor.gold : BSmartColor.brand
-            )
-        }
-        .padding(.horizontal, BSmartSpacing.medium)
-        .frame(minHeight: 52)
-        .background(BSmartColor.surface)
-        .clipShape(RoundedRectangle(cornerRadius: BSmartRadius.control, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: BSmartRadius.control, style: .continuous)
-                .stroke(isDelayed ? BSmartColor.gold.opacity(0.6) : BSmartColor.brand.opacity(0.45), lineWidth: 0.75)
-        }
-    }
-}
-
-private struct SmartMoneyCohortSummary: View {
-    let signals: [SmartMoneySignal]
-
-    private var positions: [SmartMoneyPosition] {
-        signals.flatMap(\.resolvedPositions)
-    }
-
-    private var longNotional: Double {
-        positions
-            .filter { $0.direction.caseInsensitiveCompare("Long") == .orderedSame }
-            .reduce(0) { $0 + abs($1.notional) }
-    }
-
-    private var shortNotional: Double {
-        positions
-            .filter { $0.direction.caseInsensitiveCompare("Short") == .orderedSame }
-            .reduce(0) { $0 + abs($1.notional) }
-    }
-
-    private var grossNotional: Double { longNotional + shortNotional }
-
-    private var netRatio: Double {
-        guard grossNotional > 0 else { return 0 }
-        return (longNotional - shortNotional) / grossNotional
-    }
-
-    private var longShare: CGFloat {
-        guard grossNotional > 0 else { return 0.5 }
-        return CGFloat(longNotional / grossNotional)
-    }
-
-    private var topAsset: (symbol: String, notional: Double)? {
-        let grouped = Dictionary(grouping: positions, by: \.symbol)
-            .map { symbol, values in
-                (symbol: symbol, notional: values.reduce(0) { $0 + abs($1.notional) })
-            }
-        return grouped.max { $0.notional < $1.notional }
-    }
-
-    private var smartCount: Int {
-        signals.filter { $0.resolvedTier == "Smart" }.count
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: BSmartSpacing.medium) {
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Cohort positioning")
-                        .font(.subheadline.weight(.bold))
-                    Text("Current positions across selected accounts")
-                        .font(.caption2)
-                        .foregroundStyle(BSmartColor.tertiaryText)
-                }
-                Spacer()
-                Text(netLabel)
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(netRatio >= 0 ? BSmartColor.bull : BSmartColor.bear)
-                    .monospacedDigit()
-            }
-
-            GeometryReader { proxy in
-                HStack(spacing: 2) {
-                    Rectangle()
-                        .fill(BSmartColor.bull)
-                        .frame(width: max(2, proxy.size.width * longShare))
-                    Rectangle()
-                        .fill(BSmartColor.bear)
-                }
-            }
-            .frame(height: 7)
-            .clipShape(Capsule())
-
-            HStack(spacing: BSmartSpacing.large) {
-                cohortMetric("Long", compactCurrency(longNotional), BSmartColor.bull)
-                cohortMetric("Short", compactCurrency(shortNotional), BSmartColor.bear)
-                cohortMetric("Gross", compactCurrency(grossNotional), BSmartColor.primaryText)
-                Spacer(minLength: 0)
-                if let topAsset {
-                    cohortMetric("Top exposure", "\(topAsset.symbol) · \(compactCurrency(topAsset.notional))", BSmartColor.gold)
-                }
-            }
-
-            Text("%d scored accounts · %d Smart tier · %d open positions".bSmartLocalized(
-                signals.count,
-                smartCount,
-                positions.count
-            ))
-                .font(.caption2)
-                .foregroundStyle(BSmartColor.secondaryText)
-                .monospacedDigit()
-        }
-        .bSmartSurface()
-    }
-
-    private var netLabel: String {
-        let side = (netRatio >= 0 ? "Net long" : "Net short").bSmartLocalized
-        return "\(side) \(abs(netRatio).formatted(.percent.precision(.fractionLength(0))))"
-    }
-
-    private func cohortMetric(_ label: String, _ value: String, _ color: Color) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label.bSmartLocalized)
-                .font(.caption2)
-                .foregroundStyle(BSmartColor.tertiaryText)
-            Text(value)
-                .font(.caption.weight(.bold))
-                .foregroundStyle(color)
-                .monospacedDigit()
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-        }
-    }
-}
-
-private struct SmartRankBadge: View {
-    let rank: Int
-
-    private var accent: Color {
-        switch rank {
-        case 1: BSmartColor.pulse
-        case 2: BSmartColor.sky
-        case 3: BSmartColor.orange
-        default: BSmartColor.secondaryText
-        }
-    }
-
-    private var foreground: Color {
-        rank == 1 ? BSmartColor.onAccent : accent
-    }
-
-    private var fill: Color {
-        rank == 1 ? BSmartColor.pulse : accent.opacity(rank <= 3 ? 0.14 : 0.055)
-    }
-
-    var body: some View {
-        Text("\(rank)")
-            .font(.caption.weight(.black))
-            .monospacedDigit()
-            .foregroundStyle(foreground)
-            .lineLimit(1)
-            .minimumScaleFactor(0.72)
-            .frame(width: 32, height: 32)
-            .background(fill)
-            .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .stroke(accent.opacity(rank <= 3 ? 0.72 : 0.18), lineWidth: rank <= 3 ? 1 : 0.7)
-            }
-            .accessibilityLabel("Rank %d".bSmartLocalized(rank))
-    }
-}
-
-private struct SmartAccountRow: View {
-    let rank: Int
-    let account: SmartAccountProfile
-    let recentTickers: [String]
-    let isFollowing: Bool
-
-    var body: some View {
-        HStack(alignment: .center, spacing: 10) {
-            SmartRankBadge(rank: rank)
-
-            BSmartAvatar(url: account.avatarURL, name: account.name, size: 38)
-
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(alignment: .center, spacing: 8) {
-                    VStack(alignment: .leading, spacing: 3) {
-                        HStack(spacing: 5) {
-                            Text(account.name)
-                                .font(.subheadline.weight(.semibold))
-                                .lineLimit(1)
-                            if isFollowing {
-                                Image(systemName: "star.fill")
-                                    .font(.caption2)
-                                    .foregroundStyle(BSmartColor.gold)
-                            }
-                        }
-                        HStack(spacing: 5) {
-                            SmartPlatformMark(platform: account.platform, size: 16)
-                            Text(account.handle)
-                                .lineLimit(1)
-                        }
-                        .font(.caption2)
-                        .foregroundStyle(BSmartColor.secondaryText)
-                        .accessibilityElement(children: .combine)
-                        .accessibilityIdentifier("smart.account.row.identity")
-                    }
-                    .layoutPriority(1)
-
-                    Spacer(minLength: 0)
-
-                    SmartAssetCluster(tickers: recentTickers)
-                }
-
-                SmartPreviewTraitRow(
-                    sector: account.specialty,
-                    horizon: account.horizon,
-                    style: account.resolvedStyle
-                )
-            }
-        }
-        .padding(.vertical, 6)
-    }
-}
-
-private struct SmartMoneyRow: View {
-    let signal: SmartMoneySignal
-    let isFollowing: Bool
-
-    private var isLong: Bool { signal.direction.lowercased() == "long" }
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            SmartRankBadge(rank: signal.rank ?? 0)
-                .padding(.top, 3)
-
-            BSmartSmartMoneyAvatar(identity: signal.publicIdentity, size: 38)
-
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(alignment: .top, spacing: 8) {
-                    VStack(alignment: .leading, spacing: 3) {
-                        HStack(spacing: 5) {
-                            Text(signal.publicIdentity.displayName)
-                                .font(.subheadline.weight(.semibold))
-                                .lineLimit(1)
-                            if isFollowing {
-                                Image(systemName: "star.fill")
-                                    .font(.caption2)
-                                    .foregroundStyle(BSmartColor.gold)
-                            }
-                        }
-                        HStack(spacing: 5) {
-                            SmartPlatformMark(platform: signal.resolvedSource, size: 16)
-                            Text(signal.resolvedAddress.shortWalletAddress)
-                                .lineLimit(1)
-                            if let accountValue = signal.accountValue, accountValue > 0 {
-                                Text("·")
-                                Text(compactCurrency(accountValue))
-                                    .monospacedDigit()
-                            }
-                        }
-                        .font(.caption2)
-                        .foregroundStyle(BSmartColor.secondaryText)
-                    }
-                    .layoutPriority(1)
-
-                    Spacer(minLength: 0)
-
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text(compactSignedCurrency(signal.netPnl ?? 0))
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle((signal.netPnl ?? 0) >= 0 ? BSmartColor.bull : BSmartColor.bear)
-                            .monospacedDigit()
-                        Text("Win %@".bSmartLocalized(percent(signal.winRate)))
-                            .font(.caption2)
-                            .foregroundStyle(BSmartColor.tertiaryText)
-                            .monospacedDigit()
-                    }
-                }
-
-                HStack(spacing: 9) {
-                    SmartAssetCluster(tickers: positionTickers)
-                    Rectangle()
-                        .fill(BSmartColor.line)
-                        .frame(width: 0.6, height: 18)
-                    SmartPreviewTraitRow(
-                        sector: inferredSector(for: positionTickers),
-                        horizon: inferredHorizon,
-                        style: inferredBias
-                    )
-                }
-            }
-        }
-        .padding(.vertical, 7)
-    }
-
-    private var positionTickers: [String] {
-        let ranked = signal.resolvedPositions
-            .sorted { abs($0.notional) > abs($1.notional) }
-            .map { $0.symbol.uppercased() }
-        var seen = Set<String>()
-        return Array((ranked.isEmpty ? [signal.ticker.uppercased()] : ranked)
-            .filter { seen.insert($0).inserted }
-            .prefix(4))
-    }
-
-    private var inferredHorizon: String {
-        switch signal.resolvedStyle.lowercased() {
-        case "scalp", "intraday": "Short term"
-        case "position", "long term": "Long term"
-        default: "Medium term"
-        }
-    }
-
-    private var inferredBias: String {
-        guard let longBias = signal.longBias else {
-            return isLong ? "Long biased" : "Short biased"
-        }
-        if longBias >= 0.65 { return "Long biased" }
-        if longBias <= 0.35 { return "Short biased" }
-        return "Two-sided"
-    }
-
-    private func inferredSector(for tickers: [String]) -> String {
-        let sectors: [(String, Set<String>)] = [
-            ("Semiconductors", ["NVDA", "AMD", "MU", "AVGO", "TSM", "ASML", "INTC", "ARM", "QCOM", "MRVL", "SMH", "SOXX"]),
-            ("AI infrastructure", ["NBIS", "CRWV", "IREN", "CIFR", "APLD", "CORZ", "HUT", "WULF", "CLSK"]),
-            ("Fintech", ["HOOD", "SOFI", "PYPL", "AFRM", "NU", "COIN"]),
-            ("Crypto-linked equities", ["MSTR", "MARA", "RIOT", "CLSK", "CIFR", "IREN"]),
-            ("Software", ["PLTR", "MSFT", "ORCL", "NOW", "CRM", "APP", "SNOW"]),
-            ("Consumer", ["TSLA", "AMZN", "NFLX", "WMT", "COST"]),
-            ("Broad market", ["SP500", "USTECH", "XYZ100", "QQQ", "IWM", "DIA", "SPCX", "JP225"]),
-        ]
-        for ticker in tickers {
-            if let sector = sectors.first(where: { $0.1.contains(ticker.uppercased()) })?.0 {
-                return sector
-            }
-        }
-        return "Tokenized equities"
-    }
-}
-
-private struct SmartAssetCluster: View {
-    let tickers: [String]
-
-    var body: some View {
-        HStack(spacing: -5) {
-            ForEach(Array(tickers.prefix(3)), id: \.self) { ticker in
-                BSmartAssetMark(ticker: ticker, size: 22)
-                    .bSmartTickerDestination(ticker)
-                    .frame(width: 22, height: 22)
-                    .background(BSmartColor.ink)
-                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .stroke(BSmartColor.line, lineWidth: 0.8)
-                    }
-                    .accessibilityLabel(ticker)
-                    .accessibilityHint("Recently mentioned".bSmartLocalized)
-                }
-        }
-        .frame(minWidth: tickers.isEmpty ? 0 : 22)
-    }
-}
-
-private struct SmartPreviewTraitRow: View {
-    let sector: String
-    let horizon: String
-    let style: String
-
-    var body: some View {
-        HStack(spacing: 7) {
-            trait(icon: "square.grid.2x2.fill", value: sector, color: BSmartColor.sky)
-            separator
-            trait(icon: "clock.fill", value: horizon, color: BSmartColor.gold)
-            separator
-            trait(icon: "scope", value: style, color: BSmartColor.brand)
-        }
-    }
-
-    private var separator: some View {
-        Circle()
-            .fill(BSmartColor.line)
-            .frame(width: 3, height: 3)
-    }
-
-    private func trait(icon: String, value: String, color: Color) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.system(size: 8, weight: .black))
-                .foregroundStyle(color)
-            Text(value.bSmartLocalized)
-                .font(.system(size: 10, weight: .semibold))
-                .lineLimit(1)
-                .minimumScaleFactor(0.58)
-                .foregroundStyle(BSmartColor.secondaryText)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
 
 private extension View {
     func smartProfileCommand(accented: Bool, selected: Bool) -> some View {
@@ -1062,301 +429,41 @@ private extension View {
 }
 
 
-private enum SmartAccountDetailSection: String, CaseIterable, Identifiable {
-    case overview = "Overview"
-    case trackRecord = "Track record"
-
-    var id: Self { self }
-}
-
-struct SmartAccountDetailView: View {
-    @EnvironmentObject private var model: AppModel
-    let account: SmartAccountProfile
-    @State private var section: SmartAccountDetailSection = .overview
-    @State private var showsAllViews = false
-
-    private var updates: [SmartAccountUpdate] { model.accountEvidence(for: account) }
-    private var representativeWorks: [SmartAccountUpdate] {
-        model.representativeAccountEvidence(for: account)
-    }
-    private var insights: SmartAccountProfileInsights {
-        SmartAccountProfileInsights(
-            account: account,
-            evidenceUpdates: updates,
-            recentUpdates: model.accountUpdates(for: account)
-        )
-    }
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: BSmartSpacing.large) {
-                identityHeader
-                detailNavigation
-                switch section {
-                case .overview:
-                    SmartAccountInvestorProfileSection(account: account)
-                    SmartAccountCurrentViewsSection(insights: insights)
-                    SmartAccountLatestViewsSection(
-                        updates: insights.latestViews,
-                        limit: showsAllViews ? nil : 4,
-                        onViewAll: {
-                            withAnimation(BSmartMotion.quick) {
-                                showsAllViews = true
-                            }
-                        }
-                    )
-                    scoreProvenance
-                case .trackRecord:
-                    benchmarkAbility
-                    viewEvidence
-                }
-            }
-            .padding(BSmartSpacing.large)
-            .padding(.bottom, BSmartSpacing.xLarge)
-        }
-        .background(BSmartColor.ink)
-        .navigationTitle("Smart Account")
-        .navigationBarTitleDisplayMode(.inline)
-        .bSmartDetailPage()
-        .bSmartPage()
-        .task(id: account.id) {
-            await model.loadSmartAccountEvidence(for: account)
-        }
-    }
-
-    private var detailNavigation: some View {
-        Picker("Smart Account detail", selection: $section) {
-            ForEach(SmartAccountDetailSection.allCases) { item in
-                Text(item.rawValue.bSmartLocalized).tag(item)
-            }
-        }
-        .pickerStyle(.segmented)
-        .accessibilityIdentifier("smart.account.detail.section")
-    }
-
-    private var viewEvidence: some View {
-        SmartAccountRepresentativeWorks(works: representativeWorks, updates: updates,
-            isLoading: model.isLoadingAccountEvidence(account))
-    }
-
-    private var identityHeader: some View {
-        VStack(alignment: .leading, spacing: BSmartSpacing.medium) {
-            HStack(spacing: BSmartSpacing.medium) {
-                BSmartAvatar(url: account.avatarURL, name: account.name, size: 52)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(account.name)
-                        .font(.title3.weight(.bold))
-                    HStack(spacing: 6) {
-                        SmartPlatformMark(platform: account.platform, size: 18)
-                        Text(account.handle)
-                    }
-                        .font(.caption)
-                        .foregroundStyle(BSmartColor.secondaryText)
-                    if let followers = account.followersCount {
-                        Text("%@ followers".bSmartLocalized(followers.formatted()))
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(BSmartColor.tertiaryText)
-                    }
-                }
-                Spacer()
-                VStack(alignment: .trailing, spacing: 0) {
-                    Text(account.score.formatted(.number.precision(.fractionLength(0))))
-                        .font(.title2.weight(.black))
-                        .foregroundStyle(BSmartColor.brand)
-                        .monospacedDigit()
-                    Text("Account Score")
-                        .font(.caption2)
-                        .foregroundStyle(BSmartColor.tertiaryText)
-                }
-            }
-
-            HStack(spacing: BSmartSpacing.small) {
-                Button {
-                    model.toggleSmartAccountFollow(account.id)
-                } label: {
-                    Label(
-                        (model.isFollowingSmartAccount(account.id) ? "Tracking" : "Track").bSmartLocalized,
-                        systemImage: model.isFollowingSmartAccount(account.id) ? "star.fill" : "star"
-                    )
-                    .smartProfileCommand(
-                        accented: true,
-                        selected: model.isFollowingSmartAccount(account.id)
-                    )
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("smart.account.follow")
-
-                if let profileURL = account.profileURL {
-                    Link(destination: profileURL) {
-                        Label("Public profile", systemImage: "arrow.up.right")
-                            .smartProfileCommand(accented: false, selected: false)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Open public profile")
-                }
-            }
-        }
-    }
-
-    private var scoreProvenance: some View {
-        VStack(alignment: .leading, spacing: BSmartSpacing.medium) {
-            BSmartSectionHeader(
-                title: "Why this account ranks here",
-                detail: "Score provenance and evidence coverage"
-            )
-            HStack(spacing: 0) {
-                detailMetric(label: "Platform rank", value: "#\(account.resolvedPlatformRank)")
-                Divider().overlay(BSmartColor.line)
-                detailMetric(
-                    label: "Platform percentile",
-                    value: "Top \(max(1, Int(ceil(account.resolvedPlatformPercentile * 100))))%"
-                )
-                Divider().overlay(BSmartColor.line)
-                detailMetric(label: "Confidence", value: account.resolvedConfidence.capitalized)
-            }
-            Divider().overlay(BSmartColor.line)
-            HStack(spacing: 0) {
-                detailMetric(
-                    label: "Evidence weight",
-                    value: account.resolvedEffectiveSamples.formatted(.number.precision(.fractionLength(1)))
-                )
-                Divider().overlay(BSmartColor.line)
-                detailMetric(label: "Settled calls", value: "\(account.resolvedSettledCalls)")
-                Divider().overlay(BSmartColor.line)
-                detailMetric(label: "Active days", value: "\(account.resolvedActiveDays)")
-            }
-            if let scoreAsOf = updates.compactMap(\.authorScoreAsOf).max() {
-                Label("Score snapshot %@".bSmartLocalized(scoreAsOf.bSmartCompactDate), systemImage: "clock.badge.checkmark")
-                    .font(.caption2)
-                    .foregroundStyle(BSmartColor.tertiaryText)
-            }
-        }
-        .bSmartSurface()
-    }
-
-    @ViewBuilder
-    private var benchmarkAbility: some View {
-        if account.marketSelectionScore != nil || account.industrySelectionScore != nil {
-            VStack(alignment: .leading, spacing: BSmartSpacing.medium) {
-                BSmartSectionHeader(title: "Selection ability", detail: "Two independent benchmarks")
-                HStack(spacing: 0) {
-                    detailMetric(
-                        label: "vs S&P 500",
-                        value: scoreLabel(account.marketSelectionScore)
-                    )
-                    Divider().overlay(BSmartColor.line)
-                    detailMetric(
-                        label: "vs sector ETF",
-                        value: scoreLabel(account.industrySelectionScore)
-                    )
-                }
-            }
-            .bSmartSurface()
-        }
-    }
-
-    private func detailMetric(label: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(label.bSmartLocalized)
-                .font(.caption2)
-                .foregroundStyle(BSmartColor.tertiaryText)
-            Text(value)
-                .font(.caption.weight(.bold))
-                .lineLimit(2)
-                .minimumScaleFactor(0.8)
-        }
-        .frame(maxWidth: .infinity, minHeight: 68, alignment: .leading)
-        .padding(.horizontal, BSmartSpacing.small)
-    }
-
-    private func scoreLabel(_ score: Double?) -> String {
-        guard let score else { return "--" }
-        return score.formatted(.number.precision(.fractionLength(0)))
-    }
-
-    private func directionLabel(_ direction: SignalDirection) -> String {
-        switch direction {
-        case .bullish: "Bullish"
-        case .bearish: "Bearish"
-        case .neutral: "Neutral"
-        case .mixed: "Mixed"
-        }
-    }
-
-}
 
 struct SmartAccountEvidenceDetailView: View {
     let update: SmartAccountUpdate
+    var priceContextNote: String? = nil
     @State private var traderRefresh = 0
 
-    private func displayHorizon(_ value: String) -> String {
-        value.lowercased() == "unknown" ? "Horizon unavailable".bSmartLocalized : value
-    }
-
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: BSmartSpacing.large) {
-                evidenceHeader
-                OpinionTradersSection(opinionID: update.id, ticker: update.ticker,
-                                     referencePrice: update.priceEvidence?.latestPrice, refresh: traderRefresh)
-                    .id(update.id)
-                OpinionReaderView(update: update)
-                if !update.displayableSupportingSources.isEmpty {
-                    OpinionSupportingSourcesSection(sources: update.displayableSupportingSources)
-                }
-                if let settlement = update.settlement {
-                    settlementEvidence(settlement)
-                }
-                if let priceEvidence = update.priceEvidence {
-                    priceContext(priceEvidence)
-                }
+        OpinionDetailLayout(update: update) {
+            OpinionTradersSection(opinionID: update.id, ticker: update.ticker,
+                                 referencePrice: update.priceEvidence?.latestPrice, refresh: traderRefresh)
+                .id(update.id)
+                .accessibilityIdentifier("opinion.traders.section")
+            OpinionReaderView(update: update)
+            if !update.displayableSupportingSources.isEmpty {
+                OpinionSupportingSourcesSection(sources: update.displayableSupportingSources)
             }
-            .padding(BSmartSpacing.large)
-            .padding(.bottom, BSmartSpacing.xLarge)
+            if let settlement = update.settlement {
+                settlementEvidence(settlement)
+            }
+            if let priceEvidence = update.priceEvidence {
+                priceContext(priceEvidence)
+            }
+            if let priceContextNote {
+                DisclosureGroup("About these prices".bSmartLocalized) {
+                    Text(priceContextNote).font(.footnote)
+                        .foregroundStyle(BSmartColor.secondaryText).padding(.top, 10)
+                }.font(.subheadline)
+            }
         }
-        .background(BSmartColor.ink)
-        .navigationTitle("Call evidence".bSmartLocalized)
-        .navigationBarTitleDisplayMode(.inline)
         .accessibilityIdentifier("smart.account.evidence.detail")
         .bSmartDetailPage()
-        .bSmartTradeDock(symbol: update.ticker, opinionSource: .init(opinionID: update.id, ticker: update.ticker),
+        .bSmartTradeDock(symbol: update.ticker, opinionSource: .init(opinionID: update.id, ticker: update.ticker, authorID: update.authorId),
                         onTradeDismiss: { traderRefresh += 1 })
         .bSmartPage()
     }
-
-    private var evidenceHeader: some View {
-        VStack(alignment: .leading, spacing: BSmartSpacing.medium) {
-            HStack(alignment: .top, spacing: BSmartSpacing.medium) {
-                BSmartAvatar(url: update.authorAvatarURL, name: update.authorName, size: 46)
-                    .bSmartSubjectDestination(update)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(update.authorName)
-                        .font(.headline.weight(.bold))
-                    Text("\(update.platform) · \(update.publishedAt.bSmartRelativeTimestamp)")
-                        .font(.caption)
-                        .foregroundStyle(BSmartColor.secondaryText)
-                }
-                .bSmartSubjectDestination(update)
-                Spacer()
-                Text(update.score.formatted(.number.precision(.fractionLength(0))))
-                    .font(.title3.weight(.black))
-                    .foregroundStyle(BSmartColor.brand)
-                    .monospacedDigit()
-            }
-            HStack(spacing: BSmartSpacing.small) {
-                BSmartAssetMark(ticker: update.ticker, size: 30)
-                    .bSmartTickerDestination(update.ticker)
-                Text(update.ticker)
-                    .font(.headline.weight(.black))
-                BSmartTag(text: directionLabel, color: update.direction.color)
-                BSmartTag(text: displayHorizon(update.horizon), color: BSmartColor.sky)
-                if let role = update.evidenceRole {
-                    BSmartTag(text: roleLabel(role), color: roleColor(role))
-                }
-            }
-        }
-    }
-
 
     private func settlementEvidence(_ settlement: SmartAccountSettlementEvidence) -> some View {
         VStack(alignment: .leading, spacing: BSmartSpacing.medium) {
@@ -1395,7 +502,8 @@ struct SmartAccountEvidenceDetailView: View {
                     .foregroundStyle(BSmartColor.secondaryText)
             }
         }
-        .bSmartSurface()
+        .padding(.vertical, 8)
+        .overlay(alignment: .bottom) { Divider().overlay(BSmartColor.line) }
     }
 
     private func priceContext(_ evidence: SmartAccountPriceEvidence) -> some View {
@@ -1410,7 +518,7 @@ struct SmartAccountEvidenceDetailView: View {
             SmartAccountOpinionEvidenceList(update: update, evidence: evidence)
             PriceEvidenceMilestones(update: update, evidence: evidence, settlement: update.settlement)
         }
-        .bSmartSurface()
+        .padding(.vertical, 8)
     }
 
 
@@ -1430,16 +538,6 @@ struct SmartAccountEvidenceDetailView: View {
     }
 
 
-    private var directionLabel: String {
-        switch update.direction {
-        case .bullish: "Bullish".bSmartLocalized
-        case .bearish: "Bearish".bSmartLocalized
-        case .neutral: "Neutral".bSmartLocalized
-        case .mixed: "Mixed".bSmartLocalized
-        }
-    }
-
-
     private func settlementResultLabel(_ settlement: SmartAccountSettlementEvidence) -> String {
         guard settlement.status == "settled" else { return "Pending settlement".bSmartLocalized }
         return (settlement.actualHit == true ? "Historical hit" : "Historical miss").bSmartLocalized
@@ -1454,21 +552,6 @@ struct SmartAccountEvidenceDetailView: View {
         value.formatted(.bSmartDollars.precision(.fractionLength(value >= 100 ? 0 : 2)))
     }
 
-    private func roleLabel(_ role: String) -> String {
-        switch role {
-        case "strongest": "Representative hit".bSmartLocalized
-        case "counterexample": "Representative miss".bSmartLocalized
-        default: "Recent".bSmartLocalized
-        }
-    }
-
-    private func roleColor(_ role: String) -> Color {
-        switch role {
-        case "strongest": BSmartColor.brand
-        case "counterexample": BSmartColor.bear
-        default: BSmartColor.sky
-        }
-    }
 }
 
 private struct EvidenceChartGuide: View {
@@ -1580,7 +663,7 @@ private struct SmartAccountOpinionEvidenceList: View {
     private func evidenceNumber(_ value: Int, color: Color) -> some View {
         Text("\(value)")
             .font(.caption2.weight(.black))
-            .foregroundStyle(BSmartColor.ink)
+            .foregroundStyle(BSmartColor.onAccent)
             .frame(width: 22, height: 22)
             .background(color)
             .clipShape(Circle())
@@ -1753,7 +836,7 @@ private struct SmartMoneyEntryEvidenceList: View {
     private func evidenceNumber(_ value: Int, color: Color) -> some View {
         Text("\(value)")
             .font(.caption2.weight(.black))
-            .foregroundStyle(BSmartColor.ink)
+            .foregroundStyle(BSmartColor.onAccent)
             .frame(width: 22, height: 22)
             .background(color)
             .clipShape(Circle())
@@ -1831,6 +914,7 @@ struct SmartMoneyDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: BSmartSpacing.large) {
                 identityHeader
+                SubjectTradeStatsSection(subject: .init(money: signal))
                 detailNavigation
                 switch section {
                 case .overview:
@@ -1843,6 +927,7 @@ struct SmartMoneyDetailView: View {
                     currentPositions
                     assetEdge
                 case .activity:
+                    SmartMoneySourceActivity(movements: model.moneyMovements(for: signal))
                     recentTrades
                     capitalActivity
                 }
@@ -1941,11 +1026,10 @@ struct SmartMoneyDetailView: View {
                 detail: "Top 3 markets by observed entry exposure"
             )
 
-            if representativeEntries.isEmpty {
-                HStack(spacing: BSmartSpacing.small) {
-                    if model.isLoadingMoneyEvidence(signal) { ProgressView() }
-                    Text("No representative entry with price evidence is available yet.")
-                }
+            if representativeEntries.isEmpty && model.isLoadingMoneyEvidence(signal) {
+                BSmartSkeletonRows(style: .simple, count: 3)
+            } else if representativeEntries.isEmpty {
+                Text("No representative entry with price evidence is available yet.")
                 .font(.subheadline)
                 .foregroundStyle(BSmartColor.secondaryText)
             } else {

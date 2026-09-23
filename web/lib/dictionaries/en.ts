@@ -2,6 +2,42 @@ import type { Dictionary } from "./zh";
 
 // English mirror of zh.ts. Proper nouns (tickers, bSmart, r/subreddits, people) stay verbatim.
 export const en: Dictionary = {
+  betaLanding: {
+    survey: {
+      title: "Get early access to bSmart", required: "All fields required",
+      channels: "Where do you follow investment information?", multiple: "Select all that apply",
+      channelsRequired: "Please select at least one information source.", contactRequired: "Please enter your contact details.",
+      accounts: "Investment accounts", accountsDetail: "Twitter/X, YouTube, Reddit & more",
+      politicians: "Politicians", politiciansDetail: "Pelosi, Trump & others", institutions: "Institutions",
+      onchain: "On-chain smart money", insiders: "Insiders", insidersDetail: "CEOs, executives & more", other: "Other",
+      otherPlaceholder: "Other sources you follow", contact: "Where else can we reach you?",
+      platform: "Contact platform", handle: "Contact details", handlePlaceholder: "Your handle or profile link", wechat: "WeChat",
+      invalid: "Please check your answers and describe any other sources selected.",
+    },
+    tagline: "The best way to follow the smartest investors",
+    apply: "Request access", applied: "Requested",
+    screenTitle: "See their track record.\nDecide who to follow.", screenFeatures: ["Past calls", "Asset updates", "Smart money"], screenFeaturesLabel: "What bSmart brings together",
+    title: "bSmart · Find the voices worth following",
+    description: "Discover investors with a public track record. Follow the assets and opinions you care about. Join the bSmart private beta waitlist.",
+    beta: "PRIVATE BETA", navStory: "Our story", navProduct: "The experience", join: "Join the waitlist", skip: "Skip to content",
+    heroTop: "So many voices.", heroBottom: "Find the ones worth following.", heroAccent: "worth following.",
+    heroStory: "You've read a hundred opinions. But whose judgment deserves your attention? We've been there, too.",
+    heroPromise: "That's why we're building bSmart.", explore: "Meet bSmart, below", demo: "PRODUCT DEMO",
+    noiseKicker: "01 / IT STARTS WITH THE NOISE", noiseTitle: "More information.\nNot always more clarity.",
+    noiseStory: "A post. A video. Another thread. The conversation never stops. The perspectives worth your time are scattered across it.",
+    noiseWords: ["Is it time to buy?", "Another price target raised", "How much room is left?", "Is this time different?", "Where's the next opportunity?", "Bullish or bearish?"],
+    peopleKicker: "02 / FIND YOUR PEOPLE", peopleTitle: "See what they say.\nAnd what they've said before.",
+    peopleStory: "Explore public calls, areas of focus, and the moments an investor got it right—or wrong. Choose whom to follow with a little more context.",
+    peopleNote: "Get to know the track record.", history: "Past opinions", evidence: "Traceable sources", expertise: "Focus", semiconductor: "Semiconductors", consumer: "Consumer tech", researcher: "Researcher A", researcherB: "Researcher B", researcherC: "Researcher C", profile: "Smart Account", follow: "Following",
+    yoursKicker: "03 / BRING BACK WHAT MATTERS TO YOU", yoursTitle: "Your interests.\nYour starting point.",
+    yoursStory: "A new view on an asset you follow. A fresh perspective from an investor you trust. Together, without hopping between platforms.",
+    assetTab: "Assets I follow", peopleTab: "People I follow", newOpinion: "New opinion", original: "Original post", source: "Public source", today: "Today", following: "Following", all: "All activity", assetActivity: "Around the assets you follow", peopleActivity: "From the investors you follow",
+    demoOpinion1: "Beyond demand, watch delivery capacity.", demoOpinion2: "A new product cycle still needs to deliver.", demoOpinion3: "The quality of growth matters more than speed.", demoPosition1: "Watching delivery", demoPosition2: "Watching the product cycle", demoPosition3: "Watching cash flow", updatedView: "updated a view", firstView: "shared a new view", originalLabel: "Illustrative opinions, not investment advice",
+    proofKicker: "04 / KEEP THE SOURCE IN SIGHT", proofTitle: "Their perspective.\nYour own judgment.",
+    proofStory: "bSmart brings public opinions together, with the author, date and source attached. Explore the reasoning before you act. The decision stays yours.",
+    proofSteps: ["Find a perspective", "Read the source", "Make your own call"], proofQuote: "Their opinions.\nYour decisions.", proofTag: "Every perspective starts somewhere.",
+    ctaKicker: "A BETTER START TO YOUR NEXT DECISION", ctaTitle: "Less noise.\nMore perspective.", ctaStory: "bSmart is in private beta. Leave your email to join the waitlist.", email: "Email address", emailPlaceholder: "Your email address", submitting: "Submitting…", successTitle: "You're on the waitlist.", successBody: "We'll email you when a beta spot is available.", another: "Use a different email", consent: "I agree to receive bSmart beta invitations and have read the", privacy: "Privacy notice", consentRequired: "Please read the privacy notice and agree to beta invitations.", invalidEmail: "Please enter a valid email address.", unavailable: "The waitlist is temporarily unavailable. Please try again later.", networkError: "We couldn't submit your email. Check your connection and try again.", tooMany: "Too many attempts. Please try again later.", retry: "Try again", privacyTitle: "Your email. Only for beta invitations.", privacyBody: "We collect your email, request date and page language to manage the beta waitlist and send invitations. The list is stored with Cloudflare. It is never displayed publicly or used for advertising. A hashed network identifier is stored briefly to prevent abuse. Joining does not guarantee a beta spot.", privacyDelete: "To delete your request or stop contact, email zfy3712z@gmail.com.", close: "Close", disclaimer: "Public opinions are for information only, not investment advice. Past performance does not indicate future results.", footer: "Stay curious. Think for yourself.", contact: "Contact us", backTop: "Back to top",
+  },
   meta: {
     title: "bSmart · Reddit US-stock sentiment intelligence",
     description:

@@ -2,15 +2,13 @@ import SwiftUI
 
 struct AppSettingsView: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var model: AppModel
-    @EnvironmentObject private var notifications: NotificationService
-    @EnvironmentObject private var notificationPreferences: NotificationPreferencesStore
     @EnvironmentObject private var language: AppLanguageStore
     @EnvironmentObject private var appearance: AppAppearanceStore
     @EnvironmentObject private var account: AccountAccessStore
-    @State private var isShowingAlertSettings = false
-    @State private var isConfirmingReset = false
-    @State private var isResetting = false
+    @EnvironmentObject private var deviceWallet: DeviceWalletStore
+    @EnvironmentObject private var notifications: NotificationService
+    @State private var confirmsDisableWalletAuthentication = false
+    @State private var isShowingOnboardingPreview = false
 
     var body: some View {
         NavigationStack {
@@ -28,12 +26,71 @@ struct AppSettingsView: View {
                                 if account.identity != nil {
                                     Text("Signed in".bSmartLocalized)
                                         .font(.subheadline).foregroundStyle(BSmartColor.brand)
+                                } else if account.isTestSession {
+                                    Text("Test login".bSmartLocalized)
+                                        .font(.subheadline).foregroundStyle(BSmartColor.brand)
                                 }
                                 Image(systemName: "chevron.right").font(.caption)
                                     .foregroundStyle(BSmartColor.tertiaryText)
                             }.foregroundStyle(BSmartColor.primaryText).frame(minHeight: 44)
                         }
                         .accessibilityIdentifier("settings.account")
+                        if account.isTestSession {
+                            Button { Task { await account.signOut() } } label: {
+                                AccountActionRow(title: "Exit test login",
+                                    symbol: "rectangle.portrait.and.arrow.right", showsChevron: false)
+                            }.buttonStyle(.plain)
+                                .accessibilityIdentifier("settings.test-signout")
+                        }
+                        NavigationLink { TradingWalletView() } label: {
+                            HStack(spacing: BSmartSpacing.medium) {
+                                Image(systemName: "wallet.bifold")
+                                    .foregroundStyle(BSmartColor.brand).frame(width: 24, height: 24)
+                                Text("Trading wallet".bSmartLocalized).font(.body.weight(.semibold))
+                                Spacer()
+                                Image(systemName: "chevron.right").font(.caption)
+                            }.foregroundStyle(BSmartColor.primaryText).frame(minHeight: 48)
+                        }.accessibilityIdentifier("settings.wallet")
+                        if case .verified(let wallet) = deviceWallet.state, wallet.accountID == account.identity?.id {
+                            NavigationLink { ArbitrumReceiveView(service: account) } label: {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    AccountActionRow(title: "Account address", symbol: "qrcode")
+                                    Text(wallet.address).font(.caption.monospaced())
+                                        .foregroundStyle(BSmartColor.secondaryText)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                        .accessibilityIdentifier("settings.wallet.address.full")
+                                }
+                            }.accessibilityIdentifier("settings.wallet.address")
+                        }
+                    }
+
+                    if account.identity != nil {
+                        settingsSection("Wallet security") {
+                            VStack(alignment: .leading, spacing: 12) {
+                                if case .verified(let wallet) = deviceWallet.state, wallet.provider == .privy {
+                                    Label("Account wallet".bSmartLocalized, systemImage: "checkmark.shield")
+                                        .foregroundStyle(BSmartColor.brand)
+                                } else {
+                                Toggle(isOn: Binding(get: { deviceWallet.userPresenceRequired }, set: { required in
+                                    if required { Task { await deviceWallet.setUserPresenceRequired(true) } }
+                                    else { confirmsDisableWalletAuthentication = true }
+                                })) {
+                                    Label("Use Face ID".bSmartLocalized, systemImage: "faceid")
+                                }.tint(BSmartColor.brand)
+                                    .disabled(deviceWallet.isBusy || !walletIsReady)
+                                    .accessibilityIdentifier("settings.wallet.face-id")
+                                }
+                                if deviceWallet.isBusy { ProgressView() }
+                                else if !walletIsReady {
+                                    Button("Unlock your bSmart wallet".bSmartLocalized) {
+                                        Task { await deviceWallet.prepare() }
+                                    }
+                                }
+                                if let error = deviceWallet.errorMessage {
+                                    Text(error).font(.caption).foregroundStyle(BSmartColor.bear)
+                                }
+                            }
+                        }
                     }
 
                     settingsSection("Language") {
@@ -58,81 +115,39 @@ struct AppSettingsView: View {
                         }
                     }
 
-                    settingsSection("Notifications") {
-                        settingsButton(
-                            title: "Alert preferences",
-                            detail: "Instant events, daily brief and quiet hours",
-                            symbol: "bell.badge"
-                        ) {
-                            isShowingAlertSettings = true
-                        }
-                        .accessibilityIdentifier("settings.notifications")
-                    }
-
-                    settingsSection("Data & privacy") {
-                        VStack(alignment: .leading, spacing: BSmartSpacing.medium) {
-                            BSmartDetailNavigationLink(id: "settings-intelligence-method") {
-                                IntelligenceMethodView(isUsingDemoData: model.isUsingDemoData)
-                            } label: {
-                                settingsRow(
-                                    title: "Data & methodology",
-                                    detail: "Sources, Score and evidence relationships",
-                                    symbol: "point.3.connected.trianglepath.dotted"
-                                )
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityIdentifier("settings.data-methodology")
-
-                            Divider().overlay(BSmartColor.line)
-
-                            BSmartDetailNavigationLink(id: "settings-risk-disclosure") {
-                                RiskDisclosureView()
-                            } label: {
-                                settingsRow(
-                                    title: "Risk disclosure",
-                                    detail: "Coverage, limitations and investment risk",
-                                    symbol: "exclamationmark.shield"
-                                )
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityIdentifier("settings.risk-disclosure")
-
-                            Divider().overlay(BSmartColor.line)
-
-                            Button(role: .destructive) {
-                                isConfirmingReset = true
-                            } label: {
-                                HStack(spacing: BSmartSpacing.medium) {
-                                    Image(systemName: "trash")
-                                        .frame(width: 24, height: 24)
-
-                                    VStack(alignment: .leading, spacing: BSmartSpacing.xSmall) {
-                                        Text("Reset local app data")
-                                            .font(.body.weight(.semibold))
-                                        Text("Remove this device's portfolio, follows and event activity")
-                                            .font(.caption)
-                                            .foregroundStyle(BSmartColor.secondaryText)
-                                    }
-
-                                    Spacer(minLength: BSmartSpacing.small)
+                    if NotificationService.isEnabled {
+                        settingsSection("Notifications") {
+                            VStack(alignment: .leading, spacing: BSmartSpacing.medium) {
+                                Toggle("Content notifications".bSmartLocalized, isOn: Binding(
+                                    get: { notifications.dataUpdatesEnabled },
+                                    set: { enabled in Task { await notifications.setDataUpdatesEnabled(enabled) } }
+                                ))
+                                .accessibilityIdentifier("settings.notifications.master")
+                                Divider().overlay(BSmartColor.line)
+                                Toggle("Followed authors".bSmartLocalized, isOn: Binding(
+                                    get: { notifications.notifyAuthors }, set: notifications.setNotifyAuthors
+                                ))
+                                .disabled(!notifications.dataUpdatesEnabled)
+                                .accessibilityIdentifier("settings.notifications.authors")
+                                Toggle("Followed tickers".bSmartLocalized, isOn: Binding(
+                                    get: { notifications.notifyTickers }, set: notifications.setNotifyTickers
+                                ))
+                                .disabled(!notifications.dataUpdatesEnabled)
+                                .accessibilityIdentifier("settings.notifications.tickers")
+                                Toggle("Open positions".bSmartLocalized, isOn: Binding(
+                                    get: { notifications.notifyHoldings }, set: notifications.setNotifyHoldings
+                                ))
+                                .disabled(!notifications.dataUpdatesEnabled)
+                                .accessibilityIdentifier("settings.notifications.holdings")
+                                if notifications.authorizationStatus == .denied {
+                                    Button("Open Settings".bSmartLocalized) { notifications.openSystemSettings() }
                                 }
-                                .contentShape(Rectangle())
+                                if notifications.dataUpdatesRegistrationFailed {
+                                    Text("Notification registration failed. We will retry when connected.".bSmartLocalized)
+                                        .font(.subheadline).foregroundStyle(BSmartColor.bear)
+                                }
                             }
-                            .buttonStyle(.plain)
-                            .foregroundStyle(BSmartColor.bear)
-                            .disabled(isResetting)
-                            .accessibilityIdentifier("settings.reset-local-data")
-
-                            Divider().overlay(BSmartColor.line)
-
-                            Label {
-                                Text("Your installation identity is retained. This action does not delete a server account.")
-                            } icon: {
-                                Image(systemName: "lock.shield")
-                                    .foregroundStyle(BSmartColor.brand)
-                            }
-                            .font(.caption)
-                            .foregroundStyle(BSmartColor.tertiaryText)
+                            .tint(BSmartColor.brand)
                         }
                     }
 
@@ -146,6 +161,20 @@ struct AppSettingsView: View {
                         }
                         .buttonStyle(.plain)
                         .accessibilityIdentifier("settings.send-feedback")
+                    }
+
+                    settingsSection("Help") {
+                        Button {
+                            isShowingOnboardingPreview = true
+                        } label: {
+                            AccountActionRow(
+                                title: "Replay onboarding",
+                                symbol: "play.rectangle",
+                                showsChevron: true
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("settings.onboarding-preview")
                     }
 
                     settingsSection("About") {
@@ -176,20 +205,20 @@ struct AppSettingsView: View {
                     Button("Done".bSmartLocalized) { dismiss() }
                 }
             }
-            .sheet(isPresented: $isShowingAlertSettings) {
-                NotificationSettingsView()
-            }
-            .confirmationDialog(
-                "Reset local app data?",
-                isPresented: $isConfirmingReset,
-                titleVisibility: .visible
-            ) {
-                Button("Reset local app data", role: .destructive) {
-                    resetLocalData()
+            .task { await notifications.refreshAuthorizationStatus() }
+            .confirmationDialog("Turn off wallet Face ID?".bSmartLocalized,
+                isPresented: $confirmsDisableWalletAuthentication, titleVisibility: .visible) {
+                Button("Turn off".bSmartLocalized, role: .destructive) {
+                    Task { await deviceWallet.setUserPresenceRequired(false) }
                 }
-                Button("Cancel", role: .cancel) {}
+                Button("Cancel".bSmartLocalized, role: .cancel) {}
             } message: {
-                Text("This removes your positions, watchlist, follows, event activity and alert preferences from this device.")
+                Text("Anyone using your unlocked device and signed-in account can authorize wallet operations without another identity check.".bSmartLocalized)
+            }
+            .fullScreenCover(isPresented: $isShowingOnboardingPreview) {
+                OnboardingView(isPreview: true) {
+                    isShowingOnboardingPreview = false
+                }
             }
         }
         .bSmartPage()
@@ -277,18 +306,6 @@ struct AppSettingsView: View {
         .accessibilityIdentifier("settings.appearance.\(option.rawValue)")
     }
 
-    private func settingsButton(
-        title: String,
-        detail: String,
-        symbol: String,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            settingsRow(title: title, detail: detail, symbol: symbol)
-        }
-        .buttonStyle(.plain)
-    }
-
     private func settingsRow(title: String, detail: String, symbol: String) -> some View {
         HStack(spacing: BSmartSpacing.medium) {
             Image(systemName: symbol)
@@ -316,13 +333,9 @@ struct AppSettingsView: View {
         AppBuildInfo.current.displayLabel
     }
 
-    private func resetLocalData() {
-        isResetting = true
-        Task {
-            await notifications.clearPendingLocalNotifications()
-            notificationPreferences.resetLocalPreferences()
-            await model.resetLocalAppData()
-            isResetting = false
-        }
+    private var walletIsReady: Bool {
+        if case .verified(let wallet) = deviceWallet.state { return wallet.accountID == account.identity?.id }
+        return false
     }
+
 }

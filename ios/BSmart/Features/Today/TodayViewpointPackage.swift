@@ -215,6 +215,7 @@ struct TodayViewpointPackageRail: View {
 }
 
 struct TodayViewpointPackageCard: View {
+    @Environment(\.colorScheme) private var colorScheme
     let package: TodayViewpointPackage
     let style: Int
     var width: CGFloat? = 344
@@ -270,8 +271,9 @@ struct TodayViewpointPackageCard: View {
         .clipShape(RoundedRectangle(cornerRadius: BSmartRadius.card, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: BSmartRadius.card, style: .continuous)
-                .stroke(foreground.opacity(0.16), lineWidth: 0.7)
+                .stroke(colorScheme == .light ? BSmartColor.line : foreground.opacity(0.16), lineWidth: 0.7)
         }
+        .shadow(color: BSmartColor.cardShadow, radius: 5, y: 2)
         .contentShape(RoundedRectangle(cornerRadius: BSmartRadius.card, style: .continuous))
     }
 

@@ -4,35 +4,39 @@ struct TodayInvestorDiscoveryModule: View {
     var compact = false
     @EnvironmentObject private var model: AppModel
     @Environment(\.scenePhase) private var scenePhase
-    @State private var sector: String?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Namespace private var portraitTransition
+    @State private var portraitSourceID: String?
     @State private var selectedID: String?
-    @State private var showsDirectory = false
     @State private var profileSession: TodayInvestorDiscoverySession?
     @State private var discovery = TodayInvestorDiscovery(accounts: [])
 
     private var candidates: [TodayInvestorDiscovery.Investor] {
-        TodayInvestorPool.arranged(discovery.candidates(sector: sector))
+        TodayInvestorPool.arranged(discovery.investors)
     }
     private var activeSelection: TodayInvestorDiscovery.Investor? {
         TodayInvestorDiscovery.selected(selectedID ?? TodayInvestorPool.preferredID, in: candidates)
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
             controls
-            sectors
             if let investor = activeSelection {
                 TodayInvestorDiscoveryPeople(
-                    investors: candidates, selectedID: investor.id, compact: compact
+                    investors: candidates, selectedID: investor.id, compact: compact,
+                    transition: portraitTransition
                 ) {
                     selectedID = $0.id
+                } onOpen: { tapped in
+                    portraitSourceID = tapped.id
+                    profileSession = .init(investors: candidates, selectedID: tapped.id)
                 }
-                .id(sector)
                 TodayInvestorDiscoveryFocus(investor: investor, loadsEvidence: true) {
+                    portraitSourceID = nil
                     profileSession = .init(investors: candidates, selectedID: investor.id)
                 }
             } else if model.isLoading {
-                ProgressView().frame(maxWidth: .infinity, minHeight: 240)
+                BSmartSkeletonRows(style: .profile, count: 1)
             } else {
                 ContentUnavailableView("No ranked investors available", systemImage: "person.2.slash")
                     .frame(minHeight: 240)
@@ -45,61 +49,38 @@ struct TodayInvestorDiscoveryModule: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { rebuild() }
         }
-        .sheet(isPresented: $showsDirectory) {
-            TodayInvestorDiscoveryDirectory(discovery: discovery, sector: sector)
-        }
         .fullScreenCover(item: $profileSession) { session in
             TodayInvestorProfileBrowser(session: session)
+                .bSmartZoomNavigationTransition(sourceID: portraitSourceID ?? "",
+                    in: portraitTransition, enabled: portraitSourceID != nil && !reduceMotion)
         }
     }
 
     private var controls: some View {
         HStack(spacing: 8) {
-            TodayHomeSectionHeading(title: "Smart investors", symbol: "person.2.fill",
-                                    accent: BSmartColor.brand, identifier: "discovery.heading")
-            Spacer(minLength: 0)
-            Text("Top 25%")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(BSmartColor.brand)
-                .accessibilityLabel("Platform Top 25%".bSmartLocalized)
-            Button { showsDirectory = true } label: {
-                Image(systemName: "magnifyingglass").font(.body.weight(.medium))
-                    .frame(width: 44, height: 44)
+            BSmartDetailNavigationLink(id: "today-investor-directory") {
+                SmartHubView()
+            } label: {
+                HStack(spacing: 8) {
+                    TodayHomeSectionHeading(title: "Smart investors", identifier: "discovery.heading")
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(BSmartColor.brand)
+                        .frame(width: 28, height: 28)
+                        .background(BSmartColor.brand.opacity(0.1), in: Circle())
+                        .accessibilityHidden(true)
+                }
+                .frame(minHeight: 44, alignment: .leading)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .foregroundStyle(BSmartColor.secondaryText)
-            .accessibilityLabel("Search investors".bSmartLocalized)
-            .accessibilityIdentifier("discovery.search")
+            .accessibilityIdentifier("discovery.open-directory")
+            Spacer(minLength: 0)
+            InvestorEducationEntry()
         }
-    }
-
-    private var sectors: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 18) {
-                sectorButton(nil)
-                ForEach(discovery.sectors, id: \.self) { sectorButton($0) }
-            }
-        }
-        .accessibilityIdentifier("discovery.sectors")
-    }
-
-    private func sectorButton(_ value: String?) -> some View {
-        Button { sector = value } label: {
-            Text((value ?? "All sectors").bSmartLocalized)
-                .font(.caption.weight(sector == value ? .bold : .medium))
-                .foregroundStyle(sector == value ? BSmartColor.brand : BSmartColor.secondaryText)
-                .frame(minHeight: 44)
-                .overlay(alignment: .bottom) {
-                    if sector == value { Rectangle().fill(BSmartColor.brand).frame(height: 2) }
-                }
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(sector == value ? .isSelected : [])
-        .accessibilityIdentifier("discovery.sector.\(value ?? "all")")
     }
 
     private func rebuild() {
         discovery = TodayInvestorDiscovery(accounts: model.smartAccounts)
-        if let sector, !discovery.sectors.contains(sector) { self.sector = nil }
     }
 }

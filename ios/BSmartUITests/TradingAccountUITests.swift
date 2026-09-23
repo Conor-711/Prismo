@@ -16,7 +16,10 @@ final class TradingAccountUITests: XCTestCase {
                                "--ui-appearance", appearance,
                                "-AppleLanguages", "(\(language))", "-AppleLocale", language == "en" ? "en_US" : "zh_CN"]
         app.launch()
-        let settings = app.buttons["today.settings"]
+        let profile = app.buttons["app.tab.portfolio"]
+        XCTAssertTrue(profile.waitForExistence(timeout: 10))
+        profile.tap()
+        let settings = app.buttons["portfolio.settings"]
         XCTAssertTrue(settings.waitForExistence(timeout: 10))
         XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "hittable == true"), object: settings

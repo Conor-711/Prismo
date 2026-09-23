@@ -9,6 +9,7 @@ final class BSmartAppearanceContrastTests: XCTestCase {
         ("page", BSmartColor.ink), ("canvas", BSmartColor.canvas),
         ("card", BSmartColor.surface), ("elevated", BSmartColor.elevated),
         ("recessed", BSmartColor.recessed), ("chart", BSmartColor.chartSurface),
+        ("raised", BSmartColor.raisedSurface), ("selected control", BSmartColor.selectedControlSurface),
     ]
     private let accents: [(String, Color)] = [
         ("brand", BSmartColor.brand), ("bull", BSmartColor.bull),
@@ -81,6 +82,32 @@ final class BSmartAppearanceContrastTests: XCTestCase {
         assertContrast(BSmartColor.tabInactiveForeground, on: BSmartColor.tabBarBottom,
                        minimum: 4.5, name: "inactive navigation")
         assertContrast(BSmartColor.line, on: BSmartColor.surface, minimum: 1.5, name: "card boundary")
+    }
+
+    func testLightInputAndDisabledControlStatesStayLegible() {
+        assertContrast(BSmartColor.tertiaryText, on: BSmartColor.disabledControl,
+                       minimum: 4.5, name: "disabled action label")
+        assertContrast(BSmartColor.inputOutline, on: BSmartColor.surface,
+                       minimum: 3, name: "input boundary")
+        assertContrast(BSmartColor.brand, on: BSmartColor.surface,
+                       minimum: 3, name: "focused input boundary")
+        assertContrast(BSmartColor.softDivider, on: BSmartColor.surface,
+                       minimum: 1.5, name: "search and profile dividers")
+        assertContrast(BSmartColor.tradeBarText, on: BSmartColor.tradeBarSurface,
+                       minimum: 7, name: "trade footer text")
+        for fill in [BSmartColor.tabSelectionTop, BSmartColor.tabSelectionBottom] {
+            assertContrast(BSmartColor.tabSelectedForeground, on: fill,
+                           minimum: 4.5, name: "selected navigation")
+        }
+    }
+
+    func testLightSurfacesHaveDistinctRolesWithoutAddingDarkCardShadows() {
+        let card = rgba(BSmartColor.surface), inset = rgba(BSmartColor.elevated)
+        XCTAssertGreaterThan(card.contrast(with: inset), 1.1)
+        XCTAssertEqual(rgba(BSmartColor.cardShadow, style: .dark).a, 0)
+        XCTAssertEqual(rgba(BSmartColor.inputOutline, style: .dark).a, 0)
+        XCTAssertEqual(rgba(BSmartColor.tradeBarSurface, style: .dark).a, 0.82, accuracy: 0.001)
+        XCTAssertEqual(rgba(BSmartColor.tradeBarSurface).a, 1)
     }
 
     func testDarkPaletteRemainsUnchanged() {

@@ -1,0 +1,402 @@
+openapi: 3.1.0
+info:
+  title: bSmart Supabase Trade Feed
+  version: 1.0.0
+servers:
+  - url: https://dzyitinagewdfkzjkuiz.supabase.co/functions/v1
+security:
+  - supabaseUser: []
+    publishableKey: []
+paths:
+  /bsmart-feed/orders/{cloid}/activity:
+    get:
+      operationId: nativeOwnTradeActivity
+      description: Owner-only independently verified social trade, including its original opinion quote.
+      parameters:
+        - {name: cloid, in: path, required: true, schema: {type: string, pattern: '^0x[0-9a-f]{32}$'}}
+      responses:
+        '200':
+          description: Verified event for the authenticated owner.
+          content:
+            application/json:
+              schema: {$ref: './bsmart-v1.yaml#/components/schemas/TradeFeedItem'}
+        '401': {description: Native sign-in required.}
+        '409': {description: Own verified event is not available yet; no order is resent.}
+        '503': {description: Feed unavailable.}
+  /bsmart-feed/trades/{id}/thesis:
+    put:
+      operationId: publishNativeTradeThesis
+      description: One immutable original theory per owned verified social opinion trade. Same-text retry is idempotent. Quoted opinion comes from server registration only.
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [body]
+              properties:
+                body: {type: string, minLength: 1, maxLength: 1000}
+      responses:
+        '200':
+          description: Published thesis, including existing result after retry.
+          content:
+            application/json:
+              schema: {$ref: './bsmart-v1.yaml#/components/schemas/TradeThesis'}
+        '401': {description: Native sign-in required.}
+        '404': {description: No owned trade.}
+        '409': {description: Pending verification or different theory already exists.}
+        '422': {description: Invalid text or ineligible source.}
+        '503': {description: Publication unavailable; retry preserves idempotency.}
+  /bsmart-feed/theses/{id}/like:
+    put:
+      operationId: setNativeTradeThesisLike
+      description: Idempotent desired like state per authenticated user. Authors cannot like their own theory.
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [liked]
+              properties:
+                liked: {type: boolean}
+      responses:
+        '200':
+          description: Authoritative count and viewer state.
+          content:
+            application/json:
+              schema: {$ref: './bsmart-v1.yaml#/components/schemas/TradeThesis'}
+        '401': {description: Native sign-in required.}
+        '404': {description: Thesis unavailable.}
+        '422': {description: Invalid state or self-like.}
+        '503': {description: Like state unavailable.}
+  /bsmart-feed/subject-stats:
+    get:
+      operationId: nativeSubjectTradeStats
+      description: All-time distinct user/source pairs, not unique users across an author. Latest verified fill determines direction. Money means attributed user trades, never the source account's own trades.
+      parameters:
+        - {name: kind, in: query, required: true, schema: {type: string, enum: [account, money]}}
+        - {name: id, in: query, required: true, schema: {type: string, minLength: 1, maxLength: 256}}
+        - {name: platform, in: query, required: true, schema: {type: string, minLength: 1, maxLength: 32}}
+      responses:
+        '200':
+          description: Aggregate of server-bound, verified executions only.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SubjectTradeStats'}
+        '401': {description: Verified native account required.}
+        '422': {description: Invalid subject scope.}
+        '503': {description: Statistics unavailable; not a zero count.}
+  /bsmart-feed/reconcile:
+    post:
+      operationId: scheduledFeedReconciliation
+      x-internal: true
+      security:
+        - workerToken: []
+      description: Vault-authenticated scheduler only, not an app endpoint. Checks up to five leased orders without placing trades.
+      responses:
+        '200':
+          description: Verification batch completed and private heartbeat saved.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [checked, verified, failed]
+                properties:
+                  checked: {type: integer, minimum: 0, maximum: 5}
+                  verified: {type: integer, minimum: 0, maximum: 5}
+                  failed: {type: integer, minimum: 0, maximum: 5}
+        '401': {description: Invalid scheduler authorization; user JWT is not accepted.}
+        '503': {description: Queue or heartbeat unavailable.}
+  /bsmart-feed:
+    get:
+      operationId: nativeTradeFeed
+      description: Plain trades retain top-quartile eligibility; published social trade theses appear regardless of source rank. Chronological by execution time.
+      parameters:
+        - {name: offset, in: query, schema: {type: integer, minimum: 0, maximum: 10000, default: 0}}
+        - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 30, default: 10}}
+        - {name: profileId, in: query, schema: {type: string, format: uuid}}
+        - {name: includeTheses, in: query, description: Opt into viewer-aware theories. Defaults false to preserve older clients with top-quartile validation., schema: {type: boolean, default: false}}
+        - {name: mine, in: query, description: All own verified social trades for later thesis publication. Cannot combine with profileId., schema: {type: boolean, default: false}}
+      responses:
+        '200':
+          description: Independently verified eligible mainnet executions with public platform profiles.
+          content:
+            application/json:
+              schema: {$ref: './bsmart-v1.yaml#/components/schemas/TradeFeedPage'}
+        '401': {description: Verified Supabase login required.}
+        '503': {description: Feed source unavailable, not zero trades.}
+  /bsmart-feed/profiles/{id}:
+    get:
+      operationId: nativePublicTrader
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: Public identity, no auth account ID or wallet.
+          content:
+            application/json:
+              schema: {$ref: './bsmart-v1.yaml#/components/schemas/FeedPublicProfile'}
+        '404': {description: Profile deleted or missing.}
+  /bsmart-feed/profiles/{id}/portfolio:
+    get:
+      operationId: nativePublicTraderPortfolio
+      description: Read-only exchange portfolio for the registered on-chain wallet of this public profile. No wallet or account ID accepted from the caller.
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: Hyperliquid perps equity history, separate spot USDC and current perps positions; not_connected when no registered wallet.
+          content:
+            application/json:
+              schema: {$ref: './bsmart-v1.yaml#/components/schemas/FeedPublicPortfolio'}
+        '401': {description: Verified Supabase login required.}
+        '404': {description: Public profile not found.}
+        '503': {description: Account mapping or exchange read unavailable; never treated as zero assets.}
+  /bsmart-feed/sharing:
+    get:
+      operationId: nativeFeedSharing
+      deprecated: true
+      responses:
+        '200':
+          description: Compatibility response; activity is permanently public.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Sharing'}
+    put:
+      operationId: updateNativeFeedSharing
+      deprecated: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/SharingInput'}
+      responses:
+        '200':
+          description: Always-public policy and authoritative profile; legacy flags cannot hide activity.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Sharing'}
+  /bsmart-feed/orders:
+    post:
+      operationId: registerOpinionBeforeSubmission
+      description: Binds source only; cannot place or execute any order. Immutable by cloid.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/Attribution'}
+      responses:
+        '200':
+          description: Registration receipt, NOT a fill.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, cloid]
+                properties:
+                  id: {type: string, format: uuid}
+                  cloid: {type: string, pattern: '^0x[0-9a-f]{32}$'}
+        '409':
+          description: Wallet missing, existing exchange order or conflicting attribution.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AttributionError'}
+        '422':
+          description: Missing source (opinion_unavailable) or invalid/expired intent (invalid_input).
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AttributionError'}
+        '429':
+          description: Too many registration requests; no order is submitted by this service.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AttributionError'}
+        '503':
+          description: Catalog or registration unavailable; do not submit linked order.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AttributionError'}
+  /bsmart-feed/sync:
+    post:
+      operationId: reconcileNativeOpinionOrders
+      description: Read-only mainnet queries for this user's pending registered order. Never resends.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                cloid: {type: string, pattern: '^0x[0-9a-f]{32}$'}
+      responses:
+        '200':
+          description: Bounded reconciliation result; failed checks do not count as trades.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [checked, verified, failed]
+                properties:
+                  checked: {type: integer, minimum: 0, maximum: 1}
+                  verified: {type: integer, minimum: 0, maximum: 1}
+                  failed: {type: integer, minimum: 0, maximum: 1}
+  /bsmart-feed/rankings:
+    get:
+      operationId: nativeDiscoveryRankings
+      description: Top-quartile social opinions or their authors, aggregated over verified opening orders. Traders are distinct accounts across the entire group; volume sums every eligible order. Window uses last fill time. Investor identity is platform plus authorId. Anonymous users contribute counts, not identities. Incomplete historical amounts are null and excluded from volume sorting. Ties use latest fill then group ID.
+      parameters:
+        - {name: kind, in: query, required: true, schema: {type: string, enum: [opinions, investors]}}
+        - {name: sort, in: query, required: true, schema: {type: string, enum: [traders, volume]}}
+        - {name: window, in: query, required: true, schema: {type: string, enum: [1d, 7d, 30d, all]}}
+        - {name: asOf, in: query, description: Server-returned window anchor for pagination, schema: {type: string, format: date-time}}
+        - {name: offset, in: query, schema: {type: integer, minimum: 0, maximum: 10000, default: 0}}
+        - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 30, default: 10}}
+      responses:
+        '200':
+          description: Ranked aggregates with a fixed time-window anchor. Late reconciliation can still change historical results.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DiscoveryRankingsPage'}
+        '401': {description: Verified native account required.}
+        '422': {description: Invalid filters or pagination.}
+        '503': {description: Statistics unavailable.}
+  /bsmart-feed/popular:
+    get:
+      operationId: nativePopularOpinions
+      description: Top-quartile author opinions ranked by distinct verified traders in the last seven days. Includes anonymous counts, never private identity or amounts. Ties use latest fill then opinion ID.
+      parameters:
+        - {name: offset, in: query, schema: {type: integer, minimum: 0, default: 0}}
+        - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 30, default: 10}}
+      responses:
+        '200':
+          description: Server-ranked opinion aggregates, not a sort of a single Feed page.
+          content:
+            application/json:
+              schema: {$ref: './bsmart-v1.yaml#/components/schemas/PopularOpinionsPage'}
+        '401': {description: Verified native account required.}
+        '503': {description: Statistics unavailable, never replaced by zero counts.}
+  /bsmart-feed/opinions/{id}/traders:
+    get:
+      operationId: nativeOpinionTraders
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: offset, in: query, schema: {type: integer, minimum: 0, default: 0}}
+        - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 30, default: 30}}
+      responses:
+        '200':
+          description: One count per user, latest fill direction/time, private identities excluded.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/OpinionTradersPage'}
+components:
+  securitySchemes:
+    workerToken: {type: http, scheme: bearer, bearerFormat: Vault-generated 64-character hexadecimal token}
+    supabaseUser: {type: http, scheme: bearer, bearerFormat: JWT}
+    publishableKey: {type: apiKey, in: header, name: apikey}
+  schemas:
+    DiscoveryRankingsPage:
+      type: object
+      required: [kind, sort, window, asOf, items, nextOffset]
+      properties:
+        kind: {type: string, enum: [opinions, investors]}
+        sort: {type: string, enum: [traders, volume]}
+        window: {type: string, enum: [1d, 7d, 30d, all]}
+        asOf: {type: string, format: date-time}
+        nextOffset: {type: [integer, 'null']}
+        items:
+          type: array
+          maxItems: 30
+          items:
+            type: object
+            required: [id, opinion, totalTraders, totalNotionalUSD, opinionCount, longTraders, shortTraders, lastTradedAt]
+            properties:
+              id: {type: string}
+              opinion: {$ref: './bsmart-v1.yaml#/components/schemas/SmartAccountUpdate'}
+              totalTraders: {type: integer, minimum: 1}
+              totalNotionalUSD: {type: [string, 'null'], description: Exact positive decimal USD notional; null if any amount is unknown.}
+              opinionCount: {type: integer, minimum: 1}
+              longTraders: {type: integer, minimum: 0}
+              shortTraders: {type: integer, minimum: 0}
+              lastTradedAt: {type: string, format: date-time}
+    SubjectTradeStats:
+      type: object
+      required: [kind, subjectId, platform, totalTrades, longTrades, shortTrades, sourceCount]
+      properties:
+        kind: {type: string, enum: [account, money]}
+        subjectId: {type: string}
+        platform: {type: string}
+        totalTrades: {type: integer, minimum: 0}
+        longTrades: {type: integer, minimum: 0}
+        shortTrades: {type: integer, minimum: 0}
+        sourceCount: {type: integer, minimum: 0}
+    OpinionTradersPage:
+      type: object
+      required: [totalTraders, longTraders, shortTraders, publicTraders, traders, nextOffset]
+      properties:
+        totalTraders: {type: integer, minimum: 0}
+        longTraders: {type: integer, minimum: 0, description: All-time distinct people whose latest fill is long, including private people.}
+        shortTraders: {type: integer, minimum: 0, description: All-time distinct people whose latest fill is short. Sum equals totalTraders.}
+        totalNotionalUSD: {type: [string, 'null'], pattern: '^[0-9]+(\.[0-9]+)?$', description: All-time sum of verified filled notional for this opinion, including repeat orders and private people. Null only when historical executions lack valid notional.}
+        publicTraders: {type: integer, minimum: 0}
+        nextOffset: {type: [integer, 'null'], minimum: 0}
+        traders:
+          type: array
+          items:
+            type: object
+            required: [id, nickname, avatarURL, side, tradedAt]
+            properties:
+              id: {type: string, format: uuid}
+              nickname: {type: string, minLength: 1, maxLength: 28}
+              handle: {type: [string, 'null'], pattern: '^[a-z][a-z0-9_]{2,23}$'}
+              avatarURL: {type: [string, 'null'], format: uri}
+              side: {type: string, enum: [long, short]}
+              tradedAt: {type: string, format: date-time}
+    SharingInput:
+      type: object
+      additionalProperties: false
+      required: [visible, feedVisible]
+      properties:
+        nickname: {type: string, deprecated: true, description: Legacy input ignored. Edit identity via bsmart-profile.}
+        visible: {type: boolean, default: false}
+        feedVisible: {type: boolean, default: false, description: Requires visible=true.}
+        useProviderAvatar: {type: boolean, deprecated: true, description: Legacy input ignored.}
+    Sharing:
+      type: object
+      required: [nickname, avatarURL, visible, feedVisible, useProviderAvatar]
+      properties:
+        nickname: {type: string, maxLength: 28}
+        handle: {type: [string, 'null'], pattern: '^[a-z][a-z0-9_]{2,23}$'}
+        avatarURL: {type: [string, 'null'], format: uri}
+        visible: {type: boolean}
+        feedVisible: {type: boolean}
+        useProviderAvatar: {type: boolean}
+    AttributionError:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          enum: [opinion_unavailable, invalid_input, wallet_required, existing_order, attribution_conflict, rate_limit, feed_unavailable]
+    Attribution:
+      type: object
+      additionalProperties: false
+      required: [opinionId, authorId, ticker, cloid, coin, side, size, limitPrice, nonce, expiresAfter]
+      properties:
+        opinionId: {type: string, format: uuid}
+        authorId: {type: string, minLength: 1, maxLength: 256}
+        ticker: {type: string}
+        cloid: {type: string, pattern: '^0x[0-9a-f]{32}$'}
+        coin: {type: string}
+        side: {type: string, enum: [buy, sell]}
+        size: {type: string, pattern: '^\d+(\.\d+)?$'}
+        limitPrice: {type: string, pattern: '^\d+(\.\d+)?$'}
+        nonce: {type: integer, minimum: 1}
+        expiresAfter: {type: integer, minimum: 1}

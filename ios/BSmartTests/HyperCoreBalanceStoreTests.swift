@@ -3,6 +3,24 @@ import XCTest
 
 @MainActor
 final class HyperCoreBalanceStoreTests: XCTestCase {
+    func testReadOnlyBalanceIsRetainedOnlyDuringCurrentAccountRefresh() throws {
+        let snapshot = try CoreBalanceFixture.snapshot()
+        let wallet = CoreBalanceFixture.wallet
+        let now = snapshot.checkedAt.addingTimeInterval(30)
+        XCTAssertNotNil(HyperCoreBalanceView.snapshotWhileRefreshing(
+            snapshot, wallet: wallet, accountMatches: true, isLoading: true, now: now))
+        XCTAssertNil(HyperCoreBalanceView.snapshotWhileRefreshing(
+            snapshot, wallet: wallet, accountMatches: false, isLoading: true, now: now))
+        XCTAssertNil(HyperCoreBalanceView.snapshotWhileRefreshing(
+            snapshot, wallet: wallet, accountMatches: true, isLoading: false, now: now))
+        XCTAssertNil(HyperCoreBalanceView.snapshotWhileRefreshing(
+            snapshot, wallet: wallet, accountMatches: true, isLoading: true,
+            now: snapshot.checkedAt.addingTimeInterval(45)))
+        let other = DeviceWalletSummary(accountID: UUID(), address: wallet.address, recoveryVerified: true)
+        XCTAssertNil(HyperCoreBalanceView.snapshotWhileRefreshing(
+            snapshot, wallet: other, accountMatches: true, isLoading: true, now: now))
+    }
+
     func testRegistrationMustMatchBeforeSendingOwnerToPublicAPI() async {
         for variant in 0...2 {
             let service = HistoryAccountStub(wallet: CoreBalanceFixture.wallet)

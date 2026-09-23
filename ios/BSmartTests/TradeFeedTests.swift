@@ -3,6 +3,24 @@ import XCTest
 
 @MainActor
 final class TradeFeedTests: XCTestCase {
+    func testPublicPortfolioDecodesVenueValuesAndRejectsMalformedPosition() throws {
+        let payload = #"""
+        {"status":"ready","perpsEquityUSD":"35.50","equityAsOf":1790000000000,"spotUSDC":"7.25",
+         "positions":[{"coin":"xyz:NVDA","side":"short","size":"-2","valueUSD":"240",
+           "entryPriceUSD":"126","unrealizedPnLUSD":"-12","returnOnEquity":"-0.05","leverage":5}],
+         "history":{"day":[{"at":1789990000000,"valueUSD":"30"},{"at":1790000000000,"valueUSD":"35.50"}],
+                    "week":[],"month":[]}}
+        """#
+        let portfolio = try JSONDecoder().decode(FeedPublicPortfolio.self, from: Data(payload.utf8))
+        try portfolio.validate()
+        XCTAssertEqual(portfolio.positions.first?.symbol, "NVDA")
+        XCTAssertEqual(portfolio.positions.first?.side, .short)
+        XCTAssertEqual(portfolio.history.day.count, 2)
+        let malformed = payload.replacingOccurrences(of: "\"valueUSD\":\"240\"", with: "\"valueUSD\":\"NaN\"")
+        let bad = try JSONDecoder().decode(FeedPublicPortfolio.self, from: Data(malformed.utf8))
+        XCTAssertThrowsError(try bad.validate())
+    }
+
     func testExplicitDemoHasSixMarketsAndLocalProfilePagination() throws {
         let demo = try TradeFeedDemoData.load()
         XCTAssertEqual(demo.items.count, 6)
@@ -36,6 +54,11 @@ final class TradeFeedTests: XCTestCase {
         XCTAssertEqual(FeedQuickTradeChoice.choices.map(\.id), ["short.100", "short.500", "long.500", "long.100"])
     }
 
+    func testDollarAmountDoesNotIncludeCountryPrefix() throws {
+        let label = try fixture().items[0].amountLabel
+        XCTAssertTrue(label.hasPrefix("$")); XCTAssertFalse(label.contains("US"))
+    }
+
     func testValidationRejectsBrokenPaginationAndChronology() throws {
         let page = try fixture()
         XCTAssertThrowsError(try TradeFeedPage(items: [page.items[0], page.items[0]], nextOffset: nil).validate(offset: 0))
@@ -66,6 +89,19 @@ final class TradeFeedTests: XCTestCase {
         }
         XCTAssertTrue(store.items.isEmpty)
         XCTAssertFalse(store.hasLoaded)
+    }
+
+    func testCancelledRefreshDoesNotEraseVerifiedFeedOrShowFailure() async throws {
+        let page = try fixture()
+        let store = TradeFeedStore()
+        await store.load(reset: true) { _ in page }
+        await store.load(reset: true) { _ in throw CancellationError() }
+        XCTAssertEqual(store.items.map(\.id), page.items.map(\.id))
+        XCTAssertTrue(store.hasLoaded)
+        XCTAssertFalse(store.failed)
+        XCTAssertFalse(store.loading)
+        store.clear()
+        XCTAssertTrue(store.items.isEmpty)
     }
 
     func testUnavailableIsNotZeroTrades() async {

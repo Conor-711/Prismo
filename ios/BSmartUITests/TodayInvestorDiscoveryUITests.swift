@@ -13,15 +13,14 @@ final class TodayInvestorDiscoveryUITests: XCTestCase {
         XCTAssertTrue(featured.label.contains("@aleabitoreddit"))
         XCTAssertEqual(featured.value as? String, "X · Top 15%")
         let avatars = people(app)
-        XCTAssertGreaterThanOrEqual(avatars.count, 5)
-        XCTAssertGreaterThanOrEqual(avatars.allElementsBoundByIndex.filter { $0.isHittable && $0.label.contains(", YouTube") }.count, 3)
-        XCTAssertGreaterThanOrEqual(avatars.allElementsBoundByIndex.filter { $0.isHittable && $0.label.contains(", Reddit") }.count, 1)
+        XCTAssertGreaterThanOrEqual(avatars.count, 3)
+        XCTAssertEqual(visiblePeople(app).count, 3)
         XCTAssertEqual(featured.frame.midX, app.scrollViews["discovery.pool"].frame.midX, accuracy: 2)
         capture(app, "Discovery - horizontal default")
         let original = selectedPerson(app)
         app.scrollViews["discovery.pool"].swipeLeft()
         XCTAssertNotEqual(selectedPerson(app), original)
-        XCTAssertTrue(people(app).allElementsBoundByIndex.contains { $0.isHittable && $0.label.contains(", Reddit") })
+        XCTAssertEqual(visiblePeople(app).count, 3)
         XCTAssertTrue(app.buttons["today.tab.portfolio"].isSelected)
         let forward = selectedPerson(app)
         app.scrollViews["discovery.pool"].swipeRight()
@@ -30,31 +29,36 @@ final class TodayInvestorDiscoveryUITests: XCTestCase {
         capture(app, "Discovery - people")
     }
 
-    func testSectorPersonSelectionAndProfileReturn() {
+    func testCarouselPortraitsOpenMatchingProfilesAndPreserveScrollPosition() {
         let app = launch()
-        let sector = app.buttons["discovery.sector.Semiconductors"]
-        let strip = app.scrollViews["discovery.sectors"]
-        for _ in 0..<6 { if sector.isHittable { break }; strip.swipeLeft() }
-        XCTAssertTrue(sector.isHittable)
-        sector.tap()
-        let avatar = people(app).element(boundBy: 1)
-        avatar.tap()
-        let id = avatar.identifier
-        XCTAssertTrue(app.buttons[id].isSelected)
-        XCTAssertTrue(sector.isSelected)
-        capture(app, "Discovery - sector focus")
-        app.buttons["discovery.profile"].tap()
-        XCTAssertTrue(app.buttons["detail.back"].waitForExistence(timeout: 5))
-        app.buttons["detail.back"].tap()
-        XCTAssertTrue(app.staticTexts["discovery.heading"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons[id].isSelected)
-        XCTAssertTrue(sector.isSelected)
+        XCTAssertFalse(app.scrollViews["discovery.sectors"].exists)
+        let original = selectedPerson(app)
+        let viewport = app.scrollViews["discovery.pool"].frame
+        let neighbor = visiblePeople(app).first { !$0.isSelected }!
+        for id in [original, neighbor.identifier] {
+            let avatar = app.buttons[id]
+            let originalFrame = avatar.frame
+            let authorName = avatar.label.components(separatedBy: ", ")[0]
+            avatar.tap()
+            let name = app.staticTexts["smart.account.portrait.name"]
+            XCTAssertTrue(name.waitForExistence(timeout: 5))
+            XCTAssertEqual(name.label, authorName)
+            XCTAssertTrue(app.staticTexts["smart.account.top-rank"].exists)
+            XCTAssertFalse(app.descendants(matching: .any)["app.tabbar"].isHittable)
+            app.buttons["detail.back"].tap()
+            XCTAssertTrue(avatar.waitForExistence(timeout: 5))
+            XCTAssertEqual(selectedPerson(app), original)
+            XCTAssertEqual(avatar.frame.midX, originalFrame.midX, accuracy: 2)
+        }
+        app.scrollViews["discovery.pool"].swipeLeft()
+        XCTAssertNotEqual(selectedPerson(app), original)
+        XCTAssertEqual(app.scrollViews["discovery.pool"].frame, viewport)
+        XCTAssertFalse(app.staticTexts["smart.account.portrait.name"].exists)
     }
 
     func testProfileBrowseFollowAndHomeSelectionSurviveReturn() {
         let app = launch()
         let selected = app.buttons["discovery.person.x:1940360837547565056"]
-        selected.tap()
         let id = selected.identifier
         let profile = app.buttons["discovery.profile"]
         let originalY = profile.frame.minY
@@ -83,7 +87,7 @@ final class TodayInvestorDiscoveryUITests: XCTestCase {
 
     func testSearchScopesProfileNavigationAndHasEmptyState() {
         let app = launch()
-        app.buttons["discovery.search"].tap()
+        app.buttons["discovery.open-directory"].tap()
         let search = app.searchFields.firstMatch
         XCTAssertTrue(search.waitForExistence(timeout: 5))
         search.tap()
@@ -101,15 +105,15 @@ final class TodayInvestorDiscoveryUITests: XCTestCase {
         search.typeText("zzzz-no-match")
         XCTAssertFalse(app.buttons["discovery.directory.profile"].exists)
         capture(app, "Discovery - empty search")
-        if !app.buttons["discovery.directory.close"].exists {
+        if !app.buttons["detail.back"].exists {
             // Native search temporarily replaces the directory toolbar while editing.
             let endSearch = app.navigationBars.buttons.matching(
                 NSPredicate(format: "label IN %@", ["Close", "Cancel"])).firstMatch
             XCTAssertTrue(endSearch.exists)
             endSearch.tap()
         }
-        XCTAssertTrue(app.buttons["discovery.directory.close"].waitForExistence(timeout: 5))
-        app.buttons["discovery.directory.close"].tap()
+        XCTAssertTrue(app.buttons["detail.back"].waitForExistence(timeout: 5))
+        app.buttons["detail.back"].tap()
         XCTAssertTrue(app.staticTexts["discovery.heading"].waitForExistence(timeout: 5))
     }
 
@@ -123,7 +127,7 @@ final class TodayInvestorDiscoveryUITests: XCTestCase {
 
     func testLightModeLargeTextKeepsDiscoveryAndNavigationAccessible() {
         let app = launch(appearance: "light", largeText: true)
-        for avatar in people(app).allElementsBoundByIndex where avatar.isHittable {
+        for avatar in visiblePeople(app) {
             XCTAssertGreaterThanOrEqual(avatar.frame.width, 44)
             XCTAssertGreaterThanOrEqual(avatar.frame.height, 44)
             XCTAssertGreaterThanOrEqual(avatar.frame.minX, 0)
@@ -157,48 +161,93 @@ final class TodayInvestorDiscoveryUITests: XCTestCase {
     func testFocusHighlightsRealWorkInsteadOfRawScore() {
         let app = launch(language: "zh-Hans")
         let focus = app.descendants(matching: .any)["discovery.focus.x:1940360837547565056"]
-        let highlight = focus.descendants(matching: .any)["discovery.highlight"]
-        XCTAssertTrue(highlight.waitForExistence(timeout: 5))
-        XCTAssertTrue(highlight.label.contains("AAOI"))
-        XCTAssertTrue(highlight.label.contains("65.2%"))
-        XCTAssertTrue(highlight.label.contains("股价"))
-        XCTAssertTrue(highlight.label.contains("2026/02/27"))
-        XCTAssertTrue(highlight.label.contains("53.69"))
-        XCTAssertTrue(highlight.label.contains("最早加分看多"))
+        let chart = focus.descendants(matching: .any).matching(identifier: "discovery.story.chart").firstMatch
+        XCTAssertTrue(chart.waitForExistence(timeout: 15))
+        XCTAssertTrue(focus.staticTexts["行情代表作"].exists)
+        XCTAssertGreaterThanOrEqual(app.buttons["discovery.story.open"].frame.height, 60)
+        XCTAssertFalse(focus.staticTexts["discovery.story.copy"].exists)
+        let firstPrice = focus.descendants(matching: .any).matching(identifier: "discovery.story.first-price").firstMatch
+        XCTAssertTrue(firstPrice.label.contains("2026.02.27"))
+        XCTAssertFalse(focus.descendants(matching: .any)["discovery.story.dates"].exists)
+        XCTAssertTrue(focus.descendants(matching: .any)["discovery.story.peak-gain"].exists)
+        let education = app.buttons["discovery.education"]
+        let heading = app.buttons["discovery.open-directory"]
+        XCTAssertTrue(education.exists)
+        XCTAssertLessThan(abs(education.frame.midY - heading.frame.midY), 8)
+        XCTAssertGreaterThanOrEqual(education.frame.minX, heading.frame.maxX)
+        XCTAssertTrue(firstPrice.label.contains("$54"))
+        XCTAssertFalse(firstPrice.label.contains("53.69"))
+        let peakPrice = focus.descendants(matching: .any)["discovery.story.peak-price"]
+        XCTAssertTrue(peakPrice.label.contains("$129"))
+        let nodes = focus.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'discovery.story.node.'"))
+        XCTAssertGreaterThan(nodes.count, 0)
+        XCTAssertLessThanOrEqual(nodes.count, 3)
+        for node in nodes.allElementsBoundByIndex {
+            XCTAssertGreaterThanOrEqual(node.frame.width, 44 - 0.001)
+            XCTAssertTrue(chart.frame.contains(node.frame))
+        }
         XCTAssertTrue(focus.staticTexts.matching(NSPredicate(format: "label CONTAINS 'Score'")).allElementsBoundByIndex.isEmpty)
-        XCTAssertFalse(focus.staticTexts["X #33"].exists)
-        XCTAssertLessThanOrEqual(focus.frame.height, 96)
-        capture(app, "Discovery - representative introduction")
-        highlight.tap()
-        let published = app.descendants(matching: .any)["discovery.receipt.published"]
-        XCTAssertTrue(published.waitForExistence(timeout: 5))
-        let date = app.descendants(matching: .any)["discovery.receipt.price-date"]
-        XCTAssertTrue(date.label.contains("2026-02-26"))
-        capture(app, "Discovery - first opinion receipt")
+        nodes.firstMatch.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["smart.account.evidence.detail"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.descendants(matching: .any)["discovery.story.detail"].exists)
+        XCTAssertFalse(app.descendants(matching: .any)["app.tabbar"].isHittable)
+        app.buttons["detail.back"].tap()
+        XCTAssertTrue(app.buttons["discovery.story.open"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any)["app.tabbar"].isHittable)
+        app.buttons["discovery.story.open"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["smart.account.evidence.detail"].waitForExistence(timeout: 5))
     }
 
     func testRepresentativeIntroFitsLargeTypeAndDirectoryHasWorkWithoutOpeningProfiles() {
         let app = launch(appearance: "light", largeText: true)
         let focus = app.descendants(matching: .any)["discovery.focus.x:1940360837547565056"]
-        let work = focus.buttons["discovery.highlight"]
-        XCTAssertTrue(work.label.contains("65.2%"))
-        XCTAssertTrue(work.label.contains("53.69"))
-        XCTAssertLessThanOrEqual(work.frame.maxX, focus.frame.maxX)
-        XCTAssertGreaterThanOrEqual(work.frame.minX, focus.frame.minX)
-        XCTAssertLessThanOrEqual(focus.frame.height, 100)
-        capture(app, "Discovery - large type representative")
-        app.buttons["discovery.search"].tap()
-        let search = app.searchFields.firstMatch
-        XCTAssertTrue(search.waitForExistence(timeout: 5))
-        search.tap()
-        search.typeText("Wey How")
-        let directoryWork = app.descendants(matching: .any)["discovery.focus.x:1707559719215489024"]
-            .buttons["discovery.highlight"]
-        XCTAssertTrue(directoryWork.waitForExistence(timeout: 5))
-        XCTAssertTrue(directoryWork.label.contains("MU"))
-        XCTAssertTrue(directoryWork.label.contains("2025/12/05"))
-        XCTAssertTrue(directoryWork.label.contains("237.22"))
-        capture(app, "Discovery - Wey How representative")
+        let chart = focus.descendants(matching: .any).matching(identifier: "discovery.story.chart").firstMatch
+        XCTAssertTrue(chart.waitForExistence(timeout: 15))
+        XCTAssertFalse(focus.staticTexts["discovery.story.copy"].exists)
+        XCTAssertLessThanOrEqual(chart.frame.maxX, focus.frame.maxX)
+        XCTAssertGreaterThanOrEqual(chart.frame.minX, focus.frame.minX)
+        app.scrollViews["discovery.pool"].swipeLeft()
+        XCTAssertFalse(app.buttons["discovery.person.x:1940360837547565056"].isSelected)
+        XCTAssertFalse(app.staticTexts["discovery.story.copy"].exists)
+    }
+
+    func testEducationEntrySharesHeadingRowAndOpensExistingEducation() {
+        let app = launch(language: "zh-Hans")
+        let entry = app.buttons["discovery.education"]
+        XCTAssertTrue(entry.waitForExistence(timeout: 15))
+        let title = app.staticTexts["discovery.education.title"]
+        XCTAssertTrue(title.exists)
+        XCTAssertLessThanOrEqual(entry.frame.width, 120.5)
+        XCTAssertLessThanOrEqual(title.frame.height, 16)
+        XCTAssertLessThanOrEqual(title.frame.maxX, entry.frame.maxX - 16)
+        let heading = app.buttons["discovery.open-directory"]
+        XCTAssertLessThan(abs(entry.frame.midY - heading.frame.midY), 8)
+        XCTAssertGreaterThanOrEqual(entry.frame.minX, heading.frame.maxX)
+        XCTAssertEqual(app.buttons.matching(identifier: "discovery.education").count, 1)
+        entry.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["education.page"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.descendants(matching: .any)["app.tabbar"].isHittable)
+        app.buttons["detail.back"].tap()
+        XCTAssertTrue(entry.waitForExistence(timeout: 5))
+    }
+
+    func testEnglishEducationButtonStaysCompactAndSingleLine() {
+        let app = launch(language: "en")
+        let entry = app.buttons["discovery.education"]
+        XCTAssertTrue(entry.waitForExistence(timeout: 10))
+        let title = app.staticTexts["discovery.education.title"]
+        XCTAssertTrue(title.exists)
+        XCTAssertEqual(title.label, "Ranking questions?")
+        XCTAssertGreaterThanOrEqual(title.frame.height, 14)
+        XCTAssertLessThanOrEqual(title.frame.height, 16)
+        XCTAssertLessThanOrEqual(entry.frame.width, 144.5)
+        XCTAssertLessThanOrEqual(title.frame.maxX, entry.frame.maxX - 16)
+        XCTAssertGreaterThanOrEqual(entry.frame.height, 44)
+        XCTAssertGreaterThanOrEqual(entry.frame.minX, app.buttons["discovery.open-directory"].frame.maxX)
+        let directory = app.buttons["discovery.open-directory"]
+        XCTAssertGreaterThanOrEqual(directory.frame.height, 44)
+        directory.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["smart.account.row.first"].waitForExistence(timeout: 5))
     }
 
     private func waitForMotion(_ seconds: Double) {
@@ -211,6 +260,13 @@ final class TodayInvestorDiscoveryUITests: XCTestCase {
         app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "discovery.person."))
     }
 
+    private func visiblePeople(_ app: XCUIApplication) -> [XCUIElement] {
+        let viewport = app.scrollViews["discovery.pool"].frame
+        return people(app).allElementsBoundByIndex.filter {
+            viewport.intersection($0.frame).width > $0.frame.width / 2
+        }
+    }
+
     private func selectedPerson(_ app: XCUIApplication) -> String {
         let selected = people(app).allElementsBoundByIndex.first { $0.isSelected }
         if selected == nil { print("Discovery state: \(app.state.rawValue)\n\(app.debugDescription)") }
@@ -220,6 +276,7 @@ final class TodayInvestorDiscoveryUITests: XCTestCase {
 
     private func assertTabsAboveDock(_ app: XCUIApplication) {
         let dock = app.descendants(matching: .any)["app.tabbar"]
+        XCTAssertTrue(dock.isHittable)
         for id in ["portfolio", "market", "investors"] {
             let tab = app.buttons["today.tab.\(id)"]
             XCTAssertTrue(tab.isHittable)

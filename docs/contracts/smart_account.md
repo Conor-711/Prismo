@@ -4,6 +4,13 @@ Smart Account 是 bSmart 用于发现和评估公开市场观点作者的产品�
 
 ## Canonical Terminology
 
+2026-09-13: author detail's `Trades inspired` is a separate real-execution
+aggregate, not a Score component. One user trading ten different opinions counts
+ten; repeat trades through one opinion count once. See `subject_trade_stats.md`.
+Representative-work reference-price/OHLC/helper captions are removed from the
+main profile; source data remains in interactive charts and full evidence, with
+methodology and limitations grouped inside the existing collapsed disclosure.
+
 - 产品、页面和功能统一称为 `Smart Account`。
 - 具体分数、分数列和筛选指标统一称为 `Score`。
 - 新增 UI、metadata、报告和文档不得使用旧产品名或用旧缩写代指 Score。
@@ -73,6 +80,12 @@ fixture JSON。
 | `priceEvidence` | 真实日线价格窗口；只为每位作者的代表证据附带，控制客户端负载 |
 
 历史收益是观点发布后的市场背景，不证明作者真实持仓、成交质量、主观意图或因果关系。详情页必须明确展示该限制。
+
+iOS 作者详情首屏展示代表作与真实照片/头像；下拉只改变图片裁切范围和标题透明度。
+代表作大数字使用 `settlement.tickerReturnPercent` 及对应入场/退出日期；缺少完整结算窗口时，
+可使用明确标注起止日期的 `priceEvidence.responsePercent`。不年化、不以最新高点覆盖结算结果、
+不将看空后的股价下跌翻转成账户盈利。最新观点标的只能称为观点/关注标的，不称为真实持仓。
+算法与历史证据入口仍须提供样本量、基准、版本和失误案例，不因突出代表作而隐藏反例。
 
 ## 前端筛选
 
@@ -168,7 +181,9 @@ iOS 作者详情的“代表作”口径独立于榜单头尾预览：只聚合 
 
 作者列表可选 `representativeWork` 是上述第一代表标的的轻量摘要，随列表返回，不要求首页或目录先加载每人的 K 线/全文。选取“累计加分最多标的 + 最早有效加分观点”，保留同一条观点的证据 ID、作者/平台、发布时间、方向、原结算窗口、股价变化和结算入场价，不包含新的评分。可选 `firstOpinion` 同时进入证据及摘要，描述这条最早加分观点及其发布前参考价；不能与另一条更晚、更高分观点的表现混用。查询覆盖全部已结算正贡献 Call，不限于之前导出的 10 个高分点；展示名称是“最早加分观点”，不声称作者一生首次判断，也不纳入只有提及而无有效加分的旧帖。
 
-`firstOpinion.price` 仅是发帖前已完成的最近日线收盘参考价（最多回看 7 日），保留 `priceDay`、`priceSource`、`priceBasis=last_completed_daily_close`，不是逐笔实时价或模拟成交价；美国东部时间 16:00 前不得采用当日收盘。未知价格为 null，不能用后续入场价或当前价回填。代表判断收益仍属于原结算窗口，不得描述为从首次收录日起的收益。只有日线数据时必须显示“参考价”。旧客户端/旧数据缺少可选字段时沿用详情按需加载，网络错误不能永久缓存为无代表作。
+`firstOpinion.price` 仅是发帖前已完成的最近日线收盘参考价（最多回看 7 日），保留 `priceDay`、`priceSource`、`priceBasis=last_completed_daily_close`，不是逐笔实时价或模拟成交价；美国东部时间 16:00 前不得采用当日收盘。未知价格为 null，不能用后续入场价或当前价回填。代表判断收益仍属于原结算窗口，不得描述为从首次收录日起的收益。首页故事卡按已确认文案使用“价格”，常规观点详情的折叠区保留日线口径说明，不声称作者实际买入。旧客户端/旧数据缺少可选字段时沿用详情按需加载，网络错误不能永久缓存为无代表作。
+
+首页代表作故事是上述数据的只读展示投影，不新增 Score 或回测。第一代表标的及首条有效加分观点不变；结合该作者该标的已有 `opinionMarkers` 与已加载观点，按原帖去重，依发布时间选择最早三条看多，不足三条全取。节点价格重新匹配发布前最近完成的日线，不取 marker 的结算入场价。当前证据并非作者全部历史，详情口径说明明确记录范围。“后来最高”只取首条观点所在交易日之后且已经收盘的数据，截止日在详情口径说明保留；最高涨幅以首条观点价格为分母，不等同原结算窗口涨幅，更不等同作者已实现收益。后续观点若发生在高点之后，叙事必须按真实顺序写出；单日 OHLC 无法推断当天先发帖还是先触及高点。
 
 作者人数指标与加权净强度必须并列输出，不能互相冒充：在当前平台组合、时间窗和标的内，每个正式 Top 10% 平台作者按 `source + investor_id` 去重，只保留其最新 actionable call 的方向。`author_bull_count` / `author_bear_count` 是一人一票计数，`author_net = bull - bear`，`author_consensus = author_net / (bull + bear)`；同一作者在窗口内重复发帖不得重复计数。跨平台作者实体未归并前，不得仅凭 handle 相似自动合并。该指标当前只展示，不改变既有 `highBullScore - highBearScore` 排名。
 

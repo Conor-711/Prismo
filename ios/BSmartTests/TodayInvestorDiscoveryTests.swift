@@ -91,6 +91,12 @@ final class TodayInvestorDiscoveryTests: XCTestCase {
         XCTAssertEqual(Set(arranged.prefix(5).map(\.account.platform)), ["X", "YouTube", "Reddit"])
         XCTAssertEqual(arranged[4].account.name, "u/Smart_Money_HQ")
         XCTAssertNotNil(arranged[4].account.avatarURL)
+        XCTAssertEqual(arranged[1].account.name, "u/alpha247365")
+        XCTAssertEqual(arranged[3].account.name.trimmingCharacters(in: .whitespaces), "Jeremy Lefebvre Clips")
+        XCTAssertEqual(TodayRepresentativeStoryBundle.bundled?.story(for: arranged[1].account)?.ticker, "TQQQ")
+        XCTAssertNotNil(TodayRepresentativeStoryBundle.bundled?.story(for: arranged[3].account))
+        XCTAssertEqual(Set(arranged), Set(projection(accounts).investors))
+        XCTAssertTrue(arranged.dropFirst(5).contains { $0.account.name == "Rey Jay's Trades" })
     }
 
     func testPortraitsPrecedePlaceholdersAndPreserveOrderWithinEachGroup() {

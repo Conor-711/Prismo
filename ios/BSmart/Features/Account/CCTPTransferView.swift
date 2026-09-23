@@ -10,7 +10,7 @@ struct CCTPTransferDestination: View {
                 ContentUnavailableView("Deposits are not open yet".bSmartLocalized, systemImage: "lock.shield")
             } else if case .verified(let wallet) = deviceWallet.state, wallet.canAuthorizeTransactions,
                       account.identity?.id == wallet.accountID {
-                CCTPTransferLoader(wallet: wallet, service: account) {
+                CCTPTransferLoader(wallet: wallet, service: account, signer: deviceWallet.signing) {
                     account.configuration.depositsEnabled && account.identity?.id == wallet.accountID
                         && deviceWallet.state == .verified(wallet)
                 }.id(wallet.accountID.uuidString + wallet.address)
@@ -29,6 +29,7 @@ struct CCTPTransferDestination: View {
 private struct CCTPTransferLoader: View {
     let wallet: DeviceWalletSummary
     let service: AccountWalletServicing
+    let signer: any FundingDeviceSigning
     let enabled: () -> Bool
     @State private var store: CCTPTransferStore?
     @State private var failed = false
@@ -47,7 +48,7 @@ private struct CCTPTransferLoader: View {
         .task(id: retryID) {
             do {
                 guard enabled() else { return }
-                let preparation = CCTPDepositPreparation(service: service, signer: KeychainDeviceWalletVault(),
+                let preparation = CCTPDepositPreparation(service: service, signer: signer,
                     journal: try FundingTransactionJournal(), isEnabled: enabled)
                 store = CCTPTransferStore(preparation: preparation, isEnabled: enabled)
                 failed = false
@@ -62,13 +63,13 @@ struct CCTPTransferView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var amount = ""
     @State private var operation: Task<Void, Never>?
+    @State private var now = Date()
     @FocusState private var amountFocused: Bool
 
     var body: some View {
         ScrollView {
-            TimelineView(.periodic(from: .now, by: 1)) { timeline in
                 VStack(alignment: .leading, spacing: 24) {
-                    CCTPTransferContent(display: store.display, isBusy: store.isBusy, now: timeline.date,
+                    CCTPTransferContent(display: store.display, isBusy: store.isBusy, now: now,
                         errorMessage: store.errorMessage, amount: $amount, amountFocused: $amountFocused,
                         primary: advance, cancel: cancel)
                     NavigationLink { FundingHistoryDestination() } label: {
@@ -79,7 +80,6 @@ struct CCTPTransferView: View {
                         }.font(.subheadline.weight(.semibold)).frame(minHeight: 48)
                     }.foregroundStyle(BSmartColor.brand).accessibilityIdentifier("deposit.transfer-history")
                 }.padding(24).frame(maxWidth: 520).frame(maxWidth: .infinity)
-            }
         }
         .scrollDismissesKeyboard(.interactively)
         .disabled(scenePhase != .active)
@@ -91,6 +91,16 @@ struct CCTPTransferView: View {
             }
         }
         .onDisappear { clear() }
+        .task { await store.restore(wallet: wallet) }
+        .task(id: store.display.phase) {
+            // No timer traverses the text input while the user types.
+            now = Date()
+            guard [.authorization, .networkFee, .signed].contains(store.display.phase) else { return }
+            while !Task.isCancelled {
+                do { try await Task.sleep(for: .seconds(1)) } catch { return }
+                now = Date()
+            }
+        }
         .onChange(of: scenePhase) { _, phase in if phase == .background { clear() } }
         .onChange(of: wallet) { _, _ in clear() }
     }
@@ -101,10 +111,13 @@ struct CCTPTransferView: View {
         let value = amount, phase = store.display.phase
         operation = Task {
             switch phase {
-            case .amount: await store.review(amount: value, wallet: wallet)
+            case .amount: await store.prepareTransfer(amount: value, wallet: wallet)
             case .authorization: await store.authorize()
-            case .networkFee: await store.sign()
+            case .networkFee:
+                if store.display.canConfirm(at: Date()) { await store.confirmTransfer() }
+                else { await store.restore(wallet: wallet) }
             case .signed: await store.submit()
+            case .recovery: await store.restore(wallet: wallet)
             default: break
             }
         }

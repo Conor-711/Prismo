@@ -31,6 +31,8 @@ YOUTUBE_CALL_SYSTEM = (
     "\"lifecycle_action\":\"open_call|reinforce_call|invalidate_prior_call|close_prior_call|reverse_call|no_trade_setup|retrospective|none\","
     "\"affected_direction\":\"bull|bear|unknown\",\"entry_status\":\"active_entry|conditional_setup|watchlist_only|not_applicable\","
     "\"trigger_condition\":string,\"invalidation_condition\":string,\"evidence_span\":string,"
+    "\"summary_zh\":\"short Chinese thesis for an actionable call\","
+    "\"summary_en\":\"short English thesis for an actionable call\","
     "\"evidence_segment_start\":number|null,\"evidence_segment_end\":number|null,"
     "\"statement_mode\":\"prediction|position_action|risk_management|education|news|retrospective|other\","
     "\"instrument_scope\":\"stock|options|portfolio|other\","

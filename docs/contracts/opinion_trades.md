@@ -1,5 +1,10 @@
 # Opinion-attributed real trades
 
+September 12: native live orders now carry source/author identity into a server
+registration before signing; signed-in count/list reads use the Supabase Feed
+service. See `supabase_trade_feed.md`. The following source-off/legacy deployment
+descriptions are historical; new SQL and Edge deployment are still required.
+
 ## App preview (2026-09-11)
 
 At the user's request, an explicit local demo is visible when there is no
@@ -40,7 +45,7 @@ applied automatically. Deploying UI alone cannot produce real trader counts.
 ## Privacy
 
 Total includes everyone. The expandable list includes only accounts with
-explicit public-list consent, latest avatar/nickname, latest execution direction
+explicit public-list consent, latest canonical avatar/username/handle, latest execution direction
 and timestamp. Sort newest verified fill first, then stable public profile ID.
 This people list does not expose wallet addresses, account IDs, quantities, sizes
 or P&L. The separate Trade Feed may expose filled USD notional only after explicit
@@ -64,7 +69,9 @@ read-model fixtures do not bypass this authenticated write boundary. See
 `GET /v1/opinions/{opinionId}/traders?offset=0&limit=30` requires the installation
 bearer, is no-store, and returns `totalTraders`, `publicTraders`, `traders`, and
 `nextOffset`. Rows contain `id` (public pseudonymous UUID), `nickname`, nullable
-`avatarURL`, `side` (`long`/`short`), and `tradedAt` (UTC ISO timestamp).
+`avatarURL`, `handle`, `side` (`long`/`short`), and `tradedAt` (UTC ISO timestamp).
+The historical `nickname` wire key means the account's username. `handle` is
+unique; bio is not projected into these lists. See `account_profiles.md`.
 Offset pages are live, not a frozen snapshot; clients de-duplicate by public ID
 and reset pagination on refresh. 503 means unavailable, never zero; failed pages
 must retain prior rows. Empty verified ledger means zero only once the live

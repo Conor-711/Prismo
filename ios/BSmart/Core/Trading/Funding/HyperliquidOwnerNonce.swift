@@ -4,11 +4,12 @@ extension FundingJournalSnapshot {
     func latestHyperliquidNonce(owner: String) -> UInt64 {
         max(orders.values.filter { $0.order.owner == owner }.map(\.order.nonce).max() ?? 0,
             withdrawals.values.filter { $0.intent.owner == owner }.map(\.intent.nonce).max() ?? 0,
-            accountSetups.values.filter { $0.owner == owner }.map(\.nonce).max() ?? 0)
+            accountSetups.values.filter { $0.owner == owner }.map(\.nonce).max() ?? 0,
+            leverages.values.filter { $0.owner == owner }.map(\.nonce).max() ?? 0)
     }
 
     func checkHyperliquidReservation(id: UUID, owner: String, nonce: UInt64, at now: Date) throws {
-        guard orders[id] == nil, withdrawals[id] == nil, accountSetups[id] == nil,
+        guard orders[id] == nil, withdrawals[id] == nil, accountSetups[id] == nil, leverages[id] == nil,
               nonce > latestHyperliquidNonce(owner: owner),
               !orders.values.contains(where: { $0.order.owner == owner && $0.blocksNewOrder(at: now) }),
               !withdrawals.values.contains(where: { $0.intent.owner == owner && $0.blocksNewAction(at: now) }) else {

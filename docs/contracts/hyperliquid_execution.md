@@ -20,6 +20,54 @@ trading feature and cannot be presented as verified perpetual collateral.
 Builder recipient and fee are undecided: initial orders omit builder entirely;
 no invented recipient, fee or implicit approval may be used.
 
+### Native composer (2026-09-12)
+
+The original amount, leverage ruler, keypad/chart toggle, presets, balance/MAX
+and slide-to-confirm layout is restored. Input means margin; Feed notional is
+converted once on entry. One slide explicitly authorizes the selected leverage
+and order, with no intervening review form. Balance and fees come from the
+execution reader; unavailable liquidation estimates remain blank, never simulated.
+
+With no existing position, a changed leverage uses the fixed `updateLeverage`
+action before the order. Its ordered MessagePack fields are type, asset, isCross,
+leverage; signing uses the official L1 Agent hash and a 60-second expiresAfter.
+The journal reserves its nonce in the shared owner sequence before signing;
+one-use permits prevent duplicate signing/submission. A fresh exchange snapshot
+must confirm the leverage before constructing the order. Existing positions lock
+the ruler to their actual leverage. No builder approval or arbitrary action is added.
+
+Deposit UI is amount -> Continue -> Confirm transfer. A saved, unexpired USDC
+authorization can resume under its original amount, fee ceiling and deadline,
+using a fresh source simulation. Chain-confirmed expired orphan authorizations
+retain their evidence but stop reserving the wallet. Abandoned unsigned source
+previews are cancelled in the journal; signed or sent transactions are never
+cleared or resent. Authorization, submission and credited balance remain distinct.
+
+If simulation fails before any source transaction exists, the fixed self-submitted
+extension authorization is retained as `notSubmitted` and cannot be revived into
+a source permit. A new explicitly requested deposit gets a new authorization
+nonce. The journal checks absence of a source record atomically; an in-flight
+authorization signer remains reserved. This is not
+an onchain authorization revocation and does not delete signatures or history.
+Arbitrum preflight obtains the gas estimate before its bounded fee-bearing call,
+avoiding the node's default ~50-million-gas affordability check.
+
+Submission rechecks use raw estimated gas <= the originally signed gas limit.
+The original limit already contains 20% headroom; reapplying that multiplier at
+submission incorrectly rejects even a one-unit increase. Both fresh and final
+bounded estimates must fit, with no increase to the signed gas or fee-per-gas caps.
+A genuine quote overrun is distinct from the fixed absolute safety limit.
+
+For source records, only `signed -> notSubmitted` may release an abandoned
+pre-submission attempt, with all signed evidence retained. `beginSubmission`
+commits `submitting` before returning the only broadcast permit; the new terminal
+transition and permit issuance are mutually exclusive under the journal lock.
+It cannot release signing in progress, submitting, submitted or uncertain states,
+or records with observed transaction/receipt/nonce/authorization conflicts.
+A not-found observation alone does not block this transition. New attempts use
+fresh authorization nonces and explicit confirmation; old signed bytes cannot
+obtain another permit. UI restoration also handles legacy never-submitted records.
+
 ## Withdrawal boundary
 
 ### Native MVP flow (2026-09-12)
@@ -40,7 +88,16 @@ amount. Accepted requests are shown as processing, not arrived; they cannot be
 resubmitted. New explicit withdrawals require fresh balances and new nonces.
 Unknown requests remain blocked. Full protocol fee checks and funded end-to-end
 acceptance remain public-release requirements.
-History, itemized fills and reconciliation screens are deferred; market-order
+Withdrawal history now restores local encrypted journal records in the native
+withdrawal screen, including accepted, rejected and ambiguous requests. A disabled
+withdrawal gate still permits authenticated history reads, never signing.
+The portfolio entry is next to Deposit; verified wallets use the existing hybrid
+device/embedded signer. Pre-input availability uses the same mode/flat-account
+validation as the signed preview, rounded down from eight to six decimals for Max.
+Fresh confirmation still revalidates the full amount; displayed availability is
+not signing authority. Accepted/rejected requests can begin a new explicit review;
+unknown requests cannot be cleared by the UI or automatically resent.
+Itemized fills and destination reconciliation screens are deferred; market-order
 confirmation now returns the exchange acknowledgement without an extra fills read.
 
 ### Protocol and persistence
@@ -389,7 +446,140 @@ as part of final production acceptance.
 - BatchLabs, [MessagePack writer source](https://github.com/BatchLabs/MessagePack-Swift/blob/c6fabe5afe1261f927a448187b20e84b9af34720/Sources/MessagePack/Writer.swift), revision dated 2020-04-22.
 ## Native order lifecycle (2026-09-11)
 
+Latest latency revision (2026-09-22): execution info reads prefer a shared native
+connection to the official Hyperliquid WebSocket post API, retaining typed decode
+and original request/server timestamps. Order-only observations parallelize five
+independent reads with a five-second network budget instead of serial repeated
+observations within each phase. Independent observations before and after signing
+compare exact position (also for openings), mode, leverage, market and non-regressing
+server timestamps. They are not atomic exchange snapshots or a collateral
+reservation. The original bracketed provider remains unchanged for other users.
+No snapshot or balance cache is introduced. A bounded, cooldown-protected HTTP
+fallback applies only to public reads, never signed actions. Replies must match
+the request ID and query type; rate-limit/server errors are not retried.
+The single-slide path uses its immediate unexpired review as the pre-sign proof,
+then performs the independent post-sign refresh. Separate review/confirm still
+refreshes before signing. Attribution and registry reads overlap; post-sign
+registry checks and local revocation checks remain. Mode changes now fail closed.
+This supersedes the 31/39 read-count figures below: opening now uses 15/20 info
+reads without/with a leverage change. Slow attribution cannot extend review
+expiry. This does not claim measured funded execution within five seconds.
+Research and acceptance: `docs/operations/trading-latency.md`.
+
+Latency update (2026-09-22): entry and margin preparation overlap fee/account
+reads. No-builder previews overlap fees and the book; construction reuses its
+own book observation with the original wall/monotonic request timestamps, never
+the entry display or a renewed expiry. The same prepared snapshot path avoids
+one redundant registry fetch. Confirmation overlaps read-only snapshot refresh
+with registry/attribution checks and awaits all results before signing. Post-sign
+registry and market checks also overlap; signing and exchange submission remain
+ordered and one-shot. Snapshot consistency rounds and all expiry/capacity checks
+are unchanged. Unchanged/changed leverage uses 31/39 venue reads, respectively,
+plus attribution when applicable; this is not a measured live latency guarantee.
+The composer locks immediately after the deliberate slide and shows the actual
+stage and elapsed seconds in a stable-height submission control. It never shows
+success based on elapsed time. Attribution errors retain bounded machine codes;
+missing catalog entries, expired parameters, rate limits and service outages no
+longer all become the same error or a wallet-recovery prompt.
+
+Verification: the signed simulator order/preview/snapshot/feed/auth/layout suite
+passes 91 tests on 2026-09-22. No funded submission was performed. The initial
+unsigned run failed an existing Keychain integration case; the signed rerun
+passes that case as well. Real user network/signing/fill latency remains to be
+measured after installing this code.
+
+Latency update (2026-09-13): opening via the shared slide reuses the snapshot
+obtained within that same operation instead of fetching it twice again. A leverage
+change still requires an authoritative read-back. Review validates the reused
+snapshot's wallet, market and original expiry. The composer initially selects the
+account's actual leverage rather than resetting it to 5x, so an untouched selector
+does not request a leverage change. Entry/display data is never order
+authority. Independent pre-sign and post-sign refreshes remain, as do fee/depth,
+reduce-only, registration, nonce, lease and one-use submission checks. No order
+is retried automatically. The unchanged-leverage fixture now performs 32 info
+reads rather than 48; this is a request-count measurement, not live fill latency.
+
+Snapshot reads overlap only independent metadata requests or active/position
+requests within one round, at most two at once. The two observation rounds remain
+ordered and bracketed by account-mode reads. Original server and dual-clock
+expiry constraints are unchanged. Progress in the shared composer reflects
+checking, leverage update, signing and submission rather than an unlabeled spinner.
+
+Entering or returning to the active trade screen restores only an already bound
+wallet. It does not create a wallet, bind an address or place an order implicitly.
+Provider/registry failures remain visible and retryable; a missing key still needs
+recovery. Legacy local authentication contexts are reused for at most five minutes
+in the foreground, scoped by account, with the existing settings and background,
+protected-data, sign-out and policy-change invalidation. Signing leases retain
+their separate short deadlines; no key bytes are cached by this reuse policy.
+
+Verification (2026-09-13): signed iPhone 16 / iOS 18.5 simulator suite passes
+955 tests, 6 skipped, 0 failures. Tests assert 32/40 info reads for unchanged/changed
+leverage, two concurrent snapshot reads at most, ordered consistency checks,
+automatic restore without creation, and the five-minute authentication boundary.
+Two trade-entry UI tests pass, including the missing-wallet -> Google login path.
+Generic iOS device build passes without distribution signing. These tests do not
+measure funded order latency or verify physical Face ID behavior; no real orders,
+wallet creations, account-mode changes or transfers were performed for verification.
+
+Balance integration update (2026-09-12): standard/default-mode balances remain
+separate by DEX. A zero-capacity HIP-3 order screen exposes the existing unified
+USDC setup with explicit risk confirmation, not an automatic transfer or order.
+Only an authoritative unified mode read-back triggers an entry-capacity refresh;
+failure remains visible. Display/MAX keep six decimals, and opening inputs expose
+the existing 10 USDC notional minimum and fee-inclusive margin limits. No account
+equity, spot balance or withdrawable figure is used as substitute order capacity.
+Reference: [Hyperliquid account abstraction modes](https://hyperliquid.gitbook.io/hyperliquid-docs/trading/account-abstraction-modes), checked 2026-09-12.
+
+Verification: `/tmp/bsmart-shared-trading-balance.xcresult` passes 38 tests,
+including separate/shared capacity refresh, six-decimal small balances, opening
+minimums, setup read-back, no automatic signing, existing order safety and six
+rendered layouts. No funded transaction or user account-mode change was performed.
+
+UI update (2026-09-12): all live entries use `BSmartTradeSheet` and
+`LiveOrderComposer`, including reduction/close. A deliberate slide starts the
+existing review/sign/submit pipeline, without a separate intermediate form.
+Reduction presets select 25/50/75/100 percent; partial size rounds down to lot
+precision and full close preserves the exact position size. The position market
+and leverage are fixed, direction comes from the freshly checked signed position,
+and `reduceOnly` remains true. No leverage update or Feed attribution is needed
+for reduction. Missing positions, invalid percentages and ambiguous submissions
+do not become new opening orders. The common modal is above app tabs and keeps
+the submission control outside its scrolling contents.
+
+Verification: `/tmp/bsmart-unified-trading-final.xcresult` passes 42 unit/layout
+tests and the short-entry wallet-gate UI test. The long-entry/return UI test
+initially tapped during chart relayout; after waiting for a hittable action it
+passes in `/tmp/bsmart-unified-trading-ui.xcresult`, including the covered-tab
+assertion. Six rendered layouts cover light/dark, compact and large text.
+The legacy Feed quick-entry UI test remains blocked before order entry: it uses
+the old API fixture without a session, while the current Feed requires native
+account authentication. Its runtime path is not claimed verified. Architecture,
+terminology and diff checks pass. No user wallet or funded order was used.
+
 Native market execution must use a dedicated device-signed IOC lifecycle, never `PaperTradingEngine`. User review fixes owner, coin, side, size, slippage limit, actual leverage/margin mode and fee estimate. The existing encrypted, Keychain-anchored journal records nonce/cloid and each transition before issuing a one-use signing or submission permit. History survives cancellation, sign-out and process restart. Unknown submissions cannot be retried; only read-only reconciliation is available. HTTP 200 alone is not a fill. Partial fills are distinct from complete fills.
+
+Installation boundary (2026-09-22): the container marker selects the journal's
+Keychain namespace; existing databases retain their legacy anchor. A fresh
+container (no marker and no database), including legacy orphan-anchor migration,
+starts a separate ledger and preserves every previous anchor. Lost local history
+is not recovered, reconciled or replayed by this operation. All new orders still
+require explicit intent, fresh venue positions and nonce allocation; closes remain
+reduce-only. Missing/corrupt storage within a marked installation continues to
+block submission rather than silently resetting. Local journal errors are not
+reported as market-price changes. Wallet identity/keys are never reset.
+
+Validation: `/tmp/bsmart-close-journal-device-final.xcresult` passed 62 tests on
+iPhone 15 / iOS 26.2.1, including an opt-in installed-container check of journal
+reads, nonce allocation, reopening and unchanged legacy anchor bytes. The original
+failure was reproduced before the fix: legacy checkpoint sequence 80, no database,
+integrity error. `/tmp/bsmart-close-journal-extra-simulator-final.xcresult` passed
+60 additional test executions covering installation, integrity, signatures,
+funding consent, withdrawals and account setup (installation cases overlap the
+device suite). Mock-venue reduction preserves 0.018 size, reduce-only and single
+submission. No funded trade, withdrawal or deposit was executed. Earlier runs
+were superseded after the concurrent-read test fixture was corrected; attempted
+extra runs also encountered a shared build lock and a missing device test bundle.
 
 Stored market metadata is an archive, not authority: fresh raw metadata and account checks must match before signing/submission. Signed bytes and responses are persisted even if the UI task was cancelled. Basic execution remains subject to the existing identity/recovery/production capability gates; absence of builder configuration is not a gate.
 
@@ -412,3 +602,29 @@ instances, encrypted signature persistence, cancellation, process restart, clock
 rollback, one-way submission states and old order replay. They use public test keys
 only. The preceding 98/100-test runs are superseded, not additive. No protected
 withdrawal signer, broadcaster or funded destination receipt is claimed by this run.
+
+### Pre-sign expiry during opinion attribution (2026-09-22)
+
+A same-slide preview may expire while authenticated opinion attribution or wallet
+registration is awaiting the network. Before any journal reservation or signature,
+only typed account/quote staleness triggers one fresh snapshot and quote for the
+exact original order. This does not recreate its cloid, nonce, expiry, side, size
+or limit. Existing position, mode, leverage, fee and capacity checks still apply.
+Manual review/confirm and all post-sign paths do not gain this retry. Network,
+invalid response, leverage and capacity failures are not retryable through this path.
+Typed failures have distinct localized messages and non-sensitive OrderLatency codes.
+
+Validation: simulator build and 49 native regressions passed, including a 6-second
+attribution delay that still submits exactly the registered intent once, rejection
+after a changed account mode or expired 60-second intent, and existing post-sign,
+capacity, leverage and dual-clock expiry tests. No live trade was performed; the
+screenshot alone cannot identify the original typed failure on that device.
+
+### Inline close-position entry (2026-09-22)
+
+The ordinary instrument composer exposes a segmented open/close selector when its
+verified entry snapshot contains a position in that exact market. Existing position
+entry points still start in close mode. Switching resets the amount (100% close,
+zero opening margin) and invalidates any old preview; no switch while submitting.
+The existing 25/50/75/100 presets and integer 1–100 input use executeReduction.
+Missing positions disable close submission without silently changing to opening.

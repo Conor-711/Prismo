@@ -55,6 +55,7 @@ struct BSmartClientComposition {
 }
 
 enum BSmartClientFactory {
+    @MainActor
     static func make(
         bundle: Bundle = .main,
         defaults: UserDefaults = .standard,
@@ -68,8 +69,11 @@ enum BSmartClientFactory {
         let isDebug = false
         #endif
 
+        let contentBackend = environment["BSMART_CONTENT_BACKEND"]
+            ?? bundle.object(forInfoDictionaryKey: "BSMART_CONTENT_BACKEND") as? String
+
         let configuration = BSmartRuntimeConfiguration.resolve(
-            arguments: arguments,
+            arguments: arguments + (contentBackend == "supabase" ? ["--use-live-api"] : []),
             environment: environment,
             configuredBaseURL: bundle.object(forInfoDictionaryKey: "BSMART_API_BASE_URL") as? String,
             configuredDataEnvironment: bundle.object(forInfoDictionaryKey: "BSMART_DATA_ENVIRONMENT") as? String,
@@ -99,6 +103,16 @@ enum BSmartClientFactory {
                 accountClient: accountClient
             )
         case let .live(baseURL):
+            if contentBackend == "supabase" {
+                return BSmartClientComposition(
+                    client: SupabaseContentClient(configuration: SupabaseAccountConfiguration.resolve(bundle: bundle)),
+                    directMrCollieClient: directMrCollieClient,
+                    portfolioBootstrapStrategy: .localOnly,
+                    syncCoordinator: nil,
+                    isUsingDemoData: configuration.isUsingDemoData,
+                    accountClient: accountClient
+                )
+            }
             #if DEBUG
             print("[BSmart Data] live API: \(baseURL.absoluteString)")
             #endif

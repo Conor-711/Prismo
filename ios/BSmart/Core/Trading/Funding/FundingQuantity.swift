@@ -75,7 +75,9 @@ struct FundingQuantity: Equatable, Comparable, Sendable {
 enum FundingPreflightError: Error, LocalizedError, Equatable {
     case unavailable, invalidResponse, wrongChain, staleState, routeChanged, transferRestricted
     case unsupportedWallet, insufficientUSDC, insufficientETH, authorizationUsed, pendingTransaction
-    case simulationFailed, excessiveFee
+    case simulationFailed, excessiveFee, feeQuoteChanged
+    case invalidAuthorization, expiredAuthorization
+    case rpcRejected(method: String, code: Int)
 
     var errorDescription: String? {
         switch self {
@@ -91,7 +93,12 @@ enum FundingPreflightError: Error, LocalizedError, Equatable {
         case .authorizationUsed: return "This deposit authorization has already been used or canceled.".bSmartLocalized
         case .pendingTransaction: return "A wallet transaction is pending or changed. Wait and refresh.".bSmartLocalized
         case .simulationFailed: return "The deposit simulation failed. No transfer was made.".bSmartLocalized
+        case .invalidAuthorization: return "The USDC contract rejected the authorization signature. No transfer was made.".bSmartLocalized
+        case .expiredAuthorization: return "The USDC authorization expired. Enter the amount again.".bSmartLocalized
+        case .rpcRejected(let method, let code):
+            return "The network rejected %@ (code %@). No transfer was made.".bSmartLocalized(method, String(code))
         case .excessiveFee: return "The network fee exceeds the deposit safety limit. Try again later.".bSmartLocalized
+        case .feeQuoteChanged: return "Network fees changed. Review a new quote and confirm again.".bSmartLocalized
         }
     }
 }

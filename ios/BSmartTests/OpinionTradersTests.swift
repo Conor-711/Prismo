@@ -22,4 +22,31 @@ final class OpinionTradersTests: XCTestCase {
             XCTFail("Bundled historical data cannot prove real trading activity")
         } catch BSmartAPIError.tradeStatisticsUnavailable { } catch { XCTFail("Unexpected error: \(error)") }
     }
+
+    func testDirectionTotalsIncludePrivatePeopleAndRejectInconsistentCounts() throws {
+        let page = OpinionTradersPage(totalTraders: 10, publicTraders: 0, traders: [], nextOffset: nil,
+                                      longTraders: 7, shortTraders: 3)
+        try page.validate(offset: 0)
+        let decoded = try JSONDecoder().decode(OpinionTradersPage.self, from: JSONEncoder().encode(page))
+        XCTAssertEqual(decoded.longTraders, 7); XCTAssertEqual(decoded.shortTraders, 3)
+        for counts in [(7, 4), (-1, 11), (7, nil), (nil, 3)] as [(Int?, Int?)] {
+            XCTAssertThrowsError(try OpinionTradersPage(totalTraders: 10, publicTraders: 0,
+                traders: [], nextOffset: nil, longTraders: counts.0, shortTraders: counts.1).validate(offset: 0))
+        }
+        try OpinionTradersPage(totalTraders: 0, publicTraders: 0, traders: [], nextOffset: nil,
+                               longTraders: 0, shortTraders: 0).validate(offset: 0)
+    }
+
+    func testVerifiedTradeValueDecodesExactlyAndRejectsInvalidAmounts() throws {
+        let page = OpinionTradersPage(totalTraders: 2, publicTraders: 0, traders: [], nextOffset: nil,
+                                      longTraders: 2, shortTraders: 0, totalNotionalUSD: "364.75")
+        try page.validate(offset: 0)
+        XCTAssertEqual(page.totalNotionalLabel, "$364.75")
+        let decoded = try JSONDecoder().decode(OpinionTradersPage.self, from: JSONEncoder().encode(page))
+        XCTAssertEqual(decoded.totalNotionalUSD, "364.75")
+        for raw in ["-1", "1e3", "abc", "", String(repeating: "9", count: 65)] {
+            XCTAssertThrowsError(try OpinionTradersPage(totalTraders: 0, publicTraders: 0,
+                traders: [], nextOffset: nil, totalNotionalUSD: raw).validate(offset: 0))
+        }
+    }
 }

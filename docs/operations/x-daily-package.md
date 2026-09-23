@@ -1,6 +1,18 @@
 # X 每日数据包工作流
 
+> 2026-09-22 接通更新：build 1.0 (9) 已默认使用 Supabase，真实 iPhone 同版本内容更新已验收。
+> 当前三小时队列见 `content-delivery.md`；Telegram 自动来源见 `telegram-x-delivery.md`。用户手动提供新包并要求按既定三小时更新时，先检查包，
+> 再用 `make x-delivery-enqueue PACKAGE=...` 登记；不要只放文件而不登记。定时任务运行 `make x-delivery`。
+> 下文旧 API、SSH 受阻及待切换的描述是早期部署记录，不能再作为当前 Supabase 状态。
+
+
 更新：2026-09-10。用户每天提供一次 X 数据包；在本机处理，在现有 Client API 的 PostgreSQL 发布。不是每天重打包 iOS，也不启动新的爬虫、网页构建或自动交易。
+
+2026-09-15：新增可选 Supabase 内容发布目标。首次多平台基线、迁移、只读 Edge 接口与 iOS 切换见 `supabase-content.md`。
+`BSMART_CONTENT_PUBLISH_TARGET=supabase` 时，PUBLISH=1 使用新的版本发布器和
+`BSMART_CONTENT_DATABASE_URL`；默认 legacy 继续沿用本文原连接。两次新包可分别执行，
+不是已安装每天两次定时任务。Supabase 路径另写 `supabase-publication.json`，数据库提交与
+公网 API 验证分开记录。首次生产激活仍待人工迁移、完整基线及同一 App 前后验收。
 
 ## 给后续对话的执行约定
 
@@ -27,6 +39,10 @@
 
 ## 日常命令
 
+限定作者的运行先按运行前正式平台排名生成独立 JSONL，保留原包哈希、固定作者名单与排名日期，不修改原文件。可加 `READING_PACKAGE_ONLY=1`（`--reading-package-only`）只提炼输入包内的阅读内容，不顺带补其他作者的历史摘要；原有内容不删除，质量清单记录 `readingScope: package`，不表示历史展示窗口全部重新核验。续跑必须保持相同范围。日更抽取及摘要默认读取完整原文，不再截取旧 2,200/2,000 字符前缀。
+
+用户明确不需要全文翻译时，加 `SKIP_TRANSLATION=1`（CLI `--skip-translation`）。仍保留原文、观点抽取与双语摘要，不调用全文翻译模型，不将原文伪装成译文，也不删除既有译文。运行记录保存该选择，续跑不能静默更改；发布质量记录以 `translationMode: skipped` 如实标记，原文和摘要仍必须完整。
+
 先检查，不写业务数据库、不调用模型或行情接口：
 
 ```bash
@@ -34,6 +50,8 @@ make x-daily PACKAGE='/absolute/path/daily.zip'
 ```
 
 确认原帖时间范围、数量、模型凭据和预算后处理：
+
+`WORKERS` 默认 2，可设 1–16；仅控制模型网络请求并发，SQLite 仍由主线程串行写入。遇到提供方限流应降低并发，不提高候选上限来重试。
 
 ```bash
 make x-daily PACKAGE='/absolute/path/daily.zip' APPLY=1 WORKERS=2 MAX_CALLS=1000

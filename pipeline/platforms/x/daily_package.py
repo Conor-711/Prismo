@@ -25,7 +25,7 @@ def stage_package(source: Path, destination: Path) -> dict:
                 path = PurePosixPath(member.filename)
                 if path.is_absolute() or ".." in path.parts or "\\" in member.filename or stat.S_ISLNK(member.external_attr >> 16):
                     raise ValueError("Unsafe archive path")
-                if member.is_dir() or not path.name.startswith("tweets_") or path.suffix != ".jsonl":
+                if member.is_dir() or (path.name != "tweets.jsonl" and not path.name.startswith("tweets_")) or path.suffix != ".jsonl":
                     continue
                 target = destination / f"tweets_{len(files):05}.jsonl"
                 with archive.open(member) as stream, target.open("wb") as output:

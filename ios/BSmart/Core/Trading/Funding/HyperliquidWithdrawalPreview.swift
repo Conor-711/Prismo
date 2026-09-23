@@ -10,21 +10,10 @@ struct HyperliquidWithdrawalPreview: Sendable {
 
     func validate(wallet: DeviceWalletSummary, now: Date, continuousNow: ContinuousClock.Instant = .now) throws {
         try intent.validate(wallet: wallet)
-        try balance.validate(wallet: wallet, now: now)
         try fee.validate(now: now, continuousNow: continuousNow)
-        let available: FundingQuantity
-        if intent.source == .spot {
-            guard balance.mode == .unifiedAccount, let flatAccount, balance.held.units == FundingQuantity(0) else {
-                throw HyperliquidWithdrawalError.unsupportedBalance
-            }
-            try flatAccount.validate(owner: wallet.address, now: now)
-            available = balance.usdc.units
-        } else {
-            guard !balance.mode.usesSharedBalance, let perps = balance.perps else {
-                throw HyperliquidWithdrawalError.unsupportedBalance
-            }
-            available = perps.withdrawable.units
-        }
+        let capacity = HyperliquidWithdrawalAvailability(balance: balance, flatAccount: flatAccount)
+        guard intent.source == capacity.source else { throw HyperliquidWithdrawalError.unsupportedBalance }
+        let available = try capacity.availableUnits(wallet: wallet, now: now)
         guard try intent.amountUnits.multiplied(by: FundingQuantity(100)) <= available else {
             throw HyperliquidWithdrawalError.insufficientBalance
         }
@@ -35,6 +24,7 @@ struct HyperliquidWithdrawalPreview: Sendable {
 }
 
 protocol HyperliquidWithdrawalPreparing: Sendable {
+    func availability(wallet: DeviceWalletSummary) async throws -> HyperliquidWithdrawalAvailability
     func source(wallet: DeviceWalletSummary) async throws -> HyperliquidWithdrawalIntent.Source
     func preview(intent: HyperliquidWithdrawalIntent, wallet: DeviceWalletSummary) async throws -> HyperliquidWithdrawalPreview
 }
@@ -47,6 +37,16 @@ struct HyperliquidWithdrawalProvider: HyperliquidWithdrawalPreparing {
     var balances: any HyperCoreBalanceProviding = HyperCoreBalanceProvider()
     var fees: any CCTPWithdrawalFeeReading = CCTPWithdrawalFeeReader()
     var flatCheck = HyperliquidFlatAccountCheck()
+
+    func availability(wallet: DeviceWalletSummary) async throws -> HyperliquidWithdrawalAvailability {
+        let initial = try await balances.snapshot(wallet: wallet)
+        let flat = initial.mode == .unifiedAccount ? try await flatCheck.check(owner: wallet.address) : nil
+        let balance = flat != nil ? try await balances.snapshot(wallet: wallet) : initial
+        guard balance.mode == initial.mode else { throw HyperliquidWithdrawalError.stale }
+        let capacity = HyperliquidWithdrawalAvailability(balance: balance, flatAccount: flat)
+        _ = try capacity.availableUnits(wallet: wallet, now: Date())
+        return capacity
+    }
 
     func source(wallet: DeviceWalletSummary) async throws -> HyperliquidWithdrawalIntent.Source {
         let balance = try await balances.snapshot(wallet: wallet)

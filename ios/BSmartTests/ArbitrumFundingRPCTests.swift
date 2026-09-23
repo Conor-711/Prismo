@@ -2,6 +2,23 @@ import XCTest
 @testable import BSmart
 
 final class ArbitrumFundingRPCTests: XCTestCase {
+    func testRPCFailuresDistinguishFundsContractRevertAndInvalidRequest() throws {
+        let request = FundingRPCRequest(.call)
+        for (code, message, expected) in [
+            (-32000, "err: insufficient funds for gas * price + value", FundingPreflightError.insufficientETH),
+            (-32602, "invalid argument 1", .rpcRejected(method: "eth_call", code: -32602)),
+            (3, "execution reverted: FiatToken: invalid signature", .invalidAuthorization),
+            (3, "execution reverted: FiatToken: authorization is expired", .expiredAuthorization),
+            (-32005, "rate limit exceeded", .rpcRejected(method: "eth_call", code: -32005))
+        ] {
+            let data = try JSONSerialization.data(withJSONObject: [["jsonrpc": "2.0", "id": request.id,
+                "error": ["code": code, "message": message]]])
+            XCTAssertThrowsError(try ArbitrumFundingRPC.results(data, requests: [request])) {
+                XCTAssertEqual($0 as? FundingPreflightError, expected)
+            }
+        }
+    }
+
     func testNullMeansNotFoundOnlyForHashLookups() throws {
         for method in [FundingRPCRequest.Method.transaction, .receipt, .block, .nonce, .balance, .call] {
             let request = FundingRPCRequest(method)

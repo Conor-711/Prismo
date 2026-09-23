@@ -31,19 +31,16 @@ struct OpinionTradersDemoView: View {
                     Image(systemName: expanded ? "chevron.up" : "chevron.down").font(.caption)
                 }.frame(minHeight: 44).contentShape(Rectangle())
             }.buttonStyle(.plain).accessibilityIdentifier("opinion.traders.expand")
+            OpinionTradeSplitBar(longTraders: data.longTraders, shortTraders: data.shortTraders)
 
             if expanded {
                 ForEach(Array(data.traders.prefix(showAll ? 6 : 3))) { trader in
                     VStack(alignment: .leading, spacing: 12) {
                         HStack(spacing: 12) {
                             avatar(trader, size: 42)
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(trader.nickname).font(.subheadline.weight(.semibold))
-                                Text(trader.openedAt, format: .dateTime.month().day().hour().minute())
-                                    .font(.caption).foregroundStyle(BSmartColor.secondaryText)
-                            }
+                            Text(trader.nickname).font(.subheadline.weight(.semibold))
                             Spacer(minLength: 8)
-                            Text("\(trader.leverage)x " + (trader.side == .long ? "Long" : "Short").bSmartLocalized)
+                            Text((trader.side == .long ? "Long" : "Short").bSmartLocalized)
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(trader.side == .long ? BSmartColor.bull : BSmartColor.bear)
                         }
@@ -80,6 +77,7 @@ struct OpinionTradersDemoView: View {
         .foregroundStyle(BSmartColor.primaryText)
         .padding(.vertical, 12)
         .overlay(alignment: .bottom) { Divider().overlay(BSmartColor.line) }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("opinion.traders.demo")
     }
 

@@ -44,6 +44,7 @@ help:
 	@echo "  make hyperliquid-smart-money-live  持续订阅 HIP-3 成交并分钟级刷新聪明钱"
 	@echo "  make export-smart-account-read-model  将现有 Web 排名与 Calls 投影为 iOS Client API 集合"
 	@echo "  make congress-score      美国国会两院一年公开交易能力评分与逐笔官方证据"
+	@echo "  make official-source-refresh  刷新观点相关依据的 SEC/官网候选及健康报告"
 	@echo "  make sv-ticker-signals    标的 Score 分层、聚集事件与无泄漏历史回测"
 	@echo "  make sv-indicator-backtest  回测 Score 发现页指标的胜率、盈亏比和超额收益"
 	@echo "  make sv-indicator-report    导出逐事件、逐原文证据和稳健性细分数据"
@@ -86,7 +87,7 @@ help:
 	@echo "  make client-api-alpha-smoke 对运行中的 Alpha API 执行完整数据库冒烟测试"
 	@echo "  make client-api-alpha-plan-digests 规划隔离 Alpha 用户日报"
 	@echo "  make client-api-alpha-image 构建可部署的 Mock Internal Alpha 容器"
-	@echo "  make cf-deploy     构建并上传 web/out 到 Cloudflare Pages（PROJECT=bsmart 可改项目名）"
+	@echo "  make cf-deploy     构建并发布内测单页官网到 Cloudflare Pages（PROJECT=bsmart）"
 	@echo "  make arch-check    检查前端/管线架构边界"
 	@echo "  make terminology-check  检查 Smart Account / Score 产品术语"
 	@echo "  make backup-db     备份本地真源到项目外（默认只保留最近一份）"
@@ -611,6 +612,13 @@ client-api-dispatch-notifications:
 client-api-notification-worker:
 	BSMART_ENV=development BSMART_READ_MODEL_MODE=database $(CLIENT_API_PY) -m services.client_api.notification_worker
 
+.PHONY: feed-catalog-publish feed-service-check
+feed-catalog-publish:
+	$(CLIENT_API_PY) -m services.client_api.opinion_trades.publish_catalog --source-dir '$(or $(INPUT_DIR),contracts/fixtures)' --source-version '$(SOURCE_VERSION)' $(if $(filter 1,$(APPLY)),--apply,)
+
+feed-service-check:
+	$(CLIENT_API_PY) -m services.client_api.opinion_trades.inspect_feed
+
 client-api-publish-read-models:
 	BSMART_ENV=development BSMART_READ_MODEL_MODE=database $(CLIENT_API_PY) -m services.client_api.publish_read_models --input-dir '$(INPUT_DIR)' --source-version '$(SOURCE_VERSION)' --channel $(or $(CHANNEL),production)
 
@@ -618,7 +626,20 @@ client-api-publish-live-smart-money:
 	BSMART_ENV=development BSMART_READ_MODEL_MODE=database $(CLIENT_API_PY) -m services.client_api.publish_realtime_smart_money --input-dir '$(or $(INPUT_DIR),data/runtime/smart-money-live)' $(if $(ONCE),--once,)
 
 x-daily:
-	$(MANAGE) x-daily --package '$(PACKAGE)' --workers $(or $(WORKERS),2) --max-calls $(or $(MAX_CALLS),1000) $(if $(filter 1,$(APPLY)),--apply,) $(if $(filter 1,$(PUBLISH)),--publish,)
+	$(MANAGE) x-daily --package '$(PACKAGE)' --workers $(or $(WORKERS),2) --max-calls $(or $(MAX_CALLS),1000) $(if $(filter 1,$(APPLY)),--apply,) $(if $(filter 1,$(PUBLISH)),--publish,) $(if $(filter 1,$(SKIP_TRANSLATION)),--skip-translation,) $(if $(filter 1,$(READING_PACKAGE_ONLY)),--reading-package-only,)
+
+.PHONY: content-prepare-baseline content-publish content-rollback content-push-dispatch content-push-retry
+content-push-dispatch content-push-retry:
+	services/client_api/.venv/bin/python -m services.client_api.content_release.push
+
+content-prepare-baseline:
+	$(CLIENT_API_PY) -m services.client_api.content_release.prepare --input-dir '$(INPUT_DIR)' --source-metadata '$(SOURCE_METADATA)' --output-dir '$(OUTPUT_DIR)'
+
+content-publish:
+	$(CLIENT_API_PY) -m services.client_api.content_release --input-dir '$(INPUT_DIR)' $(if $(filter 1,$(BASELINE)),--baseline,) $(if $(filter 1,$(APPLY)),--apply,) $(if $(filter 1,$(ALLOW_DROP)),--allow-drop,)
+
+content-rollback:
+	$(CLIENT_API_PY) -m services.client_api.content_release --rollback '$(REVISION)' $(if $(filter 1,$(APPLY)),--apply,)
 
 client-api-publish-daily-x:
 	$(CLIENT_API_PY) -m services.client_api.publish_daily_x --input-dir '$(INPUT_DIR)' $(if $(filter 1,$(APPLY)),--apply,) $(if $(filter 1,$(ROLLBACK)),--rollback,) $(if $(filter 1,$(ALLOW_DROP)),--allow-drop,)
@@ -704,13 +725,12 @@ serve:
 	@python3 -m http.server 8080 --bind 0.0.0.0 --directory web/out
 
 # Cloudflare Pages：本地用 Node 22 读 dev.db 构建静态产物，再用 Wrangler Direct Upload 发布。
-# 当前产品只部署 zh/en；web/out 里若有 ja/ko 历史产物，会先排除到临时目录，避免上传体积过大。
+# bsmart.today 仅发布根页、zh/en 官网及必要资源；完整研究页仍保留在 web/out。
 # 首次使用前需要：npx wrangler login。项目名默认 bsmart，可用 PROJECT=xxx 覆盖。
 cf-deploy:
 	NEXT_BUILD_CPUS=$(or $(CPUS),1) $(MAKE) site
-	rm -rf /tmp/bsmart-out-cf
-	rsync -a --exclude='/ja/' --exclude='/ko/' web/out/ /tmp/bsmart-out-cf/
-	npx wrangler pages deploy /tmp/bsmart-out-cf --project-name $(or $(PROJECT),bsmart) --branch main --commit-dirty=true
+	node web/scripts/stage-beta-site.mjs
+	cd web && npx wrangler@4.131.1 pages deploy /tmp/bsmart-beta-out-cf --project-name $(or $(PROJECT),bsmart) --branch main --commit-dirty=true
 
 # ---------- 云端数据库（Supabase = 数据的家）----------
 # 前提：.env 里 DATABASE_URL 已设为 Supabase 的 Postgres 连接串（见 CLOUD_DB.md）。
@@ -775,3 +795,35 @@ site-cloud:
 clean:
 	rm -rf web/.next-dev web/.next web/out
 	@echo "ℹ️  已清 web/.next-dev + web/.next + web/out。（dev.db 是真源，未动；要删请手动并先 make backup-db）"
+
+.PHONY: official-source-refresh
+official-source-refresh:
+	$(PY) -m pipeline.jobs.official_source_refresh
+
+.PHONY: x-delivery x-delivery-enqueue
+x-delivery:
+	$(MANAGE) x-delivery
+
+x-delivery-enqueue:
+	$(MANAGE) x-delivery --package '$(PACKAGE)' --workers $(or $(WORKERS),2) --max-calls $(or $(MAX_CALLS),1000) $(if $(filter 1,$(SKIP_TRANSLATION)),--skip-translation,)
+
+.PHONY: social-delivery
+social-delivery:
+	$(MANAGE) social-delivery --source $(or $(SOURCE),all)
+
+.PHONY: content-delivery
+content-delivery:
+	$(MANAGE) content-delivery
+
+.PHONY: telegram-x-sync telegram-x-retry telegram-bot-api-up telegram-bot-api-cutover
+telegram-x-sync:
+	$(MANAGE) telegram-x-sync
+
+telegram-x-retry:
+	$(MANAGE) telegram-x-retry
+
+telegram-bot-api-up:
+	docker compose --env-file .env -f deploy/telegram-bot-api/docker-compose.yml up -d
+
+telegram-bot-api-cutover:
+	$(MANAGE) telegram-bot-api-cutover

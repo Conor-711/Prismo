@@ -3,6 +3,7 @@ import SwiftUI
 struct TradingMarketsView: View {
     @EnvironmentObject private var trading: HyperliquidTradingStore
     @State private var search = ""
+    @State private var selectedMarket: HyperliquidPerpMarket?
 
     private var markets: [HyperliquidPerpMarket] {
         trading.marketCatalog.filter {
@@ -12,14 +13,14 @@ struct TradingMarketsView: View {
 
     var body: some View {
         List {
-            if trading.isLoadingCatalog && markets.isEmpty { ProgressView() }
+            if trading.isLoadingCatalog && markets.isEmpty {
+                BSmartSkeletonRows(style: .simple, count: 6)
+                    .listRowBackground(BSmartColor.ink)
+            }
             ForEach(markets) { market in
-                NavigationLink {
-                    LiveMarketOrderDestination(coin: market.coin, dex: market.dex, side: .buy, market: market)
-                        .padding(.horizontal, 20).navigationTitle(market.coin).navigationBarTitleDisplayMode(.inline)
-                } label: {
+                Button { selectedMarket = market } label: {
                     HStack(spacing: 12) {
-                        BSmartAssetMark(ticker: market.symbol, size: 32)
+                        BSmartAssetMark(ticker: market.symbol, size: 32, isCrypto: market.dex.isEmpty)
                         Text(market.coin).font(.subheadline.weight(.semibold))
                         Spacer()
                         Text(market.markPrice.bSmartMarketPrice).font(.subheadline.monospacedDigit())
@@ -28,6 +29,11 @@ struct TradingMarketsView: View {
             }
             if !trading.isLoadingCatalog, markets.isEmpty {
                 Text((trading.errorMessage ?? "No markets found").bSmartLocalized)
+            }
+        }
+        .sheet(item: $selectedMarket) { market in
+            BSmartTradeSheet(symbol: market.symbol, initialSide: .long, store: trading.makeSession(), coin: market.coin) {
+                selectedMarket = nil
             }
         }
         .searchable(text: $search, prompt: "Market or symbol".bSmartLocalized)

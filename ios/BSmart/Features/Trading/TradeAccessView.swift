@@ -23,6 +23,7 @@ struct BSmartTradeButton: View {
     var style: BSmartTradeButtonStyle = .compact
     var initialSide: PaperTradeSide = .long
     var opinionSource: OpinionTradeSource? = nil
+    var marketCoin: String? = nil
     var onTradeDismiss: (() -> Void)? = nil
 
     @State private var showsTrading = false
@@ -73,7 +74,7 @@ struct BSmartTradeButton: View {
                     Capsule().stroke(accent.opacity(0.7), lineWidth: 0.8)
                 } else {
                     RoundedRectangle(cornerRadius: BSmartRadius.control, style: .continuous)
-                        .stroke(Color.white.opacity(0.16), lineWidth: 0.6)
+                        .stroke(BSmartColor.controlOutline, lineWidth: 0.6)
                 }
             }
             .contentShape(Rectangle())
@@ -82,7 +83,7 @@ struct BSmartTradeButton: View {
         .accessibilityLabel("%@ %@".bSmartLocalized(title, symbol.uppercased()))
         .accessibilityIdentifier(accessibilityIdentifier)
         .sheet(isPresented: $showsTrading, onDismiss: { onTradeDismiss?() }) {
-            BSmartTradeSheet(symbol: symbol, initialSide: initialSide, store: trading.makeSession()) {
+            BSmartTradeSheet(symbol: symbol, initialSide: initialSide, store: trading.makeSession(), coin: marketCoin) {
                 showsTrading = false
             }
             .environment(\.opinionTradeSource, opinionSource?.matches(symbol: symbol) == true ? opinionSource : nil)
@@ -103,7 +104,7 @@ struct BSmartTradeCardBar: View {
                 Text("Trade %@".bSmartLocalized(symbol.uppercased()))
                     .font(.system(size: 10, weight: .black))
                     .tracking(0.25)
-                    .foregroundStyle(Color.white.opacity(0.88))
+                    .foregroundStyle(BSmartColor.tradeBarText)
                     .lineLimit(1)
             }
 
@@ -114,9 +115,9 @@ struct BSmartTradeCardBar: View {
         }
         .padding(.horizontal, 12)
         .frame(width: width, height: 52)
-        .background(Color.black.opacity(0.82))
+        .background(BSmartColor.tradeBarSurface)
         .overlay(alignment: .top) {
-            Rectangle().fill(Color.white.opacity(0.11)).frame(height: 0.5)
+            Rectangle().fill(BSmartColor.tradeBarLine).frame(height: 0.5)
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("trade.card.\(symbol.lowercased())")
@@ -124,14 +125,37 @@ struct BSmartTradeCardBar: View {
 }
 
 struct BSmartTradeDock: View {
+    @EnvironmentObject private var trading: HyperliquidTradingStore
     let symbol: String
     var opinionSource: OpinionTradeSource? = nil
+    var marketCoin: String? = nil
     var onTradeDismiss: (() -> Void)? = nil
+    @State private var showsExternalVenues = false
 
     var body: some View {
-        HStack(spacing: 10) {
-            BSmartTradeButton(symbol: symbol, style: .prominent, initialSide: .short, opinionSource: opinionSource, onTradeDismiss: onTradeDismiss)
-            BSmartTradeButton(symbol: symbol, style: .prominent, initialSide: .long, opinionSource: opinionSource, onTradeDismiss: onTradeDismiss)
+        Group {
+            if marketCoin == nil, trading.verifiedNoMarketSymbol == symbol.uppercased(),
+               !ExternalTradeLinks.destinations(for: symbol).isEmpty {
+                Button { showsExternalVenues = true } label: {
+                    HStack {
+                        Text("View on another platform".bSmartLocalized)
+                        Spacer()
+                        Image(systemName: "arrow.up.right")
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(BSmartColor.onAccent)
+                    .padding(.horizontal, 18)
+                    .frame(maxWidth: .infinity, minHeight: 46)
+                    .background(BSmartColor.brand, in: RoundedRectangle(cornerRadius: BSmartRadius.control))
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("trade.external.open")
+            } else {
+                HStack(spacing: 10) {
+                    BSmartTradeButton(symbol: symbol, style: .prominent, initialSide: .short, opinionSource: opinionSource, marketCoin: marketCoin, onTradeDismiss: onTradeDismiss)
+                    BSmartTradeButton(symbol: symbol, style: .prominent, initialSide: .long, opinionSource: opinionSource, marketCoin: marketCoin, onTradeDismiss: onTradeDismiss)
+                }
+            }
         }
         .frame(maxWidth: 420)
         .padding(.horizontal, BSmartSpacing.large)
@@ -140,38 +164,69 @@ struct BSmartTradeDock: View {
         .background(BSmartColor.ink)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("trade.dock.\(symbol.lowercased())")
+        .sheet(isPresented: $showsExternalVenues) {
+            NavigationStack {
+                ScrollView {
+                    ExternalTradingVenuesView(symbol: symbol)
+                        .padding(BSmartSpacing.large)
+                }
+                .accessibilityIdentifier("trade.external.sheet")
+                .background(BSmartColor.ink)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Done".bSmartLocalized) { showsExternalVenues = false }
+                    }
+                }
+            }
+            .presentationDetents([.height(430)])
+            .presentationDragIndicator(.visible)
+            .bSmartPage()
+        }
     }
 }
 
 private struct BSmartTradeDockModifier: ViewModifier {
     let symbol: String
     let opinionSource: OpinionTradeSource?
+    let marketCoin: String?
     let onTradeDismiss: (() -> Void)?
 
     func body(content: Content) -> some View {
         content.safeAreaInset(edge: .bottom, spacing: 0) {
-            BSmartTradeDock(symbol: symbol, opinionSource: opinionSource, onTradeDismiss: onTradeDismiss)
+            BSmartTradeDock(symbol: symbol, opinionSource: opinionSource, marketCoin: marketCoin, onTradeDismiss: onTradeDismiss)
         }
     }
 }
 
 extension View {
-    func bSmartTradeDock(symbol: String, opinionSource: OpinionTradeSource? = nil, onTradeDismiss: (() -> Void)? = nil) -> some View {
-        modifier(BSmartTradeDockModifier(symbol: symbol, opinionSource: opinionSource, onTradeDismiss: onTradeDismiss))
+    func bSmartTradeDock(symbol: String, opinionSource: OpinionTradeSource? = nil, marketCoin: String? = nil, onTradeDismiss: (() -> Void)? = nil) -> some View {
+        modifier(BSmartTradeDockModifier(symbol: symbol, opinionSource: opinionSource, marketCoin: marketCoin, onTradeDismiss: onTradeDismiss))
     }
 }
 
-private struct BSmartTradeSheet: View {
+struct BSmartTradeSheet: View {
     @StateObject private var store: HyperliquidTradingStore
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     let symbol: String
     let initialSide: PaperTradeSide
     let onClose: () -> Void
+    let coin: String?
+    let initialAmount: String
+    let initialReduction: Bool
 
-    init(symbol: String, initialSide: PaperTradeSide, store: HyperliquidTradingStore, onClose: @escaping () -> Void) {
+    private var showsExternalVenues: Bool {
+        store.activeMarket == nil && store.verifiedNoMarketSymbol == symbol.uppercased() && !initialReduction
+            && !ExternalTradeLinks.destinations(for: symbol).isEmpty
+    }
+
+    init(symbol: String, initialSide: PaperTradeSide, store: HyperliquidTradingStore,
+         coin: String? = nil, initialAmount: String = "", initialReduction: Bool = false,
+         onClose: @escaping () -> Void) {
         self.symbol = symbol
         self.initialSide = initialSide
         self.onClose = onClose
+        self.coin = coin; self.initialAmount = initialAmount; self.initialReduction = initialReduction
         _store = StateObject(wrappedValue: store)
     }
 
@@ -181,6 +236,7 @@ private struct BSmartTradeSheet: View {
                     symbol: symbol,
                     initialSide: initialSide,
                     presentation: .quick,
+                    initialCoin: coin, initialAmount: initialAmount, initialReduction: initialReduction,
                     onClose: onClose
                 )
                 .padding(BSmartSpacing.large)
@@ -199,7 +255,8 @@ private struct BSmartTradeSheet: View {
             }
         }
         .environmentObject(store)
-        .presentationDetents([.large])
+        .presentationDetents(showsExternalVenues && !dynamicTypeSize.isAccessibilitySize
+                             ? [.height(480)] : [.large])
         .presentationDragIndicator(.visible)
         .presentationBackground(BSmartColor.ink)
         .bSmartPage()

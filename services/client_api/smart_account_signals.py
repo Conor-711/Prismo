@@ -27,8 +27,17 @@ def _signal_from_update(update: dict[str, Any]) -> dict[str, Any]:
     evidence = str(update.get("evidenceSpan") or update.get("originalText") or thesis).strip()
     score = float(update.get("score") or 0)
     percentile = float(update.get("platformPercentile") or 1)
-    signal_id = str(uuid.uuid5(SIGNAL_NAMESPACE, f"x:{update_id}:{ticker}"))
-    evidence_id = str(uuid.uuid5(EVIDENCE_NAMESPACE, f"x:{update_id}:{ticker}"))
+    data_status = "current" if latency_seconds <= 900 else "delayed"
+    limitations = [
+        "This event reflects a public view, not verified account ownership or trade execution.",
+        "Smart Money confirmation is currently unavailable for this event.",
+    ]
+    if data_status == "delayed":
+        limitations.append("Source processing was delayed, so this view was not available in real time.")
+    platform = str(update.get("platform") or "X")
+    source = platform.lower()
+    signal_id = str(uuid.uuid5(SIGNAL_NAMESPACE, f"{source}:{update_id}:{ticker}"))
+    evidence_id = str(uuid.uuid5(EVIDENCE_NAMESPACE, f"{source}:{update_id}:{ticker}"))
     direction_label = {
         "bullish": "bullish",
         "bearish": "bearish",
@@ -44,7 +53,7 @@ def _signal_from_update(update: dict[str, Any]) -> dict[str, Any]:
         "summary": thesis,
         "occurredAt": published_at,
         "dataAsOf": processed_at,
-        "dataStatus": "current" if latency_seconds <= 900 else "delayed",
+        "dataStatus": data_status,
         "priority": priority,
         "kind": "account_leads",
         "direction": direction,
@@ -57,10 +66,7 @@ def _signal_from_update(update: dict[str, Any]) -> dict[str, Any]:
             "Review whether this new view changes the assumptions behind your cost basis and position size."
         ),
         "nextStep": "Read the complete source view and compare its evidence with your current position plan.",
-        "limitations": [
-            "This event reflects a public view, not verified account ownership or trade execution.",
-            "Smart Money confirmation is currently unavailable for this event.",
-        ],
+        "limitations": limitations,
         "evidence": [
             {
                 "id": evidence_id,
@@ -69,7 +75,7 @@ def _signal_from_update(update: dict[str, Any]) -> dict[str, Any]:
                 "actorName": author,
                 "title": f"Smart Account Score {score:.1f}",
                 "detail": evidence,
-                "metric": f"Top {max(1, round(percentile * 100))}% on X",
+                "metric": f"Top {max(1, round(percentile * 100))}% on {platform}",
                 "observedAt": published_at,
                 "sourceURL": update.get("sourceURL") or update.get("evidenceURL"),
             }

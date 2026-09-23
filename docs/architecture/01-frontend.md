@@ -17,6 +17,7 @@ web/
     tracking/
     smart-account/
     auth/
+    landing/                   # bsmart.today 极简 Logo + Email 申请 UI
   shared/                      # 跨业务复用基础设施
     ui/
     layout/
@@ -34,6 +35,12 @@ web/
 Tailwind 的 content 扫描必须覆盖 `app`、`components`、`features` 和 `shared`。迁移组件到新目录后，如果这里遗漏 `features/shared`，新目录中的响应式宽度、网格和任意值类不会进入生成 CSS，会导致页面布局退回到全宽流式形态。
 
 ## 路由层规则
+
+### 内测官网（2026-09-13）
+
+根 `/` 和旧 zh/en 入口均展示 Logo、唯一一句品牌文案及 Email 申请。`BrowserWaitlist` 按 `navigator.languages[0]`（回退 `navigator.language`）匹配中文，否则使用英文，并响应 `languagechange`；路由语言不覆盖浏览器偏好。静态 HTML 默认英文，客户端自动匹配中文；`LandingPage` 只向客户端传递需要的品牌及表单文案，保留输入标签与提交状态的无障碍语义，不再显示营销小字、页脚或隐私勾选。
+
+静态前端 POST 同域 `/api/waitlist`，Cloudflare Pages Function 委托 `server/waitlist/handler.ts` 写 KV；不使用 Next.js 动态 route handler，以保持静态导出。Next dev 代理到本机 8788 的 Wrangler。本地与生产名单必须隔离，操作步骤见 `../operations/beta-landing.md`。
 
 `web/app` 中的 `page.tsx` 应只做四件事：
 

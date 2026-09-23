@@ -55,6 +55,10 @@ enum HyperliquidOrderCodec {
     }
 
     static func typedJSON(_ order: HyperliquidOrderIntent) throws -> String {
+        try typedJSON(actionHash: actionHash(order))
+    }
+
+    static func typedJSON(actionHash: Data) throws -> String {
         let payload: [String: Any] = [
             "domain": ["name": "Exchange", "version": "1", "chainId": 1337,
                        "verifyingContract": "0x0000000000000000000000000000000000000000"],
@@ -64,7 +68,7 @@ enum HyperliquidOrderCodec {
                 "Agent": fields([("source", "string"), ("connectionId", "bytes32")])
             ],
             "primaryType": "Agent",
-            "message": ["source": "a", "connectionId": FundingHex.encode(try actionHash(order))]
+            "message": ["source": "a", "connectionId": FundingHex.encode(actionHash)]
         ]
         let data = try JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys])
         guard let json = String(data: data, encoding: .utf8) else { throw HyperliquidExecutionError.invalidIntent }

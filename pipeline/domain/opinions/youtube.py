@@ -66,6 +66,7 @@ def generate_fulltext(
     db_path: str | Path | None = None,
     max_total_minutes: int | None = None,
     prefer_transcript: bool = False,
+    initialize_schema: bool = True,
 ) -> int:
     """Generate full reconstructed YouTube transcripts and key-frame context."""
     from .youtube_analysis import gen_fulltext
@@ -85,6 +86,7 @@ def generate_fulltext(
         db_path=db_path,
         max_total_minutes=max_total_minutes,
         prefer_transcript=prefer_transcript,
+        initialize_schema=initialize_schema,
     )
 
 

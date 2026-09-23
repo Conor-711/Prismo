@@ -266,7 +266,7 @@ struct PortfolioSetupView: View {
                     Image(systemName: "arrow.right")
                 }
                 .font(.headline)
-                .foregroundStyle(BSmartColor.ink)
+                .foregroundStyle(BSmartColor.onAccent)
                 .padding(.horizontal, BSmartSpacing.large)
                 .frame(maxWidth: .infinity, minHeight: 52)
                 .background(BSmartColor.brand)

@@ -155,15 +155,30 @@ private final class FundingReadRPC: @unchecked Sendable {
         let map = Dictionary(uniqueKeysWithValues: rows.map { ($0.id, $0) })
         return try requests.map { request in
             guard let row = map[request.id], row.jsonrpc == "2.0" else { throw FundingPreflightError.invalidResponse }
-            if row.error != nil {
+            if let error = row.error {
                 guard row.result == nil else { throw FundingPreflightError.invalidResponse }
-                if request.method == .estimate || request.method == .call { throw FundingPreflightError.simulationFailed }
-                throw FundingPreflightError.unavailable
+                throw failure(error, request: request)
             }
             guard let result = row.result,
                   result != .null || [.transaction, .receipt].contains(request.method) else { throw FundingPreflightError.invalidResponse }
             return result
         }
+    }
+
+    private static func failure(_ value: FundingRPCValue, request: FundingRPCRequest) -> FundingPreflightError {
+        guard case .object(let error) = value, case .integer(let code) = error["code"],
+              case .string(let message) = error["message"] else { return .invalidResponse }
+        // Only classify known reasons. Never display/log an RPC body that might echo an authorization.
+        let reason = message.lowercased()
+        if reason.contains("insufficient funds for gas") { return .insufficientETH }
+        if reason.contains("transfer amount exceeds balance") { return .insufficientUSDC }
+        if reason.contains("authorization is used") || reason.contains("authorization is canceled") { return .authorizationUsed }
+        if reason.contains("authorization is expired") { return .expiredAuthorization }
+        if reason.contains("invalid signature") { return .invalidAuthorization }
+        if [.call, .estimate].contains(request.method), code == 3 || reason.contains("execution reverted") {
+            return .simulationFailed
+        }
+        return .rpcRejected(method: request.method.rawValue, code: code)
     }
 }
 

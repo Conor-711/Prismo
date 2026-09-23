@@ -47,7 +47,7 @@ struct CCTPSourceTransaction: Sendable {
                                           schedule: schedule, now: intent.planCreatedAt)
         guard let nonce = FundingHex.decode(intent.authorizationNonce) else { throw FundingJournalError.integrity }
         let plan = try CCTPDepositPlan(wallet: wallet, quote: quote, now: intent.planCreatedAt, nonce: nonce)
-        guard quote.maximumFeeUnits == intent.maximumCCTPFeeUnits, intent.expiresAt <= quote.expiresAt,
+        guard quote.maximumFeeUnits == intent.maximumCCTPFeeUnits, intent.expiresAt < intent.authorizationExpiresAt,
               TimeInterval(plan.validBefore) == intent.authorizationExpiresAt.timeIntervalSince1970,
               try CCTPDepositCodec.callData(plan: plan, wallet: wallet, authorization: intent.authorization,
                                             now: intent.preparedAt) == intent.callData else { throw FundingJournalError.integrity }

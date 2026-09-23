@@ -26,6 +26,28 @@ struct TradeFeedDemoData {
         return .init(items: rows, nextOffset: offset + rows.count < filtered.count ? offset + rows.count : nil)
     }
 
+    func popular(offset: Int, now: Date = Date()) throws -> PopularOpinionsPage {
+        guard offset >= 0 else { throw BSmartAPIError.invalidResponse }
+        let recent = items.filter { $0.executedAt >= now.addingTimeInterval(-7 * 86400) && $0.executedAt <= now }
+        let groups = Dictionary(grouping: recent, by: { $0.opinion.id })
+        let rows = groups.values.compactMap { group -> (PopularOpinion, Date)? in
+            let sorted = group.sorted { $0.executedAt != $1.executedAt ? $0.executedAt > $1.executedAt
+                : $0.id.uuidString < $1.id.uuidString }
+            guard let latest = sorted.first else { return nil }
+            var seen = Set<UUID>()
+            let people = sorted.filter { seen.insert($0.trader.id).inserted }
+            let longs = people.filter { $0.side == .long }.count
+            return (.init(opinion: latest.opinion, totalTraders: people.count,
+                          longTraders: longs, shortTraders: people.count - longs), latest.executedAt)
+        }.sorted {
+            if $0.0.totalTraders != $1.0.totalTraders { return $0.0.totalTraders > $1.0.totalTraders }
+            if $0.1 != $1.1 { return $0.1 > $1.1 }
+            return $0.0.id.uuidString < $1.0.id.uuidString
+        }.map { $0.0 }
+        let page = Array(rows.dropFirst(offset).prefix(10))
+        return .init(items: page, nextOffset: offset + page.count < rows.count ? offset + page.count : nil, windowDays: 7)
+    }
+
     func profile(id: UUID) throws -> FeedPublicProfile {
         guard let profile = items.first(where: { $0.trader.id == id })?.trader else {
             throw BSmartAPIError.httpStatus(404)

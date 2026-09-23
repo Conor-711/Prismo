@@ -5,6 +5,8 @@ import ImageIO
 struct UserProfileEditor: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var store: LocalUserProfileStore
+    private enum Field: Hashable { case name, bio }
+    @FocusState private var focusedField: Field?
     @State private var draft: LocalUserProfile
     @State private var photo: PhotosPickerItem?
     @State private var loadingPhoto = false
@@ -20,57 +22,64 @@ struct UserProfileEditor: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    HStack(spacing: 20) {
+                VStack(alignment: .leading, spacing: 12) {
+                    ProfilePhotoEditor(photo: $photo, isLoading: loadingPhoto) {
                         UserProfileAvatar(data: draft.avatarData, size: 88)
-                        VStack(alignment: .leading, spacing: 12) {
-                            PhotosPicker(selection: $photo, matching: .images) {
-                                Label("Change photo".bSmartLocalized, systemImage: "photo")
-                            }.accessibilityIdentifier("profile.photo.change")
-                            if loadingPhoto { ProgressView() }
-                            if draft.avatarData != nil {
-                                Button("Remove photo".bSmartLocalized) {
-                                    photo = nil
-                                    draft.avatarData = nil
-                                }.accessibilityIdentifier("profile.photo.remove")
-                            }
-                        }.font(.subheadline).tint(BSmartColor.brand)
+                    } options: {
+                        Button(role: .destructive) { photo = nil; draft.avatarData = nil } label: {
+                            Label("Remove photo".bSmartLocalized, systemImage: "trash")
+                        }.disabled(draft.avatarData == nil)
+                            .accessibilityIdentifier("profile.photo.remove")
                     }
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Nickname".bSmartLocalized).font(.subheadline).foregroundStyle(BSmartColor.secondaryText)
-                        TextField("bSmart Investor".bSmartLocalized, text: $draft.nickname)
-                            .textContentType(.nickname).submitLabel(.done)
-                            .accessibilityIdentifier("profile.edit.nickname")
-                            .onChange(of: draft.nickname) { _, value in draft.nickname = String(value.prefix(28)) }
-                    }
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Bio".bSmartLocalized).font(.subheadline).foregroundStyle(BSmartColor.secondaryText)
-                        TextField("Bio".bSmartLocalized, text: $draft.bio, axis: .vertical)
-                            .lineLimit(3...5).accessibilityIdentifier("profile.edit.bio")
-                            .onChange(of: draft.bio) { _, value in draft.bio = String(value.prefix(120)) }
+                    VStack(spacing: 0) {
+                        ProfileEditorField(title: "Nickname", isFocused: focusedField == .name) {
+                            TextField("bSmart Investor".bSmartLocalized, text: $draft.nickname)
+                                .textContentType(.nickname).submitLabel(.next)
+                                .focused($focusedField, equals: .name).onSubmit { focusedField = .bio }
+                                .accessibilityIdentifier("profile.edit.nickname")
+                                .onChange(of: draft.nickname) { _, value in
+                                    if value.count > 28 { draft.nickname = String(value.prefix(28)) }
+                                }
+                        }
+                        ProfileEditorField(title: "Bio", isFocused: focusedField == .bio,
+                                           detail: "\(draft.bio.unicodeScalars.count)/120", minHeight: 112) {
+                            TextField("Bio".bSmartLocalized, text: $draft.bio, axis: .vertical)
+                                .lineLimit(3...5).accessibilityIdentifier("profile.edit.bio")
+                                .focused($focusedField, equals: .bio)
+                                .onChange(of: draft.bio) { _, value in
+                                    if value.count > 120 { draft.bio = String(value.prefix(120)) }
+                                }
+                        }
                     }
                     if let errorMessage {
                         Text(errorMessage.bSmartLocalized).font(.subheadline).foregroundStyle(BSmartColor.secondaryText)
                             .accessibilityIdentifier("profile.edit.error")
                     }
                 }
-                .textFieldStyle(.roundedBorder)
                 .padding(24)
+                .frame(maxWidth: 520).frame(maxWidth: .infinity)
             }
+            .scrollDismissesKeyboard(.interactively)
+            .scrollIndicators(.hidden)
             .background(BSmartColor.ink)
             .navigationTitle("Edit profile".bSmartLocalized).navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel".bSmartLocalized) { dismiss() }
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save".bSmartLocalized) {
-                        do {
-                            try store.save(draft, expectedScope: scope)
-                            dismiss()
-                        } catch { errorMessage = "Could not save your profile. Please try again." }
-                    }.disabled(loadingPhoto).accessibilityIdentifier("profile.save")
+            }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                Button("Save".bSmartLocalized) {
+                    do {
+                        try store.save(draft, expectedScope: scope)
+                        dismiss()
+                    } catch { errorMessage = "Could not save your profile. Please try again." }
                 }
+                .buttonStyle(AccountPrimaryButtonStyle())
+                .disabled(loadingPhoto).accessibilityIdentifier("profile.save")
+                .padding(.horizontal, 24).padding(.vertical, 12)
+                .frame(maxWidth: 520).frame(maxWidth: .infinity)
+                .background(BSmartColor.ink)
             }
             .task(id: photo) {
                 guard let photo else { loadingPhoto = false; return }

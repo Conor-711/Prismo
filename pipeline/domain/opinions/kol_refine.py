@@ -118,9 +118,10 @@ def _ensure_table() -> None:
     KolRefined.__table__.create(engine, checkfirst=True)
 
 
-def _user(source: str, ticker: str, txt: str, hint: str | None) -> str:
+def _user(source: str, ticker: str, txt: str, hint: str | None, *, complete_text: bool = False) -> str:
     h = f"（系统初判立场：{hint}，仅供参考，可推翻）" if hint else ""
-    return f"标的 {ticker}。来源：{_SRC_LABEL.get(source, source)}{h}。原文：\n{txt[:2000]}"
+    body = txt if complete_text else txt[:2000]
+    return f"标的 {ticker}。来源：{_SRC_LABEL.get(source, source)}{h}。原文：\n{body}"
 
 
 def _norm(d: dict | None, fallback_stance: str = "neutral") -> dict | None:
@@ -260,7 +261,7 @@ def _existing_keys(sources: list[str], *, complete: bool = False) -> set[tuple[s
 def refine(sources: list[str] | None = None, per_source: int = DEFAULT_PER_SOURCE,
            only: list[str] | None = None, force: bool = False, workers: int = 6,
            since_days: int = DEFAULT_SINCE_DAYS, *, rows: list[dict] | None = None,
-           initialize_schema: bool = True) -> int:
+           initialize_schema: bool = True, complete_text: bool = False) -> int:
     if initialize_schema:
         _ensure_table()
     providers = [provider for provider in _provider_order() if _provider_available(provider)]
@@ -307,7 +308,7 @@ def refine(sources: list[str] | None = None, per_source: int = DEFAULT_PER_SOURC
         buf.clear()
 
     def _work(r: dict) -> tuple[dict, dict | None, str]:
-        user = _user(r["source"], r["ticker"], r["txt"], r.get("hint"))
+        user = _user(r["source"], r["ticker"], r["txt"], r.get("hint"), complete_text=complete_text)
         fallback_stance = str(r.get("hint") or "neutral")
         for provider in providers:
             norm = _norm(_messages_json_with(provider, user), fallback_stance=fallback_stance)

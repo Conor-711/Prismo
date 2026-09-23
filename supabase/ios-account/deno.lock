@@ -3,6 +3,7 @@
   "specifiers": {
     "npm:@electric-sql/pglite@0.5.8": "0.5.8",
     "npm:@supabase/supabase-js@2.116.0": "2.116.0",
+    "npm:jpeg-js@0.4.4": "0.4.4",
     "npm:viem@2.56.3": "2.56.3"
   },
   "npm": {
@@ -101,6 +102,9 @@
       "dependencies": [
         "ws"
       ]
+    },
+    "jpeg-js@0.4.4": {
+      "integrity": "sha512-WZzeDOEtTOBK4Mdsar0IqEU5sMr3vSV2RqkAIzUEV2BHnUfKGyswWFPFwK5EeDo93K3FohSHbLAjj0s1Wzd+dg=="
     },
     "ox@0.14.44": {
       "integrity": "sha512-O54qXXHEk4ySamMSyBpI0AeBegS5frxU6+LA6Jb9Sf6kMOxcTNaxYmwZfpOu22DIQsdKfgQxHq8EsAGaoBQScA==",

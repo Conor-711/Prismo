@@ -10,9 +10,10 @@ enum FundingJournalEvent: Codable {
     case orderFills(HyperliquidOrderFillBatch)
     case withdrawal(HyperliquidWithdrawalRecord)
     case accountSetup(UnifiedAccountSetup)
+    case leverage(HyperliquidLeverageUpdate)
 
-    private enum CodingKeys: String, CodingKey { case kind, source, consent, observation, attestation, forwarding, order, orderFills, withdrawal, accountSetup }
-    private enum Kind: String, Codable { case source, consent, observation, attestation, forwarding, order, orderFills, withdrawal, accountSetup }
+    private enum CodingKeys: String, CodingKey { case kind, source, consent, observation, attestation, forwarding, order, orderFills, withdrawal, accountSetup, leverage }
+    private enum Kind: String, Codable { case source, consent, observation, attestation, forwarding, order, orderFills, withdrawal, accountSetup, leverage }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -21,6 +22,7 @@ enum FundingJournalEvent: Codable {
             self = .source(try FundingJournalRecord(from: decoder))
         } else {
             switch try container.decode(Kind.self, forKey: .kind) {
+            case .leverage: self = .leverage(try container.decode(HyperliquidLeverageUpdate.self, forKey: .leverage))
             case .accountSetup: self = .accountSetup(try container.decode(UnifiedAccountSetup.self, forKey: .accountSetup))
             case .orderFills: self = .orderFills(try container.decode(HyperliquidOrderFillBatch.self, forKey: .orderFills))
             case .withdrawal: self = .withdrawal(try container.decode(HyperliquidWithdrawalRecord.self, forKey: .withdrawal))
@@ -37,6 +39,9 @@ enum FundingJournalEvent: Codable {
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         switch self {
+        case .leverage(let record):
+            try container.encode(Kind.leverage, forKey: .kind)
+            try container.encode(record, forKey: .leverage)
         case .accountSetup(let record):
             try container.encode(Kind.accountSetup, forKey: .kind)
             try container.encode(record, forKey: .accountSetup)
@@ -69,6 +74,7 @@ enum FundingJournalEvent: Codable {
 }
 
 struct FundingJournalSnapshot {
+    var leverages: [UUID: HyperliquidLeverageUpdate] = [:]
     var accountSetups: [UUID: UnifiedAccountSetup] = [:]
     var withdrawals: [UUID: HyperliquidWithdrawalRecord] = [:]
     var orders: [UUID: HyperliquidOrderRecord] = [:]
@@ -82,6 +88,10 @@ struct FundingJournalSnapshot {
 
     mutating func apply(_ event: FundingJournalEvent) throws {
         switch event {
+        case .leverage(let record):
+            try record.validate(wallet: record.wallet)
+            try checkHyperliquidReservation(id: record.id, owner: record.owner, nonce: record.nonce, at: record.createdAt)
+            leverages[record.id] = record
         case .accountSetup(let record):
             try record.validate(wallet: record.wallet)
             try checkHyperliquidReservation(id: record.id, owner: record.owner, nonce: record.nonce, at: record.createdAt)
@@ -139,6 +149,11 @@ struct FundingJournalSnapshot {
             consents[record.id] = record
         case .source(let record):
             try record.validate(after: sources[record.intent.id])
+            if record.state == .notSubmitted {
+                guard record.canFinishWithoutSubmission(observation: observations[record.intent.id]) else {
+                    throw FundingJournalError.conflict
+                }
+            }
             if sources[record.intent.id] == nil {
                 guard !reservesOwner(record.intent.owner, excludingConsent: record.intent.id),
                       !hasAuthorization(record.intent.owner, nonce: record.intent.authorizationNonce,

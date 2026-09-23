@@ -64,7 +64,9 @@ struct HyperliquidMarketChart: View {
 
             if trading.candles.isEmpty {
                 Group {
-                    if trading.isLoadingCandles { ProgressView().tint(BSmartColor.brand) }
+                    if trading.isLoadingCandles || trading.errorMessage == nil {
+                        HyperliquidChartLoadingPlot().transition(.opacity)
+                    }
                     else {
                         ContentUnavailableView("Price history unavailable".bSmartLocalized,
                                                systemImage: "chart.xyaxis.line")
@@ -72,7 +74,7 @@ struct HyperliquidMarketChart: View {
                 }
                 .frame(maxWidth: .infinity, minHeight: compact ? 214 : 330)
             } else {
-                priceChart
+                priceChart.transition(.opacity)
             }
 
             HStack(spacing: 2) {
@@ -150,6 +152,7 @@ struct HyperliquidMarketChart: View {
                 }
             }
         }
+        .animation(.easeOut(duration: 0.2), value: trading.candles.isEmpty)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("hyperliquid.chart")
     }

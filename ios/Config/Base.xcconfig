@@ -2,5 +2,8 @@
 // and public builds remain reproducible without an embedded provider key.
 BSMART_DEEPSEEK_API_KEY =
 BSMART_SUPABASE_PUBLISHABLE_KEY =
+BSMART_PRIVY_APP_ID =
+BSMART_PRIVY_CLIENT_ID =
 #include? "Secrets.xcconfig"
 #include? "Supabase.xcconfig.local"
+#include? "Privy.xcconfig.local"

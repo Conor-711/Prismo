@@ -5,7 +5,12 @@ enum TodayInvestorPool {
     // The existing X account behind @aleabitoreddit; names never merge identities.
     static let preferredID = "x:1940360837547565056"
 
-    static func arranged(_ candidates: [TodayInvestorDiscovery.Investor]) -> [TodayInvestorDiscovery.Investor] {
+    static func arranged(
+        _ candidates: [TodayInvestorDiscovery.Investor],
+        hasBullishWork: (TodayInvestorDiscovery.Investor) -> Bool = {
+            TodayRepresentativeStoryBundle.bundled?.story(for: $0.account) != nil
+        }
+    ) -> [TodayInvestorDiscovery.Investor] {
         let ordered = candidates.filter(hasAvatar) + candidates.filter { !hasAvatar($0) }
         guard let first = ordered.first(where: { $0.id == preferredID }) ?? ordered.first else { return [] }
         let youtube = Array(ordered.filter {
@@ -14,8 +19,17 @@ enum TodayInvestorPool {
         let reddit = Array(ordered.filter {
             $0.id.hasPrefix("reddit:") && hasAvatar($0) && $0.id != first.id
         }.prefix(1))
-        // Keep the preferred author centered, with all three sources in the opening five.
-        let result = Array(youtube.prefix(2)) + [first] + Array(youtube.dropFirst(2)) + reddit
+        // Preserve the fifth-slot Reddit account and move the second YouTube account to fourth.
+        let replacement = ordered.first {
+            $0.id.hasPrefix("reddit:") && hasAvatar($0) && $0.id != first.id
+                && $0.id != reddit.first?.id && hasBullishWork($0)
+        }
+        let result: [TodayInvestorDiscovery.Investor]
+        if youtube.count >= 2, let replacement {
+            result = [youtube[0], replacement, first, youtube[1]] + reddit
+        } else {
+            result = Array(youtube.prefix(2)) + [first] + Array(youtube.dropFirst(2)) + reddit
+        }
         let displayed = Set(result.map(\.id))
         return result + ordered.filter { !displayed.contains($0.id) }
     }

@@ -39,7 +39,8 @@ def extract(con: sqlite3.Connection, post_ids: set[str], workers: int, max_calls
         raise RuntimeError(f"{len(pending)} pending Calls exceed the explicitly allowed {max_calls}")
     if pending:
         score.extract_calls(con, 0, workers, False, "rank", 0, 0, sources={"x"},
-                            candidate_ids={r["candidate_id"] for r in pending}, initialize_schema=False)
+                            candidate_ids={r["candidate_id"] for r in pending}, initialize_schema=False,
+                            complete_x_text=True)
     remaining = sum(not r["processed_id"] for r in candidates(con, post_ids))
     if remaining:
         raise RuntimeError(f"{remaining} Calls remain unprocessed; publication blocked")
@@ -61,19 +62,20 @@ def reading_rows(con: sqlite3.Connection, documents: dict) -> list[dict]:
     return list(rows.values())
 
 
-def validate_readings(con: sqlite3.Connection, rows: list[dict]) -> dict:
+def validate_readings(con: sqlite3.Connection, rows: list[dict], *, require_translation: bool = True) -> dict:
     failures = []
     for row in rows:
         saved = con.execute("SELECT reason_zh,reason_en,trans_zh,trans_en FROM kol_refined "
                             "WHERE source='x' AND item_id=? AND ticker=?",
                             (row["item_id"], row["ticker"])).fetchone()
-        if not saved or not saved["reason_zh"] or not saved["reason_en"] or not validate_translation(
-            row["txt"], {"zh": saved["trans_zh"] or "", "en": saved["trans_en"] or ""}
-        ):
+        summaries_ready = saved and saved["reason_zh"] and saved["reason_en"]
+        translation_ready = not require_translation or (saved and validate_translation(
+            row["txt"], {"zh": saved["trans_zh"] or "", "en": saved["trans_en"] or ""}))
+        if not row["txt"].strip() or not summaries_ready or not translation_ready:
             failures.append(f"{row['item_id']}:{row['ticker']}")
     if failures:
         raise RuntimeError(f"Incomplete reading/translation for {len(failures)} published views: {failures[:5]}")
-    return {"readyViews": len(rows)}
+    return {"readyViews": len(rows), "translationMode": "required" if require_translation else "skipped"}
 
 
 def price_scope(con: sqlite3.Connection) -> list[str]:

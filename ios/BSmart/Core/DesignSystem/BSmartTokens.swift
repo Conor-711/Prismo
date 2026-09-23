@@ -1,30 +1,30 @@
 import SwiftUI
 
 enum BSmartColor {
-    static let ink = adaptive(dark: (9, 11, 11), light: (244, 246, 248))
-    static let canvas = adaptive(dark: (6, 8, 8), light: (235, 239, 242))
+    static let ink = adaptive(dark: (9, 11, 11), light: (246, 247, 249))
+    static let canvas = adaptive(dark: (6, 8, 8), light: (235, 239, 243))
     static let surface = adaptive(dark: (18, 21, 20), light: (255, 255, 255))
-    static let elevated = adaptive(dark: (24, 28, 27), light: (248, 250, 252))
+    static let elevated = adaptive(dark: (24, 28, 27), light: (237, 242, 246))
     static let recessed = adaptive(dark: (13, 16, 15), light: (233, 238, 241))
-    static let tabBarTop = adaptive(dark: (31, 32, 38), light: (233, 236, 235))
-    static let tabBarBottom = adaptive(dark: (20, 21, 26), light: (219, 224, 222))
-    static let tabSelectionTop = adaptive(dark: (61, 62, 70), light: (255, 255, 255))
-    static let tabSelectionBottom = adaptive(dark: (40, 41, 48), light: (236, 240, 238))
-    static let tabSelectedForeground = adaptive(dark: (255, 255, 255), light: (20, 27, 24))
+    static let tabBarTop = adaptive(dark: (31, 32, 38), light: (255, 255, 255))
+    static let tabBarBottom = adaptive(dark: (20, 21, 26), light: (248, 250, 252))
+    static let tabSelectionTop = adaptive(dark: (61, 62, 70), light: (223, 241, 234))
+    static let tabSelectionBottom = adaptive(dark: (40, 41, 48), light: (213, 235, 226))
+    static let tabSelectedForeground = adaptive(dark: (255, 255, 255), light: (0, 93, 72))
     static let tabInactiveForeground = adaptiveAlpha(dark: (171, 179, 188, 0.74), light: (68, 81, 94, 1))
     static let tabBarOutline = adaptiveAlpha(
         dark: (255, 255, 255, 0.15),
-        light: (60, 80, 97, 0.28)
+        light: (60, 80, 97, 0.2)
     )
     static let tabSelectionOutline = adaptiveAlpha(
         dark: (255, 255, 255, 0.17),
-        light: (60, 80, 97, 0.34)
+        light: (0, 106, 85, 0.3)
     )
     static let line = adaptive(dark: (38, 44, 42), light: (190, 201, 210))
     static let strongLine = adaptive(dark: (58, 68, 64), light: (145, 160, 173))
-    static let primaryText = adaptive(dark: (247, 248, 249), light: (20, 29, 37))
-    static let secondaryText = adaptive(dark: (171, 179, 188), light: (68, 81, 94))
-    static let tertiaryText = adaptive(dark: (107, 116, 126), light: (90, 105, 117))
+    static let primaryText = adaptive(dark: (247, 248, 249), light: (19, 27, 35))
+    static let secondaryText = adaptive(dark: (171, 179, 188), light: (62, 76, 89))
+    static let tertiaryText = adaptive(dark: (107, 116, 126), light: (81, 97, 110))
     static let brand = adaptive(dark: (89, 224, 190), light: (0, 106, 85))
     static let bull = adaptive(dark: (0, 195, 77), light: (0, 109, 47))
     static let pulse = adaptive(dark: (212, 255, 68), light: (74, 102, 0))
@@ -55,9 +55,21 @@ enum BSmartColor {
         light: (22, 38, 32, 0.1)
     )
 
+    // Raised content, inset controls and disabled actions have distinct light-mode roles.
+    static let raisedSurface = adaptive(dark: (24, 28, 27), light: (255, 255, 255))
+    static let selectedControlSurface = adaptive(dark: (24, 28, 27), light: (255, 255, 255))
+    static let disabledControl = adaptive(dark: (13, 16, 15), light: (225, 232, 238))
+    static let inputOutline = adaptiveAlpha(dark: (0, 0, 0, 0), light: (121, 137, 151, 1))
+    static let softDivider = adaptiveAlpha(dark: (38, 44, 42, 0.5), light: (190, 201, 210, 1))
+    static let cardShadow = adaptiveAlpha(dark: (0, 0, 0, 0), light: (27, 43, 58, 0.045))
+    static let controlOutline = adaptiveAlpha(dark: (255, 255, 255, 0.16), light: (19, 27, 35, 0.12))
+    static let tradeBarSurface = adaptiveAlpha(dark: (0, 0, 0, 0.82), light: (255, 255, 255, 1))
+    static let tradeBarText = adaptiveAlpha(dark: (255, 255, 255, 0.88), light: (62, 76, 89, 1))
+    static let tradeBarLine = adaptiveAlpha(dark: (255, 255, 255, 0.11), light: (190, 201, 210, 1))
+
     // Charts use their own semantic roles because their dense controls and labels
     // need stronger local contrast than ordinary cards in both appearances.
-    static let chartSurface = adaptive(dark: (18, 31, 32), light: (250, 252, 253))
+    static let chartSurface = adaptive(dark: (18, 31, 32), light: (255, 255, 255))
     static let chartPrimaryText = adaptive(dark: (255, 255, 255), light: (20, 27, 24))
     static let chartSelectedControlForeground = adaptive(dark: (18, 31, 32), light: (255, 255, 255))
     static let chartSecondaryText = adaptiveAlpha(
@@ -66,7 +78,7 @@ enum BSmartColor {
     )
     static let chartTertiaryText = adaptiveAlpha(
         dark: (255, 255, 255, 0.48),
-        light: (90, 105, 117, 1)
+        light: (81, 97, 110, 1)
     )
     static let chartGrid = adaptiveAlpha(
         dark: (255, 255, 255, 0.09),
@@ -154,6 +166,7 @@ extension View {
                 RoundedRectangle(cornerRadius: BSmartRadius.card, style: .continuous)
                     .stroke(BSmartColor.line, lineWidth: 0.5)
             }
+            .shadow(color: BSmartColor.cardShadow, radius: 5, y: 2)
     }
 
     func bSmartPage() -> some View {
@@ -182,9 +195,10 @@ extension View {
     @ViewBuilder
     func bSmartZoomNavigationTransition<ID: Hashable>(
         sourceID: ID,
-        in namespace: Namespace.ID
+        in namespace: Namespace.ID,
+        enabled: Bool = true
     ) -> some View {
-        if #available(iOS 18.0, *) {
+        if #available(iOS 18.0, *), enabled {
             navigationTransition(.zoom(sourceID: sourceID, in: namespace))
         } else {
             self
@@ -204,6 +218,7 @@ extension View {
                 RoundedRectangle(cornerRadius: BSmartRadius.card, style: .continuous)
                     .stroke(border, lineWidth: 0.6)
             }
+            .shadow(color: BSmartColor.cardShadow, radius: 5, y: 2)
     }
 }
 
@@ -226,11 +241,11 @@ private struct BSmartDetailPageModifier: ViewModifier {
                     .accessibilityIdentifier("detail.back")
                 }
             }
-            .onAppear {
-                router.setTabBarHidden(true, token: visibilityToken)
-            }
-            .onDisappear {
-                router.setTabBarHidden(false, token: visibilityToken)
+            .background {
+                BSmartDetailVisibilityObserver(router: router, token: visibilityToken)
+                    .frame(width: 0, height: 0)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
             }
     }
 
@@ -244,16 +259,19 @@ private struct BSmartDetailPageModifier: ViewModifier {
 
 struct BSmartDetailNavigationLink<ID: Hashable, Destination: View, Label: View>: View {
     let id: ID
+    private let usesZoomTransition: Bool
     private let destination: () -> Destination
     private let label: () -> Label
     @Namespace private var transition
 
     init(
         id: ID,
+        usesZoomTransition: Bool = true,
         @ViewBuilder destination: @escaping () -> Destination,
         @ViewBuilder label: @escaping () -> Label
     ) {
         self.id = id
+        self.usesZoomTransition = usesZoomTransition
         self.destination = destination
         self.label = label
     }
@@ -261,7 +279,7 @@ struct BSmartDetailNavigationLink<ID: Hashable, Destination: View, Label: View>:
     var body: some View {
         NavigationLink {
             destination()
-                .bSmartZoomNavigationTransition(sourceID: id, in: transition)
+                .bSmartZoomNavigationTransition(sourceID: id, in: transition, enabled: usesZoomTransition)
         } label: {
             label()
                 .bSmartMatchedTransitionSource(id: id, in: transition)

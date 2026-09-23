@@ -69,6 +69,9 @@ struct SmartMoneyMovementDetailView: View {
         .navigationTitle("Smart Money")
         .navigationBarTitleDisplayMode(.inline)
         .bSmartDetailPage()
+        .bSmartTradeDock(symbol: movement.ticker, opinionSource: account.map {
+            .init(opinionID: movement.id, ticker: movement.ticker, authorID: $0.id, supportsThesis: false)
+        }, marketCoin: movement.market)
         .bSmartPage()
         .accessibilityIdentifier("smart-money.movement-detail")
     }

@@ -25,6 +25,7 @@ export const metadata: Metadata = {
   title: SITE_TITLE,
   description: SITE_DESC,
   applicationName: "bSmart",
+  icons: { shortcut: `${BASE_PATH}/favicon.ico`, apple: `${BASE_PATH}/apple-touch-icon.png` },
   manifest: `${BASE_PATH}/manifest.webmanifest`,
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "bSmart" },
   formatDetection: { telephone: false },

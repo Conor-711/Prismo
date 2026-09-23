@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>bSmart · 无字头图方案</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="workbench">
+    <div class="brand"><strong>bSmart</strong><span>观点头图 / 设计对比</span></div>
+    <div class="tools">
+      <label class="sample-select"><span>样例</span><select id="sample" aria-label="头像与标的样例"></select></label>
+      <div class="view-mode" role="group" aria-label="预览布局">
+        <button class="icon-button" id="compare" title="并排对比" aria-label="并排对比" aria-pressed="false"><i data-lucide="columns-3"></i></button>
+        <button class="icon-button active" id="single" title="单屏预览" aria-label="单屏预览" aria-pressed="true"><i data-lucide="smartphone"></i></button>
+      </div>
+      <button id="theme" class="icon-button" title="切换为白天模式" aria-label="切换为白天模式"><i data-lucide="sun"></i></button>
+    </div>
+  </header>
+  <section class="direction-bar" aria-label="选择构图">
+    <h1>错位叠合 · 紧凑双圆</h1>
+    <div class="choices" role="group" aria-label="方案"><button data-choice="a" aria-pressed="true">A <span>紧凑双圆</span></button><button data-choice="b" aria-pressed="false">B <span>同轴双像</span></button><button data-choice="c" aria-pressed="false">C <span>头像主视觉</span></button></div>
+  </section>
+  <main id="stage" class="stage" data-mode="single"></main>
+  <footer class="disclosure">设计预览，尚未替换 App。头像、Logo 与观点来自项目快照；成交人数为布局样例，不代表真实成交。预览不连接钱包、不提交交易。</footer>
+  <dialog id="preview-dialog"><button class="icon-button dialog-close" aria-label="关闭" title="关闭"><i data-lucide="x"></i></button><div id="dialog-content"></div></dialog>
+  <script src="../investor-discovery/lucide.min.js"></script>
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

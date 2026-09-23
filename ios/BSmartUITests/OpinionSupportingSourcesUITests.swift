@@ -3,14 +3,15 @@ import XCTest
 final class OpinionSupportingSourcesUITests: XCTestCase {
     override func setUpWithError() throws { continueAfterFailure = false }
 
-    private func launch(chinese: Bool = false) -> XCUIApplication {
+    private func launch(chinese: Bool = false, openDirectory: Bool = true) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-reset-state", "--ui-scenario=loaded", "--ui-trading-fixture",
                                "-AppleLanguages", chinese ? "(zh-Hans)" : "(en)",
                                "-AppleLocale", chinese ? "zh_CN" : "en_US",
                                "-bsmart.app-language", chinese ? "zh-Hans" : "en"]
         app.launch()
-        let smart = app.descendants(matching: .any)["app.tab.smart"]
+        guard openDirectory else { return app }
+        let smart = app.buttons["discovery.open-directory"]
         XCTAssertTrue(smart.waitForExistence(timeout: 10))
         smart.tap()
         return app
@@ -33,9 +34,7 @@ final class OpinionSupportingSourcesUITests: XCTestCase {
         let account = app.descendants(matching: .any)["smart.account.row.first"]
         XCTAssertTrue(account.waitForExistence(timeout: 5))
         account.tap()
-        let sections = app.segmentedControls["smart.account.detail.section"]
-        XCTAssertTrue(sections.waitForExistence(timeout: 5))
-        sections.buttons["Track record"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["smart.account.detail"].waitForExistence(timeout: 5))
         let ticker = app.buttons["account.work.select.NBIS"]
         reveal(ticker, in: app)
         ticker.tap()
@@ -74,26 +73,26 @@ final class OpinionSupportingSourcesUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["暂无可关联的官方披露"].exists)
     }
 
-    func testReaderKeepsOriginalAccessibleAndSupportsTextSize() {
-        let app = launch()
-        let account = app.descendants(matching: .any)["smart.account.row.first"]
-        XCTAssertTrue(account.waitForExistence(timeout: 5))
-        account.tap()
-        let evidence = app.descendants(matching: .any)["smart.account.latest-view.first"]
-        reveal(evidence, in: app)
-        evidence.tap()
+    func testReaderKeepsOriginalAndSourceWithoutCopyOrTextSizeControls() {
+        let app = launch(openDirectory: false)
+        let search = app.buttons["app.tab.search"]
+        XCTAssertTrue(search.waitForExistence(timeout: 10))
+        search.tap()
+        let input = app.textFields["search.input"]
+        XCTAssertTrue(input.waitForExistence(timeout: 5))
+        input.tap(); input.typeText("NBIS")
+        app.buttons["search.filter.opinions"].tap()
+        let opinion = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "search.result.opinion:")).firstMatch
+        XCTAssertTrue(opinion.waitForExistence(timeout: 8))
+        opinion.tap()
         let original = app.buttons["opinion.reader.show-original"]
         reveal(original, in: app)
         original.tap()
         XCTAssertTrue(app.descendants(matching: .any)["opinion.reader.original"].exists)
         XCTAssertFalse(app.descendants(matching: .any)["opinion.reader.translation"].exists)
-        XCTAssertTrue(app.buttons["opinion.reader.copy"].isHittable)
-        let font = app.buttons["opinion.reader.text-size"]
-        font.tap()
-        let large = app.buttons["Large"].firstMatch
-        XCTAssertTrue(large.waitForExistence(timeout: 3))
-        large.tap()
-        XCTAssertEqual(font.value as? String, "Large")
+        XCTAssertFalse(app.buttons["opinion.reader.copy"].exists)
+        XCTAssertFalse(app.buttons["opinion.reader.text-size"].exists)
+        XCTAssertTrue(app.buttons["opinion.reader.source"].isHittable)
         XCTAssertTrue(original.isHittable)
         XCTAssertFalse(app.buttons["app.tab.smart"].isHittable)
     }

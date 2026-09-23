@@ -3,7 +3,8 @@
 ## Authentication
 
 - Google login was accepted by the user on 2026-09-12. Login still does not
-  require wallet preparation or a research API. Apple remains disabled.
+  require wallet preparation or a research API. The native Apple capability is
+  enabled; the button requires the Apple provider in Supabase Auth.
   After login, Continue opens the separate trading-wallet destination.
 - Native Google SDK / AuthenticationServices obtain an ID token using SHA-256
   of a cryptographically random, one-use, five-minute nonce.
@@ -13,13 +14,27 @@
   `/auth/v1/user`, including its provider identity against the native subject.
 - Sessions use a project-specific device-only Keychain namespace, separate from
   legacy account sessions. Supabase access JWTs and opaque refresh tokens are
-  not private keys. Refresh is coalesced; interrupted rotation requires sign-in.
+  not private keys. Refresh is coalesced. Supabase interrupted rotations retain
+  their durable marker and recover via the active refresh token's parent; transient
+  network or Keychain-lock errors never revoke the remote session. Legacy authority
+  rotation remains fail-closed. See [Supabase session semantics](https://supabase.com/docs/guides/auth/sessions).
+- Foreground restoration retains identity during transient failures; expired access
+  cannot obtain a signing lease. Known refresh-token/session rejection clears local
+  credentials. Rotation uses the authenticated token response's user directly, with
+  unchanged account/provider validation and atomic persistence before publication.
 - The local refresh restoration limit is 30 days since the last successful
   exchange, not a claim about Supabase's server-side session lifetime.
 - Logout revokes this Supabase session when online, clears local access even if
   offline, locks the wallet, and never deletes its keys or another device session.
 
 ## Wallet Registry
+
+Privy embedded wallets use this same immutable registry and ownership challenge.
+The validated Supabase access JWT is separately passed to Privy's native Custom
+Auth SDK, scoped by Supabase `sub`; no refresh token, App Secret, seed or private
+key enters the registry. Matching local wallets stay local. Missing local keys
+resolve the exact registered Privy address, never create a replacement. No new
+DDL is required; see `embedded_wallet.md`.
 
 Base URL: `<project>/functions/v1/bsmart-wallet`. All requests require a verified
 Supabase user bearer plus the public publishable key. Never accept `accountId`
@@ -67,7 +82,9 @@ using a newly created address. Never infer identity from matching email/name.
 
 ## Release Boundary
 
-Google provider configuration is an operator action. Apple is postponed.
+Google and Apple provider configuration are operator actions in Supabase Auth.
+The native build now enables Sign in with Apple; this alone does not enable the
+Supabase provider or verify a live Apple login.
 `supabase/ios-account/supabase/migrations` and the Edge Function must be deployed to the
 new bSmart auth project, not the legacy content project. No startup DDL. Remote
 account deletion is not part of this basic implementation and must be completed

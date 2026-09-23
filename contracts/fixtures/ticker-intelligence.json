@@ -1,28 +1,288 @@
 [
   {
-    "ticker": "NVDA",
-    "companyName": "NVIDIA",
+    "ticker": "AAPL",
+    "companyName": "AAPL",
     "currentPrice": 0.0,
     "dayChangePercent": 0.0,
-    "dataAsOf": "2026-09-05T14:45:37+00:00",
+    "dataAsOf": "2026-09-16T02:18:45Z",
     "relationship": "smart_money_movement",
-    "direction": "bullish",
+    "direction": "bearish",
     "conclusion": "Onchain capital changed before a matching qualified social consensus formed.",
-    "latestSignalId": "3e2ac6af-044c-57ad-bdcc-376402b973ce",
+    "latestSignalId": "335cf61a-1906-53ef-b194-51797b1127d8",
     "smartAccount": {
       "direction": "bullish",
-      "headline": "Author explicitly states holding NVDA for ultimate multiple expansions in a portfolio update, a bullish position statement without specific target or timeframe.",
-      "detail": "Holding $NVDA for the ultimate multiple expansions.",
-      "qualifiedAuthorCount": 13,
-      "latestUpdateAt": "2026-09-05T00:21:25.000Z"
+      "headline": "Latest qualified view from WallStTitan",
+      "detail": "Author states they own and hold Apple in 'hold mode', indicating a bullish stance.",
+      "qualifiedAuthorCount": 4,
+      "latestUpdateAt": "2026-09-11T12:02:19.000Z"
     },
     "smartMoney": {
       "coverage": "available",
       "direction": "bearish",
-      "headline": "5 qualified public accounts reduced directional exposure",
-      "detail": "Across 5 auditable Hyperliquid fills, tracked accounts produced a $14,071,535 net bearish change in visible directional exposure.",
-      "qualifiedAccountCount": 5,
-      "latestMovementAt": "2026-08-14T07:56:37+00:00"
+      "headline": "4 qualified public accounts reduced directional exposure",
+      "detail": "Across 65 auditable Hyperliquid fills, tracked accounts produced a $110,155 net bearish change in visible directional exposure.",
+      "qualifiedAccountCount": 4,
+      "latestMovementAt": "2026-09-15T19:51:06+00:00"
+    }
+  },
+  {
+    "ticker": "COIN",
+    "companyName": "COIN",
+    "currentPrice": 0.0,
+    "dayChangePercent": 0.0,
+    "dataAsOf": "2026-09-16T02:18:45Z",
+    "relationship": "smart_money_movement",
+    "direction": "bullish",
+    "conclusion": "Onchain capital changed before a matching qualified social consensus formed.",
+    "latestSignalId": "1c2420f8-11a8-5d1e-a6e6-4e17d8da88de",
+    "smartAccount": {
+      "direction": "bearish",
+      "headline": "Latest qualified view from Ben Lam.......",
+      "detail": "Author plans to buy COIN Sep 18 $180 puts with a profit target of $7.25, scaling in at $0.30 intervals.",
+      "qualifiedAuthorCount": 2,
+      "latestUpdateAt": "2026-09-15T13:35:51.000Z"
+    },
+    "smartMoney": {
+      "coverage": "available",
+      "direction": "bullish",
+      "headline": "2 qualified public accounts added directional exposure",
+      "detail": "Across 25 auditable Hyperliquid fills, tracked accounts produced a $111,871 net bullish change in visible directional exposure.",
+      "qualifiedAccountCount": 2,
+      "latestMovementAt": "2026-09-15T18:29:41+00:00"
+    }
+  },
+  {
+    "ticker": "CRCL",
+    "companyName": "CRCL",
+    "currentPrice": 0.0,
+    "dayChangePercent": 0.0,
+    "dataAsOf": "2026-09-16T02:18:45Z",
+    "relationship": "smart_money_movement",
+    "direction": "bearish",
+    "conclusion": "Onchain capital changed before a matching qualified social consensus formed.",
+    "latestSignalId": "0aef7c3c-331e-5e02-911d-f0402e51f1f1",
+    "smartAccount": {
+      "direction": "bearish",
+      "headline": "Latest qualified view from Ben Lam.......",
+      "detail": "The author predicts CRCL may drop to $84.",
+      "qualifiedAuthorCount": 3,
+      "latestUpdateAt": "2026-09-10T13:28:38.000Z"
+    },
+    "smartMoney": {
+      "coverage": "available",
+      "direction": "bullish",
+      "headline": "3 qualified public accounts added directional exposure",
+      "detail": "Across 46 auditable Hyperliquid fills, tracked accounts produced a $446,808 net bullish change in visible directional exposure.",
+      "qualifiedAccountCount": 3,
+      "latestMovementAt": "2026-09-15T18:58:43+00:00"
+    }
+  },
+  {
+    "ticker": "CRDO",
+    "companyName": "CRDO",
+    "currentPrice": 0.0,
+    "dayChangePercent": 0.0,
+    "dataAsOf": "2026-09-16T02:18:45Z",
+    "relationship": "smart_money_movement",
+    "direction": "bearish",
+    "conclusion": "Onchain capital changed before a matching qualified social consensus formed.",
+    "latestSignalId": "6c9b3940-c3db-563d-993c-8a0a79df0350",
+    "smartAccount": {
+      "direction": "bullish",
+      "headline": "Latest qualified view from Ben Lam.......",
+      "detail": "Author reports adding CRDO call options with a target price of 156.32, indicating a bullish directional forecast.",
+      "qualifiedAuthorCount": 11,
+      "latestUpdateAt": "2026-09-15T17:12:51.000Z"
+    },
+    "smartMoney": {
+      "coverage": "available",
+      "direction": "bullish",
+      "headline": "1 qualified public account added directional exposure",
+      "detail": "Across 20 auditable Hyperliquid fills, tracked accounts produced a $187,396 net bullish change in visible directional exposure.",
+      "qualifiedAccountCount": 1,
+      "latestMovementAt": "2026-09-13T08:58:12+00:00"
+    }
+  },
+  {
+    "ticker": "CRWD",
+    "companyName": "CRWD",
+    "currentPrice": 0.0,
+    "dayChangePercent": 0.0,
+    "dataAsOf": "2026-09-16T02:18:45Z",
+    "relationship": "smart_money_movement",
+    "direction": "bullish",
+    "conclusion": "Onchain capital changed before a matching qualified social consensus formed.",
+    "latestSignalId": "50d5f223-b2b6-5222-be67-36ce023c6cf5",
+    "smartAccount": {
+      "direction": "bullish",
+      "headline": "Latest qualified view from MWM",
+      "detail": "The author states they have purchased lottery-style call options on CRWD, noting the price is flying.",
+      "qualifiedAuthorCount": 3,
+      "latestUpdateAt": "2026-09-14T14:07:57.000Z"
+    },
+    "smartMoney": {
+      "coverage": "available",
+      "direction": "bearish",
+      "headline": "1 qualified public account reduced directional exposure",
+      "detail": "Across 20 auditable Hyperliquid fills, tracked accounts produced a $95,375 net bearish change in visible directional exposure.",
+      "qualifiedAccountCount": 1,
+      "latestMovementAt": "2026-09-15T15:45:02+00:00"
+    }
+  },
+  {
+    "ticker": "GOLD",
+    "companyName": "GOLD",
+    "currentPrice": 0.0,
+    "dayChangePercent": 0.0,
+    "dataAsOf": "2026-09-16T02:18:45Z",
+    "relationship": "smart_money_movement",
+    "direction": "bullish",
+    "conclusion": "Onchain capital changed before a matching qualified social consensus formed.",
+    "latestSignalId": "5c9fc917-93fd-57c9-b789-c474a8047044",
+    "smartAccount": {
+      "direction": "bullish",
+      "headline": "Latest qualified view from Chapo",
+      "detail": "Author strongly advises selling all other assets and buying physical gold, predicting markets will crash to zero, with gold as the only safe haven.",
+      "qualifiedAuthorCount": 1,
+      "latestUpdateAt": "2026-09-02T01:07:56.000Z"
+    },
+    "smartMoney": {
+      "coverage": "available",
+      "direction": "bullish",
+      "headline": "6 qualified public accounts added directional exposure",
+      "detail": "Across 101 auditable Hyperliquid fills, tracked accounts produced a $1,483,076 net bullish change in visible directional exposure.",
+      "qualifiedAccountCount": 6,
+      "latestMovementAt": "2026-09-15T22:13:49+00:00"
+    }
+  },
+  {
+    "ticker": "INTC",
+    "companyName": "INTC",
+    "currentPrice": 0.0,
+    "dayChangePercent": 0.0,
+    "dataAsOf": "2026-09-16T02:18:45Z",
+    "relationship": "smart_money_movement",
+    "direction": "bearish",
+    "conclusion": "Onchain capital changed before a matching qualified social consensus formed.",
+    "latestSignalId": "3de30100-97ce-5bfc-ba3f-d682f84e272a",
+    "smartAccount": {
+      "direction": "bearish",
+      "headline": "Latest qualified view from Donkey building warchest",
+      "detail": "Author sold INTC due to belief that the bull market is over, expecting weak rallies and advising profit-taking.",
+      "qualifiedAuthorCount": 5,
+      "latestUpdateAt": "2026-09-08T23:58:52.000Z"
+    },
+    "smartMoney": {
+      "coverage": "available",
+      "direction": "bullish",
+      "headline": "1 qualified public account added directional exposure",
+      "detail": "Across 20 auditable Hyperliquid fills, tracked accounts produced a $111,465 net bullish change in visible directional exposure.",
+      "qualifiedAccountCount": 1,
+      "latestMovementAt": "2026-09-15T13:33:33+00:00"
+    }
+  },
+  {
+    "ticker": "MSTR",
+    "companyName": "MSTR",
+    "currentPrice": 0.0,
+    "dayChangePercent": 0.0,
+    "dataAsOf": "2026-09-16T02:18:45Z",
+    "relationship": "smart_money_movement",
+    "direction": "bearish",
+    "conclusion": "Onchain capital changed before a matching qualified social consensus formed.",
+    "latestSignalId": "c1a662c7-149d-5cc4-84f6-b7bc47a14e26",
+    "smartAccount": {
+      "direction": "bearish",
+      "headline": "Latest qualified view from Gene",
+      "detail": "The author states their MSTR short position is profitable due to the failure of the Clarity Act in the Senate.",
+      "qualifiedAuthorCount": 26,
+      "latestUpdateAt": "2026-09-15T18:50:49.000Z"
+    },
+    "smartMoney": {
+      "coverage": "available",
+      "direction": "bullish",
+      "headline": "2 qualified public accounts added directional exposure",
+      "detail": "Across 18 auditable Hyperliquid fills, tracked accounts produced a $47,299 net bullish change in visible directional exposure.",
+      "qualifiedAccountCount": 2,
+      "latestMovementAt": "2026-09-15T16:22:14+00:00"
+    }
+  },
+  {
+    "ticker": "NBIS",
+    "companyName": "NBIS",
+    "currentPrice": 0.0,
+    "dayChangePercent": 0.0,
+    "dataAsOf": "2026-09-16T02:18:45Z",
+    "relationship": "smart_money_movement",
+    "direction": "bullish",
+    "conclusion": "Onchain capital changed before a matching qualified social consensus formed.",
+    "latestSignalId": "8dd8d8be-afb5-500a-8fc7-e543aa6e4336",
+    "smartAccount": {
+      "direction": "bullish",
+      "headline": "Latest qualified view from matt",
+      "detail": "The author explicitly advises going long on NBIS to mitigate fear of daily volatility.",
+      "qualifiedAuthorCount": 74,
+      "latestUpdateAt": "2026-09-15T18:35:08.000Z"
+    },
+    "smartMoney": {
+      "coverage": "available",
+      "direction": "bullish",
+      "headline": "2 qualified public accounts added directional exposure",
+      "detail": "Across 22 auditable Hyperliquid fills, tracked accounts produced a $229,117 net bullish change in visible directional exposure.",
+      "qualifiedAccountCount": 2,
+      "latestMovementAt": "2026-09-15T11:17:23+00:00"
+    }
+  },
+  {
+    "ticker": "NVDA",
+    "companyName": "NVDA",
+    "currentPrice": 0.0,
+    "dayChangePercent": 0.0,
+    "dataAsOf": "2026-09-16T02:18:45Z",
+    "relationship": "smart_money_movement",
+    "direction": "bullish",
+    "conclusion": "Onchain capital changed before a matching qualified social consensus formed.",
+    "latestSignalId": "9997ebd2-4cf2-50e6-8c6a-2fb73ef1e0c5",
+    "smartAccount": {
+      "direction": "bullish",
+      "headline": "Latest qualified view from matt",
+      "detail": "The author explicitly states a long position in a basket of three stocks including NVDA, constituting a bullish call for NVDA as part of a portfolio.",
+      "qualifiedAuthorCount": 32,
+      "latestUpdateAt": "2026-09-15T09:59:15.000Z"
+    },
+    "smartMoney": {
+      "coverage": "available",
+      "direction": "bearish",
+      "headline": "3 qualified public accounts reduced directional exposure",
+      "detail": "Across 45 auditable Hyperliquid fills, tracked accounts produced a $61,244 net bearish change in visible directional exposure.",
+      "qualifiedAccountCount": 3,
+      "latestMovementAt": "2026-09-14T14:49:10+00:00"
+    }
+  },
+  {
+    "ticker": "SOXL",
+    "companyName": "SOXL",
+    "currentPrice": 0.0,
+    "dayChangePercent": 0.0,
+    "dataAsOf": "2026-09-16T02:18:45Z",
+    "relationship": "smart_money_movement",
+    "direction": "bearish",
+    "conclusion": "Onchain capital changed before a matching qualified social consensus formed.",
+    "latestSignalId": "c64f85d6-5558-5690-8a0f-f861a05628c2",
+    "smartAccount": {
+      "direction": "bearish",
+      "headline": "Latest qualified view from Etrading",
+      "detail": "The author predicts weakness in semiconductors including SOXL compared to memory stocks like MU, with a timeframe extending from today to Wednesday.",
+      "qualifiedAuthorCount": 5,
+      "latestUpdateAt": "2026-09-15T00:04:55.000Z"
+    },
+    "smartMoney": {
+      "coverage": "available",
+      "direction": "bullish",
+      "headline": "2 qualified public accounts added directional exposure",
+      "detail": "Across 33 auditable Hyperliquid fills, tracked accounts produced a $250,473 net bullish change in visible directional exposure.",
+      "qualifiedAccountCount": 2,
+      "latestMovementAt": "2026-09-15T13:45:19+00:00"
     }
   }
 ]

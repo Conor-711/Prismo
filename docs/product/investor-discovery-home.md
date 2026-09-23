@@ -1,18 +1,20 @@
 # 首页投资者发现
 
-更新：2026-09-09。融合评审方案已进入原生 SwiftUI，不新增 Web 业务界面。
+更新：2026-09-15。融合评审方案已进入原生 SwiftUI，不新增 Web 业务界面。
+
+当前开场顺序为 Mike Jones Investing、u/alpha247365、Serenity、Jeremy Lefebvre Clips、u/Smart_Money_HQ。第二位优先从原候选范围中选择有头像、已内置完整看多代表作且不是第五位的 Reddit 作者；原第二位 YouTube 作者移到第四位。现有数据下第二位展示 TQQQ，第四位展示 AMD。Rey Jay's Trades 的第一代表作为 NVDA 看空，因此退出开场前五但不从候选池或正式排名删除。其余身份与排名保持原值；没有合格替换者时保留原覆盖顺序，不伪造代表作。
 
 ## 产品结构
 
-- 人物池：采用单条横向队列，不做环绕。中央大头像显示真实平台 Top 比例，两侧头像随距离逐渐缩小；每个头像下缘都有平台标识。
+- 人物池：采用单条横向队列，同时显示 3 位圆形头像，不做环绕。中央头像较大并显示真实平台 Top 比例，两侧各一位；每个头像右下角都有平台标识。
 - 简介卡：保留名称、一个平台标识、周期和风格；不显示裸 Score 或重复平台名。约 94pt 内以两行展示标的 Logo + ticker、结算窗口/股价变化，以及最早加分观点的方向、日期和参考价。点击代表作可查看精确发表时间、参考价格日期、原帖和结算区间；没有代表作时显示真实领域/覆盖标的，不以未知收益填零。
 - 发现区不再提供“看观点”，观点由下半屏既有场景承担。
-- 赛道：按作者擅长领域筛选，不对观点重新标行业、不由所选股票推断作者能力。
+- 赛道：首页隐藏，点击“发现聪明投资者”进入独立目录后提供。按作者擅长领域筛选，不对观点重新标行业、不由所选股票推断作者能力。
 - 人物档案：复用现有概览、历史表现与代表作；上一位 / 下一位只在进入时的候选范围内工作。
-- 搜索目录：支持姓名、账号、赛道、风格和已覆盖标的检索，可叠加仅已追踪。进入档案保留搜索结果范围，返回保留原首页状态。
+- 搜索目录：支持姓名、账号、赛道、风格和已覆盖标的检索，可叠加平台、赛道和仅已追踪。首页标题共享放大转场进入独立页面，教育页保留平台范围内的弹出目录。进入档案保留搜索结果范围，返回保留原首页状态。
 - 追踪：所有入口使用 AppModel 的现有追踪状态和设备持久化，不创建第二套收藏。
 
-原首页下半屏的持仓与追踪、市场情况、聪明动态继续保留，原生滚动和吸顶容器不变。新用户无持仓也可发现投资者；添加持仓仍在下半屏。
+首页下半屏保留“持仓与追踪 / 市场情况 / 聪明动态”三个基础 Tab，可点击或左右滑动切换。来源筛选收至各自完整集合页。新用户无持仓也可发现投资者；添加持仓仍在下半屏。
 
 ## 数据边界
 
@@ -35,10 +37,10 @@ Reddit 平台标识由共享 `SmartPlatformMark` 读取内置 `PlatformReddit` �
 - `TodayInvestorDiscoveryHighlight.swift`：校验已有代表作身份/结算状态，取既有窗口和股价变化用于简介。
 - `TodayInvestorDiscoveryWork.swift`：Logo/标的、最早加分日期与参考价，及可追溯的价格口径明细。
 - `Core/Models/SmartAccountRepresentativeIntro.swift`：可选轻量摘要契约；管线 `domain/smart_voice/representative_intro.py` 负责历史选择与参考价投影，客户端不重算。
-- `TodayInvestorDiscoveryModule.swift`：赛道/选人状态和 AppModel 连接。
+- `TodayInvestorDiscoveryModule.swift`：选人状态、独立目录入口和 AppModel 连接。
 - `TodayInvestorDiscoveryPeople.swift` / `TodayInvestorPoolPortrait.swift`：原生手动横滑、横向大小层次与平台标识，保留焦点档案和追踪。
 - `TodayInvestorDiscoveryDirectory.swift` / `TodayInvestorProfileBrowser.swift`：搜索目录、候选范围内连续浏览，复用现有作者详情。
-- `TodayView.swift`：移除首屏行情挂载，其他三个场景与底部主导航不变。
+- `TodayView.swift` / `TodayHomeContent.swift`：共享折叠头部与三个基础场景 Tab，保留原预览与底部主导航；详情页承载次级筛选。
 
 HTML 位于 `prototypes/investor-discovery-unified/`，仅保留评审快照，不作为原生运行时数据源。
 

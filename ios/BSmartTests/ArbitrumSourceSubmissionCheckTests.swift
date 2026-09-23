@@ -42,7 +42,7 @@ final class ArbitrumSourceSubmissionCheckTests: XCTestCase {
             ["usdc": .string(FundingQuantity(1).abi)],
             ["eth": .string("0x1")],
             ["gasPrice": .string(FundingQuantity(21_000_000).rpc)],
-            ["gas": .string(FundingQuantity(200_001).rpc)],
+            ["gas": .string(FundingQuantity(240_001).rpc)],
             [CCTPArbitrumRoute.extensionAddress: .string("0x6002600055")],
             ["simulation": .string("0x01")]
         ] as [[String: FundingRPCValue]] {
@@ -65,6 +65,34 @@ final class ArbitrumSourceSubmissionCheckTests: XCTestCase {
         }
         let requests = await rpc.requests
         XCTAssertTrue(requests.isEmpty)
+    }
+
+    func testGasFluctuationsConsumeApprovedHeadroomWithoutIncreasingSignedLimits() async throws {
+        let context = FundingJournalTestContext(); defer { context.cleanup() }
+        let signed = try await context.signed(context.transaction())
+        XCTAssertEqual(signed.transaction.preflight.estimatedGas, FundingQuantity(200_000))
+        XCTAssertEqual(signed.transaction.preflight.gasLimit, FundingQuantity(240_000))
+        for estimate in [200_001, 220_000, 240_000] as [UInt64] {
+            let rpc = try PreflightStubRPC(overrides: ["gas": .string(FundingQuantity(estimate).rpc)])
+            let check = try await ArbitrumSourceSubmissionCheck(rpc: rpc, clock: { context.clock.now })
+                .check(signed: signed, wallet: context.wallet)
+            try check.validate(hash: signed.hash, wallet: context.wallet, now: context.clock.now)
+            let requests = await rpc.requests
+            let request = try XCTUnwrap(requests.last(where: { $0.method == .estimate }))
+            guard case .object(let fields) = request.params.first else { return XCTFail("Missing envelope") }
+            XCTAssertEqual(fields["gas"], .string(FundingQuantity(240_000).rpc))
+            XCTAssertEqual(fields["maxFeePerGas"], .string(signed.transaction.preflight.maximumFeePerGas.rpc))
+        }
+    }
+
+    func testGasChangeOnlyAtFinalEstimateAlsoUsesApprovedHeadroom() async throws {
+        let context = FundingJournalTestContext(); defer { context.cleanup() }
+        let signed = try await context.signed(context.transaction())
+        let rpc = try SubmissionCheckRPC(mode: .estimate, finalEstimate: 240_000)
+        _ = try await ArbitrumSourceSubmissionCheck(rpc: rpc, clock: { context.clock.now })
+            .check(signed: signed, wallet: context.wallet)
+        let reached = await rpc.reachedTarget
+        XCTAssertTrue(reached)
     }
 
     func testFinalNonceReorgAndCappedSimulationAreCheckedAfterFreshPreflight() async throws {
@@ -103,8 +131,11 @@ private actor SubmissionCheckRPC: ArbitrumFundingRPCProviding {
     enum Mode: CaseIterable { case nonce, reorg, wrongChain, simulation, estimate, olderHead, newHashAtSameHeight }
     let mode: Mode
     let base: PreflightStubRPC
+    let finalEstimate: UInt64
     private(set) var reachedTarget = false
-    init(mode: Mode) throws { self.mode = mode; base = try PreflightStubRPC() }
+    init(mode: Mode, finalEstimate: UInt64 = 240_001) throws {
+        self.mode = mode; self.finalEstimate = finalEstimate; base = try PreflightStubRPC()
+    }
     func read(_ requests: [FundingRPCRequest]) async throws -> [FundingRPCValue] {
         var values = try await base.read(requests)
         for index in requests.indices where requests[index].method == .block {
@@ -125,7 +156,7 @@ private actor SubmissionCheckRPC: ArbitrumFundingRPCProviding {
         }
         if requests.count == 2, requests[1].method == .estimate {
             if mode == .simulation { values[0] = .string("0x01"); reachedTarget = true }
-            if mode == .estimate { values[1] = .string(FundingQuantity(200_001).rpc); reachedTarget = true }
+            if mode == .estimate { values[1] = .string(FundingQuantity(finalEstimate).rpc); reachedTarget = true }
         }
         return values
     }

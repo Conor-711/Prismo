@@ -23,12 +23,45 @@ final class TradingFlowUITests: XCTestCase {
         XCTAssertTrue(app.buttons["trade.range.1W"].isSelected)
     }
 
+    func testTradeSheetShowsStableLoadingLayoutBeforeMarketArrives() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-reset-state", "--ui-scenario=loaded", "--ui-trading-fixture",
+                               "--ui-trading-delayed-market", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        let portfolio = app.descendants(matching: .any)["app.tab.portfolio"]
+        XCTAssertTrue(portfolio.waitForExistence(timeout: 8))
+        portfolio.tap()
+        app.buttons["portfolio.tab.allTickers"].tap()
+        let search = app.textFields["portfolio.ticker-search"]
+        XCTAssertTrue(search.waitForExistence(timeout: 6))
+        search.tap()
+        search.typeText("NVDA")
+        let ticker = app.descendants(matching: .any)["portfolio.ticker.NVDA"]
+        XCTAssertTrue(ticker.waitForExistence(timeout: 6))
+        ticker.tap()
+        let open = app.buttons["trade.open.nvda"]
+        XCTAssertTrue(open.waitForExistence(timeout: 8))
+        open.tap()
+        let loading = app.descendants(matching: .any)["trade.market.loading"]
+        XCTAssertTrue(loading.waitForExistence(timeout: 3))
+        XCTAssertTrue(app.descendants(matching: .any)["trade.order.loading"].exists)
+        XCTAssertTrue(app.buttons["trade.close"].isHittable)
+        XCTAssertFalse(app.descendants(matching: .any)["trading-order.submit"].exists)
+        XCTAssertTrue(app.buttons["trade.live.wallet"].waitForExistence(timeout: 10))
+        XCTAssertTrue(loading.waitForNonExistence(timeout: 4))
+        app.buttons["trade.close"].tap()
+    }
+
     func testLiveOrderEntryAndReturnPreserveMarketRange() {
         let app = openMarket()
         XCTAssertTrue(app.buttons["trade.range.1W"].waitForExistence(timeout: 8))
         app.buttons["trade.range.1W"].tap()
-        app.buttons["trade.open.nvda"].tap()
+        let open = app.buttons["trade.open.nvda"]
+        let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hittable == true"), object: open)
+        XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 5), .completed)
+        open.tap()
         XCTAssertTrue(app.descendants(matching: .any)["trade.live.screen"].waitForExistence(timeout: 8))
+        XCTAssertFalse(app.buttons["app.tab.portfolio"].isHittable)
         XCTAssertFalse(app.buttons["trade.order.done"].exists)
         XCTAssertFalse(app.descendants(matching: .any)["trading-order.submit"].exists)
         app.buttons["trade.close"].tap()
@@ -178,9 +211,14 @@ final class TradingFlowUITests: XCTestCase {
     }
 
     func testPortfolioMarketRowUsesDollarPriceAndVolumeInChinese() {
-        let app = openMarket(language: "zh-Hans")
-        app.buttons["detail.back"].tap()
-        app.segmentedControls.buttons["全部标的"].tap()
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-reset-state", "--ui-scenario=loaded", "--ui-trading-fixture",
+                               "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
+        app.launch()
+        let portfolio = app.buttons["app.tab.portfolio"]
+        XCTAssertTrue(portfolio.waitForExistence(timeout: 8))
+        portfolio.tap()
+        app.buttons["portfolio.tab.allTickers"].tap()
         let search = app.textFields["portfolio.ticker-search"]
         XCTAssertTrue(search.waitForExistence(timeout: 5))
         search.tap()
@@ -190,7 +228,8 @@ final class TradingFlowUITests: XCTestCase {
         XCTAssertTrue(price.label.hasPrefix("$"), price.label)
         XCTAssertFalse(price.label.contains("US"), price.label)
         let volume = app.staticTexts["portfolio.volume.NVDA"]
-        XCTAssertTrue(volume.label.contains("Vol"), volume.label)
+        XCTAssertTrue(volume.label.contains("交易量"), volume.label)
+        XCTAssertFalse(volume.label.contains("24小时"), volume.label)
         XCTAssertTrue(volume.label.contains("$"), volume.label)
         XCTAssertFalse(volume.label.contains("XYZ"))
         XCTAssertFalse(volume.label.contains("Hyperliquid"))
@@ -202,21 +241,49 @@ final class TradingFlowUITests: XCTestCase {
     func testPortfolioSeparatesExternalHoldingsFromAppAccount() {
         let app = openMarket()
         app.buttons["detail.back"].tap()
-        let external = app.buttons["portfolio.account.external"]
-        let inside = app.buttons["portfolio.account.app"]
-        XCTAssertTrue(external.waitForExistence(timeout: 5))
-        XCTAssertTrue(inside.exists)
+        let accountSwitch = app.buttons["portfolio.account.switch"]
+        XCTAssertTrue(accountSwitch.waitForExistence(timeout: 5))
+        accountSwitch.tap()
+        XCTAssertEqual(accountSwitch.value as? String, "External account")
         XCTAssertTrue(app.staticTexts["portfolio.cost.NVDA"].exists)
         XCTAssertTrue(app.staticTexts["portfolio.value.NVDA"].exists)
         XCTAssertTrue(app.staticTexts["portfolio.pnl.NVDA"].exists)
         XCTAssertFalse(app.staticTexts["portfolio.volume.NVDA"].exists)
-        inside.tap()
+        accountSwitch.tap()
         XCTAssertTrue(app.descendants(matching: .any)["portfolio.app.live-balances"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.staticTexts["portfolio.app.cash"].exists)
         XCTAssertFalse(app.staticTexts["portfolio.app.equity"].exists)
         XCTAssertFalse(app.buttons["portfolio.entry.NVDA"].exists)
-        external.tap()
+        accountSwitch.tap()
         XCTAssertTrue(app.buttons["portfolio.entry.NVDA"].waitForExistence(timeout: 5))
+    }
+
+    func testTabOrderLiveFeedAndWalletSettingsEntry() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-reset-state", "--ui-scenario=loaded", "--ui-trading-fixture",
+                               "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        let home = app.buttons["app.tab.today"]
+        let feed = app.buttons["app.tab.feed"]
+        let smart = app.buttons["app.tab.smart"]
+        let profile = app.buttons["app.tab.portfolio"]
+        XCTAssertTrue(profile.waitForExistence(timeout: 10))
+        XCTAssertLessThan(home.frame.midX, feed.frame.midX)
+        XCTAssertLessThan(feed.frame.midX, smart.frame.midX)
+        XCTAssertLessThan(smart.frame.midX, profile.frame.midX)
+        feed.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["feed.screen"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["feed.demo.toggle"].exists)
+        XCTAssertFalse(app.buttons["Feed privacy"].exists)
+        profile.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["portfolio.app.positions"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["portfolio.app.wallet"].exists)
+        app.buttons["portfolio.settings"].tap()
+        let wallet = app.buttons["settings.wallet"]
+        XCTAssertTrue(wallet.waitForExistence(timeout: 5))
+        XCTAssertTrue(wallet.isHittable)
+        wallet.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["wallet.screen"].waitForExistence(timeout: 5))
     }
 
     func testTodayLogoOpensTickerInsteadOfParentCard() {

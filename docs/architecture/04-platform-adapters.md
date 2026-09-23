@@ -65,6 +65,18 @@ database writes, scoring or factual association belongs in this adapter.
 The domain verifies curated claim/date rules; the job owns the bounded manifest
 and optional local fixture export. See `docs/product/opinion-supporting-sources.md`.
 
+`source_documents/official.py` parses SEC submissions JSON, issuer RSS and
+first-party news indexes. `jobs/official_source_refresh.py` maintains a
+review-only, last-good candidate index and per-channel health report under
+`data/runtime/official-sources`; `domain/opinions/official_channels.py` owns the
+reviewed ticker/CIK/host/path allowlist. The adapter never decides that a source
+supports a particular opinion. The existing curated crawl can opt into index
+candidates, but its factual/date checks and publication step remain separate.
+
+## Telegram X file transport
+
+`pipeline/platforms/telegram/x_packages.py` 接收目标频道的 Bot API `channel_post` 文件更新，不把频道当成独立社媒观点源。平台层验证文件大小、下载路径与磁盘空间；超过远端 20 MB 限制时使用 localhost Local Bot API 文件缓存。作者排名、前 25% 筛选、模型、翻译和清理决策均不在此适配器内，分别由 domain 和 job 层负责。机器人只能接收加入后新消息，24 小时以上未消费的更新不能自动补历史。配置和真实验收见 `docs/operations/telegram-x-delivery.md`。
+
 ## X realtime adapter
 
 `pipeline/platforms/x/realtime` 以 `TweetProvider` 协议隔离供应商。当前
@@ -98,3 +110,10 @@ commodities、FX 和 preipo，不用前端硬编码市场清单；合约 ID 保�
 运行编排位于 `pipeline/jobs/smart_voice/hyperliquid.py`，CLI 不得直接调用 client。
 
 Hyperliquid 官方管线保留为来源审计、诊断和显式降级。它不得在 Hyperdash 主源健康时覆盖主榜，也不得把本地 Onchain Score 标记为 Hyperdash Copy Score。
+
+## 三小时公开来源刷新
+
+`youtube/incremental.py` 按现有频道池抓上传列表；`reddit/incremental.py` 使用用户授权的
+Arctic Shift 镜像，保留来源与时间，校验新鲜度和分页完整性。平台层不生成观点或评分；
+`jobs/social_delivery` 组织现有领域分析及 Supabase 分平台发布。直连 Reddit 403 不视为成功，
+镜像覆盖不等同于全站实时覆盖。详见 `docs/operations/social-content-delivery.md`。

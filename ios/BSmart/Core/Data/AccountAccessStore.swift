@@ -5,8 +5,10 @@ import Combine
 final class AccountAccessStore: ObservableObject, AccountWalletServicing {
     @Published private(set) var configuration = AccountAuthConfiguration.unavailable
     @Published private(set) var identity: TradingAccountIdentity?
+    @Published private(set) var feedRevision = 0
     @Published private(set) var isBusy = false
     @Published private(set) var didLoad = false
+    @Published private(set) var isTestSession = false
     @Published var errorMessage: String?
     private let client: AccountAuthenticating?
     private let storage: AccountSessionPersisting
@@ -16,14 +18,28 @@ final class AccountAccessStore: ObservableObject, AccountWalletServicing {
     private let now: () -> Date
     private let continuousNow: @Sendable () -> ContinuousClock.Instant
     private var session: TradingAccountSession?
+    var onSessionEnding: ((String) async -> Void)?
     private var fundingLease: FundingSigningLease?
     private var scope = UUID()
-    private var isRenewing = false
+    @Published private var isRenewing = false
     @Published private var providerChecks = 0
     private var providerValidation: (token: String, authorization: AppleCredentialAuthorization)?
     private var signingInProvider: AccountIdentityProvider?
 
     var supportsAccountDeletion: Bool { client is AccountDeleting }
+
+    // Content access is separate from wallet readiness. A cached identity alone
+    // must not expose the app during restore or after its access token expires.
+    var canAccessAppContent: Bool {
+        didLoad && identity != nil && identity == session?.account
+            && (session?.expiresAt ?? .distantPast) > now()
+    }
+
+    func startTestSession() {
+        guard didLoad, !isBusy, identity == nil, session == nil else { return }
+        isTestSession = true
+        errorMessage = nil
+    }
 
     init(client: AccountAuthenticating?, storage: AccountSessionPersisting = KeychainAccountSessionStore(
         service: Bundle.main.bundleIdentifier ?? "today.bsmart.ios"
@@ -48,23 +64,20 @@ final class AccountAccessStore: ObservableObject, AccountWalletServicing {
         providerValidation = nil
         isBusy = true
         defer { isBusy = false; didLoad = true }
-        identity = nil
-        session = nil
         guard let client else { return }
         do {
-            configuration = try await client.configuration()
-            guard !configuration.providers.isEmpty else { return }
             try requireNoPendingDeletion()
             if let saved = try storage.load() {
-                if try storage.isRenewalPending() {
+                if try storage.isRenewalPending(), saved.authority != .supabase {
                     try? await client.revoke(session: saved)
                     try storage.clear()
                     throw AccountAccessError.expired
                 }
                 guard saved.expiresAt > now() || (saved.refreshExpiresAt ?? .distantPast) > now() else {
-                    try storage.clear(); return
+                    try storage.clear(); session = nil; identity = nil; return
                 }
                 session = saved
+                if saved.authority == .supabase { identity = saved.account }
                 try await validateAppleCredential(saved)
                 try await renewIfNeeded()
                 guard let candidate = session else { throw AccountAccessError.expired }
@@ -74,12 +87,24 @@ final class AccountAccessStore: ObservableObject, AccountWalletServicing {
                 try Task.checkCancellation()
                 guard session?.hasSameCredentials(as: candidate) == true else { throw CancellationError() }
                 try requireNoPendingDeletion()
-                guard current == candidate.account else { throw AccountAccessError.invalidResponse }
+                guard current == candidate.account else {
+                    try clearRejectedSession(candidate)
+                    throw AccountAccessError.invalidResponse
+                }
                 identity = current
+            } else {
+                session = nil
+                identity = nil
             }
+            configuration = try await client.configuration()
+            errorMessage = nil
         } catch {
-            identity = nil
-            session = nil
+            // Offline/foreground cancellation is not a logout. Expired credentials
+            // still cannot obtain a signing lease through walletSession().
+            if session?.authority != .supabase {
+                identity = nil
+                session = nil
+            }
             if !Task.isCancelled {
                 errorMessage = (error as? AccountAccessError)?.localizedDescription
                     ?? "Account service is unavailable. Please try again.".bSmartLocalized
@@ -137,6 +162,7 @@ final class AccountAccessStore: ObservableObject, AccountWalletServicing {
                 throw error
             }
             session = verified
+            isTestSession = false
             identity = verified.account
         } catch AccountAccessError.cancelled {
         } catch is CancellationError {
@@ -149,6 +175,10 @@ final class AccountAccessStore: ObservableObject, AccountWalletServicing {
 
     func signOut() async {
         guard !isBusy else { return }
+        if isTestSession {
+            isTestSession = false
+            return
+        }
         clearTradingCapabilities()
         revokeFundingLease()
         invalidateRenewal()
@@ -160,6 +190,7 @@ final class AccountAccessStore: ObservableObject, AccountWalletServicing {
                 try storage.clear()
                 session = nil
                 identity = nil
+                await onSessionEnding?(saved.accessToken)
                 if let client {
                     do { try await client.revoke(session: saved) }
                     catch AccountAccessError.expired {}
@@ -186,6 +217,17 @@ final class AccountAccessStore: ObservableObject, AccountWalletServicing {
     }
 
     var walletAccountID: UUID? { try? walletSession().account.id }
+    var walletSessionRevision: UUID { scope }
+    var walletSessionIsRefreshing: Bool { isRenewing || providerChecks > 0 }
+
+    // Privy receives only the current Supabase access JWT, never its refresh token.
+    func embeddedWalletAccessToken(expectedAccountID: UUID) async throws -> String {
+        let expectedScope = scope
+        let active = try await validatedWalletSession()
+        guard expectedScope == scope, active.authority == .supabase,
+              active.account.id == expectedAccountID else { throw DeviceWalletError.accountChanged }
+        return active.accessToken
+    }
 
     func fundingSigningLease(wallet: DeviceWalletSummary) throws -> FundingSigningLease {
         let active = try walletSession()
@@ -203,6 +245,26 @@ final class AccountAccessStore: ObservableObject, AccountWalletServicing {
     private func revokeFundingLease() {
         fundingLease?.invalidate()
         fundingLease = nil
+    }
+
+    // Feed shares the real account, not installation auth. Never returns a token to a view.
+    func withFeedSession<T>(expectedAccountID: UUID? = nil,
+                            request: (String) async throws -> T) async throws -> T {
+        let active = try await validatedWalletSession()
+        guard active.authority == .supabase,
+              expectedAccountID == nil || expectedAccountID == active.account.id else {
+            throw AccountAccessError.expired
+        }
+        let value = try await accountRequest(session: active) { try await request(active.accessToken) }
+        try Task.checkCancellation()
+        guard session?.hasSameCredentials(as: active) == true, identity?.id == active.account.id else {
+            throw DeviceWalletError.accountChanged
+        }
+        return value
+    }
+
+    func feedSharingDidChange(accountID: UUID) {
+        if identity?.id == accountID { feedRevision += 1 }
     }
 
     func walletRegistration() async throws -> TradingWalletRegistration {
@@ -251,17 +313,18 @@ final class AccountAccessStore: ObservableObject, AccountWalletServicing {
         let flags = registration.address == nil ? nil : registration.capabilities
         configuration = .init(providers: configuration.providers,
             depositsEnabled: flags?.depositsEnabled == true, tradingEnabled: flags?.tradingEnabled == true,
-            withdrawalsEnabled: flags?.withdrawalsEnabled == true)
+            withdrawalsEnabled: flags?.withdrawalsEnabled == true,
+            acrossWithdrawalsEnabled: flags?.acrossWithdrawalsEnabled == true)
     }
 
     private func clearTradingCapabilities() {
         configuration = .init(providers: configuration.providers, depositsEnabled: false,
-                              tradingEnabled: false, withdrawalsEnabled: false)
+                              tradingEnabled: false, withdrawalsEnabled: false, acrossWithdrawalsEnabled: false)
     }
 
     func maintainSession() async {
         // Revalidate on every foreground entry, including a previously cancelled restore.
-        await load()
+        if session == nil { await load() }
         while !Task.isCancelled {
             if !isBusy, !isRenewing, providerChecks == 0, session != nil {
                 do { _ = try await validatedWalletSession() }
@@ -275,7 +338,8 @@ final class AccountAccessStore: ObservableObject, AccountWalletServicing {
 
     private func renewIfNeeded() async throws {
         guard let active = session else { throw AccountAccessError.expired }
-        if active.expiresAt.timeIntervalSince(now()) > 60 { return }
+        let recoveringRotation = try (active.authority == .supabase && storage.isRenewalPending())
+        if active.expiresAt.timeIntervalSince(now()) > 60 && !recoveringRotation { return }
         if active.refreshToken == nil, active.expiresAt > now() { return }
         guard let renewal else { throw AccountAccessError.unavailable }
         let scope = self.scope
@@ -295,7 +359,13 @@ final class AccountAccessStore: ObservableObject, AccountWalletServicing {
             try await validateAppleCredential(renewed)
             if !isBusy { identity = renewed.account }
         } catch {
-            if scope == self.scope { session = nil; identity = nil }
+            if scope == self.scope {
+                if case AccountAccessError.expired = error {
+                    try clearRejectedSession(active)
+                } else if active.authority != .supabase {
+                    session = nil; identity = nil
+                }
+            }
             throw error
         }
     }

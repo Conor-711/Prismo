@@ -10,6 +10,7 @@ struct TradingWalletCapabilities: Codable, Equatable, Sendable {
     let depositsEnabled: Bool
     let tradingEnabled: Bool
     let withdrawalsEnabled: Bool
+    var acrossWithdrawalsEnabled: Bool? = nil
 }
 
 extension TradingWalletRegistration {
@@ -80,6 +81,11 @@ struct DeviceWalletSummary: Equatable, Sendable {
     let accountID: UUID
     let address: String
     let recoveryVerified: Bool
+    var provider: TradingWalletProvider = .device
+}
+
+enum TradingWalletProvider: String, Sendable {
+    case device, privy
 }
 
 enum DeviceWalletError: Error, LocalizedError {

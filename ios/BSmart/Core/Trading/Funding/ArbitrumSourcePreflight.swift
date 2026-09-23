@@ -37,7 +37,7 @@ struct ArbitrumSourcePreflight: ArbitrumWalletSnapshotProviding, CCTPSourcePrepa
         // Validates the signature against this exact plan before any RPC can receive it.
         let data = try CCTPDepositCodec.callData(plan: plan, wallet: wallet, authorization: authorization, now: clock())
         let source = try await snapshot(wallet: wallet)
-        try plan.validate(wallet: wallet, now: clock())
+        try plan.validateAuthorization(wallet: wallet, now: clock())
         guard source.block.timestamp.timeIntervalSince1970 > TimeInterval(plan.validAfter),
               source.block.timestamp.timeIntervalSince1970 < TimeInterval(plan.validBefore) else { throw FundingPreflightError.staleState }
         let amount = FundingQuantity(plan.quote.amountUnits)
@@ -57,13 +57,15 @@ struct ArbitrumSourcePreflight: ArbitrumWalletSnapshotProviding, CCTPSourcePrepa
             "data": .string(FundingHex.encode(data)), "value": .string("0x0"), "nonce": .string(nonce.rpc),
             "maxFeePerGas": .string(maxPrice.rpc), "maxPriorityFeePerGas": .string("0x0")
         ])
-        // Deployed versions differ in fee getters. Simulate the real call, including its fee checks.
-        let simulation = try await read([.init(.call, [transaction, source.block.reference])])
-        guard try simulation[0].text() == "0x" else { throw FundingPreflightError.simulationFailed }
+        // Estimate first: an eth_call with fee fields but no gas uses the node's huge default gas cap.
         let estimates = try await read([.init(.estimate, [transaction, .string(source.block.number.rpc)])])
         let gas = try FundingQuantity(rpc: estimates[0].text())
         let budget = try CCTPSourceGasBudget(estimatedGas: gas, gasPrice: price, baseFee: source.block.baseFee)
         guard source.eth >= budget.maximumNetworkFee else { throw FundingPreflightError.insufficientETH }
+        guard case .object(var bounded) = transaction else { throw FundingPreflightError.invalidResponse }
+        bounded["gas"] = .string(budget.gasLimit.rpc)
+        let simulation = try await read([.init(.call, [.object(bounded), source.block.reference])])
+        guard try simulation[0].text() == "0x" else { throw FundingPreflightError.simulationFailed }
         try await verifyCanonical(source.block)
         let pending = try await read([.init(.nonce, [.string(plan.owner), .string("pending")])])
         guard try FundingQuantity(rpc: pending[0].text()) == nonce else { throw FundingPreflightError.pendingTransaction }

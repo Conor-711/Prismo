@@ -43,12 +43,12 @@ final class FundingHistoryStore: ObservableObject {
     }
 
     func checkSource(id: UUID, wallet: DeviceWalletSummary) async {
-        guard !isLoading, entries.contains(where: { $0.id == id && $0.transactionHash != nil }) else { return }
+        guard !isLoading, entries.contains(where: { $0.id == id && $0.transactionHash != nil && $0.stage.requiresReconciliation }) else { return }
         await run(wallet: wallet, action: .observe(id))
     }
 
     func checkCrossChain(id: UUID, wallet: DeviceWalletSummary) async {
-        guard !isLoading, entries.contains(where: { $0.id == id && $0.transactionHash != nil }) else { return }
+        guard !isLoading, entries.contains(where: { $0.id == id && $0.transactionHash != nil && $0.stage.requiresReconciliation }) else { return }
         await run(wallet: wallet, action: .crossChain(id))
     }
 

@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 
 from ..domain.opinions.crawled_sources import AssociationRejected, build_association
+from ..domain.opinions.official_channels import candidates_for_rule
 from ..domain.opinions.supporting_sources import COLLECTIONS, load_catalogue
 from ..platforms.source_documents.web import CrawlError, WebCrawler
 from .opinion_sources import export_sources
@@ -15,6 +16,7 @@ from .opinion_sources import export_sources
 ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = ROOT / "pipeline/domain/opinions/data/local_crawl_samples.json"
 CATALOGUE = ROOT / "pipeline/domain/opinions/data/crawled_sources.json"
+OFFICIAL_INDEX = ROOT / "data/runtime/official-sources/index.json"
 
 
 def write_json(path: Path, value):
@@ -26,7 +28,8 @@ def write_json(path: Path, value):
 
 def run(*, input_dir: Path, output_dir: Path, manifest: Path = MANIFEST,
         apply: bool = False, refresh: bool = False, request_limit: int = 30,
-        crawler=None, catalogue_path: Path = CATALOGUE) -> dict:
+        crawler=None, catalogue_path: Path = CATALOGUE,
+        official_index_path: Path | None = None) -> dict:
     plan = json.loads(manifest.read_text(encoding="utf-8"))
     rules = plan["rules"]
     if not 1 <= len(rules) <= 12:
@@ -36,6 +39,8 @@ def run(*, input_dir: Path, output_dir: Path, manifest: Path = MANIFEST,
         for opinion in json.loads((input_dir / f"{name}.json").read_text(encoding="utf-8")):
             opinions[opinion["id"].lower()] = opinion
     crawler = crawler or WebCrawler(output_dir / "cache", request_limit=request_limit, refresh=refresh)
+    official_index = (json.loads(official_index_path.read_text(encoding="utf-8"))
+                      if official_index_path and official_index_path.exists() else {})
     now = datetime.now(timezone.utc)
     approved, results = [], []
     for spec in rules:
@@ -50,7 +55,8 @@ def run(*, input_dir: Path, output_dir: Path, manifest: Path = MANIFEST,
             except (CrawlError, OSError, ValueError) as error:
                 errors.append({"url": index, "error": str(error)})
         # Direct seeds cover archive pages whose older articles are no longer linked.
-        candidates = list(dict.fromkeys([*candidates, *spec.get("seedURLs", [])]))[:4]
+        official = candidates_for_rule(official_index, spec) if spec.get("useOfficialIndex") else []
+        candidates = list(dict.fromkeys([*candidates, *spec.get("seedURLs", []), *official]))[:4]
         accepted = set()
         for url in candidates:
             if len(accepted) == len(targets):
@@ -101,11 +107,14 @@ def main():
     parser.add_argument("--apply", action="store_true", help="Update the crawl catalogue and local fixture sources")
     parser.add_argument("--refresh", action="store_true")
     parser.add_argument("--request-limit", type=int, default=30)
+    parser.add_argument("--official-index", type=Path, default=OFFICIAL_INDEX,
+                        help="Reviewed-rule fallback candidates from the official source index")
     args = parser.parse_args()
     if not 1 <= args.request_limit <= 60:
         parser.error("request-limit must be between 1 and 60")
     report = run(input_dir=args.input_dir, output_dir=args.output_dir, manifest=args.manifest,
-                 apply=args.apply, refresh=args.refresh, request_limit=args.request_limit)
+                 apply=args.apply, refresh=args.refresh, request_limit=args.request_limit,
+                 official_index_path=args.official_index)
     print(json.dumps({key: value for key, value in report.items() if key != "results"}, ensure_ascii=False))
 
 

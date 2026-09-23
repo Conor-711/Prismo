@@ -281,6 +281,79 @@ final class AppModelTests: XCTestCase {
     }
 
     @MainActor
+    func testInitialOnboardingCompletionIsScopedToSignedInAccount() async throws {
+        let suiteName = "BSmartTests.OnboardingAccount.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let firstAccount = UUID()
+        let secondAccount = UUID()
+
+        let model = AppModel(
+            client: TestBSmartAPIClient(),
+            defaults: defaults,
+            portfolioBootstrapStrategy: .localOnly
+        )
+        model.activateAccountContext(firstAccount)
+        await model.load()
+
+        XCTAssertFalse(model.hasCompletedPortfolioSetup)
+        model.completeInitialOnboarding()
+        XCTAssertTrue(model.hasCompletedPortfolioSetup)
+
+        model.activateAccountContext(secondAccount)
+        XCTAssertFalse(model.hasCompletedPortfolioSetup)
+        model.completeInitialOnboarding()
+        XCTAssertTrue(model.hasCompletedPortfolioSetup)
+
+        model.activateAccountContext(firstAccount)
+        XCTAssertTrue(model.hasCompletedPortfolioSetup)
+    }
+
+    @MainActor
+    func testLegacyCompletionMigratesToOnlyTheFirstSignedInAccount() throws {
+        let suiteName = "BSmartTests.OnboardingMigration.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        defaults.set(true, forKey: "bsmart.portfolio-setup-complete.v1")
+        let existingAccount = UUID()
+        let newAccount = UUID()
+
+        let model = AppModel(
+            client: TestBSmartAPIClient(),
+            defaults: defaults,
+            portfolioBootstrapStrategy: .localOnly
+        )
+        model.activateAccountContext(existingAccount)
+        XCTAssertTrue(model.hasCompletedPortfolioSetup)
+
+        model.activateAccountContext(newAccount)
+        XCTAssertFalse(model.hasCompletedPortfolioSetup)
+    }
+
+    @MainActor
+    func testNewRegistrationAlwaysRequiresInitialOnboarding() throws {
+        let suiteName = "BSmartTests.OnboardingNewRegistration.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        defaults.set(true, forKey: "bsmart.portfolio-setup-complete.v1")
+        let newAccount = UUID()
+
+        let model = AppModel(
+            client: TestBSmartAPIClient(),
+            defaults: defaults,
+            portfolioBootstrapStrategy: .localOnly
+        )
+        model.activateAccountContext(newAccount)
+        XCTAssertTrue(model.hasCompletedPortfolioSetup)
+
+        model.requireInitialOnboarding(for: newAccount)
+        XCTAssertFalse(model.hasCompletedPortfolioSetup)
+
+        model.completeInitialOnboarding()
+        XCTAssertTrue(model.hasCompletedPortfolioSetup)
+    }
+
+    @MainActor
     func testBrokeragePrototypeConnectionPersistsWithoutCredentials() throws {
         let suiteName = "BSmartTests.Brokerage.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
@@ -1200,4 +1273,112 @@ private struct AccountOnlyBSmartAPIClient: BSmartAPIClient {
     func fetchTickerIntelligence() async throws -> [TickerIntelligence] { [] }
     func fetchSmartAccounts() async throws -> [SmartAccountProfile] { [] }
     func fetchSmartMoney() async throws -> [SmartMoneySignal] { [] }
+}
+
+@MainActor
+private final class TestAccountPreferencesClient: AccountPreferencesProviding {
+    var states: [UUID: AccountPreferences] = [:]
+    var failFollows = false
+
+    func load(accountID: UUID) async throws -> AccountPreferences {
+        states[accountID] ?? AccountPreferences(onboardingCompleted: false, followedAuthors: [],
+                                                 followedMoney: [], revision: 0)
+    }
+
+    func setFollowing(_ following: Bool, kind: AccountFollowKind, id: String,
+                      accountID: UUID) async throws -> AccountPreferences {
+        if failFollows { throw AccountAccessError.unavailable }
+        let current = try await load(accountID: accountID)
+        var authors = Set(current.followedAuthors)
+        var money = Set(current.followedMoney)
+        if kind == .author {
+            if following { authors.insert(id) } else { authors.remove(id) }
+        } else {
+            if following { money.insert(id) } else { money.remove(id) }
+        }
+        let updated = AccountPreferences(onboardingCompleted: current.onboardingCompleted,
+                                         followedAuthors: authors.sorted(), followedMoney: money.sorted(),
+                                         revision: current.revision + 1)
+        states[accountID] = updated
+        return updated
+    }
+
+    func completeOnboarding(accountID: UUID) async throws -> AccountPreferences {
+        let current = try await load(accountID: accountID)
+        let updated = AccountPreferences(onboardingCompleted: true, followedAuthors: current.followedAuthors,
+                                         followedMoney: current.followedMoney, revision: current.revision)
+        states[accountID] = updated
+        return updated
+    }
+}
+
+extension AppModelTests {
+    @MainActor
+    func testAccountStateRestoresAfterReinstallWithoutLeakingToAnotherAccount() async throws {
+        let firstSuite = "BSmartTests.AccountState.First.\(UUID().uuidString)"
+        let secondSuite = "BSmartTests.AccountState.Second.\(UUID().uuidString)"
+        let firstDefaults = try XCTUnwrap(UserDefaults(suiteName: firstSuite))
+        let secondDefaults = try XCTUnwrap(UserDefaults(suiteName: secondSuite))
+        defer {
+            firstDefaults.removePersistentDomain(forName: firstSuite)
+            secondDefaults.removePersistentDomain(forName: secondSuite)
+        }
+        let server = TestAccountPreferencesClient()
+        let accountID = UUID()
+        let otherID = UUID()
+        firstDefaults.set(true, forKey: "bsmart.portfolio-setup-complete.v1")
+        let first = AppModel(client: BundleBSmartAPIClient(), accountPreferences: server, defaults: firstDefaults)
+        first.activateAccountContext(accountID)
+        await first.restoreAccountState()
+        XCTAssertFalse(first.hasCompletedPortfolioSetup)
+        try await first.completeInitialOnboardingRemotely()
+        first.toggleSmartAccountFollow("author-one")
+        first.toggleSmartMoneyFollow("wallet-one")
+        for _ in 0..<20 where server.states[accountID]?.followedAuthors != ["author-one"]
+            || server.states[accountID]?.followedMoney != ["wallet-one"] {
+            await first.synchronizePendingFollows()
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        XCTAssertEqual(server.states[accountID]?.followedAuthors, ["author-one"])
+        XCTAssertEqual(server.states[accountID]?.followedMoney, ["wallet-one"])
+
+        let installedAgain = AppModel(client: BundleBSmartAPIClient(), accountPreferences: server,
+                                      defaults: secondDefaults)
+        installedAgain.activateAccountContext(accountID)
+        XCTAssertFalse(installedAgain.hasResolvedAccountState)
+        await installedAgain.restoreAccountState()
+        XCTAssertTrue(installedAgain.hasResolvedAccountState)
+        XCTAssertTrue(installedAgain.hasCompletedPortfolioSetup)
+        XCTAssertTrue(installedAgain.isFollowingSmartAccount("author-one"))
+        XCTAssertTrue(installedAgain.isFollowingSmartMoney("wallet-one"))
+
+        installedAgain.activateAccountContext(otherID)
+        await installedAgain.restoreAccountState()
+        XCTAssertFalse(installedAgain.hasCompletedPortfolioSetup)
+        XCTAssertFalse(installedAgain.isFollowingSmartAccount("author-one"))
+        XCTAssertFalse(installedAgain.isFollowingSmartMoney("wallet-one"))
+    }
+
+    @MainActor
+    func testFailedFollowSyncIsRetriedWithoutLosingTheChoice() async throws {
+        let suite = "BSmartTests.PendingFollows.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let server = TestAccountPreferencesClient()
+        let accountID = UUID()
+        let model = AppModel(client: BundleBSmartAPIClient(), accountPreferences: server, defaults: defaults)
+        model.activateAccountContext(accountID)
+        await model.restoreAccountState()
+        server.failFollows = true
+        model.toggleSmartAccountFollow("author-two")
+        await Task.yield()
+        XCTAssertTrue(model.isFollowingSmartAccount("author-two"))
+        XCTAssertNil(server.states[accountID])
+        server.failFollows = false
+        for _ in 0..<20 where server.states[accountID]?.followedAuthors != ["author-two"] {
+            await model.synchronizePendingFollows()
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        XCTAssertEqual(server.states[accountID]?.followedAuthors, ["author-two"])
+    }
 }

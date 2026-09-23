@@ -112,7 +112,7 @@ final class HyperliquidOwnerNonceTests: XCTestCase {
         XCTAssertGreaterThan(nonce, withdrawal.nonce)
         let order = try HyperliquidOrderIntent(wallet: F.wallet, market: Q.market(), side: .buy, size: "1", limitPrice: "221",
             reduceOnly: false, cloid: "0x00000000000000000000000000000023", nonce: nonce, expiresAfter: nonce + 30_000)
-        let quote = try await HyperliquidOrderPreviewProvider(reader: TradingCheckReaderStub([Q.fees(), Q.book()]),
+        let quote = try await HyperliquidOrderPreviewProvider(reader: TradingCheckReaderStub(preview: [Q.fees(), Q.book()]),
             clock: { context.base.clock.now }, continuousClock: { context.base.clock.instant }).preview(order: order,
                 wallet: F.wallet, account: Q.snapshot(clock: context.base.clock), reviewedLeverage: 10, reviewedMarginMode: .cross)
         let reserved = try await journal.reserveOrder(id: UUID(), preview: quote, wallet: F.wallet,

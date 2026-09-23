@@ -6,11 +6,11 @@ struct FundingHistoryEntry: Identifiable, Equatable, Sendable {
     enum ForwardingStatus: Sendable { case waiting, perpsRequested, spotFallback }
     enum Stage: String, Sendable {
         case reviewAuthorization, authorizationStarted, authorizationRecorded, reviewNetworkFee
-        case signingStarted, signatureRecorded, submissionStarted, nodeAcknowledged, submissionUnknown, cancelled
+        case signingStarted, signatureRecorded, submissionStarted, nodeAcknowledged, submissionUnknown, cancelled, authorizationExpired, notSubmitted
         case sourceNotFound, sourcePending, sourceExecuted, sourceReverted, sourceReorganized, sourceConflict
 
         var canCancelReview: Bool { self == .reviewAuthorization || self == .reviewNetworkFee }
-        var requiresReconciliation: Bool { !canCancelReview && self != .cancelled }
+        var requiresReconciliation: Bool { !canCancelReview && ![.cancelled, .authorizationExpired, .notSubmitted].contains(self) }
     }
 
     let id: UUID
@@ -56,6 +56,8 @@ struct FundingHistoryEntry: Identifiable, Equatable, Sendable {
         case .authorizing: stage = .authorizationStarted
         case .authorized: stage = .authorizationRecorded
         case .cancelled: stage = .cancelled
+        case .expired: stage = .authorizationExpired
+        case .notSubmitted: stage = .notSubmitted
         }
     }
 
@@ -105,6 +107,7 @@ struct FundingHistoryEntry: Identifiable, Equatable, Sendable {
                 else { attestationStatus = .verified }
             } else { attestationStatus = .waiting }
         } else { attestationStatus = nil }
+        if source.state == .notSubmitted { stage = .notSubmitted; return }
         if let observation {
             guard observation.intentID == source.intent.id, observation.transactionHash == source.signed?.hash else {
                 throw FundingJournalError.integrity
@@ -125,6 +128,7 @@ struct FundingHistoryEntry: Identifiable, Equatable, Sendable {
         case .submitted: stage = .nodeAcknowledged
         case .uncertain: stage = .submissionUnknown
         case .cancelled: stage = .cancelled
+        case .notSubmitted: stage = .notSubmitted
         }
     }
 }

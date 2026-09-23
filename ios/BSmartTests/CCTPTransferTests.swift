@@ -3,6 +3,138 @@ import XCTest
 
 @MainActor
 final class CCTPTransferTests: XCTestCase {
+    func testFeeIncreasePastApprovedLimitAllowsNewQuoteAndConfirmation() async throws {
+        let rig = try TransferTestRig(failures: TransferTestFailures(0, submissionGas: [240_001, 210_000]))
+        defer { rig.fixture.context.cleanup() }
+        await rig.store.prepareTransfer(amount: "2.8", wallet: rig.fixture.wallet)
+        await rig.store.confirmTransfer()
+        XCTAssertEqual(rig.store.display.phase, .amount)
+        XCTAssertEqual(rig.store.errorMessage, FundingPreflightError.feeQuoteChanged.localizedDescription)
+        XCTAssertEqual(rig.broadcast.count, 0)
+        let journal = try rig.fixture.context.journal()
+        let sources = try await journal.records(wallet: rig.fixture.wallet)
+        let failed = try XCTUnwrap(sources.first)
+        XCTAssertEqual(failed.state, .notSubmitted)
+        XCTAssertNotNil(failed.signed)
+        XCTAssertFalse(failed.reservesNonce)
+        await rig.store.prepareTransfer(amount: "2.5", wallet: rig.fixture.wallet)
+        XCTAssertEqual(rig.store.display.phase, .networkFee, rig.store.errorMessage ?? "")
+        await rig.store.confirmTransfer()
+        XCTAssertEqual(rig.store.display.phase, .recorded, rig.store.errorMessage ?? "")
+        XCTAssertEqual(rig.broadcast.count, 1)
+    }
+
+    func testRestoreReleasesLegacySignedButNeverSubmittedAttemptWithoutDeletingEvidence() async throws {
+        let rig = try TransferTestRig(); defer { rig.fixture.context.cleanup() }
+        await rig.store.prepareTransfer(amount: "2.8", wallet: rig.fixture.wallet)
+        await rig.store.sign()
+        let journal = try rig.fixture.context.journal()
+        let before = try await journal.records(wallet: rig.fixture.wallet)
+        let saved = try XCTUnwrap(before.first)
+        XCTAssertEqual(saved.state, .signed)
+        rig.store.invalidate()
+        rig.fixture.context.clock.advance(400)
+        await rig.store.restore(wallet: rig.fixture.wallet)
+        XCTAssertEqual(rig.store.display.phase, .amount, rig.store.errorMessage ?? "")
+        let after = try await journal.records(wallet: rig.fixture.wallet)
+        XCTAssertEqual(after.first?.state, .notSubmitted)
+        XCTAssertEqual(after.first?.signed, saved.signed)
+        XCTAssertEqual(rig.broadcast.count, 0)
+    }
+
+    func testFailedSimulationEndsAttemptAndAllowsNewDepositImmediately() async throws {
+        let rig = try TransferTestRig(failures: TransferTestFailures(1)); defer { rig.fixture.context.cleanup() }
+        await rig.store.prepareTransfer(amount: "2.8", wallet: rig.fixture.wallet)
+        XCTAssertEqual(rig.store.display.phase, .amount)
+        XCTAssertEqual(rig.store.errorMessage, FundingPreflightError.simulationFailed.localizedDescription)
+        let journal = try rig.fixture.context.journal()
+        let consents = try await journal.consents(wallet: rig.fixture.wallet)
+        let first = try XCTUnwrap(consents.first)
+        XCTAssertEqual(first.state, .notSubmitted); XCTAssertNotNil(first.signature)
+        XCTAssertEqual(rig.broadcast.count, 0)
+        await rig.store.prepareTransfer(amount: "2.5", wallet: rig.fixture.wallet)
+        XCTAssertEqual(rig.store.display.phase, .networkFee, rig.store.errorMessage ?? "")
+        XCTAssertEqual(rig.store.display.details?.amount, 2_500_000)
+        await rig.store.confirmTransfer()
+        XCTAssertEqual(rig.store.display.phase, .recorded, rig.store.errorMessage ?? "")
+        XCTAssertEqual(rig.broadcast.count, 1)
+    }
+
+    func testLegacySavedAuthorizationFailureDoesNotTrapRecovery() async throws {
+        let rig = try TransferTestRig(failures: TransferTestFailures(1)); defer { rig.fixture.context.cleanup() }
+        let journal = try rig.fixture.context.journal(), id = UUID()
+        _ = try await journal.beginConsent(id: id, plan: rig.fixture.plan, wallet: rig.fixture.wallet)
+        let permit = try await journal.beginAuthorization(id: id, wallet: rig.fixture.wallet)
+        let signature = try await rig.fixture.signer().authorizeDeposit(permit, lease: .init(wallet: rig.fixture.wallet))
+        _ = try await journal.recordAuthorization(id: id, signature: signature, wallet: rig.fixture.wallet)
+        await rig.store.restore(wallet: rig.fixture.wallet)
+        XCTAssertEqual(rig.store.display.phase, .amount, rig.store.errorMessage ?? "")
+        let history = try await journal.history(wallet: rig.fixture.wallet)
+        XCTAssertEqual(history.first?.stage, .notSubmitted)
+        XCTAssertEqual(history.first?.stage.requiresReconciliation, false)
+        await rig.store.prepareTransfer(amount: "2.8", wallet: rig.fixture.wallet)
+        XCTAssertEqual(rig.store.display.phase, .networkFee, rig.store.errorMessage ?? "")
+        XCTAssertEqual(rig.broadcast.count, 0)
+    }
+
+    func testReturningFromUnsignedFeePreviewDoesNotBlockAnotherReview() async throws {
+        let rig = try TransferTestRig(); defer { rig.fixture.context.cleanup() }
+        await rig.store.prepareTransfer(amount: "2.8", wallet: rig.fixture.wallet)
+        XCTAssertEqual(rig.store.display.phase, .networkFee)
+        rig.store.invalidate()
+        await rig.store.restore(wallet: rig.fixture.wallet)
+        XCTAssertEqual(rig.store.display.phase, .amount, rig.store.errorMessage ?? "")
+        let records = try await rig.fixture.context.journal().records(wallet: rig.fixture.wallet)
+        XCTAssertEqual(records.first?.state, .cancelled)
+        XCTAssertNil(records.first?.signed)
+        await rig.store.prepareTransfer(amount: "2.8", wallet: rig.fixture.wallet)
+        XCTAssertEqual(rig.store.display.phase, .networkFee, rig.store.errorMessage ?? "")
+        XCTAssertEqual(rig.broadcast.count, 0)
+    }
+
+    func testSimplifiedTransferNeedsOnlyPrepareAndConfirm() async throws {
+        let rig = try TransferTestRig(); defer { rig.fixture.context.cleanup() }
+        await rig.store.prepareTransfer(amount: "2.8", wallet: rig.fixture.wallet)
+        XCTAssertEqual(rig.store.display.phase, .networkFee, rig.store.errorMessage ?? "")
+        XCTAssertEqual(rig.broadcast.count, 0)
+        XCTAssertEqual(rig.store.display.details?.amount, 2_800_000)
+        await rig.store.confirmTransfer()
+        XCTAssertEqual(rig.store.display.phase, .recorded, rig.store.errorMessage ?? "")
+        XCTAssertEqual(rig.broadcast.count, 1)
+        await rig.store.confirmTransfer()
+        XCTAssertEqual(rig.broadcast.count, 1)
+    }
+
+    func testRestoreContinuesSavedAuthorizationWithoutSigningItAgain() async throws {
+        let rig = try TransferTestRig(); defer { rig.fixture.context.cleanup() }
+        let journal = try rig.fixture.context.journal(), id = UUID()
+        _ = try await journal.beginConsent(id: id, plan: rig.fixture.plan, wallet: rig.fixture.wallet)
+        let permit = try await journal.beginAuthorization(id: id, wallet: rig.fixture.wallet)
+        let signature = try await rig.fixture.signer().authorizeDeposit(permit, lease: .init(wallet: rig.fixture.wallet))
+        _ = try await journal.recordAuthorization(id: id, signature: signature, wallet: rig.fixture.wallet)
+        let keyReads = rig.fixture.keychain.reads
+        rig.fixture.context.clock.advance(65)
+        await rig.store.restore(wallet: rig.fixture.wallet)
+        XCTAssertEqual(rig.store.display.phase, .networkFee, rig.store.errorMessage ?? "")
+        XCTAssertEqual(rig.fixture.keychain.reads, keyReads)
+        XCTAssertEqual(rig.broadcast.count, 0)
+    }
+
+    func testRestoreUnblocksExpiredOrphanAndDoesNotBroadcast() async throws {
+        let rig = try TransferTestRig(); defer { rig.fixture.context.cleanup() }
+        let journal = try rig.fixture.context.journal(), id = UUID()
+        _ = try await journal.beginConsent(id: id, plan: rig.fixture.plan, wallet: rig.fixture.wallet)
+        let permit = try await journal.beginAuthorization(id: id, wallet: rig.fixture.wallet)
+        let signature = try await rig.fixture.signer().authorizeDeposit(permit, lease: .init(wallet: rig.fixture.wallet))
+        _ = try await journal.recordAuthorization(id: id, signature: signature, wallet: rig.fixture.wallet)
+        rig.fixture.context.clock.advance(301)
+        await rig.store.restore(wallet: rig.fixture.wallet)
+        XCTAssertEqual(rig.store.display.phase, .amount, rig.store.errorMessage ?? "")
+        let history = try await journal.consents(wallet: rig.fixture.wallet)
+        XCTAssertEqual(history.first?.state, .expired)
+        XCTAssertEqual(rig.broadcast.count, 0)
+    }
+
     func testPreparationDeniesByDefaultBeforeReadingWalletOrSigning() async throws {
         let rig = try TransferTestRig(); defer { rig.fixture.context.cleanup() }
         let preparation = CCTPDepositPreparation(service: rig.service, signer: rig.fixture.signer(),
@@ -175,12 +307,12 @@ final class TransferTestRig {
     let broadcast = TransferTestBroadcaster()
     let store: CCTPTransferStore
 
-    init() throws {
+    init(failures: TransferTestFailures? = nil) throws {
         let fixture = try FundingSignerFixture()
         self.fixture = fixture
         service = TransferTestService(wallet: fixture.wallet)
         fees = TransferTestFees(schedule: fixture.plan.quote.schedule)
-        source = TransferTestSource(fixture: fixture)
+        source = TransferTestSource(fixture: fixture, failures: failures)
         let gate = gate
         let preparation = CCTPDepositPreparation(service: service, signer: fixture.signer(),
             journal: try fixture.context.journal(), preflight: source, submissionCheck: source,
@@ -221,20 +353,38 @@ final class TransferTestFees: CCTPFeeProviding {
 
 struct TransferTestSource: CCTPSourcePreparing, CCTPSourceSubmissionChecking {
     let fixture: FundingSignerFixture
+    let failures: TransferTestFailures?
+    init(fixture: FundingSignerFixture, failures: TransferTestFailures? = nil) {
+        self.fixture = fixture; self.failures = failures
+    }
     func snapshot(wallet: DeviceWalletSummary) async throws -> ArbitrumWalletSnapshot {
         let rpc = try PreflightStubRPC(blockTime: fixture.context.clock.now, owner: wallet.address)
         return try await ArbitrumSourcePreflight(rpc: rpc, clock: { fixture.context.clock.now }).snapshot(wallet: wallet)
     }
     func prepare(plan: CCTPDepositPlan, wallet: DeviceWalletSummary, authorization: String) async throws -> CCTPSourcePreflight {
+        try await failures?.check()
         let rpc = try PreflightStubRPC(blockTime: fixture.context.clock.now, authorizationNonce: plan.authorizationNonce, owner: wallet.address)
         return try await ArbitrumSourcePreflight(rpc: rpc, clock: { fixture.context.clock.now })
             .prepare(plan: plan, wallet: wallet, authorization: authorization)
     }
     func check(signed: CCTPSignedSourceTransaction, wallet: DeviceWalletSummary) async throws -> FundingSubmissionCheck {
-        let rpc = try PreflightStubRPC(blockTime: fixture.context.clock.now,
+        let gas = await failures?.nextSubmissionGas() ?? 200_000
+        let rpc = try PreflightStubRPC(overrides: ["gas": .string(FundingQuantity(gas).rpc)], blockTime: fixture.context.clock.now,
             authorizationNonce: signed.transaction.preflight.plan.authorizationNonce, owner: wallet.address)
         return try await ArbitrumSourceSubmissionCheck(rpc: rpc, clock: { fixture.context.clock.now })
             .check(signed: signed, wallet: wallet)
+    }
+}
+
+actor TransferTestFailures {
+    private var remaining: Int
+    private var submissionGas: [UInt64]
+    init(_ count: Int, submissionGas: [UInt64] = []) { remaining = count; self.submissionGas = submissionGas }
+    func nextSubmissionGas() -> UInt64 { submissionGas.isEmpty ? 200_000 : submissionGas.removeFirst() }
+    func check() throws {
+        guard remaining > 0 else { return }
+        remaining -= 1
+        throw FundingPreflightError.simulationFailed
     }
 }
 

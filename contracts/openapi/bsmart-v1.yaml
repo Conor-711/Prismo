@@ -2,7 +2,8 @@ openapi: 3.1.0
 info:
   title: bSmart Client API
   version: 1.8.0
-  description: Versioned research and legacy account contract. Current native Google/Apple login uses Supabase Auth directly; wallet registry is specified in supabase-wallet.yaml and docs/contracts/supabase_account.md.
+  x-native-social-contract: supabase-social.yaml
+  description: Versioned research and legacy account contract. Opt-in immutable Supabase research delivery reuses these item models via supabase-content.yaml. Current native Google/Apple login uses Supabase Auth directly; wallet registry is specified in supabase-wallet.yaml and docs/contracts/supabase_account.md. Native Feed and subject-attributed trade totals use supabase-feed.yaml. Provider-managed perpetuals deposits use supabase-funding.yaml.
 servers:
   - url: https://api.bsmart.today
 security:
@@ -131,6 +132,23 @@ paths:
         "401": { description: Installation authentication required. }
         "404": { description: Unknown or private profile. }
         "503": { description: Public profiles unavailable. }
+  /v1/opinions/{opinionId}/feed-context:
+    get:
+      operationId: getTrustedOpinionFeedContext
+      security:
+        - feedCatalogBearer: []
+      description: Server-owned eligible author/opinion projection for the Supabase registrar; never accepts client text or rank. No-store.
+      parameters:
+        - {in: path, name: opinionId, required: true, schema: {type: string, format: uuid}}
+        - {in: query, name: authorId, required: true, schema: {type: string, minLength: 1, maxLength: 256}}
+      responses:
+        '200':
+          description: Verified catalog excerpt, not an execution.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SmartAccountUpdate'}
+        '401': {description: Dedicated Feed catalog service authentication required.}
+        '404': {description: Author/opinion not eligible.}
   /v1/opinions/{opinionId}/traders:
     get:
       operationId: getOpinionTraders
@@ -862,6 +880,10 @@ components:
       schema:
         type: string
   securitySchemes:
+    feedCatalogBearer:
+      type: http
+      scheme: bearer
+      description: Dedicated server-to-server Feed catalog secret. Never an end-user token.
     accountBearer:
       type: http
       scheme: bearer
@@ -871,6 +893,16 @@ components:
       scheme: bearer
       bearerFormat: opaque-installation-token
   schemas:
+    AccountProfile:
+      type: object
+      required: [id, username, handle, bio, avatarURL, revision]
+      properties:
+        id: { type: string, format: uuid }
+        username: { type: string, minLength: 1, maxLength: 28 }
+        handle: { type: string, pattern: '^[a-z][a-z0-9_]{2,23}$' }
+        bio: { type: string, maxLength: 120 }
+        avatarURL: { type: [string, 'null'], format: uri }
+        revision: { type: integer, minimum: 0 }
     FeedPublicProfile:
       type: object
       additionalProperties: false
@@ -878,7 +910,49 @@ components:
       properties:
         id: { type: string, format: uuid }
         nickname: { type: string, minLength: 1, maxLength: 28 }
+        handle: { type: [string, 'null'], pattern: '^[a-z][a-z0-9_]{2,23}$' }
         avatarURL: { type: [string, 'null'], format: uri }
+        bio: { type: [string, 'null'], maxLength: 120 }
+    FeedPublicPortfolio:
+      type: object
+      additionalProperties: false
+      required: [status, perpsEquityUSD, equityAsOf, spotUSDC, positions, history]
+      properties:
+        status: {type: string, enum: [ready, not_connected]}
+        perpsEquityUSD: {type: [string, 'null'], description: Latest Hyperliquid perp portfolio history value; not summed with spot cash.}
+        equityAsOf: {type: [integer, 'null'], description: Exchange portfolio sample timestamp in milliseconds.}
+        spotUSDC: {type: [string, 'null'], description: HyperCore spot USDC balance, shown separately.}
+        positions:
+          type: array
+          maxItems: 1000
+          items:
+            type: object
+            required: [coin, side, size, valueUSD, entryPriceUSD, unrealizedPnLUSD, returnOnEquity, leverage]
+            properties:
+              coin: {type: string}
+              side: {type: string, enum: [long, short]}
+              size: {type: string}
+              valueUSD: {type: string}
+              entryPriceUSD: {type: [string, 'null']}
+              unrealizedPnLUSD: {type: string}
+              returnOnEquity: {type: string, description: Exchange ROI ratio, not percent.}
+              leverage: {type: integer, minimum: 1}
+        history:
+          type: object
+          required: [day, week, month]
+          properties:
+            day: {$ref: '#/components/schemas/FeedPublicEquityPoints'}
+            week: {$ref: '#/components/schemas/FeedPublicEquityPoints'}
+            month: {$ref: '#/components/schemas/FeedPublicEquityPoints'}
+    FeedPublicEquityPoints:
+      type: array
+      maxItems: 121
+      items:
+        type: object
+        required: [at, valueUSD]
+        properties:
+          at: {type: integer, description: Exchange sample timestamp in milliseconds.}
+          valueUSD: {type: string}
     TradeFeedPage:
       type: object
       additionalProperties: false
@@ -889,12 +963,44 @@ components:
           type: array
           maxItems: 50
           items: { $ref: '#/components/schemas/TradeFeedItem' }
+    PopularOpinionsPage:
+      type: object
+      required: [items, nextOffset, windowDays]
+      properties:
+        windowDays: {type: integer, enum: [7]}
+        nextOffset: {type: [integer, 'null'], minimum: 0}
+        items:
+          type: array
+          maxItems: 30
+          items: {$ref: '#/components/schemas/PopularOpinion'}
+    PopularOpinion:
+      type: object
+      description: Distinct verified users in seven days; latest side per user. No private identities or amounts.
+      required: [opinion, totalTraders, longTraders, shortTraders]
+      properties:
+        opinion: {$ref: '#/components/schemas/SmartAccountUpdate'}
+        totalTraders: {type: integer, minimum: 1}
+        longTraders: {type: integer, minimum: 0}
+        shortTraders: {type: integer, minimum: 0}
+    TradeThesis:
+      type: object
+      additionalProperties: false
+      required: [id, body, publishedAt, likeCount, likedByMe]
+      properties:
+        id: {type: string, format: uuid, description: Same stable ID as the verified trade event.}
+        body: {type: string, minLength: 1, maxLength: 1000}
+        publishedAt: {type: string, format: date-time}
+        likeCount: {type: integer, minimum: 0}
+        likedByMe: {type: boolean}
     TradeFeedItem:
       type: object
       additionalProperties: false
       required: [id, trader, opinion, side, notionalUSD, marketCoin, executedAt]
       properties:
         id: { type: string, format: uuid }
+        thesis: {anyOf: [{$ref: '#/components/schemas/TradeThesis'}, {type: 'null'}]}
+        canLikeThesis: {type: boolean, description: A thesis exists and belongs to another user.}
+        canPublishThesis: {type: boolean, description: Authenticated viewer owns this verified event and no thesis exists.}
         trader: { $ref: '#/components/schemas/FeedPublicProfile' }
         opinion: { $ref: '#/components/schemas/SmartAccountUpdate' }
         side: { type: string, enum: [long, short] }
@@ -1289,6 +1395,11 @@ components:
         authorFollowersCount: { type: [integer, "null"], minimum: 0 }
         authorVerified: { type: [boolean, "null"] }
         originalText: { type: [string, "null"] }
+        imageURLs:
+          description: Verified source-post photos hosted in public opinion media storage.
+          type: [array, "null"]
+          maxItems: 4
+          items: { type: string, format: uri }
         translatedText: { type: [string, "null"] }
         translatedTextZH: { type: [string, "null"] }
         translatedTextEN: { type: [string, "null"] }
@@ -1828,7 +1939,7 @@ components:
         rank: { type: integer }
         tier: { type: string, enum: [Smart, Qualified] }
         style: { type: string, enum: [Algo, Scalp, Intraday, Swing, Position, Unclassified] }
-        sizeCohort: { type: string, enum: [Kraken, Whale, Shark, Dolphin, Fish, Crab, Shrimp] }
+        sizeCohort: { type: string, description: Provider size cohort; Hyperdash and Hyperliquid labels are preserved. }
         pnlCohort: { type: string }
         accountValue: { type: number }
         totalNotional: { type: number }
@@ -1859,4 +1970,7 @@ components:
         capitalActivity:
           type: array
           items: { $ref: "#/components/schemas/SmartMoneyCapitalActivity" }
-        components: { $ref: "#/components/schemas/SmartMoneyScoreComponents" }
+        components:
+          anyOf:
+            - { $ref: "#/components/schemas/SmartMoneyScoreComponents" }
+            - { type: 'null' }

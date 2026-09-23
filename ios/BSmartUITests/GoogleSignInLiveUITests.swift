@@ -11,7 +11,10 @@ final class GoogleSignInLiveUITests: XCTestCase {
         app.launch()
         let skip = app.buttons["onboarding.skip"]
         if skip.waitForExistence(timeout: 5) { skip.tap() }
-        let settings = app.buttons["today.settings"]
+        let profile = app.buttons["app.tab.portfolio"]
+        XCTAssertTrue(profile.waitForExistence(timeout: 20))
+        profile.tap()
+        let settings = app.buttons["portfolio.settings"]
         XCTAssertTrue(settings.waitForExistence(timeout: 20))
         settings.tap()
         let account = app.buttons["settings.account"]

@@ -29,6 +29,8 @@ struct TradingWalletView: View {
             }
             .padding(24).frame(maxWidth: 560).frame(maxWidth: .infinity)
         }
+        // Reserve space for the root's floating tab bar, including the last position's action.
+        .safeAreaPadding(.bottom, 88)
         .background(BSmartColor.ink).foregroundStyle(BSmartColor.primaryText)
         .navigationTitle("Trading wallet".bSmartLocalized).navigationBarTitleDisplayMode(.inline)
         .task(id: "\(account.identity?.id.uuidString ?? "")-\(scenePhase == .background)") {

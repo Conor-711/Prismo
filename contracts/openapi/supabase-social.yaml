@@ -1,0 +1,93 @@
+openapi: 3.1.0
+info:
+  title: bSmart Social Chat
+  version: 1.0.0
+servers:
+  - url: https://dzyitinagewdfkzjkuiz.supabase.co/functions/v1/bsmart-social
+security: [{ accountBearer: [] }]
+paths:
+  /chat/{room}:
+    parameters:
+      - in: path
+        name: room
+        required: true
+        schema: { type: string, description: global or the peer public profile UUID }
+    get:
+      operationId: getChatMessages
+      parameters:
+        - { in: query, name: beforeAt, schema: { type: string, format: date-time } }
+        - { in: query, name: beforeID, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Authorized cursor page; beforeAt and beforeID must be paired.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, nextBeforeAt, nextBeforeID]
+                properties:
+                  items: { type: array, maxItems: 50, items: { $ref: '#/components/schemas/Message' } }
+                  nextBeforeAt: { type: [string, 'null'], format: date-time }
+                  nextBeforeID: { type: [string, 'null'], format: uuid }
+        '401': { description: Sign-in required }
+        '422': { description: Invalid room or cursor }
+        '503': { description: Service unavailable }
+    post:
+      operationId: sendChatMessage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id, text]
+              properties:
+                id: { type: string, format: uuid }
+                text: { type: string, maxLength: 2000 }
+                replyToID: { type: [string, 'null'], format: uuid }
+                imageBase64: { type: [string, 'null'], contentEncoding: base64, description: JPEG up to 2 MB and 2048 px per side }
+      responses:
+        '200':
+          description: Sent or identical retry. At least text or image is required.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Message' }
+        '401': { description: Sign-in required }
+        '422': { description: Invalid payload, reply scope, or idempotency conflict }
+        '429': { description: Account message rate exceeded }
+        '503': { description: Retry the same ID; outcome may be uncertain }
+components:
+  securitySchemes:
+    accountBearer: { type: http, scheme: bearer, bearerFormat: JWT }
+  schemas:
+    Message:
+      type: object
+      required: [id, isMine, text, sentAt, sender]
+      properties:
+        id: { type: string, format: uuid }
+        isMine: { type: boolean }
+        text: { type: string, maxLength: 2000 }
+        sentAt: { type: string, format: date-time }
+        sender:
+          type: object
+          required: [id, nickname]
+          properties:
+            id: { type: string, format: uuid }
+            nickname: { type: string }
+            handle: { type: [string, 'null'] }
+            avatarURL: { type: [string, 'null'], format: uri }
+        image:
+          type: [object, 'null']
+          required: [url, width, height]
+          properties:
+            url: { type: string, format: uri }
+            width: { type: integer, minimum: 1, maximum: 2048 }
+            height: { type: integer, minimum: 1, maximum: 2048 }
+        reply:
+          type: [object, 'null']
+          required: [id, senderName, text, hasImage]
+          properties:
+            id: { type: string, format: uuid }
+            senderName: { type: string }
+            text: { type: string }
+            hasImage: { type: boolean }

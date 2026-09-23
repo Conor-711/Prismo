@@ -3,7 +3,7 @@ import SwiftUI
 struct TodayView: View {
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var router: AppRouter
-    @State private var isShowingSettings = false
+    @State private var holdingsRefreshID = UUID()
 
     private var portfolioPositions: [PortfolioPosition] {
         let heldTickers = Set(model.heldPositions.map { $0.ticker.uppercased() })
@@ -30,6 +30,7 @@ struct TodayView: View {
             followedAccountIDs: model.followedSmartAccountIDs,
             followedMoneyIDs: model.followedSmartMoneyIDs
         )
+        .filter(\.isSmartAccount)
     }
 
     private var trackedAccountRecommendations: [SmartAccountProfile] {
@@ -71,7 +72,7 @@ struct TodayView: View {
 
     var body: some View {
         NavigationStack(path: $router.todayPath) {
-            TodayHomePager(
+            TodayHomeContent(
                 header: { viewport in
                     VStack(alignment: .leading, spacing: viewport.height < 700 ? BSmartSpacing.small : BSmartSpacing.medium) {
                         pageHeader
@@ -84,7 +85,7 @@ struct TodayView: View {
                     switch section {
                     case .portfolio:
                         VStack(alignment: .leading, spacing: BSmartSpacing.large) {
-                            TodayHoldingsActivityModule()
+                            TodayHoldingsActivityModule(refreshID: holdingsRefreshID)
                             TodayTrackedActivityModule(
                                 activities: trackedActivities,
                                 recommendations: trackedAccountRecommendations
@@ -96,7 +97,10 @@ struct TodayView: View {
                         TodayInvestorActivityModule()
                     }
                 },
-                refresh: { await model.refreshLiveIntelligence() }
+                refresh: {
+                    await model.refreshLiveIntelligence()
+                    holdingsRefreshID = UUID()
+                }
             )
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier("today.screen")
@@ -115,9 +119,6 @@ struct TodayView: View {
                     DailyDigestView()
                 }
             }
-            .sheet(isPresented: $isShowingSettings) {
-                AppSettingsView()
-            }
             .task(id: router.pendingSignalID) {
                 router.resolvePendingSignal(from: model.signals)
             }
@@ -134,18 +135,12 @@ struct TodayView: View {
             BSmartPageTitle(
                 eyebrow: "",
                 title: "Today",
-                subtitle: "Recent Smart Account views and Smart Money actions for stocks you track"
+                subtitle: "Recent Smart Account views for stocks you track"
             )
 
             Spacer()
 
-            BSmartIconButton(
-                symbol: "gearshape.fill",
-                accessibilityLabel: "Open settings"
-            ) {
-                isShowingSettings = true
-            }
-            .accessibilityIdentifier("today.settings")
+            NotificationEntryView()
         }
         .frame(minHeight: 44)
     }
@@ -159,7 +154,7 @@ private struct TodayTrackedActivityModule: View {
     let recommendations: [SmartAccountProfile]
 
     private var followedCount: Int {
-        model.followedSmartAccountIDs.count + model.followedSmartMoneyIDs.count
+        model.followedSmartAccountIDs.count
     }
 
     var body: some View {
@@ -176,23 +171,12 @@ private struct TodayTrackedActivityModule: View {
 
             if followedCount == 0 {
                 recommendationList(title: "Track top Smart Accounts")
+            } else if activities.isEmpty && !model.loadingSmartAccountEvidenceIDs.isEmpty {
+                BSmartSkeletonRows(style: .feed, count: 2)
             } else if activities.isEmpty {
-                HStack(spacing: BSmartSpacing.small) {
-                    if !model.loadingSmartAccountEvidenceIDs.isEmpty {
-                        ProgressView()
-                            .tint(BSmartColor.brand)
-                    } else {
-                        Image(systemName: "clock")
-                            .foregroundStyle(BSmartColor.secondaryText)
-                    }
-                    Text("Syncing tracked views".bSmartLocalized)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(BSmartColor.secondaryText)
-                }
-                .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
-                .padding(.horizontal, BSmartSpacing.medium)
-                .background(BSmartColor.surface)
-                .clipShape(RoundedRectangle(cornerRadius: BSmartRadius.card, style: .continuous))
+                Text("No tracked activity yet".bSmartLocalized)
+                    .font(.subheadline).foregroundStyle(BSmartColor.secondaryText)
+                    .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
             } else {
                 LazyVStack(spacing: 0) {
                     ForEach(activities) { activity in
@@ -711,7 +695,7 @@ private struct TodayActivityRow: View {
         @ViewBuilder label: @escaping () -> Label
     ) -> some View {
         let account = model.smartAccountProfile(for: update)
-        BSmartDetailNavigationLink(id: "activity-account-\(update.id)-\(source)") {
+        BSmartDetailNavigationLink(id: "activity-account-\(update.id)-\(source)", usesZoomTransition: false) {
             SmartAccountDetailView(account: account)
         } label: {
             label()

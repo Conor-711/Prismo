@@ -24,7 +24,7 @@ final class PriceChartInteractionUITests: XCTestCase {
         let author = app.descendants(matching: .any)["smart.account.row.first"]
         XCTAssertTrue(author.waitForExistence(timeout: 8))
         author.tap()
-        app.segmentedControls["smart.account.detail.section"].buttons["Track record"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["smart.account.detail"].waitForExistence(timeout: 5))
         revealChart("account.work.chart", in: app)
         verifyInteractions("account.work.chart", in: app, pinch: false)
         let marker = app.buttons["account.work.marker.1"]
@@ -88,8 +88,9 @@ final class PriceChartInteractionUITests: XCTestCase {
 
     private func reveal(_ element: XCUIElement, in app: XCUIApplication) {
         for _ in 0..<10 {
-            if element.isHittable { return }
-            app.swipeUp()
+            if element.isHittable && element.frame.minY > 130 && element.frame.maxY < app.frame.height - 140 { return }
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.03, dy: 0.7))
+                .press(forDuration: 0.01, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.03, dy: 0.4)))
         }
     }
 

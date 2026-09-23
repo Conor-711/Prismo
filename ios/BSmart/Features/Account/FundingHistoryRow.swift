@@ -41,7 +41,8 @@ struct FundingHistoryRow: View {
                 }
                 if let hash = entry.transactionHash {
                     identifier("Transaction hash", value: hash, copyLabel: "Copy transaction hash")
-                    if let checkSource, entry.stage != .sourceExecuted || checkCrossChain == nil {
+                    if let checkSource, entry.stage.requiresReconciliation,
+                       entry.stage != .sourceExecuted || checkCrossChain == nil {
                         Button(action: checkSource) {
                             Label("Check source transaction".bSmartLocalized, systemImage: "arrow.clockwise")
                                 .font(.subheadline.weight(.semibold)).frame(minHeight: 44)
@@ -54,6 +55,12 @@ struct FundingHistoryRow: View {
                         Label("Cancel review".bSmartLocalized, systemImage: "xmark.circle")
                             .font(.subheadline.weight(.semibold)).frame(minHeight: 44)
                     }.buttonStyle(.plain).foregroundStyle(BSmartColor.secondaryText)
+                }
+                if [.authorizationRecorded, .authorizationStarted, .notSubmitted, .authorizationExpired].contains(entry.stage) {
+                    NavigationLink { CCTPTransferDestination() } label: {
+                        Label("Continue deposit".bSmartLocalized, systemImage: "arrow.right")
+                            .font(.subheadline.weight(.semibold)).frame(minHeight: 44)
+                    }.foregroundStyle(BSmartColor.brand)
                 }
                 if entry.stage == .sourceExecuted, let checkCrossChain {
                     Button(action: checkCrossChain) {
@@ -148,6 +155,8 @@ extension FundingHistoryEntry.Stage {
         case .reviewAuthorization: "Awaiting authorization review"
         case .authorizationStarted: "Authorization needs checking"
         case .authorizationRecorded: "Authorization saved"
+        case .authorizationExpired: "Authorization expired"
+        case .notSubmitted: "Not sent; you can try again"
         case .reviewNetworkFee: "Awaiting network fee review"
         case .signingStarted: "Signing needs checking"
         case .signatureRecorded: "Signed transaction saved"
@@ -166,15 +175,15 @@ extension FundingHistoryEntry.Stage {
 
     var symbol: String {
         if canCancelReview { return "doc.text.magnifyingglass" }
-        return self == .cancelled ? "xmark.circle" : "clock.badge.exclamationmark"
+        return [.cancelled, .authorizationExpired, .notSubmitted].contains(self) ? "xmark.circle" : "clock.badge.exclamationmark"
     }
 
     var notice: String? {
         switch self {
-        case .reviewAuthorization, .cancelled: nil
+        case .reviewAuthorization, .cancelled, .authorizationExpired, .notSubmitted: nil
         case .reviewNetworkFee: "The USDC authorization is saved. The network transaction has not been signed."
         case .authorizationStarted, .authorizationRecorded:
-            "Authorization is not proof of a deposit. This record must be checked before starting another transfer."
+            "No transfer was sent. Continue the deposit to resume or refresh this authorization."
         case .signingStarted, .signatureRecorded:
             "A signature may exist. Do not send another deposit until the source transaction is checked."
         case .submissionStarted, .nodeAcknowledged, .submissionUnknown:

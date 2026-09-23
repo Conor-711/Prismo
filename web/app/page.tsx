@@ -1,49 +1,10 @@
-"use client";
+export const viewport = { themeColor: "#f8f8f5" };
 
-import { useEffect } from "react";
-import { defaultLocale, isPublishedLocale } from "@/lib/i18n";
+import { LandingPage, landingMetadata } from "@/features/landing";
 
-// 根路径无 chrome：按浏览器语言把用户送到 /zh 或 /en（默认中文）。
-// 静态导出下生成的 index.html 会在加载时用 JS 跳转。
-export default function RootRedirect() {
-  useEffect(() => {
-    // 1) 优先用户上次手动选择（LanguageSwitcher 写入）；
-    // 2) 否则按浏览器首选语言顺序匹配公开语言（zh/en），都不匹配 → en。
-    let lang = "";
-    try {
-      const saved = localStorage.getItem("bsmart:lang");
-      if (saved && isPublishedLocale(saved)) lang = saved;
-    } catch {
-      /* ignore */
-    }
-    if (!lang) {
-      const list =
-        typeof navigator !== "undefined"
-          ? navigator.languages && navigator.languages.length
-            ? navigator.languages
-            : [navigator.language || ""]
-          : [];
-      for (const raw of list) {
-        const l = (raw || "").toLowerCase();
-        if (l.startsWith("zh")) { lang = "zh"; break; }
-        if (l.startsWith("en")) { lang = "en"; break; }
-      }
-      if (!lang) lang = "en";
-    }
-    const base = location.pathname.endsWith("/") ? location.pathname : location.pathname + "/";
-    location.replace(base + lang + "/");
-  }, []);
+export const metadata = landingMetadata("zh", true);
 
-  return (
-    <main style={{ display: "grid", placeItems: "center", minHeight: "70vh", color: "#8A8A99" }}>
-      <noscript>
-        <a href={`/${defaultLocale}/`} style={{ color: "#FC3E02" }}>
-          进入 bSmart / Enter
-        </a>
-      </noscript>
-      <span style={{ fontFamily: "system-ui", letterSpacing: ".3px" }}>
-        <span style={{ color: "#FC3E02" }}>bSmart</span> …
-      </span>
-    </main>
-  );
+// The beta homepage renders at the domain root, including without JavaScript.
+export default function Home() {
+  return <LandingPage />;
 }

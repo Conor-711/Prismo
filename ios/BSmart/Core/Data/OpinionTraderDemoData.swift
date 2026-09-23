@@ -17,6 +17,8 @@ struct OpinionTraderDemoData {
     let traders: [Trader]
     let privateTraderCount = 2
     var totalTraders: Int { traders.count + privateTraderCount }
+    var longTraders: Int { traders.filter { $0.side == .long }.count + 1 }
+    var shortTraders: Int { totalTraders - longTraders }
 
     init(ticker: String, referencePrice: Double?, now: Date) {
         self.ticker = ticker.uppercased()

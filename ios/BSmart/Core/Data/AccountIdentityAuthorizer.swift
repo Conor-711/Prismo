@@ -4,6 +4,7 @@ import UIKit
 
 @MainActor
 final class AccountIdentityAuthorizer: NSObject, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
+    static let isAppleSignInEnabled = Bundle.main.object(forInfoDictionaryKey: "BSMART_APPLE_SIGN_IN_ENABLED") as? String == "YES"
     private var continuation: CheckedContinuation<AccountIdentityAssertion, Error>?
     private var expectedState: String?
     private var rawNonce: String?
@@ -39,7 +40,7 @@ final class AccountIdentityAuthorizer: NSObject, ASAuthorizationControllerDelega
                 throw error
             }
         case .apple:
-            guard Bundle.main.object(forInfoDictionaryKey: "BSMART_APPLE_SIGN_IN_ENABLED") as? String == "YES",
+            guard Self.isAppleSignInEnabled,
                   continuation == nil else { throw AccountAccessError.unavailable }
             let request = ASAuthorizationAppleIDProvider().createRequest()
             request.nonce = providerNonce

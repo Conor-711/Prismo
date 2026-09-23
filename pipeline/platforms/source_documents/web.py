@@ -117,12 +117,14 @@ def parse_html(url: str, html: bytes) -> Document:
 
 
 class WebCrawler:
-    def __init__(self, cache_dir: Path, *, request_limit: int = 30, refresh: bool = False):
+    def __init__(self, cache_dir: Path, *, request_limit: int = 30, refresh: bool = False,
+                 user_agent: str = USER_AGENT):
         self.cache_dir = cache_dir
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.request_limit = request_limit
         self.requests = 0
         self.refresh = refresh
+        self.user_agent = user_agent
         self.robots: dict[str, RobotFileParser] = {}
         self.last_request: dict[str, float] = {}
         self.host_delay: dict[str, float] = {}
@@ -147,8 +149,9 @@ class WebCrawler:
         try:
             parsed = urlsplit(url)
             path = parsed.path + ("?" + parsed.query if parsed.query else "")
-            response = pool.urlopen("GET", path, headers={"Host": host, "User-Agent": USER_AGENT,
-                                    "Accept": "text/html,text/plain", "Accept-Encoding": "identity"},
+            response = pool.urlopen("GET", path, headers={"Host": host, "User-Agent": self.user_agent,
+                                    "Accept": "text/html,application/json,application/xml,text/xml,text/plain",
+                                    "Accept-Encoding": "identity"},
                                     redirect=False, retries=False, preload_content=False)
             headers = {key.lower(): value for key, value in response.headers.items()}
             if int(headers.get("content-length", "0")) > MAX_BYTES:
@@ -178,15 +181,32 @@ class WebCrawler:
                 parser.parse(content.decode("utf-8", "replace").splitlines())
             else:
                 raise CrawlError(f"robots_unavailable_{status}")
-            delay = parser.crawl_delay(USER_AGENT) or 1
-            rate = parser.request_rate(USER_AGENT)
+            delay = parser.crawl_delay(self.user_agent) or 1
+            rate = parser.request_rate(self.user_agent)
             if rate:
                 delay = max(delay, rate.seconds / max(1, rate.requests))
             if delay > 15:
                 raise CrawlError("crawl_delay_exceeds_local_batch_limit")
             self.host_delay[urlsplit(url).hostname] = max(1.0, delay)
             self.robots[origin] = parser
-        return self.robots[origin].can_fetch(USER_AGENT, url)
+        return self.robots[origin].can_fetch(self.user_agent, url)
+
+    def fetch_payload(self, url: str, *, content_types: tuple[str, ...]) -> tuple[str, bytes]:
+        """Read a small non-HTML feed through the same SSRF/robots/redirect controls."""
+        url = normalize_url(url)
+        for _ in range(4):
+            if not self._allowed(url):
+                raise CrawlError("robots_disallowed")
+            status, headers, content = self._get(url)
+            if status in (301, 302, 303, 307, 308):
+                url = normalize_url(urljoin(url, headers.get("location", "")))
+                continue
+            if status != 200:
+                raise CrawlError(f"http_{status}")
+            if not any(value in headers.get("content-type", "").lower() for value in content_types):
+                raise CrawlError("unsupported_content_type")
+            return url, content
+        raise CrawlError("redirect_limit")
 
     def fetch(self, url: str) -> Document:
         url = normalize_url(url)

@@ -157,7 +157,7 @@ struct OrderLifecycleContext: Sendable {
         try .init(directory: directory, service: "order-test", keychain: keychain, clock: { clock.now }, commitProbe: probe)
     }
     func preview() async throws -> HyperliquidOrderPreview {
-        try await HyperliquidOrderPreviewProvider(reader: TradingCheckReaderStub([Q.fees(), Q.book()]),
+        try await HyperliquidOrderPreviewProvider(reader: TradingCheckReaderStub(preview: [Q.fees(), Q.book()]),
             clock: { clock.now }, continuousClock: { clock.instant }).preview(order: Q.order(), wallet: F.wallet,
                 account: Q.snapshot(clock: clock), reviewedLeverage: 10, reviewedMarginMode: .cross)
     }

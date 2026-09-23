@@ -1,12 +1,125 @@
 import SwiftUI
 
+struct BSmartSkeletonBar: View {
+    var width: CGFloat? = nil
+    var height: CGFloat = 12
+    var circular = false
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: circular ? height / 2 : min(6, height / 2))
+        .fill(BSmartColor.tertiaryText.opacity(0.34))
+        .frame(width: width, height: height)
+        .accessibilityHidden(true)
+    }
+}
+
+struct BSmartSkeletonRows: View {
+    enum Style { case ranking, feed, chat, profile, simple }
+    let style: Style
+    var count = 3
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        Group {
+            if reduceMotion {
+                rows
+            } else {
+                rows.phaseAnimator([false, true]) { content, dimmed in
+                    content.opacity(dimmed ? 0.48 : 1)
+                } animation: { _ in
+                    .easeInOut(duration: 1.2)
+                }
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Loading".bSmartLocalized)
+    }
+
+    private var rows: some View {
+        VStack(alignment: .leading, spacing: style == .ranking ? 0 : 16) {
+            ForEach(0..<count, id: \.self) { _ in
+                row
+                if style == .ranking { Divider().overlay(BSmartColor.line).padding(.top, 14) }
+            }
+        }
+    }
+
+    @ViewBuilder private var row: some View {
+        switch style {
+        case .ranking:
+            HStack(alignment: .top, spacing: 12) {
+                BSmartSkeletonBar(width: 34, height: 26)
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(spacing: 9) {
+                        BSmartSkeletonBar(width: 34, height: 34, circular: true)
+                        VStack(alignment: .leading, spacing: 6) {
+                            BSmartSkeletonBar(width: 132, height: 13)
+                            BSmartSkeletonBar(width: 76, height: 9)
+                        }
+                        Spacer()
+                        BSmartSkeletonBar(width: 58, height: 21)
+                    }
+                    BSmartSkeletonBar(width: 72, height: 14)
+                    BSmartSkeletonBar(height: 12)
+                    BSmartSkeletonBar(width: 190, height: 12)
+                }
+            }.padding(.vertical, 14)
+        case .feed:
+            VStack(alignment: .leading, spacing: 13) {
+                HStack(spacing: 10) {
+                    BSmartSkeletonBar(width: 42, height: 42, circular: true)
+                    VStack(alignment: .leading, spacing: 6) {
+                        BSmartSkeletonBar(width: 146, height: 14)
+                        BSmartSkeletonBar(width: 90, height: 10)
+                    }
+                    Spacer()
+                }
+                BSmartSkeletonBar(width: 96, height: 18)
+                BSmartSkeletonBar(height: 12)
+                BSmartSkeletonBar(width: 215, height: 12)
+            }.padding(.vertical, 14)
+        case .chat:
+            HStack(spacing: 12) {
+                BSmartSkeletonBar(width: 44, height: 44, circular: true)
+                VStack(alignment: .leading, spacing: 8) {
+                    BSmartSkeletonBar(width: 132, height: 13)
+                    BSmartSkeletonBar(width: 202, height: 12)
+                }
+                Spacer(minLength: 0)
+            }.frame(minHeight: 58)
+        case .profile:
+            VStack(alignment: .leading, spacing: 16) {
+                BSmartSkeletonBar(width: 72, height: 72, circular: true)
+                BSmartSkeletonBar(width: 190, height: 24)
+                BSmartSkeletonBar(width: 110, height: 13)
+                HStack {
+                    BSmartSkeletonBar(width: 122, height: 34)
+                    Spacer()
+                    BSmartSkeletonBar(width: 122, height: 34)
+                }
+            }.padding(.vertical, 14)
+        case .simple:
+            HStack(spacing: 12) {
+                BSmartSkeletonBar(width: 36, height: 36, circular: true)
+                VStack(alignment: .leading, spacing: 8) {
+                    BSmartSkeletonBar(width: 156, height: 13)
+                    BSmartSkeletonBar(width: 94, height: 10)
+                }
+                Spacer(minLength: 0)
+            }.frame(minHeight: 52)
+        }
+    }
+}
+
 struct BSmartWordmark: View {
     var fontSize: CGFloat = 24
 
     var body: some View {
-        Text("bSmart")
-            .font(.system(size: fontSize, weight: .bold, design: .default))
-            .foregroundStyle(BSmartColor.brand)
+        Image("BSmartWordmark")
+            .renderingMode(.original)
+            .resizable()
+            .scaledToFit()
+            .frame(width: fontSize * 4.1, height: fontSize)
             .accessibilityLabel("bSmart")
     }
 }
@@ -140,7 +253,7 @@ struct BSmartIconButton: View {
             Image(systemName: symbol)
                 .font(.subheadline.weight(.bold))
                 .foregroundStyle(color)
-                .frame(width: 38, height: 38)
+                .frame(width: 44, height: 44)
                 .background(BSmartColor.surface)
                 .clipShape(Circle())
                 .overlay {
@@ -299,47 +412,62 @@ struct BSmartSectionHeader: View {
 struct BSmartAssetMark: View {
     let ticker: String
     var size: CGFloat = 44
+    var contentInset: CGFloat? = nil
+    var isCrypto: Bool? = nil
 
     private var normalizedTicker: String {
         ticker.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
     }
 
+    var usesCryptoLogo: Bool {
+        if let isCrypto { return isCrypto }
+        return UIImage(named: "Ticker_\(normalizedTicker)") == nil
+            && UIImage(named: "Crypto_\(normalizedTicker)") != nil
+    }
+
     private var hasBundledLogo: Bool {
-        UIImage(named: "Ticker_\(normalizedTicker)") != nil
+        UIImage(named: assetName) != nil
+    }
+
+    private var assetName: String {
+        "\(usesCryptoLogo ? "Crypto" : "Ticker")_\(normalizedTicker)"
     }
 
     private var bundledLogoInset: CGFloat {
         switch normalizedTicker {
+        case "AAOI": 0.18
         case "PLTR": 0.21
         case "HOOD", "TSLA": 0.15
         case "NVDA": 0.11
         case "AVGO", "MSTR": 0.07
-        default: 0.04
+        default: 0
         }
     }
 
     private var remoteLogoURL: URL? {
-        guard !nonEquitySymbols.contains(normalizedTicker),
+        guard !usesCryptoLogo, !nonEquitySymbols.contains(normalizedTicker),
               let escapedTicker = normalizedTicker.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed)
         else { return nil }
         return URL(string: "https://financialmodelingprep.com/image-stock/\(escapedTicker).png")
     }
 
     private var nonEquitySymbols: Set<String> {
-        ["SP500", "USTECH", "XYZ100", "JP225", "SPCX", "SKHX", "GOLD", "SILVER", "COPPER", "BRENTOIL", "CL", "JPY"]
+        ["SP500", "USTECH", "XYZ100", "JP225", "GOLD", "SILVER", "COPPER", "BRENTOIL", "CL", "JPY"]
     }
 
     private var fallbackSymbol: String {
-        switch normalizedTicker {
+        if usesCryptoLogo { return "hexagon.fill" }
+        return switch normalizedTicker {
         case "GOLD", "SILVER", "COPPER": "mountain.2.fill"
         case "BRENTOIL", "CL": "drop.fill"
         case "JPY": "yensign.circle.fill"
-        case "SP500", "USTECH", "XYZ100", "JP225", "SPCX", "SKHX": "chart.line.uptrend.xyaxis"
+        case "SP500", "USTECH", "XYZ100", "JP225": "chart.line.uptrend.xyaxis"
         default: "building.2.fill"
         }
     }
 
     private var color: Color {
+        if usesCryptoLogo { return BSmartColor.secondaryText }
         let value = ticker.unicodeScalars.reduce(0) { $0 + Int($1.value) }
         let palette = [BSmartColor.brand, BSmartColor.sky, BSmartColor.gold, BSmartColor.orange]
         return palette[value % palette.count]
@@ -352,7 +480,7 @@ struct BSmartAssetMark: View {
             } else if let remoteLogoURL {
                 AsyncImage(url: remoteLogoURL, transaction: Transaction(animation: .easeOut(duration: 0.18))) { phase in
                     if case let .success(image) = phase {
-                        logoImage(image, inset: 0.1)
+                        logoImage(image, inset: 0)
                     } else {
                         fallback
                     }
@@ -367,7 +495,11 @@ struct BSmartAssetMark: View {
 
     @ViewBuilder
     private var bundledLogo: some View {
-        if TickerLogoRegistry.templateSymbols.contains(normalizedTicker) {
+        if usesCryptoLogo {
+            logoImage(Image(assetName).renderingMode(.original), inset: normalizedTicker == "HYPE" ? 0.12 : 0)
+                .background(cryptoLogoBackground)
+                .clipShape(Circle())
+        } else if TickerLogoRegistry.templateSymbols.contains(normalizedTicker) {
             logoImage(
                 Image("Ticker_\(normalizedTicker)").renderingMode(.template),
                 inset: bundledLogoInset
@@ -378,15 +510,35 @@ struct BSmartAssetMark: View {
         }
     }
 
+    private var cryptoLogoBackground: Color {
+        // Match the official coin renderer's backing colors for transparent marks.
+        switch normalizedTicker {
+        case "2Z", "ETC", "ETH", "UNIBOT", "BIGTIME", "NEAR", "ADA", "ONDO",
+             "DYM", "AR", "XRP", "WLD", "CFX", "GALA", "XLM", "MEGA":
+            return .white
+        case "FET": return Color(red: 32 / 255, green: 41 / 255, blue: 68 / 255)
+        case "ZEN": return Color(red: 3 / 255, green: 24 / 255, blue: 65 / 255)
+        case "HYPE": return Color(red: 6 / 255, green: 42 / 255, blue: 37 / 255)
+        default: return Color(red: 15 / 255, green: 26 / 255, blue: 31 / 255)
+        }
+    }
+
     private func logoImage(_ image: Image, inset: CGFloat) -> some View {
         image
             .resizable()
             .scaledToFit()
-            .padding(size * inset)
+            .padding(size * (contentInset ?? inset))
     }
 
     private var fallback: some View {
-        Image(systemName: fallbackSymbol)
+        Group {
+            if usesCryptoLogo {
+                Text(String(normalizedTicker.prefix(3)))
+                    .font(.system(size: size * 0.23, weight: .semibold))
+            } else {
+                Image(systemName: fallbackSymbol)
+            }
+        }
             .font(.system(size: size * 0.34, weight: .bold))
             .foregroundStyle(color)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -400,6 +552,7 @@ struct BSmartAvatar: View {
     let name: String
     var size: CGFloat = 40
     var fallbackColor: Color = BSmartColor.sky
+    var fallbackSymbol: String? = nil
     @Environment(\.scenePhase) private var scenePhase
     @State private var loadedImage: AvatarImage?
 
@@ -435,7 +588,13 @@ struct BSmartAvatar: View {
     }
 
     private var fallback: some View {
-        Text(String(name.trimmingCharacters(in: .whitespacesAndNewlines).prefix(1)).uppercased())
+        Group {
+            if let fallbackSymbol {
+                Image(systemName: fallbackSymbol)
+            } else {
+                Text(String(name.trimmingCharacters(in: .whitespacesAndNewlines).prefix(1)).uppercased())
+            }
+        }
             .font(.system(size: size * 0.34, weight: .black, design: .rounded))
             .foregroundStyle(fallbackColor)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -522,7 +681,7 @@ struct BSmartLoadingView: View {
         VStack(spacing: BSmartSpacing.medium) {
             ProgressView()
                 .tint(BSmartColor.brand)
-            Text("Loading your portfolio")
+            Text("Loading bSmart".bSmartLocalized)
                 .font(.subheadline)
                 .foregroundStyle(BSmartColor.secondaryText)
         }

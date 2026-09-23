@@ -59,18 +59,24 @@ struct FundingConsentPlan: Codable, Equatable, Sendable {
 }
 
 struct FundingConsentRecord: Codable, Equatable, Sendable {
-    enum State: String, Codable, Sendable { case review, authorizing, authorized, cancelled }
+    enum State: String, Codable, Sendable { case review, authorizing, authorized, cancelled, expired, notSubmitted }
     let id: UUID
     let plan: FundingConsentPlan
     var state: State
     var signature: String?
     var updatedAt: Date
-    var reservesOwner: Bool { state != .cancelled }
+    var expiredAtSourceTime: Date? = nil
+    var reservesOwner: Bool { ![.cancelled, .expired, .notSubmitted].contains(state) }
 
     func validate(after previous: Self?) throws {
         let restored = try plan.restored()
         guard FundingJournalIntent.validDate(updatedAt), updatedAt >= plan.createdAt,
-              (signature != nil) == (state == .authorized) else { throw FundingJournalError.integrity }
+              state == .expired || (signature != nil) == [.authorized, .notSubmitted].contains(state) else { throw FundingJournalError.integrity }
+        if state == .expired {
+            guard let expiredAtSourceTime, FundingJournalIntent.validDate(expiredAtSourceTime),
+                  expiredAtSourceTime.timeIntervalSince1970 > Double(restored.validBefore),
+                  updatedAt >= expiredAtSourceTime.addingTimeInterval(-15) else { throw FundingJournalError.integrity }
+        } else if expiredAtSourceTime != nil { throw FundingJournalError.integrity }
         if let signature {
             let wallet = DeviceWalletSummary(accountID: plan.accountID, address: plan.owner, recoveryVerified: true)
             _ = try CCTPDepositCodec.callData(plan: restored, wallet: wallet, authorization: signature, now: plan.createdAt)
@@ -78,7 +84,10 @@ struct FundingConsentRecord: Codable, Equatable, Sendable {
         if let previous {
             guard previous.id == id, previous.plan == plan, updatedAt >= previous.updatedAt,
                   (previous.state == .review && [.authorizing, .cancelled].contains(state))
-                    || (previous.state == .authorizing && state == .authorized) else { throw FundingJournalError.integrity }
+                    || (previous.state == .authorizing && state == .authorized)
+                    || (previous.state == .authorized && state == .notSubmitted && signature == previous.signature)
+                    || ([.review, .authorizing, .authorized].contains(previous.state) && state == .expired && signature == previous.signature)
+            else { throw FundingJournalError.integrity }
         } else if state != .review { throw FundingJournalError.integrity }
     }
 }

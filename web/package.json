@@ -9,7 +9,8 @@
     "dev": "NODE_OPTIONS=--experimental-sqlite next dev",
     "build": "NODE_OPTIONS=--experimental-sqlite next build",
     "start": "NODE_OPTIONS=--experimental-sqlite next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:waitlist": "node scripts/test-waitlist.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.4",

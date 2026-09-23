@@ -7,6 +7,72 @@ final class DeviceWalletVaultTests: XCTestCase {
     private let recovery = (Array(repeating: "abandon", count: 23) + ["art"]).joined(separator: " ")
     private let recoveredAddress = "0xf278cf59f82edcf871d630f28ecc8056f25c1cdb"
 
+    func testAuthenticationPolicyUpdatesExistingKeyAndPersistsAcrossInstances() async throws {
+        let io = MemoryWalletKeychain(), account = UUID()
+        let vault = KeychainDeviceWalletVault(service: "policy-test", keychain: io)
+        let original = try await vault.create(accountID: account)
+        let words = try await vault.recoveryWords(accountID: account, address: original.address)
+        let initial = try await vault.userPresenceRequired(accountID: account, address: original.address)
+        XCTAssertTrue(initial)
+        try await vault.setUserPresenceRequired(false, accountID: account, address: original.address)
+        let reopened = KeychainDeviceWalletVault(service: "policy-test", keychain: io)
+        let required = try await reopened.userPresenceRequired(accountID: account, address: original.address)
+        XCTAssertFalse(required)
+        let saved = try await reopened.summary(accountID: account, registeredAddress: original.address)
+        let preserved = try await reopened.recoveryWords(accountID: account, address: original.address)
+        XCTAssertEqual(saved, original); XCTAssertEqual(preserved, words); XCTAssertEqual(io.count, 1)
+        XCTAssertTrue(io.updatedAccessControl)
+        try await reopened.setUserPresenceRequired(true, accountID: account, address: original.address)
+        let enabled = try await vault.userPresenceRequired(accountID: account, address: original.address)
+        XCTAssertTrue(enabled)
+        XCTAssertEqual(io.count, 1)
+    }
+
+    func testFailedPolicyUpdateRetainsProtectionAndOriginalKey() async throws {
+        let io = MemoryWalletKeychain(), account = UUID()
+        let vault = KeychainDeviceWalletVault(service: "policy-failure", keychain: io)
+        let original = try await vault.create(accountID: account)
+        io.writeStatus = errSecAuthFailed
+        do {
+            try await vault.setUserPresenceRequired(false, accountID: account, address: original.address)
+            XCTFail("Published a failed ACL update")
+        } catch DeviceWalletError.locked {}
+        io.writeStatus = nil
+        let required = try await vault.userPresenceRequired(accountID: account, address: original.address)
+        let saved = try await vault.summary(accountID: account, registeredAddress: original.address)
+        XCTAssertTrue(required); XCTAssertEqual(saved, original); XCTAssertEqual(io.count, 1)
+    }
+
+    func testAuthenticationContextsAreReusedAndInvalidatedAtSecurityBoundaries() {
+        let session = WalletAuthenticationSession()
+        let first = session.context(scope: "account-a")
+        XCTAssertTrue(first === session.context(scope: "account-a"))
+        XCTAssertFalse(first === session.context(scope: "account-b"))
+        session.invalidate()
+        XCTAssertFalse(first === session.context(scope: "account-a"))
+        let beforeBackground = session.context(scope: "account-a")
+        NotificationCenter.default.post(name: UIApplication.didEnterBackgroundNotification, object: nil)
+        XCTAssertFalse(beforeBackground === session.context(scope: "account-a"))
+    }
+
+    func testAuthenticationReuseHasFiveMinuteAbsoluteLimitAndRejectsClockRollback() {
+        let clock = TradingCheckClock()
+        let session = WalletAuthenticationSession(uptime: { clock.now.timeIntervalSince1970 })
+        let first = session.context(scope: "account-a")
+        clock.advance(wall: 61)
+        XCTAssertTrue(first === session.context(scope: "account-a"))
+        clock.advance(wall: 238)
+        XCTAssertTrue(first === session.context(scope: "account-a"))
+        clock.advance(wall: 1)
+        let renewed = session.context(scope: "account-a")
+        XCTAssertFalse(first === renewed)
+        clock.advance(wall: -1)
+        XCTAssertFalse(renewed === session.context(scope: "account-a"))
+        let beforeLock = session.context(scope: "account-a")
+        NotificationCenter.default.post(name: UIApplication.protectedDataWillBecomeUnavailableNotification, object: nil)
+        XCTAssertFalse(beforeLock === session.context(scope: "account-a"))
+    }
+
     func testPersistedKeyIsRecoveredByNewVaultInstanceAndCannotBeOverwritten() async throws {
         let io = MemoryWalletKeychain()
         let account = UUID()
@@ -102,6 +168,7 @@ private final class MemoryWalletKeychain: WalletKeychainAccess, @unchecked Senda
     var writeStatus: OSStatus?
     private(set) var allWritesProtected = true
     private(set) var allReadsAuthenticated = true
+    private(set) var updatedAccessControl = false
     var count: Int { lock.withLock { items.count } }
 
     func read(_ query: [String: Any]) -> (OSStatus, Data?) {
@@ -127,6 +194,7 @@ private final class MemoryWalletKeychain: WalletKeychainAccess, @unchecked Senda
         lock.withLock {
             if let writeStatus { return writeStatus }
             guard items[key(query)] != nil else { return errSecItemNotFound }
+            updatedAccessControl = values[kSecAttrAccessControl as String] != nil
             items[key(query)] = values[kSecValueData as String] as? Data
             return errSecSuccess
         }

@@ -7,6 +7,15 @@ protocol DeviceWalletVault: Sendable {
     func verifyRecovery(accountID: UUID, address: String, phrase: String) async throws -> DeviceWalletSummary
     func restore(accountID: UUID, address: String, phrase: String) async throws -> DeviceWalletSummary
     func signBinding(accountID: UUID, challenge: TradingWalletChallenge) async throws -> String
+    func userPresenceRequired(accountID: UUID, address: String) async throws -> Bool
+    func setUserPresenceRequired(_ required: Bool, accountID: UUID, address: String) async throws
+}
+
+extension DeviceWalletVault {
+    func userPresenceRequired(accountID: UUID, address: String) async throws -> Bool { true }
+    func setUserPresenceRequired(_ required: Bool, accountID: UUID, address: String) async throws {
+        throw DeviceWalletError.storage
+    }
 }
 
 struct DeviceWalletRecord: Codable {
@@ -15,6 +24,7 @@ struct DeviceWalletRecord: Codable {
     let address: String
     var entropy: Data
     var recoveryVerified: Bool
+    var userPresenceRequired: Bool? = nil
 
     func validated(accountID expected: UUID) throws -> DeviceWalletSummary {
         guard version == 1, accountID == expected,

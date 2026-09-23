@@ -4,8 +4,12 @@
 <dict>
 	<key>BSMART_API_BASE_URL</key>
 	<string>$(BSMART_ENDPOINT_URL)</string>
+	<key>BSMART_APNS_ENVIRONMENT</key>
+	<string>$(APS_ENVIRONMENT)</string>
 	<key>BSMART_APPLE_SIGN_IN_ENABLED</key>
 	<string>$(BSMART_APPLE_SIGN_IN_ENABLED)</string>
+	<key>BSMART_CONTENT_BACKEND</key>
+	<string>$(BSMART_CONTENT_BACKEND)</string>
 	<key>BSMART_DATA_ENVIRONMENT</key>
 	<string>$(BSMART_DATA_ENVIRONMENT)</string>
 	<key>BSMART_DEEPSEEK_API_KEY</key>
@@ -20,6 +24,12 @@
 	<string>$(BSMART_INTERNAL_OPTIONAL_WALLET_BACKUP)</string>
 	<key>BSMART_MR_COLLIE_MODEL</key>
 	<string>$(BSMART_MR_COLLIE_MODEL)</string>
+	<key>BSMART_PRIVY_APP_ID</key>
+	<string>$(BSMART_PRIVY_APP_ID)</string>
+	<key>BSMART_PRIVY_CLIENT_ID</key>
+	<string>$(BSMART_PRIVY_CLIENT_ID)</string>
+	<key>BSMART_PUSH_ENABLED</key>
+	<string>$(BSMART_PUSH_ENABLED)</string>
 	<key>BSMART_SUPABASE_PUBLISHABLE_KEY</key>
 	<string>$(BSMART_SUPABASE_PUBLISHABLE_KEY)</string>
 	<key>BSMART_SUPABASE_URL</key>

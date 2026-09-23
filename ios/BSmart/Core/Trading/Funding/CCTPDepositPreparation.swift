@@ -72,8 +72,8 @@ final class CCTPDepositPreparation: ObservableObject {
             try await verifyRegistration(wallet: wallet, operation: operation)
             try await verifySource(plan: plan, wallet: wallet, operation: operation)
             let id = UUID()
-            intentID = id
             let consent = try await journal.beginConsent(id: id, plan: plan, wallet: wallet)
+            intentID = id
             try check(wallet: wallet, operation: operation)
             lease = try service.fundingSigningLease(wallet: wallet)
             state = .reviewAuthorization(consent)
@@ -107,7 +107,66 @@ final class CCTPDepositPreparation: ObservableObject {
             _ = try await journal.reserve(id: consent.id, transaction: transaction, wallet: wallet)
             try check(wallet: wallet, operation: operation)
             state = .reviewNetworkFee(transaction)
-        } catch { fail(error, operation: operation) }
+        } catch { await failBeforeSourceTransaction(error, wallet: wallet, operation: operation) }
+    }
+
+    func restore(wallet: DeviceWalletSummary) async {
+        guard !isBusy else { return }
+        let operation = revision
+        isBusy = true; errorMessage = nil
+        defer { isBusy = false }
+        do {
+            try await verifyRegistration(wallet: wallet, operation: operation)
+            let sources = try await journal.records(wallet: wallet)
+            let sourceIDs = Set(sources.map { $0.intent.id })
+            var consents = try await journal.consents(wallet: wallet)
+                .filter { $0.reservesOwner && !sourceIDs.contains($0.id) }
+            intentID = consents.first?.id
+            if !consents.isEmpty {
+                let source = try await preflight.snapshot(wallet: wallet)
+                try check(wallet: wallet, operation: operation)
+                try await journal.expireAuthorizations(wallet: wallet, source: source)
+                consents = try await journal.consents(wallet: wallet).filter { $0.reservesOwner && !sourceIDs.contains($0.id) }
+            }
+            try check(wallet: wallet, operation: operation)
+            if let source = sources.first(where: { $0.reservesNonce }) {
+                intentID = source.intent.id
+                if source.state == .prepared {
+                    // No transaction signature exists; keep the history and release the abandoned preview.
+                    _ = try await journal.cancelPrepared(id: source.intent.id, wallet: wallet)
+                    intentID = nil; lease?.invalidate(); lease = nil; state = .idle
+                } else if try await journal.finishUnsubmittedSource(id: source.intent.id, wallet: wallet) {
+                    try check(wallet: wallet, operation: operation)
+                    intentID = nil; lease?.invalidate(); lease = nil; signedSource = nil; state = .idle
+                } else {
+                    state = .submissionRecorded(try FundingHistoryEntry(source: source))
+                }
+                return
+            }
+            guard let consent = consents.first else {
+                intentID = nil; lease?.invalidate(); lease = nil; state = .idle
+                return
+            }
+            intentID = consent.id
+            if consent.state == .review {
+                _ = try await journal.cancelConsent(id: consent.id, wallet: wallet)
+                intentID = nil; state = .idle
+                return
+            }
+            guard consent.state == .authorized, let signature = consent.signature else {
+                throw FundingJournalError.expired
+            }
+            let plan = try consent.plan.restored()
+            try plan.validateAuthorization(wallet: wallet, now: clock())
+            lease = try service.fundingSigningLease(wallet: wallet)
+            state = .preflighting
+            let checked = try await preflight.prepare(plan: plan, wallet: wallet, authorization: signature)
+            try check(wallet: wallet, operation: operation)
+            let transaction = try CCTPSourceTransaction(preflight: checked, wallet: wallet, now: clock())
+            _ = try await journal.reserve(id: consent.id, transaction: transaction, wallet: wallet)
+            try check(wallet: wallet, operation: operation)
+            state = .reviewNetworkFee(transaction)
+        } catch { await failBeforeSourceTransaction(error, wallet: wallet, operation: operation) }
     }
 
     func signConfirmedTransaction() async {
@@ -163,7 +222,7 @@ final class CCTPDepositPreparation: ObservableObject {
             state = .submissionRecorded(try FundingHistoryEntry(source: record))
             lease.invalidate()
             self.lease = nil
-        } catch { fail(error, operation: operation) }
+        } catch { await failBeforeSourceTransaction(error, wallet: wallet, operation: operation) }
     }
 
     func cancelUnsignedReview() async {
@@ -222,8 +281,29 @@ final class CCTPDepositPreparation: ObservableObject {
         signedSource = nil
         state = intentID == nil ? .idle : .recoveryRequired
         if error is CancellationError { errorMessage = nil }
-        else if intentID == nil, let error = error as? FundingPreflightError { errorMessage = error.errorDescription }
-        else if intentID == nil, let error = error as? CCTPFundingError { errorMessage = error.errorDescription }
+        else if let error = error as? FundingPreflightError { errorMessage = error.errorDescription }
+        else if let error = error as? CCTPFundingError { errorMessage = error.errorDescription }
         else { errorMessage = (error as? FundingJournalError ?? .unavailable).errorDescription }
+    }
+
+    private func failBeforeSourceTransaction(_ error: Error, wallet: DeviceWalletSummary, operation: UUID) async {
+        guard revision == operation, !(error is CancellationError), service.walletAccountID == wallet.accountID else {
+            fail(error, operation: operation)
+            return
+        }
+        lease?.invalidate(); lease = nil
+        if let id = intentID {
+            do {
+                let authorizationFinished = try await journal.finishUnsubmittedAuthorization(id: id, wallet: wallet)
+                let sourceFinished = try await journal.finishUnsubmittedSource(id: id, wallet: wallet)
+                if (authorizationFinished || sourceFinished), revision == operation {
+                    intentID = nil
+                }
+            } catch {
+                fail(error, operation: operation)
+                return
+            }
+        }
+        fail(error, operation: operation)
     }
 }

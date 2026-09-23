@@ -108,6 +108,7 @@ struct TodayHoldingsActivityRow: View {
 struct TodayHoldingGroupHeader: View {
     let ticker: String
     let weight: Double?
+    var inAppSide: TodayInAppPositionSide? = nil
 
     var body: some View {
         HStack(spacing: 8) {
@@ -116,6 +117,12 @@ struct TodayHoldingGroupHeader: View {
                 .font(.headline.weight(.bold))
                 .foregroundStyle(BSmartColor.primaryText)
                 .lineLimit(1)
+            if let inAppSide {
+                Text(inAppSide.label)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(inAppSide == .both ? BSmartColor.secondaryText :
+                                     inAppSide == .short ? BSmartColor.bear : BSmartColor.bull)
+            }
             Spacer(minLength: 8)
             if let weight {
                 Text("Portfolio weight %@".bSmartLocalized(

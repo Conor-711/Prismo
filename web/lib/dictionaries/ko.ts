@@ -1,8 +1,10 @@
 import type { Dictionary } from "./zh";
+import { en } from "./en";
 
 // Korean mirror of zh.ts. Proper nouns (tickers, bSmart, r/subreddits, people) stay verbatim.
 // Post content has no KO translation, so it falls back to the English original at render time.
 export const ko: Dictionary = {
+  betaLanding: en.betaLanding,
   meta: {
     title: "bSmart · Reddit 미국 주식 심리 인텔리전스",
     description:

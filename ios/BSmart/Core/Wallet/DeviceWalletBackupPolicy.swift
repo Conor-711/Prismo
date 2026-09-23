@@ -15,7 +15,7 @@ enum DeviceWalletBackupPolicy: Equatable {
 
     func permits(_ wallet: DeviceWalletSummary) -> Bool {
         TradingWalletChallenge.validAddress(wallet.address) &&
-            (wallet.recoveryVerified || self == .optionalForInternalTesting)
+            (wallet.provider == .privy || wallet.recoveryVerified || self == .optionalForInternalTesting)
     }
 }
 

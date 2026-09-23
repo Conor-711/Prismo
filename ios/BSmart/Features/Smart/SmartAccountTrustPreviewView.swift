@@ -83,7 +83,7 @@ struct SmartAccountTrustPreviewView: View {
 
     private var profileActions: some View {
         HStack(spacing: BSmartSpacing.small) {
-            BSmartDetailNavigationLink(id: "trust-profile-\(account.id)") {
+            BSmartDetailNavigationLink(id: "trust-profile-\(account.id)", usesZoomTransition: false) {
                 SmartAccountDetailView(account: account)
             } label: {
                 Text("View full profile".bSmartLocalized)

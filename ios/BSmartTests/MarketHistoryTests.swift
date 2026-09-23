@@ -2,6 +2,32 @@ import XCTest
 @testable import BSmart
 
 final class MarketHistoryTests: XCTestCase {
+    @MainActor
+    func testOpinionQuoteUsesMatchingLiveMarketWithoutChangingTradingSelection() async throws {
+        let store = HyperliquidTradingStore(client: DebugTradingMarketClient())
+        let fetched = await store.opinionQuote(for: "SNDK")
+        let quote = try XCTUnwrap(fetched)
+        XCTAssertEqual(quote.coin, "xyz:SNDK")
+        XCTAssertGreaterThan(quote.markPrice, 0)
+        XCTAssertNil(store.activeMarket)
+        let missing = await store.opinionQuote(for: "NO_SUCH_MARKET")
+        XCTAssertNil(missing)
+
+        let failed = HyperliquidTradingStore(client: FailingVenueClient())
+        let failedQuote = await failed.opinionQuote(for: "SNDK")
+        XCTAssertNil(failedQuote)
+    }
+
+    @MainActor
+    func testPositionQuotesMatchFullCoinAcrossVenues() async {
+        let store = HyperliquidTradingStore(client: DebugTradingMarketClient())
+        let quotes = await store.freshPositionQuotes(coins: ["xyz:NVDA", "test:MSTR", "test:NVDA"])
+        XCTAssertEqual(Set(quotes.keys), ["xyz:NVDA", "test:MSTR"])
+        XCTAssertEqual(quotes["xyz:NVDA"]?.symbol, "NVDA")
+        XCTAssertEqual(quotes["test:MSTR"]?.symbol, "MSTR")
+        XCTAssertNil(store.activeMarket)
+    }
+
     func testOpinionPositionsUseMarketSessionAndNeverClampOutsideWindow() async throws {
         let end = Date()
         let source = try await DebugTradingMarketClient().fetchCandles(
@@ -67,7 +93,7 @@ final class MarketHistoryTests: XCTestCase {
     }
 
     @MainActor
-    func testPreferredVenueFailureStillResolvesOtherVenue() async {
+    func testMissingPreferredVenueStillResolvesOtherVenue() async {
         let store = HyperliquidTradingStore(client: AlternateVenueClient())
         let loading = Task { await store.runLiveMarket(symbol: "MSTR") }
         for _ in 0..<200 {
@@ -76,6 +102,77 @@ final class MarketHistoryTests: XCTestCase {
         }
         XCTAssertEqual(store.activeMarket?.coin, "test:MSTR")
         XCTAssertFalse(store.candles.isEmpty)
+        loading.cancel()
+        await loading.value
+    }
+
+    @MainActor
+    func testMarketNetworkFailureDoesNotClaimMarketIsMissing() async {
+        let client = FailingVenueClient()
+        let store = HyperliquidTradingStore(client: client)
+        await store.runLiveMarket(symbol: "NVDA")
+        XCTAssertNil(store.activeMarket)
+        XCTAssertNotNil(store.errorMessage)
+        XCTAssertFalse(store.errorMessage!.contains("No active Hyperliquid market"))
+        let requestCount = await client.marketRequestCount
+        XCTAssertEqual(requestCount, 1, "A failed quote must not trigger a catalog-wide retry storm.")
+    }
+
+    @MainActor
+    func testPartialCatalogDoesNotClaimMissingMarket() async {
+        let store = HyperliquidTradingStore(client: PartialVenueClient())
+        await store.runLiveMarket(symbol: "MSTR")
+        XCTAssertFalse(store.marketCatalog.isEmpty, "Healthy venues should remain usable.")
+        XCTAssertNil(store.activeMarket)
+        XCTAssertNotNil(store.errorMessage)
+        XCTAssertFalse(store.errorMessage!.contains("No active Hyperliquid market"))
+    }
+
+    @MainActor
+    func testTradeSessionUsesOnlyCurrentMarketSnapshot() async throws {
+        let client = FailingVenueClient()
+        let root = HyperliquidTradingStore(client: client)
+        let markets = try await DebugTradingMarketClient().fetchMarkets(dex: .init(name: "xyz", displayName: "XYZ"))
+        let market = try XCTUnwrap(markets.first { $0.coin == "xyz:NVDA" })
+        await root.selectMarket(market)
+        let trade = root.makeSession()
+        let loading = Task { await trade.runLiveMarket(symbol: "NVDA") }
+        for _ in 0..<20 {
+            if trade.activeMarket != nil { break }
+            await Task.yield()
+        }
+        XCTAssertEqual(trade.activeMarket?.coin, "xyz:NVDA")
+        let requestCount = await client.marketRequestCount
+        XCTAssertEqual(requestCount, 0)
+        loading.cancel()
+        await loading.value
+    }
+
+    @MainActor
+    func testExactPositionMarketDoesNotFallBackToAnotherVenue() async {
+        let store = HyperliquidTradingStore(client: AlternateVenueClient())
+        let loading = Task { await store.runLiveMarket(symbol: "MSTR", coin: "xyz:MSTR") }
+        for _ in 0..<200 {
+            if store.errorMessage != nil { break }
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        XCTAssertNil(store.activeMarket)
+        XCTAssertNotNil(store.errorMessage)
+        loading.cancel()
+        await loading.value
+    }
+
+    @MainActor
+    func testLateExactMarketCannotReplaceExplicitSelection() async throws {
+        let client = DelayedInitialMarketClient()
+        let store = HyperliquidTradingStore(client: client)
+        let loading = Task { await store.runLiveMarket(symbol: "NVDA", coin: "xyz:NVDA") }
+        await client.waitForRequest()
+        let other = try await DebugTradingMarketClient().fetchMarkets(dex: .init(name: "test", displayName: "Test"))[0]
+        await store.selectMarket(other)
+        await client.finish()
+        for _ in 0..<20 { await Task.yield() }
+        XCTAssertEqual(store.activeMarket?.coin, "test:MSTR")
         loading.cancel()
         await loading.value
     }
@@ -106,10 +203,36 @@ private actor DelayedInitialMarketClient: HyperliquidMarketDataClient {
 private struct AlternateVenueClient: HyperliquidMarketDataClient {
     func fetchDexs() async throws -> [HyperliquidDex] { [.init(name: "test", displayName: "Test")] }
     func fetchMarkets(dex: HyperliquidDex) async throws -> [HyperliquidPerpMarket] {
-        if dex.name == "xyz" { throw HyperliquidMarketDataError.httpStatus(503) }
+        if dex.name == "xyz" { return [] }
         return try await DebugTradingMarketClient().fetchMarkets(dex: dex)
     }
     func fetchCandles(coin: String, interval: String, start: Date, end: Date) async throws -> [HyperliquidCandle] {
         try await DebugTradingMarketClient().fetchCandles(coin: coin, interval: interval, start: start, end: end)
+    }
+}
+
+private actor FailingVenueClient: HyperliquidMarketDataClient {
+    private(set) var marketRequestCount = 0
+    func fetchDexs() async throws -> [HyperliquidDex] { [] }
+    func fetchMarkets(dex: HyperliquidDex) async throws -> [HyperliquidPerpMarket] {
+        marketRequestCount += 1
+        throw URLError(.timedOut)
+    }
+    func fetchCandles(coin: String, interval: String, start: Date, end: Date) async throws -> [HyperliquidCandle] {
+        []
+    }
+}
+
+private struct PartialVenueClient: HyperliquidMarketDataClient {
+    func fetchDexs() async throws -> [HyperliquidDex] {
+        [.init(name: "", displayName: "Hyperliquid"), .init(name: "broken", displayName: "Broken")]
+    }
+    func fetchMarkets(dex: HyperliquidDex) async throws -> [HyperliquidPerpMarket] {
+        if dex.name == "xyz" { return [] }
+        if dex.name == "broken" { throw URLError(.timedOut) }
+        return try await DebugTradingMarketClient().fetchMarkets(dex: dex)
+    }
+    func fetchCandles(coin: String, interval: String, start: Date, end: Date) async throws -> [HyperliquidCandle] {
+        []
     }
 }

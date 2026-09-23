@@ -74,6 +74,15 @@
         }
       },
       {
+        "package": "Privy",
+        "repositoryURL": "https://github.com/privy-io/privy-ios",
+        "state": {
+          "branch": null,
+          "revision": "71dd5fe9eb20a8dfaa411b219f856c108473f909",
+          "version": "2.16.2"
+        }
+      },
+      {
         "package": "Promises",
         "repositoryURL": "https://github.com/google/promises.git",
         "state": {

@@ -83,11 +83,37 @@ actor TradingCheckReaderStub: HyperliquidExecutionReading {
     let responses: [Data]
     let onRead: @Sendable (Int) throws -> Void
     private(set) var queries: [HyperliquidExecutionQuery] = []
+    private var snapshotResponses = false
+    private var previewResponses = false
     init(_ responses: [Data], onRead: @escaping @Sendable (Int) throws -> Void = { _ in }) {
         self.responses = responses; self.onRead = onRead
     }
+    init(snapshot responses: [Data], onRead: @escaping @Sendable (Int) throws -> Void = { _ in }) {
+        self.responses = responses; self.onRead = onRead; snapshotResponses = true
+    }
+    init(preview responses: [Data], onRead: @escaping @Sendable (Int) throws -> Void = { _ in }) {
+        self.responses = responses; self.onRead = onRead; previewResponses = true
+    }
     func read(_ query: HyperliquidExecutionQuery) async throws -> Data {
-        let index = queries.count
+        let index: Int
+        if snapshotResponses {
+            let occurrence = queries.filter { $0 == query }.count
+            switch query {
+            case .dexs: index = 0
+            case .metadata: index = 1
+            case .mode: index = occurrence == 0 ? 2 : 7
+            case .active: index = occurrence == 0 ? 3 : 5
+            case .positions: index = occurrence == 0 ? 4 : 6
+            default: throw HyperliquidTradingCheckError.invalidResponse
+            }
+        } else if previewResponses {
+            switch query {
+            case .fees: index = 0
+            case .builderApproval: index = 1
+            case .book: index = responses.count > 2 ? 2 : 1
+            default: throw HyperliquidTradingCheckError.invalidResponse
+            }
+        } else { index = queries.count }
         queries.append(query)
         try onRead(index)
         guard responses.indices.contains(index) else { throw HyperliquidTradingCheckError.unavailable }

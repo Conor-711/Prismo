@@ -3,36 +3,27 @@ import SwiftUI
 struct OpinionReaderView: View {
     let update: SmartAccountUpdate
     @State private var prefersOriginal = false
-    @AppStorage("bsmart.opinion.reading.size") private var readingSize = "standard"
-    @ScaledMetric(relativeTo: .body) private var compactSize = 15.0
-    @ScaledMetric(relativeTo: .body) private var standardSize = 17.0
-    @ScaledMetric(relativeTo: .body) private var largeSize = 19.0
+    @ScaledMetric(relativeTo: .body) private var fontSize = 17.0
 
     private var content: OpinionReadingContent {
         OpinionReadingContent(update: update, chinese: BSmartLocalization.isSimplifiedChinese)
     }
     private var showingTranslation: Bool { content.translation != nil && (!prefersOriginal || content.original == nil) }
     private var displayedText: String? { showingTranslation ? content.translation : content.original }
-    private var fontSize: Double {
-        switch readingSize {
-        case "compact": compactSize
-        case "large": largeSize
-        default: standardSize
-        }
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
             if let summary = content.summary {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("bSmart summary".bSmartLocalized)
+                    Text("Summary".bSmartLocalized)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(BSmartColor.brand)
                     Text(summary)
-                        .font(.title3.weight(.semibold))
-                        .lineSpacing(4)
+                        .font(.system(size: fontSize, weight: .regular))
+                        .foregroundStyle(BSmartColor.primaryText)
+                        .lineSpacing(6)
                         .fixedSize(horizontal: false, vertical: true)
-                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         .accessibilityIdentifier("opinion.reader.summary")
                 }
             }
@@ -40,8 +31,9 @@ struct OpinionReaderView: View {
             VStack(alignment: .leading, spacing: 20) {
                 controls
                 if let text = displayedText {
-                    let document = OpinionReadingDocument(text: text, evidence: showingTranslation ? nil : update.evidenceSpan)
-                    VStack(alignment: .leading, spacing: 16) {
+                    let document = OpinionReadingDocument(text: text, evidence: showingTranslation ? nil : update.evidenceSpan,
+                                                          ticker: update.ticker)
+                    VStack(alignment: .leading, spacing: 10) {
                         ForEach(document.blocks) { block in
                             paragraph(block)
                         }
@@ -57,7 +49,6 @@ struct OpinionReaderView: View {
                         Text(span)
                             .font(.system(size: fontSize))
                             .lineSpacing(7)
-                            .textSelection(.enabled)
                         Text("The complete source text is unavailable; only the extracted evidence is shown.".bSmartLocalized)
                             .font(.caption)
                             .foregroundStyle(BSmartColor.secondaryText)
@@ -67,6 +58,32 @@ struct OpinionReaderView: View {
                         .font(.subheadline)
                         .foregroundStyle(BSmartColor.secondaryText)
                 }
+            }
+            if let imageURLs = update.imageURLs, !imageURLs.isEmpty {
+                ScrollView(.horizontal) {
+                    HStack(alignment: .top, spacing: 10) {
+                        ForEach(imageURLs, id: \.self) { url in
+                            AsyncImage(url: url) { phase in
+                                switch phase {
+                                case .success(let image):
+                                    image.resizable().scaledToFit()
+                                case .failure:
+                                    Image(systemName: "photo")
+                                        .foregroundStyle(BSmartColor.secondaryText)
+                                case .empty:
+                                    ProgressView()
+                                @unknown default:
+                                    EmptyView()
+                                }
+                            }
+                            .frame(width: imageURLs.count == 1 ? 320 : 260, height: 260)
+                            .background(BSmartColor.line.opacity(0.12))
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                        }
+                    }
+                }
+                .scrollIndicators(.hidden)
+                .accessibilityIdentifier("opinion.reader.photos")
             }
             Divider().overlay(BSmartColor.line)
         }
@@ -131,30 +148,6 @@ struct OpinionReaderView: View {
 
     private var actions: some View {
         HStack(spacing: 0) {
-            Menu {
-                Picker("Text size".bSmartLocalized, selection: $readingSize) {
-                    Text("Compact".bSmartLocalized).tag("compact")
-                    Text("Standard".bSmartLocalized).tag("standard")
-                    Text("Large".bSmartLocalized).tag("large")
-                }
-            } label: {
-                Image(systemName: "textformat.size").frame(width: 44, height: 44)
-            }
-            .accessibilityLabel("Text size".bSmartLocalized)
-            .accessibilityValue((readingSize == "compact" ? "Compact" : readingSize == "large" ? "Large" : "Standard").bSmartLocalized)
-            .accessibilityIdentifier("opinion.reader.text-size")
-            .help("Text size".bSmartLocalized)
-
-            if let text = displayedText {
-                Button {
-                    UIPasteboard.general.string = text
-                } label: {
-                    Image(systemName: "doc.on.doc").frame(width: 44, height: 44)
-                }
-                .accessibilityLabel("Copy text".bSmartLocalized)
-                .accessibilityIdentifier("opinion.reader.copy")
-                .help("Copy text".bSmartLocalized)
-            }
             if let url = update.sourceURL ?? update.evidenceURL {
                 Link(destination: url) {
                     Image(systemName: "arrow.up.right.square").frame(width: 44, height: 44)
@@ -171,6 +164,12 @@ struct OpinionReaderView: View {
 
     private func paragraph(_ block: OpinionReadingDocument.Block) -> some View {
         var value = AttributedString(block.text)
+        for nsRange in block.inlineEmphasis {
+            if let range = Range(nsRange, in: block.text),
+               let attributedRange = Range(range, in: value) {
+                value[attributedRange].font = .system(size: fontSize, weight: .semibold)
+            }
+        }
         for nsRange in block.emphasis {
             if let range = Range(nsRange, in: block.text),
                let attributedRange = Range(range, in: value) {
@@ -186,7 +185,6 @@ struct OpinionReaderView: View {
             .multilineTextAlignment(.leading)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.top, block.isHeading && block.id > 0 ? 6 : 0)
-            .textSelection(.enabled)
+            .padding(.top, block.startsNewParagraph && block.id > 0 ? 14 : 0)
     }
 }

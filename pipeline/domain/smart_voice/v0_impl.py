@@ -1315,8 +1315,10 @@ def build_reddit_candidates(
     author_limit: int,
     since_days: int,
     min_author_posts: int,
+    *, initialize_schema: bool = True,
 ) -> int:
-    ensure_tables(con)
+    if initialize_schema:
+        ensure_tables(con)
     valid = price_tickers(con) - NON_CALL_TAGS
     if only:
         valid &= only
@@ -1434,8 +1436,10 @@ def build_youtube_candidates(
     only: set[str] | None,
     min_subscribers: int,
     since_days: int,
+    *, initialize_schema: bool = True,
 ) -> int:
-    ensure_tables(con)
+    if initialize_schema:
+        ensure_tables(con)
     min_subscribers = max(min_subscribers, YOUTUBE_MIN_DISPLAY_SUBSCRIBERS)
     legacy_available = table_exists(con, "yt_video") and table_exists(con, "yt_channel")
     upload_tables = {
@@ -1907,13 +1911,16 @@ def normalize_call(data: Any) -> dict[str, Any]:
     }
 
 
-def user_prompt(row: sqlite3.Row) -> str:
+def user_prompt(row: sqlite3.Row, *, complete_x_text: bool = False) -> str:
     source = str(row["source"] or "x")
     item_label = {
         "reddit": "Reddit post",
         "youtube": "YouTube video",
     }.get(source, "Tweet")
     text_cap = 5200 if source == "youtube" else 2200
+    text = str(row["text"])
+    if not (source == "x" and complete_x_text):
+        text = text[:text_cap]
     return (
         f"Ticker to judge: {row['ticker']}\n"
         f"Source: {source}\n"
@@ -1922,7 +1929,7 @@ def user_prompt(row: sqlite3.Row) -> str:
         f"Language: {row['lang']}\n"
         f"Heuristic reason: {row['reason']}\n"
         f"{item_label} text:\n"
-        f"{str(row['text'])[:text_cap]}"
+        f"{text}"
     )
 
 
@@ -2553,6 +2560,7 @@ def extract_calls(
     created_since: str | None = None,
     candidate_ids: set[str] | None = None,
     initialize_schema: bool = True,
+    complete_x_text: bool = False,
 ) -> int:
     if initialize_schema:
         ensure_tables(con)
@@ -2657,7 +2665,7 @@ def extract_calls(
             )
             model = "+".join(dict.fromkeys(used_models)) or provider_labels[-1]
             return row, norm, model
-        data, model = request_with_fallback(SV_SYSTEM, user_prompt(row), 1_200)
+        data, model = request_with_fallback(SV_SYSTEM, user_prompt(row, complete_x_text=complete_x_text), 1_200)
         norm = normalize_call(data)
         norm["ticker"] = str(row["ticker"] or "").upper()
         if str(row["source"] or "x") == "x":

@@ -913,7 +913,8 @@ def gen_fulltext(only: set[str] | None = None, per_ticker: int = 10, workers: in
                  max_rate_waits: int = 4, video_ids: set[str] | None = None,
                  db_path: str | Path | None = None,
                  max_total_minutes: int | None = None,
-                 prefer_transcript: bool = False) -> int:
+                 prefer_transcript: bool = False,
+                 initialize_schema: bool = True) -> int:
     """Gemini 真看视频 → 结构化「完整内容」（优化口播 + 关键画面**真实视频帧**）→ yt_fulltext。
 
     每视频：① Gemini 出有序段落(口播/画面+文案，剔宣传) → ② yt-dlp 下载(360p,瞬时,截完即删)
@@ -922,7 +923,7 @@ def gen_fulltext(only: set[str] | None = None, per_ticker: int = 10, workers: in
     存 segments(有序) + content_zh(扁平口播)。顺序处理、逐条落库(可续)。按 only + 每标的 top-N 播放量。
     """
     local_db = Path(db_path).expanduser().resolve() if db_path else None
-    if local_db:
+    if local_db and initialize_schema:
         with sqlite3.connect(local_db) as con:
             con.executescript(
                 """CREATE TABLE IF NOT EXISTS yt_fulltext (
@@ -942,7 +943,7 @@ def gen_fulltext(only: set[str] | None = None, per_ticker: int = 10, workers: in
                      updated_at TEXT NOT NULL DEFAULT ''
                    );"""
             )
-    else:
+    elif initialize_schema:
         _ensure_fulltext_table()
     if not settings.has_gemini:
         print("[yt-full] 无 GEMINI_API_KEY，跳过。", flush=True)

@@ -12,6 +12,7 @@ pipeline/
     commands/
   platforms/
     reddit/
+    telegram/
     x/
     youtube/
     xueqiu/
@@ -31,6 +32,7 @@ pipeline/
     target_prices/
     translations/
   jobs/
+    telegram_x_delivery/
     global_retail/
     ticker_detail/
     narrative_rotation/
@@ -97,6 +99,7 @@ CLI 只负责命令注册和参数解析。长期目标是把当前 `pipeline/ma
 ## 当前迁移状态
 
 - `pipeline/manage.py` 已变成兼容入口，只转发到 `pipeline.cli.registry`。
+- `telegram-x-sync` 使用平台层读取频道文件，`smart_voice/x_delivery_scope.py` 在提炼前固定正式 X Top 25% 作者，`jobs/telegram_x_delivery` 保存 offset、来源哈希和清理回执；衍生 JSONL 进入现有 X 模型/翻译/发布队列。`content-delivery` 周期接入；本地原包只在数据库验证后删除。
 - CLI 顶层 parser 已迁到 `pipeline/cli/registry.py`。
 - CLI 命令适配与 argparse 子命令注册已按业务组拆到 `pipeline/cli/commands/`。
 - YouTube 命令已迁到 `pipeline/jobs/youtube/workflows.py`，CLI 不再直接依赖 `pipeline/ingest/youtube_*` 或 `pipeline/analyze/youtube_*`。

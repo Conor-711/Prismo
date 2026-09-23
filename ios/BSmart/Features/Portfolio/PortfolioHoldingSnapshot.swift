@@ -40,6 +40,24 @@ struct PortfolioHoldingSnapshot {
         side = position.side
     }
 
+    init(live position: TradingPositionRow, quote: PortfolioPositionQuote?) {
+        symbol = position.symbol
+        quantity = Double(position.quantity.magnitude.wire) ?? 0
+        price = quote?.currentPrice
+        averageCost = position.entryPrice.flatMap { Double($0.wire) }.flatMap(Self.positive)
+        value = quote?.marketValue
+        let profit = Double(position.unrealizedPnL.magnitude.wire)
+        gain = profit.map { position.unrealizedPnL.isNegative ? -$0 : $0 }
+        if let gain, let averageCost, quantity > 0 {
+            let basis = quantity * averageCost
+            gainPercent = basis.isFinite && basis > 0 ? gain / basis : nil
+        } else {
+            gainPercent = nil
+        }
+        leverage = position.leverage
+        side = position.quantity.isNegative ? .short : .long
+    }
+
     private static func positive(_ value: Double) -> Double? {
         value.isFinite && value > 0 ? value : nil
     }

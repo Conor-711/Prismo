@@ -3,6 +3,67 @@ import XCTest
 
 @MainActor
 final class DeviceWalletStoreTests: XCTestCase {
+    func testTradeEntryRestoresRegisteredWalletWithoutCreatingOrBindingAgain() async {
+        let service = WalletServiceDouble(), vault = WalletVaultDouble()
+        let store = DeviceWalletStore(service: service, vault: vault)
+        await store.prepare()
+        let expected = store.state
+        store.lock()
+        await store.prepare(allowCreation: false)
+        XCTAssertEqual(store.state, expected)
+        XCTAssertEqual(service.bindCount, 1)
+        let creates = await vault.creates
+        XCTAssertEqual(creates, 1)
+        let reads = service.reads
+        await store.prepare(allowCreation: false)
+        XCTAssertEqual(service.reads, reads)
+    }
+
+    func testTradeEntryNeverCreatesOrBindsAnUnregisteredWallet() async {
+        let service = WalletServiceDouble(), vault = WalletVaultDouble()
+        let store = DeviceWalletStore(service: service, vault: vault)
+        await store.prepare(allowCreation: false)
+        XCTAssertEqual(store.state, .locked)
+        XCTAssertNil(store.errorMessage)
+        XCTAssertEqual(service.bindCount, 0)
+        let creates = await vault.creates
+        XCTAssertEqual(creates, 0)
+    }
+
+    func testTradeEntryMissingWalletRequiresRecoveryAndAccountSwitchInvalidatesRestore() async {
+        let service = WalletServiceDouble(), vault = WalletVaultDouble()
+        service.address = walletTestAddress
+        let store = DeviceWalletStore(service: service, vault: vault)
+        await store.prepare(allowCreation: false)
+        XCTAssertEqual(store.state, .recoveryRequired(address: walletTestAddress))
+        store.lock()
+        service.onRead = { store.lock(); service.walletAccountID = UUID() }
+        await store.prepare(allowCreation: false)
+        XCTAssertEqual(store.state, .locked)
+        XCTAssertEqual(service.bindCount, 0)
+        let creates = await vault.creates
+        XCTAssertEqual(creates, 0)
+    }
+
+    func testWalletAuthenticationSettingPersistsAndFailureDoesNotFlipToggle() async {
+        let service = WalletServiceDouble(), vault = WalletVaultDouble()
+        let store = DeviceWalletStore(service: service, vault: vault)
+        await store.prepare()
+        let original = store.state
+        XCTAssertTrue(store.userPresenceRequired)
+        await store.setUserPresenceRequired(false)
+        XCTAssertFalse(store.userPresenceRequired)
+        XCTAssertEqual(store.state, original)
+        store.lock()
+        await store.prepare()
+        XCTAssertFalse(store.userPresenceRequired)
+        await vault.setPolicyFailure(true)
+        await store.setUserPresenceRequired(true)
+        XCTAssertFalse(store.userPresenceRequired)
+        XCTAssertNotNil(store.errorMessage)
+        XCTAssertEqual(store.state, original)
+    }
+
     func testOnlyVerifiedUnboundAccountCreatesAndBindsOnce() async {
         let service = WalletServiceDouble()
         let vault = WalletVaultDouble()
@@ -167,6 +228,14 @@ private final class WalletServiceDouble: AccountWalletServicing {
 private actor WalletVaultDouble: DeviceWalletVault {
     private var values: [UUID: DeviceWalletSummary] = [:]
     private(set) var creates = 0
+    private var requiresPresence = true
+    private var policyFailure = false
+    func setPolicyFailure(_ value: Bool) { policyFailure = value }
+    func userPresenceRequired(accountID: UUID, address: String) async throws -> Bool { requiresPresence }
+    func setUserPresenceRequired(_ required: Bool, accountID: UUID, address: String) async throws {
+        if policyFailure { throw DeviceWalletError.locked }
+        requiresPresence = required
+    }
     let failCreate: Bool
     init(failCreate: Bool = false) { self.failCreate = failCreate }
     func summary(accountID: UUID, registeredAddress: String?) -> DeviceWalletSummary? { values[accountID] }

@@ -144,7 +144,7 @@ actor HTTPHyperliquidMarketDataClient: HyperliquidMarketDataClient {
     private func request<Response: Decodable>(_ body: [String: Any]) async throws -> Response {
         var request = URLRequest(url: infoURL)
         request.httpMethod = "POST"
-        request.timeoutInterval = 15
+        request.timeoutInterval = 8
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
@@ -168,6 +168,7 @@ final class HyperliquidTradingStore: ObservableObject {
     @Published private(set) var isLoadingMarket = false
     @Published private(set) var isLoadingCatalog = false
     @Published private(set) var errorMessage: String?
+    @Published private(set) var verifiedNoMarketSymbol: String?
     @Published var chartRange: HyperliquidChartRange = .oneDay
     @Published var chartStyle: HyperliquidChartStyle = .line
     @Published private(set) var isLoadingCandles = false
@@ -178,6 +179,7 @@ final class HyperliquidTradingStore: ObservableObject {
 
     private let client: HyperliquidMarketDataClient
     private var preferredDexCache: [HyperliquidPerpMarket] = []
+    private var catalogLoadError: Error?
     private var activeSymbol = ""
 
     init(client: HyperliquidMarketDataClient, candleWindow: HyperliquidCandleWindow? = nil) {
@@ -186,7 +188,13 @@ final class HyperliquidTradingStore: ObservableObject {
     }
 
     func makeSession(candleWindow: HyperliquidCandleWindow? = nil) -> HyperliquidTradingStore {
-        HyperliquidTradingStore(client: client, candleWindow: candleWindow)
+        let session = HyperliquidTradingStore(client: client, candleWindow: candleWindow)
+        session.marketCatalog = marketCatalog.filter { TradeAmountInput.quoteIsCurrent($0.updatedAt) }
+        if let activeMarket, TradeAmountInput.quoteIsCurrent(activeMarket.updatedAt),
+           !session.marketCatalog.contains(where: { $0.coin == activeMarket.coin }) {
+            session.marketCatalog.append(activeMarket)
+        }
+        return session
     }
 
     /// An explicit Feed market must never be replaced by the preferred ticker venue.
@@ -202,6 +210,32 @@ final class HyperliquidTradingStore: ObservableObject {
         return market
     }
 
+    func freshPositionQuotes(coins: [String]) async -> [String: HyperliquidPerpMarket] {
+        let requested = Set(coins)
+        guard !requested.isEmpty else { return [:] }
+        let dexNames = Set(requested.map { coin in
+            coin.contains(":") ? String(coin.split(separator: ":", maxSplits: 1)[0]) : ""
+        })
+        let client = self.client
+        return await withTaskGroup(of: [HyperliquidPerpMarket].self) { group in
+            for name in dexNames {
+                group.addTask {
+                    let dex = HyperliquidDex(name: name, displayName: name.uppercased())
+                    return (try? await client.fetchMarkets(dex: dex)) ?? []
+                }
+            }
+            var quotes: [String: HyperliquidPerpMarket] = [:]
+            for await markets in group {
+                guard !Task.isCancelled else { return [:] }
+                for market in markets where requested.contains(market.coin) && !market.isDelisted
+                    && market.markPrice.isFinite && market.markPrice > 0 {
+                    quotes[market.coin] = market
+                }
+            }
+            return quotes
+        }
+    }
+
     func market(for symbol: String) -> HyperliquidPerpMarket? {
         if let activeMarket, activeMarket.symbol.caseInsensitiveCompare(symbol) == .orderedSame {
             return activeMarket
@@ -211,9 +245,26 @@ final class HyperliquidTradingStore: ObservableObject {
             ?? preferredMarket(symbol: symbol, from: marketCatalog)
     }
 
-    func runLiveMarket(symbol: String) async {
+    func opinionQuote(for symbol: String) async -> HyperliquidPerpMarket? {
+        if let cached = market(for: symbol), !cached.isDelisted, cached.markPrice > 0,
+           TradeAmountInput.quoteIsCurrent(cached.updatedAt) {
+            return cached
+        }
+        let preferredDex = HyperliquidDex(name: "xyz", displayName: "XYZ")
+        if let markets = try? await client.fetchMarkets(dex: preferredDex),
+           let market = preferredMarket(symbol: symbol, from: markets), !Task.isCancelled {
+            return market
+        }
+        guard let known = market(for: symbol), known.dex != "xyz" else { return nil }
+        let dex = HyperliquidDex(name: known.dex, displayName: known.dexDisplayName)
+        guard let markets = try? await client.fetchMarkets(dex: dex), !Task.isCancelled else { return nil }
+        return preferredMarket(symbol: symbol, from: markets)
+    }
+
+    func runLiveMarket(symbol: String, coin: String? = nil) async {
         let normalizedSymbol = symbol.uppercased()
-        if activeSymbol != normalizedSymbol {
+        verifiedNoMarketSymbol = nil
+        if activeSymbol != normalizedSymbol || (coin != nil && activeMarket?.coin != coin) {
             candleRequestID = UUID()
             isLoadingCandles = false
             activeMarket = nil
@@ -221,19 +272,16 @@ final class HyperliquidTradingStore: ObservableObject {
             errorMessage = nil
         }
         activeSymbol = normalizedSymbol
-        await loadInitialMarket(symbol: activeSymbol)
+        await loadRequestedMarket(symbol: activeSymbol, coin: coin)
+        guard activeMarket != nil else { return }
 
         while !Task.isCancelled {
             try? await Task.sleep(for: .seconds(3))
             guard !Task.isCancelled else { return }
-            if activeMarket == nil {
-                await loadInitialMarket(symbol: activeSymbol)
-            } else {
-                await refreshActiveMarket()
-                if !Task.isCancelled, !isLoadingCandles,
-                   Date().timeIntervalSince(lastCandleRefresh) >= 30 {
-                    await reloadCandles()
-                }
+            await refreshActiveMarket()
+            if !Task.isCancelled, !isLoadingCandles,
+               Date().timeIntervalSince(lastCandleRefresh) >= 30 {
+                await reloadCandles()
             }
         }
     }
@@ -273,24 +321,30 @@ final class HyperliquidTradingStore: ObservableObject {
     func loadFullCatalog() async {
         guard !isLoadingCatalog else { return }
         isLoadingCatalog = true
+        catalogLoadError = nil
         defer { isLoadingCatalog = false }
         do {
             let dexs = try await client.fetchDexs()
             let marketClient = client
-            let markets = await withTaskGroup(of: [HyperliquidPerpMarket].self) { group in
+            let result = await withTaskGroup(of: Result<[HyperliquidPerpMarket], Error>.self) { group in
                 for dex in dexs {
                     group.addTask {
-                        (try? await marketClient.fetchMarkets(dex: dex)) ?? []
+                        do { return .success(try await marketClient.fetchMarkets(dex: dex)) }
+                        catch { return .failure(error) }
                     }
                 }
 
                 var catalog: [HyperliquidPerpMarket] = []
+                var firstError: Error?
                 for await batch in group {
-                    catalog.append(contentsOf: batch)
+                    switch batch {
+                    case let .success(markets): catalog.append(contentsOf: markets)
+                    case let .failure(error): firstError = firstError ?? error
+                    }
                 }
-                return catalog
+                return (catalog, firstError)
             }
-            marketCatalog = markets
+            marketCatalog = result.0
                 .filter { !$0.isDelisted && $0.markPrice > 0 }
                 .sorted { lhs, rhs in
                     if lhs.dayNotionalVolume != rhs.dayNotionalVolume {
@@ -298,8 +352,10 @@ final class HyperliquidTradingStore: ObservableObject {
                     }
                     return lhs.coin < rhs.coin
                 }
-            errorMessage = nil
+            catalogLoadError = result.1
+            errorMessage = marketCatalog.isEmpty ? result.1?.localizedDescription : nil
         } catch {
+            catalogLoadError = error
             errorMessage = error.localizedDescription
         }
     }
@@ -307,20 +363,53 @@ final class HyperliquidTradingStore: ObservableObject {
     func selectMarket(_ market: HyperliquidPerpMarket) async {
         marketRequestID = UUID()
         isLoadingMarket = false
+        verifiedNoMarketSymbol = nil
         activeSymbol = market.symbol.uppercased()
         activeMarket = market
         await reloadCandles()
     }
 
-    private func loadInitialMarket(symbol: String) async {
+    private func loadRequestedMarket(symbol: String, coin: String?) async {
+        guard let coin else { await loadInitialMarket(symbol: symbol); return }
+        if let cached = marketCatalog.first(where: { $0.coin == coin && $0.symbol.caseInsensitiveCompare(symbol) == .orderedSame
+            && !$0.isDelisted && TradeAmountInput.quoteIsCurrent($0.updatedAt) }) {
+            activeMarket = cached
+            errorMessage = nil
+            await reloadCandles()
+            return
+        }
         let requestID = UUID()
         marketRequestID = requestID
         isLoadingMarket = true
         defer { if marketRequestID == requestID { isLoadingMarket = false } }
         do {
-            let preferred = (try? await client.fetchMarkets(
+            let market = try await freshMarket(coin: coin, symbol: symbol)
+            guard !Task.isCancelled, marketRequestID == requestID else { return }
+            activeMarket = market
+            errorMessage = nil
+            await reloadCandles()
+        } catch {
+            guard !Task.isCancelled, marketRequestID == requestID else { return }
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func loadInitialMarket(symbol: String) async {
+        if let cached = preferredMarket(symbol: symbol, from: marketCatalog.filter { $0.dex == "xyz" }),
+           TradeAmountInput.quoteIsCurrent(cached.updatedAt) {
+            activeMarket = cached
+            errorMessage = nil
+            await reloadCandles()
+            return
+        }
+        let requestID = UUID()
+        marketRequestID = requestID
+        isLoadingMarket = true
+        defer { if marketRequestID == requestID { isLoadingMarket = false } }
+        do {
+            let preferred = try await client.fetchMarkets(
                 dex: HyperliquidDex(name: "xyz", displayName: "XYZ")
-            )) ?? []
+            )
             guard !Task.isCancelled, marketRequestID == requestID else { return }
             preferredDexCache = preferred
             mergeMarkets(preferred)
@@ -329,8 +418,10 @@ final class HyperliquidTradingStore: ObservableObject {
                 await loadFullCatalog()
                 guard !Task.isCancelled, marketRequestID == requestID else { return }
                 resolved = preferredMarket(symbol: symbol, from: marketCatalog)
+                if resolved == nil, let catalogLoadError { throw catalogLoadError }
             }
             guard let market = resolved else {
+                verifiedNoMarketSymbol = symbol
                 throw HyperliquidMarketDataError.marketUnavailable(symbol)
             }
             activeMarket = market

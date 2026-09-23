@@ -30,8 +30,9 @@ private struct TodayInvestorActivityContent: View {
     @State private var query = ""
 
     private var displayed: [TodayInvestorActivity] {
-        let matching = investors.filter { $0.matches(source: source, query: query) }
-        return isPreview ? Array(matching.prefix(3)) : matching
+        let effectiveSource: TodayActivityFilter = isPreview ? .accounts : source
+        let matching = investors.filter { $0.matches(source: effectiveSource, query: query) }
+        return isPreview ? TodayInvestorActivity.previewAccounts(from: matching) : matching
     }
 
     var body: some View {
@@ -59,18 +60,21 @@ private struct TodayInvestorActivityContent: View {
                     }
                 }
                 .padding(12)
+                .background(BSmartKeyboardInputRegion())
                 .background(BSmartColor.surface, in: RoundedRectangle(cornerRadius: 8))
             }
-            Picker("Sources".bSmartLocalized, selection: $source) {
-                ForEach(TodayActivityFilter.allCases) { filter in
-                    Text(filter == .all ? "All sources".bSmartLocalized : filter.label).tag(filter)
+            if !isPreview {
+                Picker("Sources".bSmartLocalized, selection: $source) {
+                    ForEach(TodayActivityFilter.allCases) { filter in
+                        Text(filter == .all ? "All sources".bSmartLocalized : filter.label).tag(filter)
+                    }
                 }
+                .pickerStyle(.segmented)
+                .accessibilityIdentifier("smart-updates.source-filter")
             }
-            .pickerStyle(.segmented)
-            .accessibilityIdentifier("smart-updates.source-filter")
 
             if model.isLoading && investors.isEmpty {
-                ProgressView().frame(maxWidth: .infinity, minHeight: 90)
+                BSmartSkeletonRows(style: .feed, count: isPreview ? 2 : 4)
             } else if displayed.isEmpty {
                 Label("No matching updates in the last 30 days".bSmartLocalized, systemImage: "text.bubble")
                     .font(.subheadline)

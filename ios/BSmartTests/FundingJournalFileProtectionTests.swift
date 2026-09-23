@@ -1,7 +1,43 @@
 import XCTest
+import Security
 @testable import BSmart
 
 final class FundingJournalFileProtectionTests: XCTestCase {
+    func testInstalledJournalReadOnlyDiagnostic() async throws {
+        guard ProcessInfo.processInfo.environment["BSMART_DEVICE_JOURNAL_DIAGNOSTIC"] == "1" else {
+            throw XCTSkip("Opt-in device journal diagnostic.")
+        }
+        let service = "today.bsmart.ios"
+        let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service + ".funding-journal.v1",
+            kSecAttrAccount as String: "ledger", kSecAttrSynchronizable as String: false,
+            kSecReturnData as String: true, kSecMatchLimit as String: kSecMatchLimitOne]
+        let (status, data) = SystemWalletKeychainAccess().read(query)
+        let anchor = data.flatMap { try? JSONDecoder().decode(FundingJournalAnchor.self, from: $0) }
+        let directory = try FundingJournalFiles.applicationDirectory()
+        let exists = try FundingJournalFiles(directory: directory).databaseExists()
+        let evidence = "keychainStatus=\(status), anchorSequence=\(anchor?.committed.sequence.description ?? "none"), databaseExists=\(exists)"
+        let attachment = XCTAttachment(string: evidence)
+        attachment.lifetime = .keepAlways
+        add(attachment)
+        let wallet = DeviceWalletSummary(accountID: UUID(),
+            address: "0x0000000000000000000000000000000000000001", recoveryVerified: true)
+        do {
+            let journal = try FundingTransactionJournal()
+            _ = try await journal.orderRecords(wallet: wallet)
+            _ = try await journal.nextOrderNonce(wallet: wallet)
+            _ = try await FundingTransactionJournal().orderRecords(wallet: wallet)
+            XCTAssertTrue(try FundingJournalFiles(directory: directory).databaseExists())
+            let (afterStatus, afterData) = SystemWalletKeychainAccess().read(query)
+            XCTAssertEqual(afterStatus, status)
+            XCTAssertTrue(afterData == data, "Legacy anchor must remain unchanged.")
+            let success = XCTAttachment(string: "journalRead=success, nonceRead=success, reopen=success, legacyAnchorUnchanged=true")
+            success.lifetime = .keepAlways
+            add(success)
+        }
+        catch { XCTFail("\(evidence), readFailure=\(error)") }
+    }
+
     func testJournalThroughSystemStyleParentAliasKeepsTheSameLedger() async throws {
         let context = FundingJournalTestContext(); defer { context.cleanup() }
         let root = context.directory.appendingPathComponent("container", isDirectory: true)

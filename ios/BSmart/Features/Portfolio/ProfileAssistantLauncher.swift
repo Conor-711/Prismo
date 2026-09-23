@@ -12,17 +12,18 @@ struct ProfileAssistantLauncher: View {
             router.setTabBarHidden(true, token: visibilityToken)
             presented = true
         } label: {
-            Image("SmartMoneyBorderCollie")
-                .resizable().scaledToFill()
-                .frame(width: 58, height: 58)
-                .background(BSmartColor.elevated, in: Circle())
-                .clipShape(Circle())
-                .overlay(Circle().strokeBorder(BSmartColor.brand, lineWidth: 1.5))
-                .shadow(color: BSmartColor.floatingShadow, radius: 10, y: 4)
+            Image(systemName: "sparkles")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(BSmartColor.brand)
+                .frame(width: 44, height: 44)
+                .background(BSmartColor.brand.opacity(0.14), in: Circle())
+                .overlay(Circle().strokeBorder(BSmartColor.brand.opacity(0.55), lineWidth: 1))
+                .shadow(color: BSmartColor.brand.opacity(0.16), radius: 6, y: 2)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(ProfileAssistantButtonStyle())
         .accessibilityLabel("AI assistant".bSmartLocalized)
         .accessibilityIdentifier("profile.ai.open")
+        .help("AI assistant".bSmartLocalized)
         .bSmartMatchedTransitionSource(id: "profile.ai", in: transition)
         .fullScreenCover(isPresented: $presented, onDismiss: {
             router.setTabBarHidden(false, token: visibilityToken)
@@ -30,5 +31,14 @@ struct ProfileAssistantLauncher: View {
             AIAssistantView(onClose: { presented = false })
                 .bSmartZoomNavigationTransition(sourceID: "profile.ai", in: transition)
         }
+    }
+}
+
+private struct ProfileAssistantButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.94 : 1)
+            .opacity(configuration.isPressed ? 0.82 : 1)
+            .animation(.easeOut(duration: 0.16), value: configuration.isPressed)
     }
 }

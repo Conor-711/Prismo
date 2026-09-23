@@ -3,6 +3,23 @@ import XCTest
 
 @MainActor
 final class FundingHistoryStoreTests: XCTestCase {
+    func testNeverSubmittedHistoryDoesNotOfferChecksThatWouldFailAndHideTheList() async throws {
+        let context = FundingJournalTestContext(); defer { context.cleanup() }
+        let journal = try context.journal(), id = UUID()
+        _ = try await context.readyWithConsent(context.transaction(), id: id, journal: journal)
+        _ = try await journal.finishUnsubmittedSource(id: id, wallet: context.wallet)
+        let service = HistoryAccountStub(wallet: context.wallet)
+        let store = FundingHistoryStore(service: service, journal: journal)
+        await store.refresh(wallet: context.wallet)
+        XCTAssertEqual(store.entries.first?.stage, .notSubmitted)
+        await store.checkSource(id: id, wallet: context.wallet)
+        await store.checkCrossChain(id: id, wallet: context.wallet)
+        XCTAssertEqual(service.reads, 1)
+        XCTAssertTrue(store.didLoad)
+        XCTAssertNil(store.errorMessage)
+        XCTAssertEqual(store.entries.count, 1)
+    }
+
     func testReadsOnlyAfterFreshMatchingRegistrationAndCancelsExactReview() async throws {
         let context = FundingJournalTestContext(); defer { context.cleanup() }
         let journal = try context.journal()

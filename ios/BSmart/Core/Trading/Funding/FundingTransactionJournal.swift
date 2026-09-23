@@ -80,10 +80,22 @@ actor FundingTransactionJournal: FundingHistoryAccessing, FundingSourceJournalAc
     private let commitProbe: @Sendable (FundingJournalCommitPhase) throws -> Void
 
     init(directory: URL? = nil, service: String = Bundle.main.bundleIdentifier ?? "today.bsmart.ios",
-         keychain: WalletKeychainAccess = SystemWalletKeychainAccess(), clock: @escaping @Sendable () -> Date = { Date() },
+         keychain: WalletKeychainAccess = SystemWalletKeychainAccess(), installationMarker: URL? = nil,
+         clock: @escaping @Sendable () -> Date = { Date() },
          commitProbe: @escaping @Sendable (FundingJournalCommitPhase) throws -> Void = { _ in }) throws {
         files = FundingJournalFiles(directory: try directory ?? FundingJournalFiles.applicationDirectory())
-        anchors = .init(service: service, keychain: keychain)
+        let marker = installationMarker ?? (directory == nil
+            ? files.directory.deletingLastPathComponent().appendingPathComponent("FundingJournalInstallation.json") : nil)
+        let anchorService: String
+        if let marker {
+            let files = files
+            anchorService = try files.withLock {
+                try FundingJournalInstallation.service(base: service, marker: marker, files: files)
+            }
+        } else {
+            anchorService = service
+        }
+        anchors = .init(service: anchorService, keychain: keychain)
         self.clock = clock
         self.commitProbe = commitProbe
     }

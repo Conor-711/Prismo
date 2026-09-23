@@ -214,7 +214,7 @@ def upsert_ticker_meta(con: sqlite3.Connection, tickers: set[str]) -> None:
                 current.get("exchange") or "",
                 current.get("sector") or "",
                 current.get("market") or "us",
-                1,
+                current.get("is_active", 1),
                 current.get("aliases") or "[]",
             )
         )
@@ -227,7 +227,7 @@ def upsert_ticker_meta(con: sqlite3.Connection, tickers: set[str]) -> None:
              exchange=COALESCE(NULLIF(ticker_meta.exchange,''), excluded.exchange),
              sector=COALESCE(NULLIF(ticker_meta.sector,''), excluded.sector),
              market=COALESCE(NULLIF(ticker_meta.market,''), excluded.market),
-             is_active=1,
+             is_active=COALESCE(ticker_meta.is_active, excluded.is_active),
              aliases=COALESCE(NULLIF(ticker_meta.aliases,''), excluded.aliases)""",
         rows,
     )

@@ -21,3 +21,21 @@ An integrity pin is not an independent security audit or reproducible-build proo
 Production release still needs provenance/security review of this exact binary,
 transitive license attribution and vulnerability review; do not replace it with
 an unpinned branch or automatically upgrade it in routine UI work.
+
+## Archive symbols
+
+Upstream publishes dSYMs separately from the two SwiftPM XCFramework archives.
+The app's archive-only build phase runs `scripts/ios_wallet_symbols.sh`, downloads
+the official 4.8.1 symbol assets into `~/Library/Caches/bSmart/WalletCore-symbols`,
+verifies pinned SHA-256 digests and checks UUIDs against the embedded frameworks
+before copying the device symbols into `DWARF_DSYM_FOLDER_PATH`. Symbols stay
+outside the app bundle and source control. Normal Run/simulator builds skip this.
+The first archive on a new machine needs GitHub access; curl honors `HTTPS_PROXY`.
+Download, integrity or UUID failures stop the build instead of silently uploading
+an archive without wallet symbols. Update symbol pins when changing WalletCore.
+
+To repair an existing archive without modifying or re-signing the app:
+
+```sh
+bash scripts/ios_wallet_symbols.sh --archive "/path/to/bSmart.xcarchive"
+```

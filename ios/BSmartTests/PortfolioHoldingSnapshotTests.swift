@@ -49,4 +49,16 @@ final class PortfolioHoldingSnapshotTests: XCTestCase {
         XCTAssertEqual(account.equity, 1100)
         XCTAssertNotEqual(account.equity, account.availableBalance + (holding.value ?? 0))
     }
+
+    func testLivePositionTableUsesNotionalReturnAndKeepsMissingQuoteUnknown() throws {
+        let position = TradingPositionRow(coin: "xyz:NVDA", dex: "xyz", quantity: try .init("-0.5"),
+            entryPrice: try .init("190"), unrealizedPnL: try .init("5"), leverage: 10)
+        let withoutQuote = PortfolioHoldingSnapshot(live: position, quote: nil)
+        XCTAssertEqual(withoutQuote.quantity, 0.5)
+        XCTAssertEqual(withoutQuote.averageCost, 190)
+        XCTAssertEqual(withoutQuote.gain, 5)
+        XCTAssertEqual(try XCTUnwrap(withoutQuote.gainPercent), 5 / 95, accuracy: 0.0001)
+        XCTAssertNil(withoutQuote.price)
+        XCTAssertNil(withoutQuote.value)
+    }
 }

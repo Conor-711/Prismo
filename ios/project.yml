@@ -13,6 +13,9 @@ configs:
   Release: release
 
 packages:
+  Privy:
+    url: https://github.com/privy-io/privy-ios
+    exactVersion: 2.16.2
   MessagePack:
     path: Packages/MessagePack
   BigInt:
@@ -30,12 +33,17 @@ settings:
     DEVELOPMENT_TEAM: ""
     CODE_SIGN_STYLE: Automatic
     MARKETING_VERSION: "1.0"
-    CURRENT_PROJECT_VERSION: "6"
+    CURRENT_PROJECT_VERSION: "11"
 
 targets:
   BSmart:
     type: application
     platform: iOS
+    postBuildScripts:
+      - name: Include Official WalletCore Symbols
+        script: bash "$SRCROOT/../scripts/ios_wallet_symbols.sh"
+        basedOnDependencyAnalysis: false
+        runOnlyWhenInstalling: true
     info:
       path: BSmart/Supporting/Info.plist
       properties:
@@ -54,11 +62,16 @@ targets:
         BSMART_GOOGLE_IOS_CLIENT_ID: $(BSMART_GOOGLE_IOS_CLIENT_ID)
         BSMART_GOOGLE_SERVER_CLIENT_ID: $(BSMART_GOOGLE_SERVER_CLIENT_ID)
         BSMART_APPLE_SIGN_IN_ENABLED: $(BSMART_APPLE_SIGN_IN_ENABLED)
+        BSMART_PUSH_ENABLED: $(BSMART_PUSH_ENABLED)
+        BSMART_APNS_ENVIRONMENT: $(APS_ENVIRONMENT)
         BSMART_INTERNAL_OPTIONAL_WALLET_BACKUP: $(BSMART_INTERNAL_OPTIONAL_WALLET_BACKUP)
         BSMART_SUPABASE_URL: $(BSMART_SUPABASE_URL)
+        BSMART_PRIVY_APP_ID: $(BSMART_PRIVY_APP_ID)
+        BSMART_PRIVY_CLIENT_ID: $(BSMART_PRIVY_CLIENT_ID)
         BSMART_SUPABASE_PUBLISHABLE_KEY: $(BSMART_SUPABASE_PUBLISHABLE_KEY)
         NSFaceIDUsageDescription: Unlock your wallet and protect your recovery phrase.
         BSMART_API_BASE_URL: $(BSMART_ENDPOINT_URL)
+        BSMART_CONTENT_BACKEND: $(BSMART_CONTENT_BACKEND)
         BSMART_DATA_ENVIRONMENT: $(BSMART_DATA_ENVIRONMENT)
         BSMART_DEEPSEEK_API_KEY: $(BSMART_DEEPSEEK_API_KEY)
         BSMART_DEEPSEEK_BASE_URL: $(BSMART_DEEPSEEK_BASE_URL)
@@ -74,6 +87,8 @@ targets:
       - path: ../contracts/fixtures
         buildPhase: resources
     dependencies:
+      - package: Privy
+        product: Privy
       - package: MessagePack
         product: MessagePack
       - package: BigInt
@@ -91,15 +106,20 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: today.bsmart.ios
         PRODUCT_NAME: BSmart
         PRODUCT_MODULE_NAME: BSmart
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
         BSMART_GOOGLE_IOS_CLIENT_ID: 1063849277830-g10kodb6nu1s29k9sfi3ije6arfegckj.apps.googleusercontent.com
         BSMART_GOOGLE_SERVER_CLIENT_ID: 1063849277830-6iqp8kf99tbmlhvfakh081f6no2gafuk.apps.googleusercontent.com
         BSMART_GOOGLE_REVERSED_CLIENT_ID: com.googleusercontent.apps.1063849277830-g10kodb6nu1s29k9sfi3ije6arfegckj
-        BSMART_APPLE_SIGN_IN_ENABLED: "NO"
+        BSMART_APPLE_SIGN_IN_ENABLED: "YES"
+        BSMART_PUSH_ENABLED: "YES"
         # This build is internal-only. Set NO before public distribution.
         BSMART_INTERNAL_OPTIONAL_WALLET_BACKUP: "YES"
         BSMART_SUPABASE_URL: https://dzyitinagewdfkzjkuiz.supabase.co
+        BSMART_CONTENT_BACKEND: supabase
+        BSMART_PRIVY_APP_ID: cmtyhnhcb01190cl08a0cvk3x
+        BSMART_PRIVY_CLIENT_ID: client-WY6d9D7yhHLpUUw6b6DmnMooHJQW2AsgPE2M58DFRHVht
         MARKETING_VERSION: 1.0
-        CURRENT_PROJECT_VERSION: 6
+        CURRENT_PROJECT_VERSION: 11
         APS_ENVIRONMENT: development
         BSMART_ENDPOINT_URL: https://api.bsmart.today
         BSMART_DATA_ENVIRONMENT: production
@@ -121,12 +141,13 @@ targets:
           BSMART_ENDPOINT_URL: http://127.0.0.1:8081
           BSMART_DATA_ENVIRONMENT: production
         InternalAlpha:
-          APS_ENVIRONMENT: development
+          APS_ENVIRONMENT: production
           EXCLUDED_SOURCE_FILE_NAMES: "*.json"
           BSMART_ENDPOINT_URL: https://api.158-247-196-93.sslip.io
           BSMART_DATA_ENVIRONMENT: production
         Release:
           APS_ENVIRONMENT: production
+          EXCLUDED_SOURCE_FILE_NAMES: "account-auth-configuration.json account-deletion-status.json opinion-traders.json subject-trade-stats.json trade-feed.json trade-thesis.json trading-wallet-registration.json"
           BSMART_ENDPOINT_URL: https://api.bsmart.today
           BSMART_DATA_ENVIRONMENT: production
     configFiles:
@@ -166,6 +187,8 @@ schemes:
         BSmartUITests: [test]
     run:
       config: Debug
+      environmentVariables:
+        BSMART_USE_LIVE_API: "1"
     archive:
       config: Release
     test:
@@ -191,5 +214,6 @@ schemes:
       config: Debug
       environmentVariables:
         BSMART_USE_LIVE_API: "1"
+        BSMART_CONTENT_BACKEND: legacy
         BSMART_API_BASE_URL: http://localhost:8081
         BSMART_DATA_ENVIRONMENT: development

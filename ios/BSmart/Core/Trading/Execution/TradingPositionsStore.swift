@@ -1,6 +1,10 @@
 import Foundation
 import Combine
 
+extension Notification.Name {
+    static let bSmartTradeFilled = Notification.Name("bSmart.trade.filled")
+}
+
 struct TradingPositionRow: Identifiable, Sendable {
     let coin: String
     let dex: String
@@ -10,6 +14,20 @@ struct TradingPositionRow: Identifiable, Sendable {
     let leverage: Int
     var id: String { coin }
     var symbol: String { String(coin.split(separator: ":").last ?? Substring(coin)) }
+    func matches(symbol requested: String?) -> Bool {
+        guard let requested else { return true }
+        return (requested.contains(":") ? coin : symbol)
+            .caseInsensitiveCompare(requested) == .orderedSame
+    }
+    var returnPercent: Double? {
+        guard let entryPrice, leverage > 0,
+              let price = Double(entryPrice.wire), let size = Double(quantity.magnitude.wire),
+              let profit = Double(unrealizedPnL.magnitude.wire) else { return nil }
+        let margin = price * size / Double(leverage)
+        guard margin.isFinite, margin > 0 else { return nil }
+        let result = (unrealizedPnL.isNegative ? -profit : profit) / margin * 100
+        return result.isFinite ? result : nil
+    }
 
     static func decode(_ data: Data, dex: String, now: Date = Date()) throws -> [Self] {
         struct Response: Decodable {
@@ -65,11 +83,17 @@ final class TradingPositionsStore: ObservableObject {
         self.service = service; self.reader = reader
     }
 
-    func refresh(wallet: DeviceWalletSummary) async {
+    func refresh(wallet: DeviceWalletSummary, verifiedRegistration: TradingWalletRegistration? = nil,
+                 onProgress: (([TradingPositionRow]) -> Void)? = nil) async {
         let token = UUID(); revision = token; isLoading = true; errorMessage = nil; rows = []; didLoad = false
         defer { if token == revision { isLoading = false } }
         do {
-            let registration = try await service.walletRegistration()
+            let registration: TradingWalletRegistration
+            if let verifiedRegistration, service.walletAccountID == wallet.accountID {
+                registration = verifiedRegistration
+            } else {
+                registration = try await service.walletRegistration()
+            }
             guard registration.accountId == wallet.accountID, registration.address == wallet.address else {
                 throw DeviceWalletError.accountChanged
             }
@@ -77,24 +101,32 @@ final class TradingPositionsStore: ObservableObject {
             let raw = try JSONDecoder().decode([Dex?].self, from: await reader.read(.dexs))
             guard !raw.isEmpty, raw[0] == nil, raw.count <= 100,
                   raw.dropFirst().allSatisfy({ $0 != nil }) else { throw HyperliquidTradingCheckError.invalidResponse }
-            let dexs = [""] + raw.dropFirst().compactMap { $0?.name }
+            let listed = raw.dropFirst().compactMap { $0?.name }
+            let dexs = [""] + (listed.contains("xyz") ? ["xyz"] : []) + listed.filter { $0 != "xyz" }
             guard Set(dexs).count == dexs.count else { throw HyperliquidTradingCheckError.invalidResponse }
             var result: [TradingPositionRow] = []
             var incomplete = false
             let reader = self.reader
-            // Bound concurrency; each venue failure remains visible instead of looking like no positions.
-            for offset in stride(from: 0, to: dexs.count, by: 4) {
-                try Task.checkCancellation()
-                let batch = Array(dexs[offset..<min(offset + 4, dexs.count)])
-                await withTaskGroup(of: [TradingPositionRow]?.self) { group in
-                    for dex in batch {
+            // Refill the bounded queue as each venue finishes so one slow venue cannot hold up a whole batch.
+            await withTaskGroup(of: [TradingPositionRow]?.self) { group in
+                var remaining = dexs.makeIterator()
+                for _ in 0..<min(4, dexs.count) {
+                    guard let dex = remaining.next() else { break }
+                    group.addTask {
+                        do { return try TradingPositionRow.decode(await reader.read(.positions(owner: wallet.address, dex: dex)), dex: dex) }
+                        catch { return nil }
+                    }
+                }
+                for await rows in group {
+                    if let rows { result.append(contentsOf: rows) } else { incomplete = true }
+                    if token == revision, service.walletAccountID == wallet.accountID, !Task.isCancelled {
+                        onProgress?(result.sorted { $0.coin < $1.coin })
+                    }
+                    if let dex = remaining.next() {
                         group.addTask {
                             do { return try TradingPositionRow.decode(await reader.read(.positions(owner: wallet.address, dex: dex)), dex: dex) }
                             catch { return nil }
                         }
-                    }
-                    for await rows in group {
-                        if let rows { result.append(contentsOf: rows) } else { incomplete = true }
                     }
                 }
             }

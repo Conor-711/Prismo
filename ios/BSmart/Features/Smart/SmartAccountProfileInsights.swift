@@ -61,226 +61,53 @@ struct SmartAccountProfileInsights {
     var latestViewDate: Date? { updates.first?.publishedAt }
 }
 
-struct SmartAccountInvestorProfileSection: View {
-    let account: SmartAccountProfile
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: BSmartSpacing.medium) {
-            BSmartSectionHeader(
-                title: "Investor profile",
-                detail: "Demonstrated characteristics from ranked public calls"
-            )
-
-            HStack(spacing: 0) {
-                capability(
-                    icon: "square.grid.2x2.fill",
-                    label: "Best field",
-                    value: account.specialty,
-                    color: BSmartColor.brand
-                )
-                Divider().overlay(BSmartColor.line)
-                capability(
-                    icon: "clock.fill",
-                    label: "Best horizon",
-                    value: account.horizon,
-                    color: BSmartColor.sky
-                )
-                Divider().overlay(BSmartColor.line)
-                capability(
-                    icon: "scope",
-                    label: "Investment style",
-                    value: account.resolvedStyle,
-                    color: BSmartColor.gold
-                )
-            }
-
-            Divider().overlay(BSmartColor.line)
-
-            HStack(spacing: BSmartSpacing.medium) {
-                profileMetric(label: "Covered tickers", value: account.resolvedCoveredTickers.formatted())
-                profileMetric(label: "Settled calls", value: account.resolvedSettledCalls.formatted())
-                profileMetric(label: "Active days", value: account.resolvedActiveDays.formatted())
-            }
-
-            if !account.resolvedTopTickers.isEmpty {
-                VStack(alignment: .leading, spacing: BSmartSpacing.small) {
-                    Text("Strongest ticker coverage".bSmartLocalized)
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(BSmartColor.tertiaryText)
-
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: BSmartSpacing.small) {
-                            ForEach(account.resolvedTopTickers, id: \.self) { ticker in
-                                HStack(spacing: 6) {
-                                    BSmartAssetMark(ticker: ticker, size: 24)
-                                        .bSmartTickerDestination(ticker)
-                                    Text(ticker)
-                                        .font(.caption.weight(.black))
-                                        .foregroundStyle(BSmartColor.primaryText)
-                                }
-                                .padding(.horizontal, BSmartSpacing.small)
-                                .frame(minHeight: 34)
-                                .background(BSmartColor.elevated)
-                                .clipShape(RoundedRectangle(cornerRadius: BSmartRadius.control, style: .continuous))
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        .bSmartSurface()
-        .accessibilityIdentifier("smart.account.investor-profile")
-    }
-
-    private func capability(icon: String, label: String, value: String, color: Color) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Image(systemName: icon)
-                .font(.caption.weight(.black))
-                .foregroundStyle(color)
-            Text(label.bSmartLocalized)
-                .font(.caption2)
-                .foregroundStyle(BSmartColor.tertiaryText)
-            Text(value.bSmartLocalized)
-                .font(.caption.weight(.bold))
-                .foregroundStyle(BSmartColor.primaryText)
-                .lineLimit(2)
-                .minimumScaleFactor(0.75)
-        }
-        .frame(maxWidth: .infinity, minHeight: 92, alignment: .topLeading)
-        .padding(.horizontal, BSmartSpacing.small)
-    }
-
-    private func profileMetric(label: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(value)
-                .font(.subheadline.weight(.black))
-                .foregroundStyle(BSmartColor.primaryText)
-                .monospacedDigit()
-            Text(label.bSmartLocalized)
-                .font(.caption2)
-                .foregroundStyle(BSmartColor.tertiaryText)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
 struct SmartAccountCurrentViewsSection: View {
     let insights: SmartAccountProfileInsights
+    @State private var expanded = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: BSmartSpacing.medium) {
-            BSmartSectionHeader(
-                title: "Current ticker views",
-                detail: "Latest active view per ticker · 30D"
-            )
-
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Current ticker views".bSmartLocalized).font(.title3.weight(.bold))
             if insights.currentTickerViews.isEmpty {
-                Label("No active ticker view in the latest 30-day window.", systemImage: "clock.badge.questionmark")
-                    .font(.subheadline)
-                    .foregroundStyle(BSmartColor.secondaryText)
+                Text("No active ticker view in the latest 30-day window.".bSmartLocalized)
+                    .font(.subheadline).foregroundStyle(BSmartColor.secondaryText)
             } else {
-                HStack(spacing: 0) {
-                    directionMetric(
-                        label: "Bullish",
-                        count: insights.bullishTickerViews.count,
-                        color: BSmartColor.bull
-                    )
-                    Divider().overlay(BSmartColor.line)
-                    directionMetric(
-                        label: "Bearish",
-                        count: insights.bearishTickerViews.count,
-                        color: BSmartColor.bear
-                    )
-                    Divider().overlay(BSmartColor.line)
-                    directionMetric(
-                        label: "Neutral / mixed",
-                        count: insights.otherTickerViews.count,
-                        color: BSmartColor.secondaryText
-                    )
-                }
-
-                Divider().overlay(BSmartColor.line)
-
-                tickerStrip(
-                    title: "Bullish tickers",
-                    views: insights.bullishTickerViews,
-                    color: BSmartColor.bull
-                )
-                tickerStrip(
-                    title: "Bearish tickers",
-                    views: insights.bearishTickerViews,
-                    color: BSmartColor.bear
-                )
-                if !insights.otherTickerViews.isEmpty {
-                    tickerStrip(
-                        title: "Neutral / mixed",
-                        views: insights.otherTickerViews,
-                        color: BSmartColor.secondaryText
-                    )
-                }
-            }
-        }
-        .bSmartSurface()
-        .accessibilityIdentifier("smart.account.current-views")
-    }
-
-    private func directionMetric(label: String, count: Int, color: Color) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(count.formatted())
-                .font(.title3.weight(.black))
-                .foregroundStyle(color)
-                .monospacedDigit()
-            Text(label.bSmartLocalized)
-                .font(.caption2)
-                .foregroundStyle(BSmartColor.tertiaryText)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-        }
-        .frame(maxWidth: .infinity, minHeight: 54, alignment: .leading)
-        .padding(.horizontal, BSmartSpacing.small)
-    }
-
-    @ViewBuilder
-    private func tickerStrip(
-        title: String,
-        views: [SmartAccountCurrentTickerView],
-        color: Color
-    ) -> some View {
-        if !views.isEmpty {
-            VStack(alignment: .leading, spacing: BSmartSpacing.small) {
-                Text(title.bSmartLocalized)
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(color)
-
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: BSmartSpacing.small) {
-                        ForEach(views) { view in
-                            HStack(spacing: 6) {
-                                BSmartAssetMark(ticker: view.update.ticker, size: 24)
-                                    .bSmartTickerDestination(view.update.ticker)
-                                Text(view.update.ticker)
-                                    .font(.caption.weight(.black))
-                                if let target = view.update.targetPrice {
-                                    Text(target.smartAccountProfileCurrency)
-                                        .font(.caption2.weight(.bold))
-                                        .foregroundStyle(BSmartColor.secondaryText)
-                                        .monospacedDigit()
+                VStack(spacing: 0) {
+                    ForEach(Array(insights.currentTickerViews.prefix(expanded ? insights.currentTickerViews.count : 5))) { item in
+                        let update = item.update
+                        HStack(spacing: 12) {
+                            BSmartAssetMark(ticker: update.ticker, size: 34).bSmartTickerDestination(update.ticker)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(update.ticker).font(.subheadline.weight(.semibold))
+                                if let target = update.targetPrice {
+                                    Text("Target %@".bSmartLocalized(target.smartAccountProfileCurrency))
+                                        .font(.caption).foregroundStyle(BSmartColor.secondaryText)
                                 }
                             }
-                            .foregroundStyle(BSmartColor.primaryText)
-                            .padding(.horizontal, BSmartSpacing.small)
-                            .frame(minHeight: 34)
-                            .background(color.opacity(0.1))
-                            .clipShape(RoundedRectangle(cornerRadius: BSmartRadius.control, style: .continuous))
-                            .overlay {
-                                RoundedRectangle(cornerRadius: BSmartRadius.control, style: .continuous)
-                                    .stroke(color.opacity(0.45), lineWidth: 0.75)
-                            }
-                        }
+                            Spacer()
+                            BSmartDetailNavigationLink(id: "current-account-view-\(update.id)") {
+                                SmartAccountEvidenceDetailView(update: update)
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Text(update.direction.label.bSmartLocalized)
+                                        .font(.subheadline.weight(.semibold)).foregroundStyle(update.direction.color)
+                                    Image(systemName: "chevron.right").font(.caption)
+                                        .foregroundStyle(BSmartColor.tertiaryText)
+                                }.frame(minHeight: 44)
+                            }.buttonStyle(.plain)
+                        }.padding(.vertical, 8)
+                        Divider().overlay(BSmartColor.line)
                     }
                 }
+                if insights.currentTickerViews.count > 5 {
+                    Button { expanded.toggle() } label: {
+                        Label((expanded ? "Show less" : "View all").bSmartLocalized,
+                              systemImage: expanded ? "chevron.up" : "chevron.down")
+                            .font(.subheadline.weight(.semibold)).frame(maxWidth: .infinity, minHeight: 44)
+                    }.buttonStyle(.plain).accessibilityIdentifier("smart.account.current-views.all")
+                }
             }
-        }
+        }.accessibilityIdentifier("smart.account.current-views")
     }
 }
 
@@ -295,90 +122,67 @@ struct SmartAccountLatestViewsSection: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: BSmartSpacing.medium) {
-            BSmartSectionHeader(
-                title: "Latest views",
-                detail: "Most recent published calls, not historical representatives"
-            )
-
+        VStack(alignment: .leading, spacing: 18) {
+            Text("Latest views".bSmartLocalized).font(.title3.weight(.bold))
             if displayedUpdates.isEmpty {
-                Text("No recent published view is available for this account.")
-                    .font(.subheadline)
-                    .foregroundStyle(BSmartColor.secondaryText)
+                Text("No recent published view is available for this account.".bSmartLocalized)
+                    .font(.subheadline).foregroundStyle(BSmartColor.secondaryText)
             } else {
-                ForEach(Array(displayedUpdates.enumerated()), id: \.element.id) { index, update in
-                    if index > 0 { Divider().overlay(BSmartColor.line) }
-                    BSmartDetailNavigationLink(id: "latest-account-view-\(update.id)") {
-                        SmartAccountEvidenceDetailView(update: update)
-                    } label: {
-                        latestViewRow(update)
+                VStack(spacing: 0) {
+                    ForEach(Array(displayedUpdates.enumerated()), id: \.element.id) { index, update in
+                        HStack(alignment: .top, spacing: 14) {
+                            VStack(spacing: 0) {
+                                Circle().fill(index == 0 ? BSmartColor.brand : BSmartColor.line)
+                                    .frame(width: 10, height: 10).padding(.top, 4)
+                                Rectangle().fill(BSmartColor.line).frame(width: 1)
+                            }.frame(width: 10)
+                            BSmartDetailNavigationLink(id: "latest-account-view-\(update.id)") {
+                                SmartAccountEvidenceDetailView(update: update)
+                            } label: {
+                                latestViewRow(update).padding(.bottom, 24)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier(index == 0 ? "smart.account.latest-view.first" : "smart.account.latest-view.\(index)")
+                        }.fixedSize(horizontal: false, vertical: true)
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier(
-                        index == 0 ? "smart.account.latest-view.first" : "smart.account.latest-view.\(index)"
-                    )
                 }
             }
-
             if let onViewAll, updates.count > displayedUpdates.count {
                 Button(action: onViewAll) {
                     HStack {
                         Text("View all %@ views".bSmartLocalized(updates.count.formatted()))
-                            .font(.caption.weight(.bold))
                         Spacer()
                         Image(systemName: "chevron.down")
-                            .font(.caption.weight(.black))
                     }
-                    .foregroundStyle(BSmartColor.brand)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("smart.account.latest-views.all")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(minHeight: 44).contentShape(Rectangle())
+                }.buttonStyle(.plain).accessibilityIdentifier("smart.account.latest-views.all")
             }
-        }
-        .bSmartSurface()
+        }.accessibilityIdentifier("smart.account.latest-views")
     }
 
     private func latestViewRow(_ update: SmartAccountUpdate) -> some View {
-        VStack(alignment: .leading, spacing: BSmartSpacing.small) {
-            HStack(spacing: BSmartSpacing.small) {
-                BSmartAssetMark(ticker: update.ticker, size: 30)
-                    .bSmartTickerDestination(update.ticker)
-                Text(update.ticker)
-                    .font(.subheadline.weight(.black))
-                    .foregroundStyle(BSmartColor.primaryText)
-                BSmartTag(text: update.direction.label, color: update.direction.color)
-                BSmartTag(text: update.lifecycle.label, color: update.direction.color)
-                Spacer(minLength: BSmartSpacing.xSmall)
-                Text(update.publishedAt.bSmartRelativeTimestamp)
-                    .font(.caption2)
-                    .foregroundStyle(BSmartColor.tertiaryText)
-                Image(systemName: "chevron.right")
-                    .font(.caption2.weight(.black))
-                    .foregroundStyle(BSmartColor.tertiaryText)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text(update.publishedAt.bSmartCompactDate)
+                    .font(.caption.weight(.semibold)).foregroundStyle(BSmartColor.secondaryText)
+                Spacer()
+                Image(systemName: "chevron.right").font(.caption).foregroundStyle(BSmartColor.tertiaryText)
             }
-
             Text(update.smartAccountProfileDisplayTitle)
-                .font(.subheadline.weight(.medium))
+                .font(.subheadline).lineSpacing(3).lineLimit(3)
                 .foregroundStyle(BSmartColor.primaryText)
-                .lineLimit(3)
                 .fixedSize(horizontal: false, vertical: true)
-
-            HStack(spacing: BSmartSpacing.medium) {
-                Label(update.smartAccountProfileDisplayHorizon, systemImage: "clock")
-                if let target = update.targetPrice {
-                    Label(
-                        "Target %@".bSmartLocalized(target.smartAccountProfileCurrency),
-                        systemImage: "scope"
-                    )
-                }
-                Text(update.platform)
+            HStack(spacing: 8) {
+                BSmartAssetMark(ticker: update.ticker, size: 24)
+                Text(update.ticker).font(.caption.weight(.semibold))
+                Text(update.direction.label.bSmartLocalized)
+                    .foregroundStyle(update.direction.color)
                 Spacer(minLength: 0)
-            }
-            .font(.caption2.weight(.semibold))
-            .foregroundStyle(BSmartColor.secondaryText)
-        }
-        .contentShape(Rectangle())
+                Text(update.smartAccountProfileDisplayHorizon)
+                    .foregroundStyle(BSmartColor.secondaryText)
+            }.font(.caption)
+        }.contentShape(Rectangle())
     }
 }
 

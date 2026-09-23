@@ -1,9 +1,22 @@
 import Foundation
 
-/// A presentation-only projection of declared holdings and existing Smart evidence.
+enum TodayInAppPositionSide: Equatable {
+    case long, short, both
+
+    var label: String {
+        switch self {
+        case .long: "Long".bSmartLocalized
+        case .short: "Short".bSmartLocalized
+        case .both: "Long".bSmartLocalized + " / " + "Short".bSmartLocalized
+        }
+    }
+}
+
+/// A presentation-only projection of declared and in-app holdings against existing Smart evidence.
 struct TodayHoldingsActivity: Equatable {
     var tickers: [String] = []
     var weights: [String: Double] = [:]
+    var inAppSides: [String: TodayInAppPositionSide] = [:]
     var activities: [TodayActivity] = []
 
     var preview: [TodayActivity] {
@@ -32,11 +45,24 @@ struct TodayHoldingsActivity: Equatable {
         positions: [PortfolioPosition],
         accountUpdates: [SmartAccountUpdate],
         moneyMovements: [SmartMoneyMovement],
+        tradingPositions: [TradingPositionRow] = [],
         now: Date = .now
     ) -> Self {
         let holdings = positions.filter { $0.isPosition && !symbol($0.ticker).isEmpty }
-        let tickers = Set(holdings.map { symbol($0.ticker) })
-        let weights = holdingWeights(holdings)
+        var inAppSides: [String: TodayInAppPositionSide] = [:]
+        for position in tradingPositions where position.quantity.magnitude.isPositive {
+            let ticker = symbol(position.symbol)
+            guard !ticker.isEmpty else { continue }
+            let side: TodayInAppPositionSide = position.quantity.isNegative ? .short : .long
+            if let previous = inAppSides[ticker], previous != side {
+                inAppSides[ticker] = .both
+            } else {
+                inAppSides[ticker] = side
+            }
+        }
+        let tickers = Set(holdings.map { symbol($0.ticker) }).union(inAppSides.keys)
+        // The two sources have no shared valuation basis, so a manual-only weight would mislead.
+        let weights = inAppSides.isEmpty ? holdingWeights(holdings) : [:]
         let earliest = now.addingTimeInterval(-30 * 86_400)
         var latest: [String: TodayActivity] = [:]
 
@@ -78,7 +104,7 @@ struct TodayHoldingsActivity: Equatable {
             if lhs.occurredAt != rhs.occurredAt { return lhs.occurredAt > rhs.occurredAt }
             return lhs.id.uuidString < rhs.id.uuidString
         }
-        return Self(tickers: tickers.sorted(), weights: weights, activities: sorted)
+        return Self(tickers: tickers.sorted(), weights: weights, inAppSides: inAppSides, activities: sorted)
     }
 
     static func symbol(_ value: String) -> String {

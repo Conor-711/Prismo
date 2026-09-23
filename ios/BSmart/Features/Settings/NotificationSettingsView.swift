@@ -11,10 +11,13 @@ struct NotificationSettingsView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: BSmartSpacing.xLarge) {
-                    intro
+                    if NotificationService.isEnabled {
+                        intro
+                        dataUpdates
+                    }
                     preferences
                     trackedStocks
-                    preview
+                    if NotificationService.isEnabled { preview }
                     boundary
                 }
                 .padding(BSmartSpacing.large)
@@ -71,6 +74,42 @@ struct NotificationSettingsView: View {
                     }
                     .font(.caption.weight(.bold))
                 }
+            }
+        }
+        .bSmartSurface()
+    }
+
+    private var dataUpdates: some View {
+        VStack(alignment: .leading, spacing: BSmartSpacing.medium) {
+            Toggle("Content notifications".bSmartLocalized, isOn: Binding(
+                get: { notifications.dataUpdatesEnabled },
+                set: { enabled in Task { await notifications.setDataUpdatesEnabled(enabled) } }
+            ))
+            .tint(BSmartColor.brand)
+            .accessibilityIdentifier("alerts.data-updates")
+            Divider().overlay(BSmartColor.line)
+            Toggle("Followed authors".bSmartLocalized, isOn: Binding(
+                get: { notifications.notifyAuthors }, set: notifications.setNotifyAuthors
+            ))
+            .tint(BSmartColor.brand)
+            .disabled(!notifications.dataUpdatesEnabled)
+            .accessibilityIdentifier("alerts.followed-authors")
+            Toggle("Followed tickers".bSmartLocalized, isOn: Binding(
+                get: { notifications.notifyTickers }, set: notifications.setNotifyTickers
+            ))
+            .tint(BSmartColor.brand)
+            .disabled(!notifications.dataUpdatesEnabled)
+            .accessibilityIdentifier("alerts.followed-tickers")
+            Toggle("Open positions".bSmartLocalized, isOn: Binding(
+                get: { notifications.notifyHoldings }, set: notifications.setNotifyHoldings
+            ))
+            .tint(BSmartColor.brand)
+            .disabled(!notifications.dataUpdatesEnabled)
+            .accessibilityIdentifier("alerts.open-positions")
+            if notifications.dataUpdatesRegistrationFailed {
+                Text("Notification registration failed. We will retry when connected.".bSmartLocalized)
+                    .font(.subheadline)
+                    .foregroundStyle(BSmartColor.secondaryText)
             }
         }
         .bSmartSurface()

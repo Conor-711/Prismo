@@ -188,8 +188,10 @@ final class CCTPDepositPreparationTests: XCTestCase {
         await model.submitConfirmedTransaction()
         XCTAssertEqual(broadcaster.started, 0)
         let records = try await fixture.context.journal().records(wallet: fixture.wallet)
-        XCTAssertEqual(records.first?.state, .signed)
-        XCTAssertTrue(records.first?.needsReconciliation == true)
+        XCTAssertEqual(records.first?.state, .notSubmitted)
+        XCTAssertFalse(records.first?.needsReconciliation == true)
+        XCTAssertNotNil(records.first?.signed?.raw)
+        guard case .idle = model.state else { return XCTFail("Pre-submit failure blocked another quote") }
     }
 
     func testInvalidationDuringFreshCheckPreventsSubmitPermission() async throws {

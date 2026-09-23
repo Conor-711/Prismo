@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail when a bSmart Release bundle leaks fixtures or omits privacy metadata."""
+"""Validate required Release resources and reject contract-only test fixtures."""
 
 from __future__ import annotations
 
@@ -39,12 +39,19 @@ def main() -> int:
         "events.json",
         "research.json",
     }
+    # These are production lookups and the existing, explicitly selected feed preview.
+    required_app_resources = {
+        "reddit-author-avatars.json",
+        "ticker-profiles.json",
+        "trade-feed-demo.json",
+    }
+    allowed_resources = required_snapshots | required_app_resources
     bundled_snapshots = {path.name for path in fixture_files}
-    missing_snapshots = sorted(required_snapshots - bundled_snapshots)
-    unexpected_snapshots = sorted(bundled_snapshots - required_snapshots)
+    missing_snapshots = sorted(allowed_resources - bundled_snapshots)
+    unexpected_snapshots = sorted(bundled_snapshots - allowed_resources)
     if missing_snapshots:
         raise SystemExit(
-            "Release bundle is missing offline bootstrap snapshots: "
+            "Release bundle is missing required app resources: "
             + ", ".join(missing_snapshots)
         )
     if unexpected_snapshots:
@@ -110,6 +117,7 @@ def main() -> int:
 
     print(f"Release bundle check passed: {bundle}")
     print(f"- offline bootstrap snapshots: {len(required_snapshots)}")
+    print(f"- additional app resources: {len(required_app_resources)}")
     print("- unexpected JSON resources: 0")
     print("- privacy manifest: present")
     print("- tracking: disabled")

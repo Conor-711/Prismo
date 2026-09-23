@@ -48,8 +48,9 @@ struct ArbitrumSourceSubmissionCheck: CCTPSourceSubmissionChecking {
         guard fresh.nonce == original.nonce else { throw FundingPreflightError.pendingTransaction }
         guard fresh.callData == original.callData,
               fresh.source.observedCodeHashes == original.source.observedCodeHashes else { throw FundingPreflightError.routeChanged }
-        guard fresh.gasLimit <= original.gasLimit,
-              max(fresh.gasPrice, fresh.source.block.baseFee) <= original.maximumFeePerGas else { throw FundingPreflightError.excessiveFee }
+        // The approved limit already includes headroom. Consume that headroom instead of buffering twice.
+        guard fresh.estimatedGas <= original.gasLimit,
+              max(fresh.gasPrice, fresh.source.block.baseFee) <= original.maximumFeePerGas else { throw FundingPreflightError.feeQuoteChanged }
         guard fresh.source.eth >= original.maximumNetworkFee else { throw FundingPreflightError.insufficientETH }
 
         // Re-simulate with the APPROVED limits, not the newly estimated envelope; never bump fees silently.
@@ -67,7 +68,7 @@ struct ArbitrumSourceSubmissionCheck: CCTPSourceSubmissionChecking {
         guard try results[0].text() == "0x" else { throw FundingPreflightError.simulationFailed }
         let gas = try FundingQuantity(rpc: results[1].text())
         guard gas >= FundingQuantity(21_000),
-              try gas.ceilingScaled(numerator: 120, denominator: 100) <= original.gasLimit else { throw FundingPreflightError.excessiveFee }
+              gas <= original.gasLimit else { throw FundingPreflightError.feeQuoteChanged }
         let final = try await read([
             .init(.chainID), .init(.block, [.string(fresh.source.block.number.rpc), .bool(false)]),
             .init(.nonce, [.string(wallet.address), .string("pending")])

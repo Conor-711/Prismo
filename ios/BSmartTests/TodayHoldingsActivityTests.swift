@@ -100,6 +100,38 @@ final class TodayHoldingsActivityTests: XCTestCase {
         XCTAssertLessThanOrEqual(snapshot.preview(source: .accounts).count, 3)
     }
 
+    func testInAppShortIsARealHoldingEvenWithoutManualPositionOrRecentEvidence() throws {
+        let short = try tradingPosition("xyz:SNDK", quantity: "-0.6")
+        let snapshot = TodayHoldingsActivity.make(positions: [], accountUpdates: [], moneyMovements: [],
+                                                   tradingPositions: [short], now: now)
+        XCTAssertEqual(snapshot.tickers, ["SNDK"])
+        XCTAssertEqual(snapshot.inAppSides["SNDK"], .short)
+        XCTAssertNil(snapshot.weights["SNDK"])
+        XCTAssertTrue(snapshot.activities.isEmpty)
+    }
+
+    func testInAppPositionsMatchEvidenceAndDoNotDuplicateManualTicker() throws {
+        let short = try tradingPosition("xyz:SNDK", quantity: "-0.6")
+        let long = try tradingPosition("xyz:NVDA", quantity: "1")
+        let snapshot = TodayHoldingsActivity.make(positions: [position("SNDK", weight: 0.4)],
+            accountUpdates: [update("SNDK"), update("NVDA")], moneyMovements: [],
+            tradingPositions: [short, long], now: now)
+        XCTAssertEqual(snapshot.tickers, ["NVDA", "SNDK"])
+        XCTAssertEqual(snapshot.activities.count, 2)
+        XCTAssertEqual(snapshot.inAppSides["NVDA"], .long)
+        XCTAssertEqual(snapshot.inAppSides["SNDK"], .short)
+        XCTAssertNil(snapshot.weights["SNDK"], "Manual weight must not describe a mixed manual/live exposure")
+    }
+
+    func testOppositeInAppPositionsOnDifferentVenuesAreNotMislabelled() throws {
+        let positions = [try tradingPosition("xyz:SNDK", quantity: "-1"),
+                         try tradingPosition("cash:SNDK", quantity: "2")]
+        let snapshot = TodayHoldingsActivity.make(positions: [], accountUpdates: [], moneyMovements: [],
+                                                   tradingPositions: positions, now: now)
+        XCTAssertEqual(snapshot.tickers, ["SNDK"])
+        XCTAssertEqual(snapshot.inAppSides["SNDK"], .both)
+    }
+
     private func make(_ positions: [PortfolioPosition], _ accounts: [SmartAccountUpdate],
                       _ money: [SmartMoneyMovement] = []) -> TodayHoldingsActivity {
         .make(positions: positions, accountUpdates: accounts, moneyMovements: money, now: now)
@@ -108,6 +140,11 @@ final class TodayHoldingsActivityTests: XCTestCase {
     private func position(_ ticker: String, weight: Double? = nil) -> PortfolioPosition {
         PortfolioPosition(id: UUID(), ticker: ticker, companyName: ticker, shares: 10, averageCost: 90,
                           currentPrice: 100, entryKind: .position, portfolioWeight: weight)
+    }
+
+    private func tradingPosition(_ coin: String, quantity: String) throws -> TradingPositionRow {
+        TradingPositionRow(coin: coin, dex: String(coin.split(separator: ":").first ?? ""),
+            quantity: try .init(quantity), entryPrice: try .init("100"), unrealizedPnL: try .init("0"), leverage: 2)
     }
 
     private func update(_ ticker: String, author: String = "author", age: TimeInterval = 100,

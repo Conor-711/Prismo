@@ -2,36 +2,35 @@ import SwiftUI
 
 struct LiveOrderAmountPanel: View {
     @Binding var amount: TradeAmountInput
+    @Binding var leverage: Int
     let summary: LiveOrderEntrySummary?
     let accent: Color
     let market: HyperliquidPerpMarket?
     let isLocked: Bool
+    var reducing = false
     @State private var showsChart = false
 
     var body: some View {
-        VStack(spacing: 16) {
-            VStack(spacing: 4) {
-                Text("Position value".bSmartLocalized).font(.subheadline).foregroundStyle(BSmartColor.secondaryText)
-                Text("$" + amount.text)
+        VStack(spacing: 12) {
+            VStack(spacing: 8) {
+                HStack(spacing: 8) {
+                    Text((reducing ? "Position to close" : "Exposure").bSmartLocalized).foregroundStyle(BSmartColor.secondaryText)
+                    if !reducing { Text(dollars(notional)).monospacedDigit() }
+                }.font(.subheadline)
+                Text(reducing ? amount.text + "%" : "$" + amount.text)
                     .font(.system(size: 64, weight: .medium, design: .rounded)).monospacedDigit()
                     .foregroundStyle(amount.value > 0 ? BSmartColor.primaryText : BSmartColor.tertiaryText)
                     .lineLimit(1).minimumScaleFactor(0.4)
-                    .frame(maxWidth: .infinity, minHeight: 80)
+                    .frame(maxWidth: .infinity, minHeight: 76)
                     .accessibilityIdentifier("trade.amount")
-            }.padding(.top, 4)
-            if let summary {
-                TradeLeveragePicker(value: .constant(summary.leverage), maximum: summary.account.market.maximumLeverage,
-                                    accent: accent, isLocked: true)
-            } else {
-                VStack(spacing: 6) {
-                    Text("--x").font(.system(size: 23, weight: .semibold)).foregroundStyle(BSmartColor.tertiaryText)
-                    Text("Leverage".bSmartLocalized).font(.caption).foregroundStyle(BSmartColor.secondaryText)
-                }.frame(height: 78)
             }
+            TradeLeveragePicker(value: $leverage, maximum: summary?.account.market.maximumLeverage ?? market?.maxLeverage ?? 5,
+                                accent: accent, isLocked: isLocked || reducing || summary?.account.position != nil)
             HStack(alignment: .top, spacing: 8) {
-                figure("Margin", dollars(summary?.margin(notional: amount.text)), alignment: .leading)
-                figure("Exposure", "$" + amount.text, alignment: .center)
-                figure("Estimated fee", dollars(summary?.fee(notional: amount.text)), alignment: .trailing)
+                figure(reducing ? "Quantity" : "Est. liq.",
+                       reducing ? summary?.reductionQuantity(percent: Int(amount.text) ?? 0) ?? "--" : "--", alignment: .leading)
+                figure("Exposure", dollars(notional), alignment: .center)
+                figure("Estimated fee", dollars(notional.flatMap { summary?.fee(notional: $0) }), alignment: .trailing)
             }.padding(.vertical, 4)
             if !isLocked {
                 if market != nil { modeControl }
@@ -39,9 +38,9 @@ struct LiveOrderAmountPanel: View {
                     LiveOrderMarketChart(market: market)
                 } else {
                     HStack(spacing: 8) {
-                        ForEach([10, 50, 100, 300], id: \.self) { value in
+                        ForEach(reducing ? [25, 50, 75, 100] : [10, 50, 100, 300], id: \.self) { value in
                             Button { amount.setExact(String(value)) } label: {
-                                Text("$\(value)").font(.subheadline.weight(.semibold))
+                                Text(reducing ? "\(value)%" : "$\(value)").font(.subheadline.weight(.semibold))
                                     .frame(maxWidth: .infinity, minHeight: 38)
                                     .background(BSmartColor.recessed, in: RoundedRectangle(cornerRadius: 8))
                             }.buttonStyle(.plain).accessibilityIdentifier("trade.amount.preset.\(value)")
@@ -51,6 +50,15 @@ struct LiveOrderAmountPanel: View {
                 }
             }
         }
+    }
+
+    private var notional: String? {
+        if reducing { return summary?.reductionNotional(percent: Int(amount.text) ?? 0) }
+        let text = amount.text.hasSuffix(".") ? String(amount.text.dropLast()) : amount.text
+        if let summary { return summary.notional(margin: text) }
+        guard let amount = try? HyperliquidOrderDecimal(text) else { return nil }
+        return try? HyperliquidExactValue(amount).multiplied(by: .init(UInt64(max(1, leverage))))
+            .rounded(decimalPlaces: 6, up: false).wire
     }
 
     private var modeControl: some View {
@@ -69,7 +77,7 @@ struct LiveOrderAmountPanel: View {
             Image(systemName: symbol).font(.system(size: 17, weight: .semibold))
                 .foregroundStyle(showsChart == chart ? accent : BSmartColor.tertiaryText)
                 .frame(width: 44, height: 38)
-                .background(showsChart == chart ? BSmartColor.elevated : .clear, in: RoundedRectangle(cornerRadius: 6))
+                .background(showsChart == chart ? BSmartColor.selectedControlSurface : .clear, in: RoundedRectangle(cornerRadius: 6))
         }.buttonStyle(.plain).accessibilityLabel(label.bSmartLocalized)
             .accessibilityAddTraits(showsChart == chart ? .isSelected : [])
             .accessibilityIdentifier(chart ? "trade.mode.chart" : "trade.mode.keypad")
@@ -83,6 +91,7 @@ struct LiveOrderAmountPanel: View {
                     ForEach(0..<3) { column in
                         let key = keys[row * 3 + column]
                         Button {
+                            if reducing, key == "." { return }
                             amount.enter(key)
                             UIImpactFeedbackGenerator(style: .soft).impactOccurred(intensity: 0.4)
                         } label: {
@@ -90,7 +99,8 @@ struct LiveOrderAmountPanel: View {
                                 if key == "delete" { Image(systemName: "delete.left").font(.system(size: 22)) }
                                 else { Text(key).font(.system(size: 28, weight: .regular, design: .rounded)) }
                             }.frame(maxWidth: .infinity, minHeight: 44).contentShape(Rectangle())
-                        }.buttonStyle(.plain)
+                        }.buttonStyle(.plain).disabled(reducing && key == ".")
+                            .opacity(reducing && key == "." ? 0 : 1)
                             .accessibilityLabel(key == "delete" ? "Delete".bSmartLocalized : key)
                             .accessibilityIdentifier("trade.key.\(key)")
                     }

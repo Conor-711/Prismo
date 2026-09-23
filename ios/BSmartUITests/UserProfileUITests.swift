@@ -3,9 +3,9 @@ import XCTest
 final class UserProfileUITests: XCTestCase {
     override func setUpWithError() throws { continueAfterFailure = false }
 
-    func testProfileIsLastAndExampleAddressCannotReceiveFunds() {
+    func testProfileDefaultsToAppHoldingsAndDepositWithAddressOnlyInSettings() {
         let app = launch()
-        let ids = ["today", "smart", "feed", "portfolio"]
+        let ids = ["today", "feed", "search", "portfolio"]
         let tabs = ids.map { app.buttons["app.tab." + $0] }
         for tab in tabs { XCTAssertTrue(tab.waitForExistence(timeout: 8)) }
         for index in 1..<tabs.count { XCTAssertLessThan(tabs[index - 1].frame.midX, tabs[index].frame.midX) }
@@ -13,10 +13,33 @@ final class UserProfileUITests: XCTestCase {
         tabs.last?.tap()
         XCTAssertTrue(app.staticTexts["profile.nickname"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["profile.edit"].isHittable)
-        app.buttons["profile.address"].tap()
-        XCTAssertTrue(app.staticTexts["profile.address.full"].waitForExistence(timeout: 3))
-        XCTAssertTrue(app.descendants(matching: .any)["profile.address.example-warning"].exists)
-        XCTAssertFalse(app.buttons["profile.address.copy"].exists)
+        let avatar = app.descendants(matching: .any)["profile.avatar"]
+        let name = app.staticTexts["profile.nickname"]
+        XCTAssertGreaterThanOrEqual(name.frame.minX, avatar.frame.maxX)
+        XCTAssertLessThanOrEqual(app.buttons["profile.edit"].frame.midX, avatar.frame.maxX + 16)
+        XCTAssertLessThanOrEqual(name.frame.maxX, app.buttons["profile.ai.open"].frame.minX)
+        XCTAssertLessThan(abs(name.frame.midY - avatar.frame.midY), 44)
+        XCTAssertFalse(app.buttons["profile.address"].exists)
+        let accountSwitch = app.buttons["portfolio.account.switch"]
+        XCTAssertEqual(accountSwitch.value as? String, "Internal account")
+        let accountBalance = app.staticTexts["portfolio.account.balance-value"]
+        XCTAssertLessThan(abs(accountBalance.frame.midY - accountSwitch.frame.midY), 12)
+        XCTAssertFalse(app.descendants(matching: .any)["wallet.hypercore-balances"].exists)
+        let deposit = app.buttons["portfolio.deposit"]
+        XCTAssertTrue(deposit.waitForExistence(timeout: 3), app.debugDescription)
+        XCTAssertTrue(deposit.isHittable)
+        XCTAssertGreaterThanOrEqual(deposit.frame.height, 44)
+        XCTAssertLessThan(deposit.frame.maxY, app.buttons["app.tab.portfolio"].frame.minY)
+        deposit.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["portfolio.deposit.screen"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["Sign in"].exists)
+        app.navigationBars.buttons.firstMatch.tap()
+        app.buttons["portfolio.settings"].tap()
+        XCTAssertTrue(app.buttons["settings.wallet"].waitForExistence(timeout: 3))
+        XCTAssertFalse(app.buttons["settings.wallet.address"].exists, "Never display an example funding address for guests")
+        for id in ["notifications", "data-methodology", "risk-disclosure", "reset-local-data"] {
+            XCTAssertFalse(app.descendants(matching: .any)["settings." + id].exists)
+        }
         app.buttons["Done"].tap()
         let page = app.scrollViews["portfolio.page.holdings"]
         for _ in 0..<4 {
@@ -32,6 +55,47 @@ final class UserProfileUITests: XCTestCase {
         XCTAssertTrue(app.textFields["portfolio.ticker-search"].exists)
     }
 
+    func testExternalAccountAndBrokerageConnectionsRemainAvailable() {
+        let app = launch()
+        app.buttons["app.tab.portfolio"].tap()
+        let accountSwitch = app.buttons["portfolio.account.switch"]
+        XCTAssertTrue(accountSwitch.waitForExistence(timeout: 5))
+        let inAppScreenshot = XCTAttachment(screenshot: app.screenshot())
+        inAppScreenshot.name = "Profile in-app balance switch"
+        inAppScreenshot.lifetime = .keepAlways
+        add(inAppScreenshot)
+        accountSwitch.tap()
+        XCTAssertEqual(accountSwitch.value as? String, "External account")
+        let externalScreenshot = XCTAttachment(screenshot: app.screenshot())
+        externalScreenshot.name = "Profile external balance switch"
+        externalScreenshot.lifetime = .keepAlways
+        add(externalScreenshot)
+        XCTAssertTrue(app.descendants(matching: .any)["portfolio.value-chart"].exists)
+        XCTAssertTrue(app.buttons["portfolio.brokerage-connections"].exists)
+        accountSwitch.tap()
+        XCTAssertEqual(accountSwitch.value as? String, "Internal account")
+        XCTAssertTrue(app.buttons["portfolio.deposit"].isHittable)
+    }
+
+    func testExternalHoldingsUseCompactFourColumnTable() {
+        let app = launch()
+        app.buttons["app.tab.portfolio"].tap()
+        let accountSwitch = app.buttons["portfolio.account.switch"]
+        XCTAssertTrue(accountSwitch.waitForExistence(timeout: 5))
+        accountSwitch.tap()
+        let page = app.scrollViews["portfolio.page.holdings"]
+        let row = app.buttons["portfolio.entry.NVDA"]
+        for _ in 0..<4 where !row.isHittable { page.swipeUp() }
+        XCTAssertTrue(row.isHittable, app.debugDescription)
+        XCTAssertTrue(app.staticTexts["Qty / value"].exists)
+        XCTAssertTrue(app.staticTexts["Price / cost"].exists)
+        XCTAssertTrue(app.staticTexts["P&L"].exists)
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = "Profile holdings compact table"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
     func testEditPersistsAndCancelDoesNotSave() {
         let app = launch()
         app.buttons["app.tab.portfolio"].tap()
@@ -40,6 +104,11 @@ final class UserProfileUITests: XCTestCase {
         edit.tap()
         let nickname = app.textFields["profile.edit.nickname"]
         XCTAssertTrue(nickname.waitForExistence(timeout: 3))
+        Thread.sleep(forTimeInterval: 0.5)
+        let editorScreenshot = XCTAttachment(screenshot: app.screenshot())
+        editorScreenshot.name = "Profile editor"
+        editorScreenshot.lifetime = .keepAlways
+        add(editorScreenshot)
         replace(nickname, with: "Casey")
         app.buttons["profile.save"].tap()
         XCTAssertEqual(app.staticTexts["profile.nickname"].label, "Casey")

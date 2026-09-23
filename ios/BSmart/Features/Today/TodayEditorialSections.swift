@@ -3,24 +3,16 @@ import SwiftUI
 
 struct TodayHomeSectionHeading: View {
     let title: String
-    let symbol: String
-    let accent: Color
     let identifier: String
     @ScaledMetric(relativeTo: .headline) private var titleSize = 20.0
 
     var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: symbol)
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(accent)
-                .accessibilityHidden(true)
-            Text(title.bSmartLocalized)
-                .font(.system(size: titleSize, weight: .bold))
-                .foregroundStyle(BSmartColor.primaryText)
-                .fixedSize(horizontal: false, vertical: true)
-                .accessibilityAddTraits(.isHeader)
-                .accessibilityIdentifier(identifier)
-        }
+        Text(title.bSmartLocalized)
+            .font(.system(size: titleSize, weight: .bold))
+            .foregroundStyle(BSmartColor.primaryText)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityAddTraits(.isHeader)
+            .accessibilityIdentifier(identifier)
     }
 }
 
@@ -577,6 +569,14 @@ private struct TodayPriceEventDetail: View {
     let marker: TodayPriceEventMarker
 
     var body: some View {
+        if case let .account(update) = marker.source {
+            SmartAccountEvidenceDetailView(update: update)
+        } else {
+            moneyDetail
+        }
+    }
+
+    private var moneyDetail: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: BSmartSpacing.large) {
                 actorHeader

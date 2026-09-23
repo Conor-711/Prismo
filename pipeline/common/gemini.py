@@ -128,8 +128,10 @@ def _gen(parts: list, system: str | None, max_tokens: int, temperature: float,
 
 
 def chat(system: str, user: str, model: str | None = None, max_tokens: int = 1500,
-         temperature: float = 0.2, retries: int = 5, timeout: int = 120) -> str:
-    return _gen([{"text": user}], system, max_tokens, temperature, False, model, retries, timeout)
+         temperature: float = 0.2, retries: int = 5, timeout: int = 120,
+         max_rate_waits: int = 12) -> str:
+    return _gen([{"text": user}], system, max_tokens, temperature, False, model, retries, timeout,
+                max_rate_waits=max_rate_waits)
 
 
 def analyze_video(url: str, prompt: str, system: str | None = None, low_res: bool = False,
@@ -141,8 +143,10 @@ def analyze_video(url: str, prompt: str, system: str | None = None, low_res: boo
                 max_rate_waits=max_rate_waits)  # 多重试穿过 flaky egress
 
 
-def messages_json(system: str, user: str, model: str | None = None, max_tokens: int = 1500):
-    return extract_json(chat(system, user, model=model, max_tokens=max_tokens))
+def messages_json(system: str, user: str, model: str | None = None, max_tokens: int = 1500,
+                  max_rate_waits: int = 12):
+    return extract_json(chat(system, user, model=model, max_tokens=max_tokens,
+                             max_rate_waits=max_rate_waits))
 
 
 def video_json(url: str, prompt: str, system: str | None = None, low_res: bool = False,

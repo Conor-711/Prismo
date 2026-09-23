@@ -4,6 +4,8 @@ import SwiftUI
 enum AppSection: String, Hashable {
     case today
     case smart
+    case search
+    case friends
     case portfolio
     case feed
 }
@@ -61,6 +63,7 @@ final class AppRouter: ObservableObject {
     @Published var selection: AppSection = .today
     @Published var todayPath = NavigationPath()
     @Published private(set) var pendingSignalID: UUID?
+    @Published private(set) var pendingNotificationInbox = false
     @Published private var tabBarHiddenTokens = Set<UUID>()
 
     var isTabBarHidden: Bool { !tabBarHiddenTokens.isEmpty }
@@ -77,12 +80,28 @@ final class AppRouter: ObservableObject {
         tabBarHiddenTokens.removeAll()
     }
 
+    func resetForAccountChange() {
+        selection = .today
+        todayPath = NavigationPath()
+        pendingSignalID = nil
+        pendingNotificationInbox = false
+        tabBarHiddenTokens.removeAll()
+    }
+
+    func openNotificationInbox() {
+        selection = .today
+        todayPath = NavigationPath()
+        pendingNotificationInbox = true
+    }
+
+    func consumeNotificationInbox() { pendingNotificationInbox = false }
+
     #if DEBUG
     func applyDebugLaunchSection(from arguments: [String]) {
         guard let argument = arguments.first(where: { $0.hasPrefix("--ui-section=") }),
               let section = AppSection(rawValue: String(argument.dropFirst("--ui-section=".count)))
         else { return }
-        selection = section
+        selection = section == .smart ? .today : section
     }
     #endif
 

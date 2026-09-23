@@ -1,0 +1,68 @@
+openapi: 3.1.0
+info:
+  title: bSmart Supabase Research Content
+  version: 1.0.0
+  description: Immutable paged research releases. Item models reuse bsmart-v1.yaml. See docs/contracts/supabase_content.md.
+servers:
+  - url: https://{project}.supabase.co/functions/v1/bsmart-content
+    variables:
+      project: { default: your-project }
+security: [{ accountBearer: [] }]
+paths:
+  /manifest:
+    get:
+      operationId: contentManifest
+      responses:
+        '200':
+          description: Active immutable content version and collection hashes.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Manifest' }
+        '401': { description: Verified Supabase user required. }
+        '503': { description: No publication or service unavailable. }
+  /page:
+    get:
+      operationId: contentPage
+      parameters:
+        - { in: query, name: revision, required: true, schema: { type: string, pattern: '^[a-f0-9]{64}$' } }
+        - { in: query, name: collection, required: true, schema: { type: string, enum: [smart-accounts, smart-account-updates, smart-account-evidence, portfolio-signals, ticker-intelligence, smart-money, smart-money-movements, smart-money-evidence] } }
+        - { in: query, name: owner, schema: { type: string, default: _, maxLength: 160 } }
+        - { in: query, name: page, schema: { type: integer, minimum: 0, maximum: 10000, default: 0 } }
+      responses:
+        '200':
+          description: One page from exactly the requested revision; total is for this owner.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [revision, page, pages, total, items]
+                properties:
+                  revision: { type: string }
+                  page: { type: integer }
+                  pages: { type: integer }
+                  total: { type: integer }
+                  items: { type: array, items: { type: object } }
+        '401': { description: Verified Supabase user required. }
+        '404': { description: Unknown revision or page. }
+        '422': { description: Invalid query. }
+        '503': { description: Service unavailable. }
+components:
+  securitySchemes:
+    accountBearer: { type: http, scheme: bearer, bearerFormat: Supabase JWT }
+  schemas:
+    Manifest:
+      type: object
+      required: [schemaVersion, revision, collections]
+      properties:
+        schemaVersion: { type: integer, const: 1 }
+        revision: { type: string, pattern: '^[a-f0-9]{64}$' }
+        collections:
+          type: object
+          additionalProperties:
+            type: object
+            required: [count, sha256, checkedAt, latestContentAt]
+            properties:
+              count: { type: integer, minimum: 0 }
+              sha256: { type: string }
+              checkedAt: { type: string, format: date-time }
+              latestContentAt: { type: [string, 'null'], format: date-time }

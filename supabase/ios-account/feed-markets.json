@@ -1,0 +1,23 @@
+{
+  "xyz:NVDA": "NVDA", "xyz:MU": "MU", "xyz:MSTR": "MSTR",
+  "xyz:TSLA": "TSLA", "xyz:HOOD": "HOOD", "xyz:INTC": "INTC",
+  "xyz:PLTR": "PLTR", "xyz:COIN": "COIN", "xyz:META": "META",
+  "xyz:AAPL": "AAPL", "xyz:MSFT": "MSFT", "xyz:ORCL": "ORCL",
+  "xyz:GOOGL": "GOOGL", "xyz:AMZN": "AMZN", "xyz:AMD": "AMD",
+  "xyz:SNDK": "SNDK", "xyz:CRCL": "CRCL", "xyz:NFLX": "NFLX",
+  "xyz:COST": "COST", "xyz:LLY": "LLY", "xyz:TSM": "TSM",
+  "xyz:RIVN": "RIVN", "xyz:BABA": "BABA", "xyz:USAR": "USAR",
+  "xyz:CRWV": "CRWV", "xyz:GME": "GME", "xyz:HIMS": "HIMS",
+  "xyz:DKNG": "DKNG", "xyz:LITE": "LITE", "xyz:BX": "BX",
+  "xyz:MRVL": "MRVL", "xyz:RKLB": "RKLB", "xyz:ZM": "ZM",
+  "xyz:EBAY": "EBAY", "xyz:ARM": "ARM", "xyz:ASML": "ASML",
+  "xyz:DELL": "DELL", "xyz:IBM": "IBM", "xyz:AVGO": "AVGO",
+  "xyz:NOW": "NOW", "xyz:NBIS": "NBIS", "xyz:WDC": "WDC",
+  "xyz:QCOM": "QCOM", "xyz:BE": "BE", "xyz:AMAT": "AMAT",
+  "xyz:GEV": "GEV", "xyz:IREN": "IREN", "xyz:NET": "NET",
+  "xyz:CRWD": "CRWD", "xyz:RDDT": "RDDT", "xyz:AAOI": "AAOI",
+  "xyz:MRNA": "MRNA", "xyz:XBI": "XBI", "xyz:SMH": "SMH",
+  "xyz:SOXL": "SOXL", "xyz:XLE": "XLE", "xyz:EWY": "EWY",
+  "xyz:STRC": "STRC",
+  "para:SOFI": "SOFI"
+}

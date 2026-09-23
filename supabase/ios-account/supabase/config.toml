@@ -5,3 +5,32 @@ project_id = "dzyitinagewdfkzjkuiz"
 # The handler validates every user JWT with Supabase Auth getUser.
 # The legacy gateway JWT check does not support all new signing keys.
 verify_jwt = false
+
+[functions.bsmart-feed]
+verify_jwt = false
+
+[functions.bsmart-profile]
+verify_jwt = false
+
+[functions.bsmart-search]
+verify_jwt = false
+
+[functions.bsmart-social]
+# The handler verifies the Supabase user on every request.
+verify_jwt = false
+
+[functions.bsmart-content]
+# JWT is verified with Auth getUser before every content read.
+verify_jwt = false
+
+[functions.bsmart-notifications]
+# Handler validates the real Apple/Google user with Auth getUser.
+verify_jwt = false
+
+[functions.bsmart-funding]
+# Handler resolves the authenticated user's immutable wallet binding.
+verify_jwt = false
+
+[functions.bsmart-withdrawals]
+# Handler verifies Supabase Auth and wallet ownership before every operation.
+verify_jwt = false

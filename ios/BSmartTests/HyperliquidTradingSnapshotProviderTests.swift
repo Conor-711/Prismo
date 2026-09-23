@@ -4,18 +4,35 @@ import XCTest
 final class HyperliquidTradingSnapshotProviderTests: XCTestCase {
     private typealias F = HyperliquidTradingFixture
 
+    func testIndependentReadsOverlapWithAtMostTwoRequestsInFlight() async throws {
+        let reader = ConcurrentSnapshotReader()
+        let snapshot = try await HyperliquidTradingSnapshotProvider(reader: reader,
+            clock: { F.now }, continuousClock: { F.instant })
+            .snapshot(wallet: F.wallet, dex: "xyz", coin: F.coin)
+        XCTAssertEqual(snapshot.market.coin, F.coin)
+        let peak = await reader.peak
+        let count = await reader.count
+        XCTAssertEqual(peak, 2)
+        XCTAssertEqual(count, 8)
+    }
+
     func testEveryModeUsesExactMarketQueriesAndNeverTransfersOrChangesLeverage() async throws {
         for mode in HyperCoreAccountMode.allCases {
-            let reader = TradingCheckReaderStub(try F.responses(mode: mode))
+            let reader = TradingCheckReaderStub(snapshot: try F.responses(mode: mode))
             let snapshot = try await provider(reader).snapshot(wallet: F.wallet, dex: "xyz", coin: F.coin)
             XCTAssertEqual(snapshot.mode, mode)
             XCTAssertEqual(snapshot.market.asset, 110000)
             XCTAssertEqual(snapshot.active.leverage.multiplier, 10)
             let queries = await reader.queries
-            XCTAssertEqual(queries, [.dexs, .metadata(dex: "xyz"), .mode(owner: F.wallet.address),
-                .active(owner: F.wallet.address, coin: F.coin), .positions(owner: F.wallet.address, dex: "xyz"),
-                .active(owner: F.wallet.address, coin: F.coin), .positions(owner: F.wallet.address, dex: "xyz"),
-                .mode(owner: F.wallet.address)])
+            XCTAssertEqual(queries.count, 8)
+            XCTAssertTrue(queries.prefix(2).contains(.dexs))
+            XCTAssertTrue(queries.prefix(2).contains(.metadata(dex: "xyz")))
+            XCTAssertEqual(queries[2], .mode(owner: F.wallet.address))
+            for range in [3...4, 5...6] {
+                XCTAssertTrue(queries[range].contains(.active(owner: F.wallet.address, coin: F.coin)))
+                XCTAssertTrue(queries[range].contains(.positions(owner: F.wallet.address, dex: "xyz")))
+            }
+            XCTAssertEqual(queries[7], .mode(owner: F.wallet.address))
         }
     }
 
@@ -51,12 +68,12 @@ final class HyperliquidTradingSnapshotProviderTests: XCTestCase {
         var responses = try F.responses()
         responses[4] = try F.positions(at: F.now.addingTimeInterval(-14))
         responses[6] = responses[4]
-        let snapshot = try await provider(TradingCheckReaderStub(responses)).snapshot(wallet: F.wallet, dex: "xyz", coin: F.coin)
+        let snapshot = try await provider(TradingCheckReaderStub(snapshot: responses)).snapshot(wallet: F.wallet, dex: "xyz", coin: F.coin)
         XCTAssertEqual(snapshot.expiresAt, F.now.addingTimeInterval(1))
         XCTAssertThrowsError(try snapshot.validate(wallet: F.wallet, now: snapshot.expiresAt,
                                                    continuousNow: F.instant.advanced(by: .seconds(1))))
         let clock = TradingCheckClock()
-        let delayed = TradingCheckReaderStub(responses) { if $0 == 7 { clock.advance(wall: 1, steady: .seconds(1)) } }
+        let delayed = TradingCheckReaderStub(snapshot: responses) { if $0 == 7 { clock.advance(wall: 1, steady: .seconds(1)) } }
         do { _ = try await provider(delayed, clock: clock).snapshot(wallet: F.wallet, dex: "xyz", coin: F.coin)
             XCTFail("Reissued expired positions after final IO")
         } catch { XCTAssertEqual(error as? HyperliquidTradingCheckError, .stale) }
@@ -65,17 +82,18 @@ final class HyperliquidTradingSnapshotProviderTests: XCTestCase {
     func testWallAndMonotonicDeadlinesCoverIOAndRollback() async throws {
         for (wall, steady): (Double, Duration) in [(15, .zero), (0, .seconds(15)), (-1, .zero), (0, .seconds(-1))] {
             let clock = TradingCheckClock()
-            let reader = TradingCheckReaderStub(try F.responses()) { if $0 == 0 { clock.advance(wall: wall, steady: steady) } }
+            let reader = TradingCheckReaderStub(snapshot: try F.responses()) { if $0 == 0 { clock.advance(wall: wall, steady: steady) } }
             do { _ = try await provider(reader, clock: clock).snapshot(wallet: F.wallet, dex: "xyz", coin: F.coin)
                 XCTFail("Accepted expired/rolled-back IO")
             } catch { XCTAssertEqual(error as? HyperliquidTradingCheckError, .stale) }
             let calls = await reader.queries
-            XCTAssertEqual(calls.count, 1)
+            XCTAssertTrue((1...2).contains(calls.count))
+            XCTAssertTrue(calls.allSatisfy { $0 == .dexs || $0 == .metadata(dex: "xyz") })
         }
     }
 
     func testForeignWalletAndUnsupportedCollateralStopBeforeAccountQueries() async throws {
-        let reader = TradingCheckReaderStub(try F.responses())
+        let reader = TradingCheckReaderStub(snapshot: try F.responses())
         for wallet in [DeviceWalletSummary(accountID: F.wallet.accountID, address: "0x0", recoveryVerified: true),
                        .init(accountID: F.wallet.accountID, address: "0x" + String(repeating: "0", count: 40), recoveryVerified: false)] {
             do { _ = try await provider(reader).snapshot(wallet: wallet, dex: "xyz", coin: F.coin); XCTFail("Invalid wallet") }
@@ -83,7 +101,7 @@ final class HyperliquidTradingSnapshotProviderTests: XCTestCase {
         }
         let calls = await reader.queries; XCTAssertTrue(calls.isEmpty)
         var responses = try F.responses(); responses[1] = try F.metadata(collateral: 7)
-        let other = TradingCheckReaderStub(responses)
+        let other = TradingCheckReaderStub(snapshot: responses)
         do { _ = try await provider(other).snapshot(wallet: F.wallet, dex: "xyz", coin: F.coin); XCTFail("Wrong collateral") }
         catch { XCTAssertEqual(error as? HyperliquidTradingCheckError, .unsupportedCollateral) }
         let otherCalls = await other.queries; XCTAssertEqual(otherCalls.count, 2)
@@ -91,11 +109,11 @@ final class HyperliquidTradingSnapshotProviderTests: XCTestCase {
 
     func testFailureAndCancellationNeverPublishASnapshot() async throws {
         for stop in [0, 3, 7] {
-            let reader = TradingCheckReaderStub(try F.responses()) { if $0 == stop { throw HyperliquidTradingCheckError.unavailable } }
+            let reader = TradingCheckReaderStub(snapshot: try F.responses()) { if $0 == stop { throw HyperliquidTradingCheckError.unavailable } }
             do { _ = try await provider(reader).snapshot(wallet: F.wallet, dex: "xyz", coin: F.coin); XCTFail("Swallowed failure") }
             catch { XCTAssertEqual(error as? HyperliquidTradingCheckError, .unavailable) }
         }
-        let reader = TradingCheckReaderStub(try F.responses()) { index in
+        let reader = TradingCheckReaderStub(snapshot: try F.responses()) { index in
             if index == 7 { withUnsafeCurrentTask { $0?.cancel() } }
         }
         let source = provider(reader)
@@ -108,8 +126,21 @@ final class HyperliquidTradingSnapshotProviderTests: XCTestCase {
         .init(reader: reader, clock: { clock.now }, continuousClock: { clock.instant })
     }
     private func fails(_ responses: [Data], _ expected: HyperliquidTradingCheckError) async {
-        do { _ = try await provider(TradingCheckReaderStub(responses)).snapshot(wallet: F.wallet, dex: "xyz", coin: F.coin)
+        do { _ = try await provider(TradingCheckReaderStub(snapshot: responses)).snapshot(wallet: F.wallet, dex: "xyz", coin: F.coin)
             XCTFail("Accepted invalid snapshot")
         } catch { XCTAssertEqual(error as? HyperliquidTradingCheckError, expected) }
+    }
+}
+
+private actor ConcurrentSnapshotReader: HyperliquidExecutionReading {
+    private let reader = OrderStoreReader()
+    private var inFlight = 0
+    private(set) var peak = 0
+    private(set) var count = 0
+    func read(_ query: HyperliquidExecutionQuery) async throws -> Data {
+        inFlight += 1; count += 1; peak = max(peak, inFlight)
+        defer { inFlight -= 1 }
+        try await Task.sleep(for: .milliseconds(20))
+        return try await reader.read(query)
     }
 }

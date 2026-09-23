@@ -270,6 +270,7 @@ struct SmartAccountUpdate: Identifiable, Codable, Hashable {
     var authorFollowersCount: Int? = nil
     var authorVerified: Bool? = nil
     var originalText: String? = nil
+    var imageURLs: [URL]? = nil
     var priceEvidence: SmartAccountPriceEvidence? = nil
     var sourcePostId: String? = nil
     var sourceURL: URL? = nil

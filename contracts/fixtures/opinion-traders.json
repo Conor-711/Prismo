@@ -1,5 +1,8 @@
 {
   "totalTraders": 3,
+  "longTraders": 2,
+  "shortTraders": 1,
+  "totalNotionalUSD": "364.75",
   "publicTraders": 2,
   "nextOffset": null,
   "traders": [

@@ -2,6 +2,47 @@ import XCTest
 @testable import BSmart
 
 final class HyperliquidTradingLiveTests: XCTestCase {
+    func testReadOnlySocketAndHTTPPreflightLatency() async throws {
+        guard ProcessInfo.processInfo.environment["BSMART_FUNDING_LIVE_READS"] == "1" else {
+            throw XCTSkip("Explicit public read-only latency measurement only.")
+        }
+        let wallet = DeviceWalletSummary(accountID: UUID(),
+            address: "0xa4add8273d7f47318675bdfbcce3e9648cdb4509", recoveryVerified: true)
+        var measurements: [String] = []
+        // Actual native transports and full consistency rounds; no signer or exchange writes.
+        for (useSocket, orderObservation) in [(false, false), (true, false), (true, true)] {
+            let reader = HyperliquidExecutionReader(useWebSocket: useSocket, connection: HyperliquidInfoConnection())
+            for index in 0..<3 {
+                let start = ContinuousClock.now
+                do {
+                let snapshot: HyperliquidTradingSnapshot
+                if orderObservation {
+                    snapshot = try await HyperliquidOrderAccountObservation(reader: reader,
+                        clock: { Date() }, continuousClock: { .now })
+                        .snapshot(wallet: wallet, dex: "xyz", coin: "xyz:SNDK")
+                } else {
+                    snapshot = try await HyperliquidTradingSnapshotProvider(reader: reader)
+                        .snapshot(wallet: wallet, dex: "xyz", coin: "xyz:SNDK")
+                }
+                async let book = HyperliquidBookObservation.read(reader: reader, market: snapshot.market,
+                    clock: { Date() }, continuousClock: { .now })
+                async let fees = reader.read(.fees(owner: wallet.address))
+                _ = try await book
+                _ = try HyperliquidTakerFees.decode(await fees, owner: wallet.address)
+                try snapshot.validate(wallet: wallet, now: Date())
+                let elapsed = start.duration(to: .now)
+                measurements.append("transport=\(useSocket ? "socket-preferred" : "http") orderObservation=\(orderObservation) sample=\(index) preflight=\(elapsed)")
+                } catch {
+                    measurements.append("transport=\(useSocket ? "socket-preferred" : "http") orderObservation=\(orderObservation) sample=\(index) failed=\(error) elapsed=\(start.duration(to: .now))")
+                }
+            }
+        }
+        let report = measurements.joined(separator: "\n")
+        print(report)
+        let attachment = XCTAttachment(string: report + "\nPublic reads only; excludes identity, signing and submission.")
+        attachment.name = "read-only-preflight-latency"; attachment.lifetime = .keepAlways; add(attachment)
+    }
+
     func testPublicMainnetAccountMarketObservation() async throws {
         guard ProcessInfo.processInfo.environment["BSMART_FUNDING_LIVE_READS"] == "1" else {
             throw XCTSkip("Explicit mainnet read-only check only.")

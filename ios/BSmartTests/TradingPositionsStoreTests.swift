@@ -3,6 +3,24 @@ import XCTest
 
 @MainActor
 final class TradingPositionsStoreTests: XCTestCase {
+    func testTickerHoldingsUseLivePositionsAndPreserveVenueIdentity() async throws {
+        let reader = BasicWalletTestReader()
+        reader.rows = ["": [reader.position(coin: "ETH")],
+                       "xyz": [reader.position(coin: "xyz:SNDK", size: "-0.011"),
+                               reader.position(coin: "xyz:NVDA")]]
+        let service = BasicWalletTestService()
+        let store = TradingPositionsStore(service: service, reader: reader)
+        await store.refresh(wallet: service.wallet)
+        let positions = store.rows.filter { $0.matches(symbol: "sndk") }
+        XCTAssertEqual(positions.map(\.coin), ["xyz:SNDK"])
+        XCTAssertTrue(try XCTUnwrap(positions.first).quantity.isNegative)
+        XCTAssertTrue(positions[0].matches(symbol: "xyz:SNDK"))
+        XCTAssertFalse(positions[0].matches(symbol: "other:SNDK"))
+        XCTAssertEqual(store.rows.filter { $0.matches(symbol: nil) }.count, 3)
+        XCTAssertEqual(store.rows.filter { $0.matches(symbol: "ETH") }.count, 1)
+        XCTAssertTrue(store.rows.filter { $0.matches(symbol: "BTC") }.isEmpty)
+    }
+
     func testNativeAndHIP3PositionsUseExactDirectionAndDoNotMixMarkets() async throws {
         let reader = BasicWalletTestReader()
         reader.rows = ["": [reader.position(coin: "ETH", size: "1.5")], "xyz": [reader.position(coin: "xyz:NVDA", size: "-2")]]
@@ -14,6 +32,36 @@ final class TradingPositionsStoreTests: XCTestCase {
         XCTAssertEqual(store.rows.last?.quantity.isNegative, true)
         XCTAssertEqual(store.rows.last?.symbol, "NVDA")
         XCTAssertEqual(store.rows.last?.entryPrice?.wire, "200")
+    }
+
+    func testVerifiedRegistrationAvoidsASecondAccountRequest() async throws {
+        let service = BasicWalletTestService()
+        let registration = try service.walletRegistration()
+        let store = TradingPositionsStore(service: service, reader: BasicWalletTestReader())
+        await store.refresh(wallet: service.wallet, verifiedRegistration: registration)
+        XCTAssertTrue(store.didLoad)
+        XCTAssertEqual(service.registrationReads, 1)
+    }
+
+    func testPositionRefreshShowsPartialResultsBeforeCompletion() async throws {
+        let service = BasicWalletTestService()
+        let reader = BasicWalletTestReader()
+        reader.rows = ["xyz": [reader.position(coin: "xyz:NVDA")]]
+        let store = TradingPositionsStore(service: service, reader: reader)
+        var partialCounts: [Int] = []
+        await store.refresh(wallet: service.wallet, onProgress: { partialCounts.append($0.count) })
+        XCTAssertTrue(partialCounts.contains(1))
+        XCTAssertEqual(store.rows.map(\.coin), ["xyz:NVDA"])
+        XCTAssertTrue(store.didLoad)
+    }
+
+    func testWrongVerifiedRegistrationCannotReadAnotherWallet() async throws {
+        let service = BasicWalletTestService()
+        let wrong = TradingWalletRegistration(accountId: UUID(), address: service.wallet.address)
+        let store = TradingPositionsStore(service: service, reader: BasicWalletTestReader())
+        await store.refresh(wallet: service.wallet, verifiedRegistration: wrong)
+        XCTAssertFalse(store.didLoad)
+        XCTAssertNotNil(store.errorMessage)
     }
 
     func testPartialOutageIsVisibleAndCannotMasqueradeAsFlatAccount() async throws {
@@ -46,6 +94,34 @@ final class TradingPositionsStoreTests: XCTestCase {
         XCTAssertThrowsError(try TradingPositionRow.decode(reader.positionData([], at: Date().addingTimeInterval(-60)), dex: "xyz"))
     }
 
+    func testPositionDisplaySymbolAndMarginReturn() throws {
+        let position = TradingPositionRow(coin: "xyz:SNDK", dex: "xyz", quantity: try .init("0.006"),
+            entryPrice: try .init("200"), unrealizedPnL: try .init("-0.12"), leverage: 10)
+        XCTAssertEqual(position.symbol, "SNDK")
+        XCTAssertEqual(try XCTUnwrap(position.returnPercent), -100, accuracy: 0.0001)
+    }
+
+    func testProfilePositionQuoteUsesExactMarketAndAbsoluteSize() async throws {
+        let markets = try await DebugTradingMarketClient().fetchMarkets(
+            dex: .init(name: "xyz", displayName: "XYZ"))
+        let market = try XCTUnwrap(markets.first { $0.coin == "xyz:NVDA" })
+        let position = TradingPositionRow(coin: "xyz:NVDA", dex: "xyz", quantity: try .init("-0.5"),
+            entryPrice: try .init("190"), unrealizedPnL: try .init("-1"), leverage: 5)
+        let quote = try XCTUnwrap(PortfolioPositionQuote(position: position, market: market))
+        XCTAssertEqual(quote.marketValue, 100, accuracy: 0.001)
+        XCTAssertEqual(quote.currentPrice, 200)
+        let holding = PortfolioHoldingSnapshot(live: position, quote: quote)
+        XCTAssertEqual(holding.quantity, 0.5)
+        XCTAssertEqual(holding.value, 100)
+        XCTAssertEqual(holding.averageCost, 190)
+        XCTAssertEqual(holding.gain, -1)
+        XCTAssertEqual(try XCTUnwrap(holding.gainPercent), -1 / 95, accuracy: 0.0001)
+
+        let otherVenue = TradingPositionRow(coin: "test:NVDA", dex: "test", quantity: try .init("0.5"),
+            entryPrice: nil, unrealizedPnL: try .init("0"), leverage: 5)
+        XCTAssertNil(PortfolioPositionQuote(position: otherVenue, market: market))
+    }
+
     func testFlatCheckRejectsAnyPositionOrOpenOrder() async throws {
         let reader = BasicWalletTestReader(), wallet = BasicWalletTestService().wallet
         _ = try await HyperliquidFlatAccountCheck(reader: reader).check(owner: wallet.address)
@@ -60,7 +136,11 @@ final class TradingPositionsStoreTests: XCTestCase {
 final class BasicWalletTestService: AccountWalletServicing {
     let wallet = HyperliquidTradingFixture.wallet
     var walletAccountID: UUID? = HyperliquidTradingFixture.wallet.accountID
-    func walletRegistration() throws -> TradingWalletRegistration { .init(accountId: walletAccountID ?? UUID(), address: wallet.address) }
+    var registrationReads = 0
+    func walletRegistration() throws -> TradingWalletRegistration {
+        registrationReads += 1
+        return .init(accountId: walletAccountID ?? UUID(), address: wallet.address)
+    }
     func walletChallenge(address: String) throws -> TradingWalletChallenge { throw DeviceWalletError.invalidProof }
     func bindWallet(challenge: TradingWalletChallenge, signature: String) throws -> TradingWalletRegistration { throw DeviceWalletError.invalidProof }
     func fundingSigningLease(wallet: DeviceWalletSummary) throws -> FundingSigningLease {

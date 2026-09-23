@@ -19,6 +19,12 @@ struct TickerIntelligenceView: View {
     init(ticker: TickerIntelligence) { self.init(symbol: ticker.ticker) }
 
     private var activeSymbol: String { trading.activeMarket?.symbol ?? symbol }
+    private var isCryptoMarket: Bool? {
+        if let market = trading.activeMarket, market.symbol == activeSymbol {
+            return market.dex.isEmpty
+        }
+        return trading.market(for: activeSymbol)?.dex.isEmpty
+    }
     private var profile: TickerProfile? { TickerProfile.lookup(activeSymbol) }
     private var companyName: String {
         profile?.name ?? model.intelligence(for: activeSymbol)?.companyName
@@ -40,7 +46,8 @@ struct TickerIntelligenceView: View {
                 switch selection {
                 case .overview:
                     TickerAboutSection(symbol: activeSymbol, companyName: companyName,
-                                       profile: profile, market: trading.activeMarket)
+                                       profile: profile, market: trading.activeMarket,
+                                       isCrypto: isCryptoMarket)
                 case .activity:
                     TickerSmartActivityFeed(activities: activities, framed: false)
                         .id(activeSymbol)
@@ -117,7 +124,7 @@ struct TickerIntelligenceView: View {
     private var assetNavigationHeader: some View {
         Button { showsMarketPicker = true } label: {
             HStack(spacing: 9) {
-                BSmartAssetMark(ticker: activeSymbol, size: 34)
+                BSmartAssetMark(ticker: activeSymbol, size: 34, isCrypto: isCryptoMarket)
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 5) {
                         Text(activeSymbol).font(.system(size: 16, weight: .semibold))

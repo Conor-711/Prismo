@@ -56,6 +56,14 @@ struct HyperCoreBalanceSnapshot: Equatable, Sendable {
     let requestedAt: Date
     let checkedAt: Date
 
+    var accountBalanceValue: Double? {
+        guard let cash = Double(usdc.formatted), cash.isFinite else { return nil }
+        guard let perps else { return cash }
+        guard let equity = Double(perps.equity.formatted), equity.isFinite else { return nil }
+        let total = cash + equity
+        return total.isFinite ? total : nil
+    }
+
     var expiresAt: Date {
         min(requestedAt.addingTimeInterval(30), perps?.updatedAt.addingTimeInterval(30) ?? requestedAt.addingTimeInterval(30))
     }

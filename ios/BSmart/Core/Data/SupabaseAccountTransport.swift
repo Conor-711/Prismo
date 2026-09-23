@@ -29,7 +29,8 @@ final class SupabaseAccountTransport: @unchecked Sendable {
     private let configuration: SupabaseAccountConfiguration
     private let session: URLSession
 
-    init(configuration: SupabaseAccountConfiguration, sessionConfiguration: URLSessionConfiguration = .ephemeral) {
+    init(configuration: SupabaseAccountConfiguration, sessionConfiguration: URLSessionConfiguration = .ephemeral,
+         requestTimeout: TimeInterval = 15, resourceTimeout: TimeInterval = 30) {
         self.configuration = configuration
         let config = sessionConfiguration.copy() as! URLSessionConfiguration
         config.urlCache = nil
@@ -37,8 +38,8 @@ final class SupabaseAccountTransport: @unchecked Sendable {
         config.httpShouldSetCookies = false
         config.urlCredentialStorage = nil
         config.httpAdditionalHeaders = nil
-        config.timeoutIntervalForRequest = 15
-        config.timeoutIntervalForResource = 30
+        config.timeoutIntervalForRequest = requestTimeout
+        config.timeoutIntervalForResource = resourceTimeout
         session = URLSession(configuration: config, delegate: SupabaseNoRedirects(), delegateQueue: nil)
     }
 
@@ -61,17 +62,85 @@ final class SupabaseAccountTransport: @unchecked Sendable {
         }
         let (bytes, response) = try await session.bytes(for: request)
         defer { bytes.task.cancel() }
+        let maximumBytes = path.hasPrefix("functions/v1/bsmart-feed") ? 2_097_152
+            : path.hasPrefix("functions/v1/bsmart-content/") || path.hasPrefix("functions/v1/bsmart-social") ? 524288 : 131072
         guard let http = response as? HTTPURLResponse, http.url == request.url,
-              response.expectedContentLength <= 131072 else { throw AccountAccessError.invalidResponse }
+              response.expectedContentLength <= maximumBytes else { throw AccountAccessError.invalidResponse }
         if http.statusCode == 401 { throw AccountAccessError.expired }
+        if path.hasPrefix("functions/v1/bsmart-social/chat/") {
+            if http.statusCode == 429 { throw SocialChatError.rateLimited }
+            if http.statusCode == 422 { throw SocialChatError.invalidMessage }
+        }
+        if path == "functions/v1/bsmart-feed/orders", http.statusCode != expectedStatus {
+            guard http.mimeType == "application/json" else { throw OpinionLinkError.unavailable }
+            var data = Data()
+            for try await byte in bytes {
+                guard data.count < 4096 else { throw OpinionLinkError.unavailable }
+                data.append(byte)
+            }
+            struct Failure: Decodable { let error: String }
+            let code = (try? JSONDecoder().decode(Failure.self, from: data))?.error
+            throw code.flatMap(OpinionLinkError.init(rawValue:)) ?? .unavailable
+        }
+        if path.hasPrefix("functions/v1/bsmart-withdrawals"), http.statusCode != expectedStatus {
+            guard http.mimeType == "application/json" else { throw AcrossWithdrawalError.unavailable }
+            var data = Data()
+            for try await byte in bytes {
+                guard data.count < 4096 else { throw AcrossWithdrawalError.unavailable }
+                data.append(byte)
+            }
+            struct Failure: Decodable { let error: String }
+            let code = (try? JSONDecoder().decode(Failure.self, from: data))?.error
+            throw code.flatMap(AcrossWithdrawalError.init(rawValue:)) ?? .unavailable
+        }
+        if path.hasPrefix("functions/v1/bsmart-feed/state"), http.statusCode == 409 {
+            throw AccountAccessError.unavailable
+        }
+        if path.hasPrefix("functions/v1/bsmart-feed/"),
+           (path.hasSuffix("/thesis") || path.hasSuffix("/like") || path.hasSuffix("/activity")),
+           http.statusCode != expectedStatus {
+            guard http.mimeType == "application/json" else { throw TradeThesisError.unavailable }
+            var data = Data()
+            for try await byte in bytes {
+                guard data.count < 4096 else { throw TradeThesisError.unavailable }
+                data.append(byte)
+            }
+            struct Failure: Decodable { let error: String }
+            let code = (try? JSONDecoder().decode(Failure.self, from: data))?.error
+            throw code.flatMap(TradeThesisError.init(rawValue:)) ?? .unavailable
+        }
+        if path == "auth/v1/token", http.statusCode == 400 {
+            var data = Data()
+            for try await byte in bytes {
+                guard data.count < 4096 else { throw AccountAccessError.invalidResponse }
+                data.append(byte)
+            }
+            struct Failure: Decodable { let error_code: String? }
+            let code = try? JSONDecoder().decode(Failure.self, from: data).error_code
+            if ["refresh_token_not_found", "refresh_token_already_used", "session_not_found", "session_expired", "user_banned"].contains(code ?? "") {
+                throw AccountAccessError.expired
+            }
+            throw AccountAccessError.invalidResponse
+        }
+        if path == "functions/v1/bsmart-profile", [409, 422].contains(http.statusCode) {
+            guard http.mimeType == "application/json" else { throw AccountAccessError.invalidResponse }
+            var data = Data()
+            for try await byte in bytes {
+                guard data.count < 4096 else { throw AccountAccessError.invalidResponse }
+                data.append(byte)
+            }
+            struct Failure: Decodable { let error: String }
+            let result = try JSONDecoder().decode(Failure.self, from: data)
+            throw AccountProfileError(rawValue: result.error) ?? .invalid
+        }
         if http.statusCode == 409 { throw DeviceWalletError.recoveryRequired }
-        if path.hasPrefix("functions/"), [404, 503].contains(http.statusCode) { throw AccountAccessError.walletSetupRequired }
-        if [404, 429, 503].contains(http.statusCode) { throw AccountAccessError.unavailable }
+        if path.hasPrefix("functions/v1/bsmart-wallet"), [404, 503].contains(http.statusCode) { throw AccountAccessError.walletSetupRequired }
+        if [404, 429].contains(http.statusCode) || http.statusCode >= 500 { throw AccountAccessError.unavailable }
         guard http.statusCode == expectedStatus,
               expectedStatus == 204 || http.mimeType == "application/json" else { throw AccountAccessError.invalidResponse }
         var data = Data()
         for try await byte in bytes {
-            guard data.count < 131072 else { throw AccountAccessError.invalidResponse }
+            guard data.count < maximumBytes else { throw AccountAccessError.invalidResponse }
             data.append(byte)
         }
         return data

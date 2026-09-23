@@ -51,11 +51,15 @@ struct CCTPDepositPlan: Sendable {
     }
 
     func validate(wallet: DeviceWalletSummary, now: Date) throws {
+        try validateAuthorization(wallet: wallet, now: now)
+        guard now < quote.expiresAt else { throw CCTPFundingError.expiredQuote }
+    }
+
+    func validateAuthorization(wallet: DeviceWalletSummary, now: Date) throws {
         guard wallet.accountID == accountID, wallet.address == owner, wallet.canAuthorizeTransactions,
               now >= createdAt,
               now.timeIntervalSince1970 >= TimeInterval(validAfter),
               now.timeIntervalSince1970 < TimeInterval(validBefore) else { throw CCTPFundingError.invalidPlan }
-        guard now < quote.expiresAt else { throw CCTPFundingError.expiredQuote }
     }
 
     var hookData: Data {

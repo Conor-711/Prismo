@@ -6,12 +6,80 @@ final class SupabaseAccountAuthTests: XCTestCase {
     private let jwt = "eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJ0ZXN0In0.disposableSignatureForTests"
     private let publicKey = "sb_publishable_disposable_public_test_key"
 
+    func testOrderLinkErrorsKeepActionableCodesWithoutTriggeringWalletRecovery() async throws {
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [SupabaseTestURLProtocol.self]
+        let transport = SupabaseAccountTransport(configuration:
+            SupabaseAccountConfiguration(url: "https://test.supabase.co", publishableKey: publicKey)!, sessionConfiguration: config)
+        for (status, code, expected): (Int, String, OpinionLinkError) in [
+            (422, "opinion_unavailable", .sourceUnavailable), (409, "attribution_conflict", .conflict),
+            (422, "invalid_input", .invalidIntent), (429, "rate_limit", .rateLimit),
+            (503, "feed_unavailable", .unavailable), (503, "unknown", .unavailable)] {
+            SupabaseTestURLProtocol.configure { _ in (status, Data("{\"error\":\"\(code)\"}".utf8)) }
+            do { _ = try await transport.request("functions/v1/bsmart-feed/orders", method: "POST", token: jwt)
+                XCTFail("Failure accepted")
+            } catch { XCTAssertEqual(error as? OpinionLinkError, expected) }
+            XCTAssertEqual(SupabaseTestURLProtocol.requests.count, 1)
+        }
+        SupabaseTestURLProtocol.configure { _ in (401, Data("{}".utf8)) }
+        do { _ = try await transport.request("functions/v1/bsmart-feed/orders", token: jwt); XCTFail("Expired auth accepted") }
+        catch { XCTAssertEqual(error as? AccountAccessError, .expired) }
+    }
+
+    func testAcrossErrorsDoNotMasqueradeAsSignInFailures() async throws {
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [SupabaseTestURLProtocol.self]
+        let transport = SupabaseAccountTransport(configuration:
+            SupabaseAccountConfiguration(url: "https://test.supabase.co", publishableKey: publicKey)!,
+            sessionConfiguration: config)
+        for (status, code, expected): (Int, String, AcrossWithdrawalError) in [
+            (422, "quote_unavailable", .quoteUnavailable),
+            (503, "provider_unavailable", .providerUnavailable),
+            (503, "provider_not_authorized", .providerNotAuthorized),
+            (503, "withdrawal_unavailable", .unavailable),
+            (409, "withdrawal_pending", .pending),
+            (409, "quote_expired", .quoteExpired),
+            (503, "unknown", .unavailable)] {
+            SupabaseTestURLProtocol.configure { _ in (status, Data("{\"error\":\"\(code)\"}".utf8)) }
+            do {
+                _ = try await transport.request("functions/v1/bsmart-withdrawals/quote", method: "POST",
+                                                token: jwt, expectedStatus: 201)
+                XCTFail("Failure accepted")
+            } catch { XCTAssertEqual(error as? AcrossWithdrawalError, expected) }
+        }
+        SupabaseTestURLProtocol.configure { _ in (401, Data("{}".utf8)) }
+        do { _ = try await transport.request("functions/v1/bsmart-withdrawals", token: jwt); XCTFail("Expired auth accepted") }
+        catch { XCTAssertEqual(error as? AccountAccessError, .expired) }
+    }
+
     func testOnlyProjectHTTPSAndPublicClientKeysAreAccepted() {
         for url in ["http://test.supabase.co", "https://api.bsmart.today", "https://test.supabase.co.evil.invalid",
                     "https://user@test.supabase.co", "https://test.supabase.co?key=x", "https://test.supabase.co/auth"] {
             XCTAssertNil(SupabaseAccountConfiguration(url: url, publishableKey: publicKey))
         }
         XCTAssertNil(SupabaseAccountConfiguration(url: "https://test.supabase.co", publishableKey: "sb_secret_not_a_client_key"))
+    }
+
+    func testProfileConflictsDoNotTriggerWalletRecoveryAndWalletBehaviorIsUnchanged() async throws {
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [SupabaseTestURLProtocol.self]
+        let transport = SupabaseAccountTransport(configuration:
+            SupabaseAccountConfiguration(url: "https://test.supabase.co", publishableKey: publicKey)!, sessionConfiguration: config)
+        SupabaseTestURLProtocol.configure { _ in (409, Data(#"{"error":"handle_taken"}"#.utf8)) }
+        do { _ = try await transport.request("functions/v1/bsmart-profile", token: jwt); XCTFail("Conflict accepted") }
+        catch AccountProfileError.handleTaken {} catch { XCTFail("Unexpected: \(error)") }
+        do { _ = try await transport.request("functions/v1/bsmart-wallet", token: jwt); XCTFail("Conflict accepted") }
+        catch DeviceWalletError.recoveryRequired {} catch { XCTFail("Wallet behavior changed: \(error)") }
+    }
+
+    func testProfileConflictErrorBodyIsBounded() async throws {
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [SupabaseTestURLProtocol.self]
+        let transport = SupabaseAccountTransport(configuration:
+            SupabaseAccountConfiguration(url: "https://test.supabase.co", publishableKey: publicKey)!, sessionConfiguration: config)
+        SupabaseTestURLProtocol.configure { _ in (409, Data(repeating: 32, count: 4097)) }
+        do { _ = try await transport.request("functions/v1/bsmart-profile", token: jwt); XCTFail("Oversize accepted") }
+        catch AccountAccessError.invalidResponse {} catch { XCTFail("Unexpected: \(error)") }
     }
 
     func testGoogleAndAppleExchangeNonceDirectlyWithSupabase() async throws {
@@ -192,6 +260,91 @@ final class SupabaseAccountAuthTests: XCTestCase {
         XCTAssertEqual(storage.saved?.refreshToken, "shortToken12")
         XCTAssertFalse(storage.pending)
         XCTAssertNil(store.errorMessage)
+    }
+
+    @MainActor
+    func testRefreshOutageKeepsIdentityAndRetriesPendingRotationAfterRecovery() async throws {
+        let previous = TradingAccountSession(account: .init(id: accountID, provider: .google), accessToken: jwt + "Old",
+            expiresAt: Date().addingTimeInterval(-10), refreshToken: "previousShort12",
+            refreshExpiresAt: Date().addingTimeInterval(86400), authority: .supabase)
+        let storage = RenewalMemoryStorage(previous)
+        let store = AccountAccessStore(client: makeClient(), storage: storage)
+        SupabaseTestURLProtocol.configure { _ in (503, Data("{}".utf8)) }
+        await store.load()
+        XCTAssertEqual(store.identity, previous.account)
+        XCTAssertEqual(storage.saved, previous)
+        XCTAssertTrue(storage.pending)
+        XCTAssertNil(store.walletAccountID, "Expired identity must not authorize wallet operations")
+        configure()
+        let value: String = try await store.withFeedSession { _ in "recovered" }
+        XCTAssertEqual(value, "recovered")
+        XCTAssertEqual(storage.saved?.accessToken, jwt)
+        XCTAssertFalse(storage.pending)
+        XCTAssertFalse(SupabaseTestURLProtocol.requests.contains { $0.0.url?.path == "/auth/v1/logout" })
+    }
+
+    @MainActor
+    func testColdStartRecoversPendingSupabaseRotationInsteadOfRevokingIt() async throws {
+        configure()
+        let previous = TradingAccountSession(account: .init(id: accountID, provider: .google), accessToken: jwt + "Old",
+            expiresAt: Date().addingTimeInterval(30), refreshToken: "previousShort12",
+            refreshExpiresAt: Date().addingTimeInterval(86400), authority: .supabase)
+        let storage = RenewalMemoryStorage(previous)
+        try storage.beginRenewal(previous)
+        let store = AccountAccessStore(client: makeClient(), storage: storage)
+        await store.load()
+        XCTAssertEqual(store.identity, previous.account)
+        XCTAssertFalse(storage.pending)
+        XCTAssertEqual(storage.saved?.accessToken, jwt)
+        XCTAssertFalse(SupabaseTestURLProtocol.requests.contains { $0.0.url?.path == "/auth/v1/logout" })
+    }
+
+    @MainActor
+    func testKeychainLockDuringRotationDoesNotRevokeGoogleSession() async throws {
+        configure()
+        let previous = TradingAccountSession(account: .init(id: accountID, provider: .google), accessToken: jwt + "Old",
+            expiresAt: Date().addingTimeInterval(-10), refreshToken: "previousShort12",
+            refreshExpiresAt: Date().addingTimeInterval(86400), authority: .supabase)
+        let storage = RenewalMemoryStorage(previous)
+        storage.rejectsSave = true
+        let store = AccountAccessStore(client: makeClient(), storage: storage)
+        await store.load()
+        XCTAssertEqual(store.identity, previous.account)
+        XCTAssertTrue(storage.pending)
+        XCTAssertFalse(SupabaseTestURLProtocol.requests.contains { $0.0.url?.path == "/auth/v1/logout" })
+        storage.rejectsSave = false
+        let value: Bool = try await store.withFeedSession { _ in true }
+        XCTAssertTrue(value)
+        XCTAssertFalse(storage.pending)
+    }
+
+    @MainActor
+    func testExplicitRefreshRejectionClearsSessionButServerErrorsDoNot() async throws {
+        let previous = TradingAccountSession(account: .init(id: accountID, provider: .google), accessToken: jwt + "Old",
+            expiresAt: Date().addingTimeInterval(-10), refreshToken: "previousShort12",
+            refreshExpiresAt: Date().addingTimeInterval(86400), authority: .supabase)
+        let storage = RenewalMemoryStorage(previous)
+        SupabaseTestURLProtocol.configure { _ in (400, Data(#"{"error_code":"refresh_token_not_found"}"#.utf8)) }
+        let store = AccountAccessStore(client: makeClient(), storage: storage)
+        await store.load()
+        XCTAssertNil(store.identity)
+        XCTAssertNil(storage.saved)
+    }
+
+    @MainActor
+    func testOfflineForegroundReloadDoesNotRemoveGoogleIdentity() async throws {
+        configure()
+        let saved = TradingAccountSession(account: .init(id: accountID, provider: .google), accessToken: jwt,
+            expiresAt: Date().addingTimeInterval(3600), refreshToken: "shortToken12",
+            refreshExpiresAt: Date().addingTimeInterval(86400), authority: .supabase)
+        let storage = RenewalMemoryStorage(saved)
+        let store = AccountAccessStore(client: makeClient(), storage: storage)
+        await store.load()
+        SupabaseTestURLProtocol.configure { _ in (503, Data("{}".utf8)) }
+        await store.load()
+        XCTAssertEqual(store.identity, saved.account)
+        XCTAssertEqual(storage.saved, saved)
+        XCTAssertFalse(store.configuration.tradingEnabled)
     }
 
     func testTokenShapeAndSessionAuthorityCannotBeConfused() throws {

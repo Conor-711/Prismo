@@ -64,6 +64,6 @@ enum TickerLogoRegistry {
         "ZHIPU", "ZIM", "ZM", "ZS", "ZSL",
     ]
     static let templateSymbols: Set<String> = [
-        "AEO", "COHR", "DECK", "GS", "ISRG", "MRLN", "OUST", "PLTR", "TE", "UNITREE"
+        "AEO", "AVAV", "COHR", "DECK", "GS", "ISRG", "MRLN", "OUST", "PLTR", "TE", "UNITREE"
     ]
 }

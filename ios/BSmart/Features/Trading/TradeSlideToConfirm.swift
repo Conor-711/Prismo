@@ -27,7 +27,7 @@ struct TradeSlideToConfirm: View {
                     .font(.system(size: 18, weight: .bold))
                     .foregroundStyle(isEnabled ? BSmartColor.onAccent : BSmartColor.tertiaryText)
                     .frame(width: 50, height: 50)
-                    .background(isEnabled ? accent : BSmartColor.elevated, in: RoundedRectangle(cornerRadius: 6))
+                    .background(isEnabled ? accent : BSmartColor.selectedControlSurface, in: RoundedRectangle(cornerRadius: 6))
                     .offset(x: 5 + translation)
                     .contentShape(Rectangle())
                     .highPriorityGesture(

@@ -13,7 +13,7 @@ struct SmartAccountRepresentativeWorks: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text("Representative works".bSmartLocalized).font(.headline)
+            Text("Representative works".bSmartLocalized).font(.title3.weight(.bold))
             if let selected, let evidence = selected.priceEvidence {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 10) {
@@ -43,8 +43,8 @@ struct SmartAccountRepresentativeWorks: View {
                 RepresentativeWorkDetail(update: selected, evidence: evidence, updates: updates)
                     .id(selected.id)
             } else {
-                HStack {
-                    if isLoading { ProgressView() }
+                if isLoading { BSmartSkeletonRows(style: .feed, count: 2) }
+                else {
                     Text("No settled representative work with price evidence is available yet.".bSmartLocalized)
                         .font(.subheadline).foregroundStyle(BSmartColor.secondaryText)
                 }
@@ -77,29 +77,7 @@ private struct RepresentativeWorkDetail: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(update.ticker).font(.title3.weight(.semibold))
-                        .accessibilityIdentifier("account.work.ticker")
-                    if let first = model.candles.first, let last = model.candles.last {
-                        Text("\(dateLabel(first.day)) – \(dateLabel(last.day))")
-                            .font(.caption2.monospacedDigit()).foregroundStyle(BSmartColor.secondaryText)
-                    }
-                }
-                Spacer()
-                VStack(alignment: .trailing, spacing: 4) {
-                    Text(update.representativeTickerContribution.map(score) ?? "--")
-                        .font(.title3.weight(.semibold).monospacedDigit()).foregroundStyle(BSmartColor.brand)
-                    Text("Score contribution".bSmartLocalized).font(.caption2).foregroundStyle(BSmartColor.secondaryText)
-                }
-            }
-            HStack {
-                Text("%@ daily OHLC".bSmartLocalized(evidence.source))
-                    .font(.caption2).foregroundStyle(BSmartColor.tertiaryText)
-                Spacer()
-                chartMode(true, symbol: "chart.bar.xaxis", label: "Candlesticks")
-                chartMode(false, symbol: "chart.xyaxis.line", label: "Line chart")
-            }
+            performanceHeader
             if model.candles.isEmpty {
                 ContentUnavailableView("Price history unavailable".bSmartLocalized, systemImage: "chart.xyaxis.line")
                     .frame(height: 270)
@@ -135,11 +113,60 @@ private struct RepresentativeWorkDetail: View {
         .accessibilityIdentifier("account.work.detail.\(update.ticker)")
     }
 
+    private var performanceHeader: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                BSmartAssetMark(ticker: update.ticker, size: 28)
+                Text(update.ticker).font(.headline).accessibilityIdentifier("account.work.ticker")
+                Text(update.direction.label.bSmartLocalized).font(.subheadline.weight(.semibold))
+                    .foregroundStyle(update.direction.color)
+                Spacer()
+            }
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .center, spacing: 16) {
+                    performanceSummary
+                    Spacer(minLength: 0)
+                    chartModes
+                }
+                VStack(alignment: .leading, spacing: 8) {
+                    performanceSummary
+                    chartModes
+                }
+            }
+        }
+    }
+
+    @ViewBuilder private var performanceSummary: some View {
+        if let performance = RepresentativeWorkPerformance(update: update) {
+            VStack(alignment: .leading, spacing: 2) {
+                performanceValue(performance).fixedSize()
+                Text("Stock price change".bSmartLocalized)
+                    .font(.subheadline).foregroundStyle(BSmartColor.secondaryText)
+            }
+        }
+    }
+
+    private var chartModes: some View {
+        HStack(spacing: 8) {
+            chartMode(true, symbol: "chart.bar.xaxis", label: "Candlesticks")
+            chartMode(false, symbol: "chart.xyaxis.line", label: "Line chart")
+        }
+        .fixedSize()
+    }
+
+    private func performanceValue(_ performance: RepresentativeWorkPerformance) -> some View {
+        Text((performance.percent / 100).formatted(.percent.precision(.fractionLength(1)).sign(strategy: .always())))
+            .font(.system(.largeTitle, design: .default, weight: .bold)).monospacedDigit()
+            .foregroundStyle(performance.percent >= 0 ? BSmartColor.bull : BSmartColor.bear)
+            .accessibilityValue("\(dateLabel(performance.startDay)) – \(dateLabel(performance.endDay))")
+            .accessibilityIdentifier("account.work.performance")
+    }
+
     private func chartMode(_ candles: Bool, symbol: String, label: String) -> some View {
         Button { showsCandles = candles } label: {
             Image(systemName: symbol).font(.system(size: 15, weight: .semibold))
                 .frame(width: 44, height: 36)
-                .foregroundStyle(showsCandles == candles ? BSmartColor.ink : BSmartColor.secondaryText)
+                .foregroundStyle(showsCandles == candles ? BSmartColor.onAccent : BSmartColor.secondaryText)
                 .background(showsCandles == candles ? BSmartColor.brand : BSmartColor.surface,
                             in: RoundedRectangle(cornerRadius: 8))
         }
@@ -168,25 +195,15 @@ private struct RepresentativeWorkDetail: View {
 
     private func opinionDetail(_ opinion: SmartAccountOpinionMarker) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text(dateLabel(opinion.viewDay)).font(.caption.monospacedDigit())
-                Spacer()
-                Text(opinion.viewPrice.formatted(.bSmartDollars.precision(.fractionLength(2))))
-                    .font(.subheadline.weight(.semibold).monospacedDigit())
-            }
             HStack(spacing: 8) {
                 BSmartTag(text: opinion.direction.label.bSmartLocalized, color: opinion.direction.color)
                 if opinion.horizon.lowercased() != "unknown" {
                     BSmartTag(text: opinion.horizon, color: BSmartColor.sky)
                 }
                 Spacer()
-                if !(evidence.opinionMarkers ?? []).isEmpty || update.settlement?.contribution != nil {
-                    Text("\(score(opinion.contribution)) Score").font(.caption.weight(.semibold))
-                        .foregroundStyle(BSmartColor.secondaryText)
-                }
             }
-            Text("View summary".bSmartLocalized).font(.caption2).foregroundStyle(BSmartColor.tertiaryText)
             Text(opinion.thesis).font(.subheadline).lineSpacing(3)
+                .lineLimit(4)
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityIdentifier("account.work.selected-thesis")
             if let full = (updates + [update]).first(where: { $0.id == opinion.id }) {
@@ -212,9 +229,6 @@ private struct RepresentativeWorkDetail: View {
         .accessibilityIdentifier("account.work.selected-opinion")
     }
 
-    private func score(_ value: Double) -> String {
-        value.formatted(.number.precision(.fractionLength(2)).sign(strategy: .always()))
-    }
     private func dateLabel(_ day: String) -> String { day.replacingOccurrences(of: "-", with: "/") }
     private func shortDate(_ day: String) -> String { String(dateLabel(day).suffix(5)) }
 }

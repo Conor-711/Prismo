@@ -4,6 +4,31 @@ import WalletCore
 
 @MainActor
 final class UnifiedAccountSetupTests: XCTestCase {
+    func testDefaultPreparationEnablesUnifiedBalanceOnce() async throws {
+        let f = SetupTestContext(); defer { f.cleanup() }
+        let store = try f.store()
+        await store.prepare(wallet: f.service.wallet)
+        XCTAssertEqual(store.mode, .unifiedAccount)
+        XCTAssertEqual(f.sender.count, 1)
+        await store.prepare(wallet: f.service.wallet)
+        XCTAssertEqual(f.sender.count, 1)
+    }
+
+    func testAutomaticSetupDoesNotRetryUnconfirmedWriteOrChangePortfolioMargin() async throws {
+        let f = SetupTestContext(); defer { f.cleanup() }
+        f.sender.apply = false
+        let store = try f.store()
+        await store.prepare(wallet: f.service.wallet)
+        await store.prepare(wallet: f.service.wallet)
+        XCTAssertEqual(f.sender.count, 1)
+        XCTAssertNotEqual(store.mode, .unifiedAccount)
+        f.reader.mode = "portfolioMargin"
+        let portfolio = try f.store()
+        await portfolio.prepare(wallet: f.service.wallet)
+        XCTAssertEqual(portfolio.mode, .portfolioMargin)
+        XCTAssertEqual(f.sender.count, 1)
+    }
+
     func testIndependentViemDigestAndSignatureMatchAndCannotChangeOwner() throws {
         let wallet = BasicWalletTestService().wallet
         let setup = UnifiedAccountSetup(id: UUID(), accountID: wallet.accountID, owner: wallet.address,

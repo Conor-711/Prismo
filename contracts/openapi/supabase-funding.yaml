@@ -1,0 +1,122 @@
+openapi: 3.1.0
+info:
+  title: bSmart Managed Funding
+  version: 1.1.0
+  description: Privy owner wallets with Relay-managed deposits into HyperCore perpetuals. No bSmart fund movement or server wallet signer.
+servers:
+  - url: https://PROJECT.supabase.co/functions/v1
+security:
+  - accountBearer: []
+paths:
+  /bsmart-funding:
+    get:
+      operationId: managedFundingAvailability
+      responses:
+        '200':
+          description: Provider, global deposit capability and wallet binding availability. No-store.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [available]
+                properties:
+                  available: { type: boolean }
+        '401': { description: Apple/Google session required. }
+        '503': { description: Registry unavailable. }
+  /bsmart-funding/address:
+    post:
+      operationId: managedFundingAddress
+      description: Creates a reusable open deposit address for the selected network. No user amount is required. The provider registration quote is internal; actual deposits are priced on receipt. Recipient and refund destination come from the wallet binding.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [network]
+              properties:
+                network: { type: string, enum: [arbitrum, monad, base, ethereum, bnb] }
+      responses:
+        '200':
+          description: Validated reusable address; no arrival estimate or payment amount. No-store.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [network, recipient, refundAddress, depositAddress, reusable, createdAt]
+                properties:
+                  network: { type: string, enum: [arbitrum, monad, base, ethereum, bnb] }
+                  recipient: { type: string }
+                  refundAddress: { type: string }
+                  depositAddress: { type: string }
+                  reusable: { type: boolean, const: true }
+                  createdAt: { type: string, format: date-time }
+        '401': { description: Apple/Google session required. }
+        '422': { description: Invalid network or extra fields. }
+        '503': { description: Funding disabled or provider unavailable. }
+  /bsmart-funding/quote:
+    post:
+      operationId: managedFundingQuote
+      description: Creates an open Relay deposit quote. Recipient and refund owner are resolved from the immutable wallet binding; no client address is accepted. No funds are sent. Subsequent deposits are requoted by Relay.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [network, amount]
+              properties:
+                network: { type: string, enum: [arbitrum, monad, base, ethereum, bnb] }
+                amount: { type: string, pattern: '^(0|[1-9]\d{0,6})(\.\d{1,6})?$' }
+      responses:
+        '200':
+          description: Validated provider quote. Indicative arrival includes routing costs but not the external sender's fees. No-store.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [network, recipient, refundAddress, depositAddress, requestId, inputAmount, estimatedOutput, quotedAt]
+                properties:
+                  network: { type: string, enum: [arbitrum, monad, base, ethereum, bnb] }
+                  recipient: { type: string }
+                  refundAddress: { type: string }
+                  depositAddress: { type: string }
+                  requestId: { type: string }
+                  inputAmount: { type: string }
+                  estimatedOutput: { type: string }
+                  quotedAt: { type: string, format: date-time }
+        '401': { description: Authentication required. }
+        '422': { description: Invalid amount or route. }
+        '503': { description: Disabled, provider unavailable or route unavailable; no address exposed. }
+  /bsmart-funding/deposits:
+    get:
+      operationId: managedFundingDeposits
+      description: Recent provider-issued deposit-address routes to this bound wallet's perps USDC. Available during intake pause. Provider delivery is not a replacement for HyperCore order balance checks.
+      responses:
+        '200':
+          description: At most 20 recent records, no-store. Amount is null unless an actual settled output is available.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [recipient, deposits]
+                properties:
+                  recipient: { type: string }
+                  deposits:
+                    type: array
+                    maxItems: 20
+                    items:
+                      type: object
+                      required: [id, status, createdAt, amount]
+                      properties:
+                        id: { type: string }
+                        status: { type: string, enum: [waiting, depositing, pending, submitted, delayed, success, refund, failure, unknown] }
+                        createdAt: { type: string, format: date-time }
+                        amount: { type: [string, 'null'] }
+        '401': { description: Authentication required. }
+        '503': { description: History unavailable, not an empty successful result. }
+components:
+  securitySchemes:
+    accountBearer: { type: http, scheme: bearer, bearerFormat: Supabase JWT }

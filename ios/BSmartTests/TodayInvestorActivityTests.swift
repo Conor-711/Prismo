@@ -59,6 +59,18 @@ final class TodayInvestorActivityTests: XCTestCase {
         XCTAssertEqual(result, groups(Array(values.reversed()), [money]))
     }
 
+    func testPreviewShowsNewestInvestorFromEachAvailablePlatform() {
+        let values = [update("TSLA", author: "yt-a", age: 10, platform: "YouTube"),
+                      update("AMD", author: "yt-b", age: 20, platform: "YouTube"),
+                      update("MRVL", author: "x-a", age: 30, platform: "X"),
+                      update("QQQ", author: "reddit-a", age: 40, platform: "Reddit")]
+        let all = groups(values)
+        XCTAssertEqual(TodayInvestorActivity.previewAccounts(from: all).map(\.id),
+                       ["account:youtube:yt-a", "account:x:x-a", "account:reddit:reddit-a"])
+        XCTAssertEqual(TodayInvestorActivity.previewAccounts(from: groups(Array(values.prefix(3)))).map(\.id),
+                       ["account:youtube:yt-a", "account:youtube:yt-b", "account:x:x-a"])
+    }
+
     func testSourceAndSearchIntersectWithoutHidingOtherTickerContext() throws {
         let account = try XCTUnwrap(groups([update("NVDA"), update("MU")]).first)
         XCTAssertTrue(account.matches(source: .accounts, query: " nvda "))

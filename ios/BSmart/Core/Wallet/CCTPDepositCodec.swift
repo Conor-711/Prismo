@@ -27,7 +27,9 @@ enum CCTPDepositCodec {
     }
 
     static func callData(plan: CCTPDepositPlan, wallet: DeviceWalletSummary, authorization: String, now: Date) throws -> Data {
-        let typedJSON = try authorizationJSON(plan: plan, wallet: wallet, now: now)
+        // Reusing an existing authorization does not increase its amount, deadline or fee ceiling.
+        try plan.validateAuthorization(wallet: wallet, now: now)
+        let typedJSON = try authorizationJSON(plan: plan, wallet: wallet, now: plan.createdAt)
         guard authorization.utf8.count == 132, let authorizationBytes = FundingHex.decode(authorization) else {
             throw CCTPFundingError.invalidPlan
         }

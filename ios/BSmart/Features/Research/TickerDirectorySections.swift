@@ -1,29 +1,91 @@
 import Foundation
 
+enum TickerDirectoryFilter: String, CaseIterable, Identifiable {
+    case all, crypto, stocks, commodities, indices, forex
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .all: "All"
+        case .crypto: "Crypto"
+        case .stocks: "Stocks"
+        case .commodities: "Commodities"
+        case .indices: "Indices"
+        case .forex: "FX"
+        }
+    }
+
+    private static let commoditySymbols: Set<String> = [
+        "ALUMINIUM", "BRENTOIL", "CL", "COPPER", "CORN", "GOLD", "NATGAS",
+        "PALLADIUM", "PLATINUM", "SILVER", "TTF", "URANIUM", "WHEAT", "WTI"
+    ]
+    private static let indexSymbols: Set<String> = [
+        "DXY", "HSI", "IBOV", "JP225", "KR200", "NIFTY", "SP500",
+        "USTECH", "VIX", "VOL", "XYZ100"
+    ]
+    private static let forexSymbols: Set<String> = [
+        "AUD", "CAD", "CHF", "EUR", "EURUSD", "GBP", "GBPUSD", "JPY",
+        "KRW", "USDJPY"
+    ]
+
+    static func category(for entry: AppTickerCatalogEntry) -> Self {
+        if entry.isCrypto { return .crypto }
+        if commoditySymbols.contains(entry.symbol) { return .commodities }
+        if indexSymbols.contains(entry.symbol) { return .indices }
+        if forexSymbols.contains(entry.symbol) { return .forex }
+        return .stocks
+    }
+}
+
+enum TickerDirectorySort: String, CaseIterable, Identifiable {
+    case volume, gain, loss, price, symbol
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .volume: "Volume"
+        case .gain: "Top gainers"
+        case .loss: "Top losers"
+        case .price: "Price"
+        case .symbol: "A-Z"
+        }
+    }
+}
+
 struct TickerDirectorySections {
-    let trending: [AppTickerCatalogEntry]
-    let remaining: [AppTickerCatalogEntry]
-    var matchCount: Int { trending.count + remaining.count }
+    let entries: [AppTickerCatalogEntry]
 
-    init(catalog: [AppTickerCatalogEntry], trendingSymbols: [String], query: String = "") {
+    init(catalog: [AppTickerCatalogEntry], query: String = "",
+         filter: TickerDirectoryFilter = .all, sort: TickerDirectorySort = .volume) {
         let search = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !search.isEmpty {
-            trending = []
-            remaining = catalog.filter {
-                $0.symbol.localizedCaseInsensitiveContains(search)
-                    || $0.companyName.localizedCaseInsensitiveContains(search)
+        let filtered = catalog.filter { entry in
+            let matchesSearch = search.isEmpty || entry.symbol.localizedCaseInsensitiveContains(search)
+                || entry.companyName.localizedCaseInsensitiveContains(search)
+            guard matchesSearch else { return false }
+            return filter == .all || TickerDirectoryFilter.category(for: entry) == filter
+        }
+        entries = filtered.sorted { left, right in
+            let leftValue: Double?
+            let rightValue: Double?
+            switch sort {
+            case .volume:
+                leftValue = left.volume24h
+                rightValue = right.volume24h
+            case .gain, .loss:
+                leftValue = left.dayChange
+                rightValue = right.dayChange
+            case .price:
+                leftValue = left.price
+                rightValue = right.price
+            case .symbol:
+                return left.symbol < right.symbol
             }
-            return
+            if leftValue == nil { return rightValue == nil && left.symbol < right.symbol }
+            guard let rightValue, let leftValue else { return true }
+            if leftValue == rightValue { return left.symbol < right.symbol }
+            return sort == .loss ? leftValue < rightValue : leftValue > rightValue
         }
-
-        let entries = Dictionary(catalog.map { ($0.symbol, $0) }, uniquingKeysWith: { first, _ in first })
-        var seen = Set<String>()
-        trending = trendingSymbols.compactMap { symbol in
-            let key = symbol.trimmingCharacters(in: .whitespacesAndNewlines)
-                .trimmingCharacters(in: CharacterSet(charactersIn: "$" )).uppercased()
-            guard let entry = entries[key], seen.insert(key).inserted else { return nil }
-            return entry
-        }
-        remaining = catalog.filter { !seen.contains($0.symbol) }
     }
 }

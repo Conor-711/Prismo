@@ -41,9 +41,11 @@ final class TradeFeedStore: ObservableObject {
             hasLoaded = true
         } catch {
             guard requestID == identifier else { return }
+            // A cancelled view task is not a failed server refresh.
+            guard !Task.isCancelled, !(error is CancellationError) else { return }
             // Public consent may have changed; stale identities are not a refresh fallback.
             if reset { items = []; nextOffset = nil; hasLoaded = false }
-            failed = !Task.isCancelled
+            failed = true
         }
     }
 }

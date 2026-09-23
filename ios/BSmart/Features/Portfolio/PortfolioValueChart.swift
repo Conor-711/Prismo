@@ -18,6 +18,7 @@ enum PortfolioChartPeriod: String, CaseIterable, Identifiable {
 
 struct PortfolioValueChart: View {
     let history: [PortfolioValuePoint]
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var period: PortfolioChartPeriod = .all
     @State private var selectedDate: Date?
 
@@ -70,7 +71,7 @@ struct PortfolioValueChart: View {
                     PointMark(x: .value("Date", point.timestamp), y: .value("Value", point.value))
                         .foregroundStyle(tint).symbolSize(28)
                     if selected != nil {
-                        RuleMark(x: .value("Date", point.timestamp)).foregroundStyle(BSmartColor.secondaryText.opacity(0.5))
+                        RuleMark(x: .value("Date", point.timestamp)).foregroundStyle(BSmartColor.chartVerticalCrosshair)
                     }
                 }
             }
@@ -94,6 +95,7 @@ struct PortfolioValueChart: View {
             }
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier("portfolio.value-chart")
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.6), value: points)
 
             HStack(spacing: 0) {
                 ForEach(PortfolioChartPeriod.allCases) { item in

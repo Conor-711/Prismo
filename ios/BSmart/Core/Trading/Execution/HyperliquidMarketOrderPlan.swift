@@ -85,3 +85,45 @@ enum HyperliquidMarketOrderPlan {
         }
     }
 }
+
+// Only typed, local failure codes enter diagnostics; never log server payloads.
+enum HyperliquidOrderFailure {
+    static func isExpiredObservation(_ error: Error) -> Bool {
+        (error as? HyperliquidTradingCheckError) == .stale || (error as? HyperliquidQuoteError) == .stale
+    }
+
+    static func code(_ error: Error) -> String {
+        if let value = error as? HyperliquidTradingCheckError { return "account." + String(describing: value) }
+        if let value = error as? HyperliquidQuoteError { return "quote." + String(describing: value) }
+        if let value = error as? HyperliquidExecutionError { return "execution." + String(describing: value) }
+        if let value = error as? DeviceWalletError { return "wallet." + String(describing: value) }
+        if let value = error as? AccountAccessError { return "session." + String(describing: value) }
+        return "other"
+    }
+
+    static func message(_ error: Error) -> String {
+        if let error = error as? HyperliquidTradingCheckError {
+            switch error {
+            case .unavailable: return "Could not reach the trading service. Please try again.".bSmartLocalized
+            case .invalidResponse: return "Trading account data could not be verified. Please refresh.".bSmartLocalized
+            case .stale: return "The account check timed out or expired. Please try again.".bSmartLocalized
+            case .accountChanged: return DeviceWalletError.accountChanged.localizedDescription
+            case .unsupportedCollateral: return "This market's collateral is not supported.".bSmartLocalized
+            case .leverageChanged: return "The selected leverage is not confirmed. Refresh and try again.".bSmartLocalized
+            case .exceedsCapacity: return "The order exceeds the market's available capacity. Reduce the amount.".bSmartLocalized
+            case .invalidReduction: return HyperliquidLiveOrderError.invalidReduction.localizedDescription
+            }
+        }
+        if let error = error as? HyperliquidQuoteError {
+            switch error {
+            case .stale: return "The quote expired before signing. Please try again.".bSmartLocalized
+            case .noLiquidity: return "Not enough liquidity within the order's price limit. Please try again.".bSmartLocalized
+            case .invalidFees, .feesUnavailable, .builderApprovalRequired:
+                return "Trading fees could not be verified. Please try again.".bSmartLocalized
+            case .arithmetic, .invalidBook:
+                return "The market quote could not be verified. Please refresh.".bSmartLocalized
+            }
+        }
+        return "The order could not be prepared. Please refresh and try again.".bSmartLocalized
+    }
+}

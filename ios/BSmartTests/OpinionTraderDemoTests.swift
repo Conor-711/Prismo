@@ -8,6 +8,8 @@ final class OpinionTraderDemoTests: XCTestCase {
         let data = OpinionTraderDemoData(ticker: "nvda", referencePrice: 180, now: now)
         XCTAssertEqual(data.ticker, "NVDA")
         XCTAssertEqual(data.totalTraders, 8)
+        XCTAssertEqual(data.longTraders, 5)
+        XCTAssertEqual(data.shortTraders, 3)
         XCTAssertEqual(data.traders.count, 6)
         XCTAssertEqual(Set(data.traders.map(\.nickname)).count, 6)
         XCTAssertEqual(Set(data.traders.map(\.avatarAsset)).count, 6)

@@ -45,6 +45,8 @@ final class AppModel: ObservableObject {
     @Published private(set) var isLoading = false
     @Published private(set) var isRefreshingLiveIntelligence = false
     @Published private(set) var hasFinishedInitialLoad = false
+    @Published private(set) var hasResolvedAccountState = true
+    @Published private(set) var accountStateError: String?
     @Published private(set) var hasCompletedPortfolioSetup = false
     @Published private(set) var lastDataRefreshAt: Date?
     @Published private(set) var smartAccountFreshness: BSmartDataFreshness?
@@ -63,25 +65,42 @@ final class AppModel: ObservableObject {
         try await client.fetchOpinionTraders(opinionID: opinionID, offset: offset)
     }
     private let bootstrapFallbackClient: BSmartAPIClient?
+    private let accountPreferences: AccountPreferencesProviding?
     private let directMrCollieClient: DirectMrCollieAnswering?
     private let syncCoordinator: BSmartSyncCoordinator?
     private let defaults: UserDefaults
     private let portfolioBootstrapStrategy: PortfolioBootstrapStrategy
     private let savedPortfolioKey = "bsmart.portfolio.v1"
     private let completedPortfolioSetupKey = "bsmart.portfolio-setup-complete.v1"
+    private let accountOnboardingCompletionPrefix = "bsmart.initial-onboarding-complete.v2"
     private let savedSignalStatesKey = "bsmart.signal-user-states.v1"
     private let readTodayActivityIDsKey = "bsmart.today-read-activities.v1"
     private let savedClientCacheKey = "bsmart.client-cache.v1"
     private let followedSmartAccountsKey = "bsmart.followed-smart-accounts.v1"
     private let followedSmartMoneyKey = "bsmart.followed-smart-money.v1"
+    private let followedOwnerKey = "bsmart.followed-intelligence-owner.v1"
+    private let pendingFollowsPrefix = "bsmart.pending-follows.v1"
+    private let remoteFollowsMigratedPrefix = "bsmart.remote-follows-migrated.v1"
     private let linkedBrokerageAccountsKey = "bsmart.linked-brokerages.v1"
     private let valuationHistoryKey = "bsmart.portfolio-valuations.v1"
     private var remotePortfolioContext: String?
+    private var activeAccountID: UUID?
     private var hasLoaded = false
+    private var loadGeneration = UUID()
+    private var remoteLoadTask: Task<Void, Never>?
+    private var isSyncingFollows = false
+    private var pendingFollows: [String: PendingFollow] = [:]
+
+    private struct PendingFollow: Codable, Equatable {
+        let kind: AccountFollowKind
+        let id: String
+        let following: Bool
+    }
 
     init(
         client: BSmartAPIClient = BundleBSmartAPIClient(),
         bootstrapFallbackClient: BSmartAPIClient? = nil,
+        accountPreferences: AccountPreferencesProviding? = nil,
         directMrCollieClient: DirectMrCollieAnswering? = nil,
         defaults: UserDefaults = .standard,
         portfolioBootstrapStrategy: PortfolioBootstrapStrategy = .remoteFallback,
@@ -90,6 +109,7 @@ final class AppModel: ObservableObject {
     ) {
         self.client = client
         self.bootstrapFallbackClient = bootstrapFallbackClient
+        self.accountPreferences = accountPreferences
         self.directMrCollieClient = directMrCollieClient
         self.defaults = defaults
         self.portfolioBootstrapStrategy = portfolioBootstrapStrategy
@@ -238,16 +258,103 @@ final class AppModel: ObservableObject {
         return signals.filter { trackedTickers.contains($0.ticker.uppercased()) }
     }
 
+    func activateAccountContext(_ accountID: UUID?) {
+        guard activeAccountID != accountID else { return }
+        activeAccountID = accountID
+        restoreFollowedIntelligence()
+        restorePendingFollows()
+        hasCompletedPortfolioSetup = restoredInitialOnboardingCompletion()
+        hasResolvedAccountState = accountID == nil || accountPreferences == nil
+        accountStateError = nil
+    }
+
+    func requireInitialOnboarding(for accountID: UUID) {
+        activeAccountID = accountID
+        defaults.set(false, forKey: onboardingCompletionKey(for: accountID))
+        hasCompletedPortfolioSetup = false
+    }
+
+    func restoreAccountState() async {
+        guard let accountID = activeAccountID, let accountPreferences else {
+            hasResolvedAccountState = true
+            return
+        }
+        accountStateError = nil
+        let timeout = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(12))
+            guard !Task.isCancelled, let self, self.activeAccountID == accountID,
+                  !self.hasResolvedAccountState else { return }
+            self.accountStateError = "Account data is taking longer than expected. Please try again.".bSmartLocalized
+        }
+        defer { timeout.cancel() }
+        do {
+            var remote = try await accountPreferences.load(accountID: accountID)
+            guard activeAccountID == accountID else { return }
+            let localCompleted = restoredInitialOnboardingCompletion()
+            if localCompleted && !remote.onboardingCompleted {
+                remote = try await accountPreferences.completeOnboarding(accountID: accountID)
+            }
+            guard activeAccountID == accountID else { return }
+
+            let migratedKey = remoteFollowsMigratedPrefix + "." + accountID.uuidString.lowercased()
+            if !defaults.bool(forKey: migratedKey) {
+                for id in followedSmartAccountIDs where !remote.followedAuthors.contains(id) {
+                    queueFollow(.author, id: id, following: true, synchronize: false)
+                }
+                for id in followedSmartMoneyIDs where !remote.followedMoney.contains(id) {
+                    queueFollow(.money, id: id, following: true, synchronize: false)
+                }
+                defaults.set(true, forKey: migratedKey)
+            }
+            followedSmartAccountIDs = Set(remote.followedAuthors)
+            followedSmartMoneyIDs = Set(remote.followedMoney)
+            for follow in pendingFollows.values {
+                if follow.kind == .author {
+                    if follow.following { followedSmartAccountIDs.insert(follow.id) }
+                    else { followedSmartAccountIDs.remove(follow.id) }
+                } else {
+                    if follow.following { followedSmartMoneyIDs.insert(follow.id) }
+                    else { followedSmartMoneyIDs.remove(follow.id) }
+                }
+            }
+            persistFollowedIntelligence()
+            hasCompletedPortfolioSetup = remote.onboardingCompleted
+            defaults.set(remote.onboardingCompleted, forKey: activeOnboardingCompletionKey)
+            hasResolvedAccountState = true
+            accountStateError = nil
+            Task { await synchronizePendingFollows() }
+        } catch {
+            guard activeAccountID == accountID else { return }
+            if defaults.object(forKey: activeOnboardingCompletionKey) != nil {
+                hasResolvedAccountState = true
+            } else {
+                hasResolvedAccountState = false
+                accountStateError = error.localizedDescription
+            }
+        }
+    }
+
+    func completeInitialOnboardingRemotely() async throws {
+        if let accountID = activeAccountID, let accountPreferences {
+            _ = try await accountPreferences.completeOnboarding(accountID: accountID)
+            guard activeAccountID == accountID else { throw CancellationError() }
+        }
+        completeInitialOnboarding()
+    }
+
     func load() async {
         guard !hasLoaded else { return }
+        remoteLoadTask?.cancel()
+        loadGeneration = UUID()
+        let generation = loadGeneration
         hasLoaded = true
         isLoading = true
         errorMessage = nil
 
         let localPortfolio = restoredPortfolio()
         positions = localPortfolio ?? []
-        hasCompletedPortfolioSetup = defaults.bool(forKey: completedPortfolioSetupKey)
-            || !positions.isEmpty
+        hasCompletedPortfolioSetup = restoredInitialOnboardingCompletion()
+            || (activeAccountID == nil && !positions.isEmpty)
         restoreSignalUserStates()
         restoreReadTodayActivities()
         restoreFollowedIntelligence()
@@ -257,27 +364,47 @@ final class AppModel: ObservableObject {
             hasFinishedInitialLoad = true
         }
 
+        var hasBootstrap = restoredCache
+        if !restoredCache, let bootstrapFallbackClient {
+            do {
+                try await loadSnapshot(from: bootstrapFallbackClient, localPortfolio: localPortfolio, persist: false)
+                hasBootstrap = true
+                hasFinishedInitialLoad = true
+            } catch {
+                // The network path below remains available if bundled content cannot load.
+            }
+        }
+        let task = Task { await finishRemoteLoad(localPortfolio: localPortfolio,
+                                                 hasBootstrap: hasBootstrap, generation: generation) }
+        remoteLoadTask = task
+        if hasBootstrap, bootstrapFallbackClient != nil {
+            return
+        }
+
+        let watchdog = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(15))
+            guard !Task.isCancelled, generation == loadGeneration, !hasFinishedInitialLoad else { return }
+            errorMessage = "Loading is taking longer than expected. Please try again.".bSmartLocalized
+            hasFinishedInitialLoad = true
+            hasLoaded = false
+        }
+        await task.value
+        watchdog.cancel()
+    }
+
+    private func finishRemoteLoad(localPortfolio: [PortfolioPosition]?, hasBootstrap: Bool,
+                                  generation: UUID) async {
+        defer { if generation == loadGeneration { remoteLoadTask = nil } }
         do {
             try await loadSnapshot(from: client, localPortfolio: localPortfolio)
+            guard !Task.isCancelled, generation == loadGeneration else { return }
             refreshSourceFreshness()
+            hasLoaded = true
             errorMessage = nil
         } catch {
-            if !restoredCache, let bootstrapFallbackClient {
-                do {
-                    try await loadSnapshot(
-                        from: bootstrapFallbackClient,
-                        localPortfolio: localPortfolio,
-                        persist: false
-                    )
-                    errorMessage = nil
-                } catch {
-                    hasLoaded = false
-                    errorMessage = error.localizedDescription
-                }
-            } else {
-                hasLoaded = false
-                errorMessage = error.localizedDescription
-            }
+            guard !Task.isCancelled, generation == loadGeneration else { return }
+            hasLoaded = false
+            errorMessage = error.localizedDescription
         }
 
         isLoading = false
@@ -289,6 +416,8 @@ final class AppModel: ObservableObject {
         localPortfolio: [PortfolioPosition]?,
         persist: Bool = true
     ) async throws {
+        try await (source as? BSmartContentRefreshing)?.prepareContentRefresh()
+        try Task.checkCancellation()
         async let loadedPortfolio = source.fetchPortfolio()
         async let loadedPortfolioHistory = fetchPortfolioHistoryIfAvailable(from: source)
         async let loadedSignals = source.fetchSignals()
@@ -300,11 +429,12 @@ final class AppModel: ObservableObject {
         async let loadedDigest = fetchDailyDigestIfAvailable(from: source)
 
         let remotePortfolio = try await loadedPortfolio
+        try Task.checkCancellation()
         remotePortfolioContext = PortfolioValuationHistory.context(for: remotePortfolio)
         positions = localPortfolio
             ?? (portfolioBootstrapStrategy == .remoteFallback ? remotePortfolio : [])
-        hasCompletedPortfolioSetup = defaults.bool(forKey: completedPortfolioSetupKey)
-            || !positions.isEmpty
+        hasCompletedPortfolioSetup = restoredInitialOnboardingCompletion()
+            || (activeAccountID == nil && !positions.isEmpty)
         let history = await loadedPortfolioHistory
         portfolioHistory = PortfolioValuationHistory.context(for: positions) == remotePortfolioContext ? history : []
         signals = (try await loadedSignals).sorted { $0.occurredAt > $1.occurredAt }
@@ -329,11 +459,12 @@ final class AppModel: ObservableObject {
     }
 
     func refreshLiveIntelligence() async {
-        guard hasFinishedInitialLoad, !isRefreshingLiveIntelligence else { return }
+        guard hasFinishedInitialLoad, !isLoading, !isRefreshingLiveIntelligence else { return }
         isRefreshingLiveIntelligence = true
         defer { isRefreshingLiveIntelligence = false }
 
         do {
+            try await (client as? BSmartContentRefreshing)?.prepareContentRefresh()
             async let loadedSignals = client.fetchSignals()
             async let loadedPortfolioHistory = fetchPortfolioHistoryIfAvailable()
             async let loadedAccountUpdates = client.fetchSmartAccountUpdates()
@@ -387,9 +518,30 @@ final class AppModel: ObservableObject {
     @discardableResult
     func completePortfolioSetup() -> Bool {
         guard !positions.isEmpty || !linkedBrokerageAccounts.isEmpty else { return false }
-        hasCompletedPortfolioSetup = true
-        defaults.set(true, forKey: completedPortfolioSetupKey)
+        completeInitialOnboarding()
         return true
+    }
+
+    func completeInitialOnboarding() {
+        hasCompletedPortfolioSetup = true
+        defaults.set(true, forKey: activeOnboardingCompletionKey)
+    }
+
+    private var activeOnboardingCompletionKey: String {
+        guard let activeAccountID else { return completedPortfolioSetupKey }
+        return onboardingCompletionKey(for: activeAccountID)
+    }
+
+    private func onboardingCompletionKey(for accountID: UUID) -> String {
+        "\(accountOnboardingCompletionPrefix).\(accountID.uuidString.lowercased())"
+    }
+
+    private func restoredInitialOnboardingCompletion() -> Bool {
+        let key = activeOnboardingCompletionKey
+        if defaults.object(forKey: key) != nil {
+            return defaults.bool(forKey: key)
+        }
+        return false
     }
 
     func addPosition(
@@ -511,7 +663,12 @@ final class AppModel: ObservableObject {
             followedSmartMoneyKey,
             linkedBrokerageAccountsKey
         ].forEach(defaults.removeObject(forKey:))
+        defaults.removeObject(forKey: activeOnboardingCompletionKey)
         defaults.removeObject(forKey: valuationHistoryKey)
+        defaults.removeObject(forKey: followedKey(followedSmartAccountsKey))
+        defaults.removeObject(forKey: followedKey(followedSmartMoneyKey))
+        if let pendingFollowsKey { defaults.removeObject(forKey: pendingFollowsKey) }
+        pendingFollows = [:]
 
         await syncCoordinator?.clearPendingOperations()
     }
@@ -648,6 +805,7 @@ final class AppModel: ObservableObject {
             followedSmartAccountIDs.insert(id)
         }
         persistFollowedIntelligence()
+        queueFollow(.author, id: id, following: followedSmartAccountIDs.contains(id))
     }
 
     func isFollowingSmartMoney(_ id: String) -> Bool {
@@ -661,6 +819,7 @@ final class AppModel: ObservableObject {
             followedSmartMoneyIDs.insert(id)
         }
         persistFollowedIntelligence()
+        queueFollow(.money, id: id, following: followedSmartMoneyIDs.contains(id))
     }
 
     func intelligence(for ticker: String) -> TickerIntelligence? {
@@ -982,13 +1141,69 @@ final class AppModel: ObservableObject {
     }
 
     private func persistFollowedIntelligence() {
-        defaults.set(followedSmartAccountIDs.sorted(), forKey: followedSmartAccountsKey)
-        defaults.set(followedSmartMoneyIDs.sorted(), forKey: followedSmartMoneyKey)
+        defaults.set(followedSmartAccountIDs.sorted(), forKey: followedKey(followedSmartAccountsKey))
+        defaults.set(followedSmartMoneyIDs.sorted(), forKey: followedKey(followedSmartMoneyKey))
     }
 
     private func restoreFollowedIntelligence() {
-        followedSmartAccountIDs = Set(defaults.stringArray(forKey: followedSmartAccountsKey) ?? [])
-        followedSmartMoneyIDs = Set(defaults.stringArray(forKey: followedSmartMoneyKey) ?? [])
+        followedSmartAccountIDs = Set(defaults.stringArray(forKey: followedKey(followedSmartAccountsKey)) ?? [])
+        followedSmartMoneyIDs = Set(defaults.stringArray(forKey: followedKey(followedSmartMoneyKey)) ?? [])
+    }
+
+    private func followedKey(_ base: String) -> String {
+        guard let activeAccountID else { return base }
+        let account = activeAccountID.uuidString.lowercased()
+        let scoped = base + "." + account
+        if defaults.object(forKey: scoped) == nil {
+            let owner = defaults.string(forKey: followedOwnerKey)
+            if owner == nil || owner == account {
+                defaults.set(defaults.stringArray(forKey: base) ?? [], forKey: scoped)
+                if owner == nil { defaults.set(account, forKey: followedOwnerKey) }
+            }
+        }
+        return scoped
+    }
+
+    private var pendingFollowsKey: String? {
+        activeAccountID.map { pendingFollowsPrefix + "." + $0.uuidString.lowercased() }
+    }
+
+    private func restorePendingFollows() {
+        guard let pendingFollowsKey, let data = defaults.data(forKey: pendingFollowsKey) else {
+            pendingFollows = [:]
+            return
+        }
+        pendingFollows = (try? JSONDecoder().decode([String: PendingFollow].self, from: data)) ?? [:]
+    }
+
+    private func persistPendingFollows() {
+        guard let pendingFollowsKey else { return }
+        defaults.set(try? JSONEncoder().encode(pendingFollows), forKey: pendingFollowsKey)
+    }
+
+    private func queueFollow(_ kind: AccountFollowKind, id: String, following: Bool,
+                             synchronize: Bool = true) {
+        guard activeAccountID != nil, accountPreferences != nil else { return }
+        pendingFollows[kind.rawValue + ":" + id] = PendingFollow(kind: kind, id: id, following: following)
+        persistPendingFollows()
+        if synchronize { Task { await synchronizePendingFollows() } }
+    }
+
+    func synchronizePendingFollows() async {
+        guard !isSyncingFollows, let accountID = activeAccountID, let accountPreferences else { return }
+        isSyncingFollows = true
+        defer { isSyncingFollows = false }
+        while let key = pendingFollows.keys.sorted().first, let follow = pendingFollows[key] {
+            do {
+                _ = try await accountPreferences.setFollowing(follow.following, kind: follow.kind,
+                                                               id: follow.id, accountID: accountID)
+                guard activeAccountID == accountID else { return }
+                if pendingFollows[key] == follow {
+                    pendingFollows.removeValue(forKey: key)
+                    persistPendingFollows()
+                }
+            } catch { return }
+        }
     }
 
     private func signalReferencesFollowedActor(_ signal: PortfolioSignal) -> Bool {

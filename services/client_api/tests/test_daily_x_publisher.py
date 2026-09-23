@@ -7,6 +7,7 @@ import pytest
 from services.client_api.publish_daily_x import COLLECTIONS, publish, load_release
 from services.client_api.read_models import (DatabaseReadModelRepository, RealtimeReadModelPublisher,
                                              ReadModelPublisher, READ_MODEL_COLLECTIONS)
+from services.client_api.smart_account_signals import build_portfolio_signals
 
 
 def make_release(path, *, name="New author", as_of=None):
@@ -33,6 +34,17 @@ def view(identity):
             "authorName": "Author", "platform": "X", "score": 110, "platformPercentile": 0.1,
             "direction": "bullish", "lifecycle": "new", "horizon": "20D", "thesis": "Example",
             "publishedAt": datetime.now(timezone.utc).isoformat()}
+
+
+def test_delayed_smart_account_signal_discloses_processing_delay():
+    published = datetime.now(timezone.utc) - timedelta(hours=1)
+    update = view("00000000-0000-0000-0000-000000000003")
+    update.update(publishedAt=published.isoformat(), processedAt=datetime.now(timezone.utc).isoformat())
+
+    signal = build_portfolio_signals([update])[0]
+
+    assert signal["dataStatus"] == "delayed"
+    assert any("delay" in limitation.lower() for limitation in signal["limitations"])
 
 
 def seed(url):

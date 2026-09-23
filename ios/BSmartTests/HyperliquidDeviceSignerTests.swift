@@ -46,7 +46,7 @@ final class HyperliquidDeviceSignerTests: XCTestCase {
         let snapshot = HyperliquidTradingSnapshot(accountID: wallet.accountID, owner: wallet.address, market: base.market,
             mode: base.mode, active: base.active, positions: base.positions, requestedAt: base.requestedAt,
             checkedAt: base.checkedAt, requestedContinuousAt: base.requestedContinuousAt, checkedContinuousAt: base.checkedContinuousAt)
-        let reader = TradingCheckReaderStub(try [HyperliquidQuoteFixture.fees(), HyperliquidQuoteFixture.book()])
+        let reader = TradingCheckReaderStub(preview: try [HyperliquidQuoteFixture.fees(), HyperliquidQuoteFixture.book()])
         let preview = try await HyperliquidOrderPreviewProvider(reader: reader, clock: { context.clock.now },
             continuousClock: { context.clock.instant }).preview(order: makeOrder(wallet: wallet), wallet: wallet,
                 account: snapshot, reviewedLeverage: 10, reviewedMarginMode: .cross)

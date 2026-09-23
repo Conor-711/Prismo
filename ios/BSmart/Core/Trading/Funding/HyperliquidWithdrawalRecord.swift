@@ -48,7 +48,7 @@ enum HyperliquidWithdrawalAcknowledgement: Equatable, Sendable {
 // Durable evidence only. Neither a record nor an API acceptance proves funds arrived.
 struct HyperliquidWithdrawalRecord: Codable, Equatable, Sendable, Identifiable {
     enum State: String, Codable, Sendable {
-        case review, signing, signed, submitting, accepted, uncertain, rejected, cancelled
+        case review, signing, signed, submitting, accepted, uncertain, coreDebited, rejected, cancelled, abandoned
     }
     let id: UUID
     let intent: HyperliquidArchivedWithdrawal
@@ -69,7 +69,7 @@ struct HyperliquidWithdrawalRecord: Codable, Equatable, Sendable, Identifiable {
         case .signing, .signed, .submitting, .uncertain: return true
         // Acceptance debits HyperCore, not proof of destination arrival. A new explicit
         // withdrawal may use a fresh balance; this record can never be submitted again.
-        case .accepted, .rejected, .cancelled: return false
+        case .accepted, .coreDebited, .rejected, .cancelled, .abandoned: return false
         }
     }
 
@@ -87,6 +87,10 @@ struct HyperliquidWithdrawalRecord: Codable, Equatable, Sendable, Identifiable {
             guard signature == nil, response == nil else { throw FundingJournalError.integrity }
         case .signed, .submitting, .uncertain:
             guard signature != nil, response == nil else { throw FundingJournalError.integrity }
+        case .abandoned:
+            guard response == nil else { throw FundingJournalError.integrity }
+        case .coreDebited:
+            guard signature != nil else { throw FundingJournalError.integrity }
         case .accepted:
             guard signature != nil, acknowledgement == .accepted else { throw FundingJournalError.integrity }
         case .rejected:
@@ -101,11 +105,13 @@ struct HyperliquidWithdrawalRecord: Codable, Equatable, Sendable, Identifiable {
               previous.signature == nil || previous.signature == signature else { throw FundingJournalError.conflict }
         let allowed: [State]
         switch previous.state {
-        case .review: allowed = [.signing, .cancelled]
-        case .signing: allowed = [.signed]
-        case .signed: allowed = [.submitting]
-        case .submitting: allowed = [.accepted, .rejected, .uncertain]
-        case .accepted, .rejected, .uncertain, .cancelled: allowed = []
+        case .review: allowed = [.signing, .cancelled, .abandoned]
+        case .signing: allowed = [.signed, .abandoned]
+        case .signed: allowed = [.submitting, .abandoned]
+        case .submitting: allowed = [.accepted, .rejected, .uncertain, .coreDebited, .abandoned]
+        case .accepted: allowed = [.coreDebited]
+        case .uncertain: allowed = [.accepted, .rejected, .coreDebited, .abandoned]
+        case .coreDebited, .rejected, .cancelled, .abandoned: allowed = []
         }
         guard allowed.contains(state), state != .signing || updatedAt < reviewExpiresAt else {
             throw FundingJournalError.invalidTransition

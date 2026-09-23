@@ -35,9 +35,10 @@ function databaseError(error: { code?: string; message?: string }): Response {
   return reply({ error: "wallet_setup_unavailable" }, 503);
 }
 
-export type TradingCapabilities = { depositsEnabled: boolean; tradingEnabled: boolean; withdrawalsEnabled: boolean };
+export type TradingCapabilities = { depositsEnabled: boolean; tradingEnabled: boolean; withdrawalsEnabled: false;
+  acrossWithdrawalsEnabled?: boolean };
 export const closedCapabilities: TradingCapabilities = {
-  depositsEnabled: false, tradingEnabled: false, withdrawalsEnabled: false,
+  depositsEnabled: false, tradingEnabled: false, withdrawalsEnabled: false, acrossWithdrawalsEnabled: false,
 };
 
 export async function handle(req: Request, client: SupabaseClient,

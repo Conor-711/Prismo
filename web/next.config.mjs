@@ -17,6 +17,12 @@ const nextConfig = {
   images: { unoptimized: true },
   basePath,
   assetPrefix: basePath || undefined,
+  // Local Pages Functions run separately; static production uses the same-origin Function.
+  ...(process.env.NODE_ENV === "development" ? {
+    async rewrites() {
+      return [{ source: "/api/waitlist", destination: "http://127.0.0.1:8788/api/waitlist" }];
+    },
+  } : {}),
   // Full SQLite snapshots can make data-heavy ticker pages exceed Next's
   // 60-second default even when generation is healthy.
   staticPageGenerationTimeout: 300,

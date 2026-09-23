@@ -75,6 +75,31 @@ pipeline/.venv/bin/python -m pipeline.jobs.opinion_source_crawl --refresh --requ
 
 当前只更新 `contracts/fixtures`，本地 fixture 模式需重新构建 App 才会读取新资源；不会自动替换线上 API 的数据，也没有部署服务器或启动定时抓取。
 
+## 官方材料候选渠道（2026-09-22）
+
+原先只有两条人工目录记录和四条定向抓取观点，不足以持续发现新材料。新增 `pipeline.jobs.official_source_refresh`，按审核过的发行人身份收集 **AAPL、COIN、CRCL、CRDO、CRWD、GOLD、INTC、MSTR、MU、NBIS、NVDA** 的 SEC EDGAR submissions 元数据；其中 NVDA、MU、NBIS 还配置公司官网新闻/RSS。Strategy 新闻站点的 robots 请求返回 403，故暂只使用其 SEC 渠道，不绕过限制。首发目录中的 SOXL 是 ETF，尚未配置基金披露身份，不混成单一公司的公告。来源配置在 `pipeline/domain/opinions/official_channels.py`；SEC JSON/RSS/官网目录解析在 `pipeline/platforms/source_documents/official.py`，复用原抓取器的 robots、HTTPS、公开 IP 固定连接、限速和 2 MB 上限。CIK 来自本地发行人元数据，抓取时还要由 SEC 返回的 CIK 和 ticker 双重核对；官网域名和文章路径须在白名单内，不从搜索引擎结果推断官方身份。
+
+- SEC 使用官方 `data.sec.gov/submissions/CIK##########.json`，只记录 8-K、10-Q、10-K、6-K、20-F 及其修订版的表单、日期、主文件地址；**SEC 接收申报不等于认可发行人观点**。SEC 要求声明身份的 User-Agent，运行前设置 `BSMART_OFFICIAL_CONTACT` 为运营方真实联系邮箱；未设置时跳过 SEC 并将该渠道标为 `not_configured`，不编造身份。
+- 官网渠道读取 NVIDIA 官方新闻 RSS、Micron 官网新闻和 Nebius 新闻室。页面失败、robots 禁止、非官方跳转、RSS/JSON 结构变化时不绕过或写入伪记录；上一份成功索引保留，`health.json` 标记失败及 48 小时新鲜度。各站渠道独立，另一渠道的成功不会掩盖故障。
+- 候选索引写入 git 忽略的 `data/runtime/official-sources/index.json`，只保存标题、日期、URL、正文哈希和来源身份，不保存/再分发全文。`health.json` 提供逐渠道状态、最后成功时间、覆盖标的和缺口。连续刷新按 URL 去重，保留一年候选；抓不到可信发布日期时留空，不猜测时间。
+- **候选不是观点依据**。审核人员仍需核对作者原帖、确切事实、来源短摘录、发布日期/修订时间和前后关系，再录入审核规则或目录。`opinion_source_crawl` 仅在规则显式设置 `useOfficialIndex: true` 时，以同发行主体、同日、同标题关键词从候选索引补充 URL；原有逐句核验和 `--apply` 发布门禁不变。只因同标的或同日期不允许自动关联。
+
+```sh
+# 每日/每 6 小时可调度一次；设置真实运营联系邮箱后启用 SEC 通道
+export BSMART_OFFICIAL_CONTACT='your-team@example.com'
+pipeline/.venv/bin/python -m pipeline.jobs.official_source_refresh
+
+# 阅读候选及健康状态；退出码 2 表示至少一个渠道不健康/未配置
+pipeline/.venv/bin/python -m json.tool data/runtime/official-sources/health.json
+
+# 对已审核的少量观点规则核验，默认不写正式目录
+pipeline/.venv/bin/python -m pipeline.jobs.opinion_source_crawl --official-index data/runtime/official-sources/index.json
+```
+
+这是一条**后台材料发现渠道**，不是用户侧新增的官方账号追踪或通知。当前只落地本地可重复运行的刷新任务和审核入口，**没有部署定时任务，也没有把新候选自动推送到线上 App**；运行方需配置运营邮箱、调度和健康告警，并继续现有审核/导出/发布流程。SEC API 文档与 User-Agent 要求参见 [SEC EDGAR API](https://www.sec.gov/search-filings/edgar-application-programming-interfaces) 和 [SEC Webmaster FAQ](https://www.sec.gov/about/webmaster-frequently-asked-questions)；NVIDIA 的 [官方 RSS 入口](https://investor.nvidia.com/investor-resources/rss/default.aspx) 可校验新闻 feed 来源。
+
+本机验证（2026-09-22）：使用运营联系邮箱运行刷新任务，11 只普通股全部有健康 SEC 渠道，另 3 个官网渠道健康；一年内候选共 257 条，`degraded=false`，SOXL 仍未接入。邮箱只在进程环境中使用，未写入仓库或索引。现有少量观点规则的 dry-run 复核了 3 条 Nebius 官网关联；两条 AP 新闻样本因源站访问失败未在本轮重新通过，未执行 `--apply` 或覆盖原发布资料。这说明候选发现已可运行，但历史新闻关联仍须逐条复核，不能把候选总数当成 App 中已展示的依据数量。
+
 ## 更新与验证
 
 只对已有 JSON 导出补充或移除资料，不访问线上数据库：

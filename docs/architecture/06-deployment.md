@@ -1,5 +1,7 @@
 # Deployment Architecture
 
+Telegram 频道的 X 文件接收不是云端常驻服务：小于 20 MB 的文件默认由公共 Bot API 下载；超过该限额时，`deploy/telegram-bot-api/docker-compose.yml` 可在本机以 localhost:8081 运行 Local Bot API，持久化缓存到忽略 Git 的 `data/runtime/telegram-bot-api`。`make content-delivery` 在本机三小时任务中调用接收与发布队列；本机离线时不保证时效，使用本地服务时 Docker 停止也会中断。普通模式只需 Bot Token 和频道授权，大文件模式另需 API ID/Hash；切到本地服务前运行 `telegram-bot-api-cutover`。自动下载的本地原件只在数据库验证发布后清理；参见 `docs/operations/telegram-x-delivery.md`。
+
 bSmart 的推荐部署路径是静态构建加内容快照。线上页面应该等价于本地 `data/dev.db` 构建结果。
 
 ## 推荐路径
@@ -8,6 +10,12 @@ bSmart 的推荐部署路径是静态构建加内容快照。线上页面应该�
 2. 改数据前执行 `make backup-db`，备份写到项目外且默认只保留最近一份。
 3. 本地执行 `make site` 生成 `web/out/`。
 4. 使用 Cloudflare Pages Direct Upload 部署静态产物。
+
+### bsmart.today 内测官网
+
+`make cf-deploy` 使用完整 `make site` 后的产物，由 `web/scripts/stage-beta-site.mjs` 抽取 `/`、`/zh/`、`/en/` 和必要资源到 `/tmp/bsmart-beta-out-cf`。研究页和 `/data` 留在 `web/out`，不发布到单页官网。官网专用 manifest、robots 和 sitemap 在抽取时生成。
+
+部署从 `web/` 调用 Wrangler 4.131.1，以同时上传 `web/functions`；生产 Pages 项目为 `bsmart`，实际默认域名为 `bsmart-501.pages.dev`，`WAITLIST` 绑定独立生产 KV。网站、邮箱持久化和正式域名分别验收，不能互相替代；当前域名接入状态见 `docs/operations/beta-landing.md`。
 
 这种方式避免线上构建环境重新抓取、重新分析或缺少 LFS 数据导致页面为空。
 

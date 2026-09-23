@@ -1,0 +1,39 @@
+openapi: 3.1.0
+info:
+  title: bSmart Public Profile Search
+  version: 1.0.0
+servers:
+  - url: https://dzyitinagewdfkzjkuiz.supabase.co/functions/v1
+paths:
+  /bsmart-search/profiles:
+    get:
+      operationId: searchPublicProfiles
+      description: Search completed public profiles by nickname or handle. Empty query lists recently updated public profiles. No auth IDs, emails, wallets or private metadata.
+      security:
+        - supabaseUser: []
+          publishableKey: []
+      parameters:
+        - {name: q, in: query, schema: {type: string, maxLength: 80, default: ''}}
+        - {name: offset, in: query, schema: {type: integer, minimum: 0, maximum: 10000, default: 0}}
+        - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 20, default: 20}}
+      responses:
+        '200':
+          description: Public matches; no-store. Stable public ID ordering for matching names.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, nextOffset]
+                properties:
+                  items:
+                    type: array
+                    maxItems: 20
+                    items: {$ref: './bsmart-v1.yaml#/components/schemas/FeedPublicProfile'}
+                  nextOffset: {type: [integer, 'null'], minimum: 1}
+        '401': {description: Verified Supabase account required.}
+        '422': {description: Invalid query or pagination.}
+        '503': {description: Directory unavailable; not an empty result.}
+components:
+  securitySchemes:
+    supabaseUser: {type: http, scheme: bearer, bearerFormat: JWT}
+    publishableKey: {type: apiKey, in: header, name: apikey}

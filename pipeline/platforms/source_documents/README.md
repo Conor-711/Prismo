@@ -26,3 +26,14 @@ This checks only the explicit local sample manifest. Add `--apply` to export its
 verified attachments into the current local fixture collections. The job does
 not create a scheduler or deploy to the API. See the product document for sample
 IDs, matching rules and limitations.
+
+`official.py` adds bounded parsers for SEC submissions JSON, official RSS and
+first-party news indexes. The issuer/CIK/host registry is owned by
+`pipeline/domain/opinions/official_channels.py`; orchestration and health belong
+to `pipeline/jobs/official_source_refresh.py`. Run `make official-source-refresh`
+with a real `BSMART_OFFICIAL_CONTACT` email in the process environment for SEC.
+The job writes review-only candidates and per-channel health under the ignored
+`data/runtime/official-sources` directory. It preserves last good records after
+fetch failure, flags unavailable/stale channels and never attaches a candidate
+to an opinion automatically. The curated opinion crawl may opt into those URLs
+for an explicit fact/date rule; publication remains a separate step.

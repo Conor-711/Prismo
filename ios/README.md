@@ -6,8 +6,9 @@ rest of the bSmart repository.
 
 ## Accounts and device wallet
 
-The current scope is Google login only, directly through Supabase Auth.
-Apple sign-in and automatic wallet setup on the account page are disabled.
+Google and Apple use native sign-in with Supabase Auth. Apple appears on the
+account page when its provider is enabled in the bSmart Supabase project.
+Automatic wallet setup on the account page remains separate.
 See [setup checklist](../supabase/ios-account/README.md). Native configuration is
 in `project.yml` plus gitignored `Config/Supabase.xcconfig.local`; private wallet
 material remains in device-only Keychain. Login also works with fixture research

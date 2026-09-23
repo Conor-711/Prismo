@@ -85,7 +85,7 @@ struct FundingJournalIntent: Codable, Equatable, Sendable {
 
 struct FundingJournalRecord: Codable, Equatable, Sendable {
     enum State: String, Codable, Sendable {
-        case prepared, signing, signed, submitting, submitted, uncertain, cancelled
+        case prepared, signing, signed, submitting, submitted, uncertain, cancelled, notSubmitted
     }
     struct Signed: Codable, Equatable, Sendable {
         let signature: Data
@@ -98,12 +98,19 @@ struct FundingJournalRecord: Codable, Equatable, Sendable {
     var updatedAt: Date
 
     var needsReconciliation: Bool { [.signing, .signed, .submitting, .submitted, .uncertain].contains(state) }
-    var reservesNonce: Bool { state != .cancelled }
+    var reservesNonce: Bool { ![.cancelled, .notSubmitted].contains(state) }
+
+    func canFinishWithoutSubmission(observation: FundingSourceObservation?) -> Bool {
+        guard [.signed, .notSubmitted].contains(state) else { return false }
+        guard let observation else { return true }
+        return !observation.transactionPresent && observation.receipt == nil && observation.priorReceiptBlock == nil
+            && !observation.authorizationUsed && observation.latestNonce == intent.nonce && observation.pendingNonce == intent.nonce
+    }
 
     func validate(after previous: Self?) throws {
         try intent.validate()
         guard FundingJournalIntent.validDate(updatedAt), updatedAt >= intent.preparedAt else { throw FundingJournalError.integrity }
-        let needsSignature = [.signed, .submitting, .submitted, .uncertain].contains(state)
+        let needsSignature = [.signed, .submitting, .submitted, .uncertain, .notSubmitted].contains(state)
         guard (signed != nil) == needsSignature else { throw FundingJournalError.integrity }
         if let signed {
             guard signed.signature.count == 65, signed.raw.first == 2, (100...1_024).contains(signed.raw.count),
@@ -113,7 +120,7 @@ struct FundingJournalRecord: Codable, Equatable, Sendable {
             guard previous.intent == intent, updatedAt >= previous.updatedAt,
                   previous.signed == nil || previous.signed == signed else { throw FundingJournalError.integrity }
             let allowed: [State: Set<State>] = [
-                .prepared: [.signing, .cancelled], .signing: [.signed], .signed: [.submitting],
+                .prepared: [.signing, .cancelled], .signing: [.signed], .signed: [.submitting, .notSubmitted],
                 .submitting: [.submitted, .uncertain], .submitted: [.uncertain], .uncertain: [.submitted]
             ]
             guard allowed[previous.state]?.contains(state) == true else { throw FundingJournalError.integrity }
@@ -126,6 +133,19 @@ struct FundingJournalRecord: Codable, Equatable, Sendable {
 
 enum FundingJournalError: Error, LocalizedError, Equatable {
     case unavailable, integrity, conflict, invalidTransition, expired, capacity, busy
+
+    var orderMessage: String {
+        switch self {
+        case .unavailable, .integrity, .capacity:
+            return "Local order records could not be verified. Check order status before retrying.".bSmartLocalized
+        case .busy:
+            return "Another order operation is in progress. Try again shortly.".bSmartLocalized
+        case .conflict, .invalidTransition:
+            return "Check the previous order's status before placing another order.".bSmartLocalized
+        case .expired:
+            return "Order confirmation expired. Review a new quote.".bSmartLocalized
+        }
+    }
 
     var errorDescription: String? {
         switch self {

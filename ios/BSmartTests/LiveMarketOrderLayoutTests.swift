@@ -8,6 +8,10 @@ final class LiveMarketOrderLayoutTests: XCTestCase {
         try await render(language: .english, scheme: .dark, width: 320, size: .large, reduction: false)
     }
 
+    func testChineseLightOpening() async throws {
+        try await render(language: .simplifiedChinese, scheme: .light, width: 393, size: .large, reduction: false)
+    }
+
     func testEnglishCompactReductionReview() async throws {
         try await render(language: .english, scheme: .dark, width: 320, size: .large, reduction: true)
     }
@@ -31,21 +35,19 @@ final class LiveMarketOrderLayoutTests: XCTestCase {
         defer { BSmartLocalization.configure(original) }
         let context = OrderLifecycleContext(); defer { context.cleanup() }
         let reader = OrderStoreReader()
+        let service = OrderStoreAccount(clock: context.clock)
         await reader.setPosition(position)
-        let store = try HyperliquidMarketOrderStore(service: OrderStoreAccount(clock: context.clock),
+        let store = try HyperliquidMarketOrderStore(service: service,
             journal: context.journal(), reader: reader, clock: { context.clock.now },
             continuousClock: { context.clock.instant }, enabled: { true })
-        if reduction {
-            await store.reviewReduction(percent: 100, slippageBPS: 50, wallet: HyperliquidTradingFixture.wallet,
-                                        dex: "xyz", coin: HyperliquidTradingFixture.coin)
-            XCTAssertNotNil(store.preview)
-        } else {
-            await store.loadEntry(wallet: HyperliquidTradingFixture.wallet, dex: "xyz", coin: HyperliquidTradingFixture.coin)
-            XCTAssertNotNil(store.entryAccount)
-        }
-        let content = LiveMarketOrderView(wallet: HyperliquidTradingFixture.wallet,
-            coin: HyperliquidTradingFixture.coin, dex: "xyz", initialSide: .buy, initialAmount: "100",
-            store: store, enabled: true, initialReduction: reduction)
+        let balances = HyperCoreBalanceStore(service: service, provider: LayoutBalanceProvider())
+        await store.loadEntry(wallet: HyperliquidTradingFixture.wallet, dex: "xyz", coin: HyperliquidTradingFixture.coin)
+        XCTAssertNotNil(store.entryAccount)
+        let trading = HyperliquidTradingStore(client: DebugTradingMarketClient())
+        let market = try await DebugTradingMarketClient().fetchMarkets(dex: .init(name: "xyz", displayName: "XYZ"))[0]
+        let content = LiveOrderComposer(wallet: HyperliquidTradingFixture.wallet, coin: HyperliquidTradingFixture.coin,
+                    dex: "xyz", side: .buy, initialNotional: "100", market: market, enabled: true,
+                    store: store, balances: balances, reducing: reduction).environmentObject(trading)
             .padding(.horizontal, 16).frame(width: width, height: 760)
             .foregroundStyle(BSmartColor.primaryText).background(BSmartColor.ink)
             .environment(\.colorScheme, scheme).environment(\.dynamicTypeSize, size)
@@ -69,5 +71,13 @@ final class LiveMarketOrderLayoutTests: XCTestCase {
         attachment.lifetime = .keepAlways; add(attachment)
         let records = try await context.journal().orderRecords(wallet: HyperliquidTradingFixture.wallet)
         XCTAssertTrue(records.isEmpty, "Rendering/review must not reserve, sign or submit an order")
+    }
+}
+
+private struct LayoutBalanceProvider: HyperCoreBalanceProviding {
+    func snapshot(wallet: DeviceWalletSummary) async throws -> HyperCoreBalanceSnapshot {
+        let now = Date()
+        return try .init(accountID: wallet.accountID, owner: wallet.address, mode: .unifiedAccount,
+                         usdc: .init("100"), held: .init("0"), perps: nil, requestedAt: now, checkedAt: now)
     }
 }

@@ -2,8 +2,9 @@ import SwiftUI
 
 struct BSmartCollapsingPager<Selection: Hashable, Header: View, Tabs: View, Content: View>: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.bSmartFloatingNavigationFrame) private var floatingNavigationFrame
     @Binding private var selection: Selection
-    @StateObject private var scrollState: BSmartCollapsingScrollState<Selection>
+    @State private var scrollState: BSmartCollapsingScrollState<Selection>
     @State private var headerHeight: CGFloat = 0
     @State private var tabHeight: CGFloat = 0
     @State private var headerDragOrigin: CGFloat?
@@ -22,7 +23,7 @@ struct BSmartCollapsingPager<Selection: Hashable, Header: View, Tabs: View, Cont
          @ViewBuilder content: @escaping (Selection) -> Content,
          refresh: @escaping () async -> Void) {
         _selection = selection
-        _scrollState = StateObject(wrappedValue: BSmartCollapsingScrollState(selection: selection.wrappedValue))
+        _scrollState = State(initialValue: BSmartCollapsingScrollState(selection: selection.wrappedValue))
         self.sections = sections
         self.collapseHeader = collapseHeader
         self.pageIdentifier = pageIdentifier
@@ -42,10 +43,13 @@ struct BSmartCollapsingPager<Selection: Hashable, Header: View, Tabs: View, Cont
                                 Color.clear.frame(height: headerHeight + tabHeight)
                                 content(section)
                                     .padding(BSmartSpacing.large)
-                                    .padding(.bottom, 88)
                                     .frame(maxWidth: .infinity,
                                            minHeight: max(0, viewport.size.height - tabHeight),
                                            alignment: .topLeading)
+                                // Keep trailing clearance outside lazy content and its minimum-height frame.
+                                Color.clear.frame(height: BSmartFloatingNavigationLayout.bottomSpacing(
+                                    viewport: viewport.frame(in: .global), navigationFrame: floatingNavigationFrame
+                                ))
                             }
                             .background(BSmartCollapsingScrollProbe(section: section, state: scrollState))
                         }
@@ -67,6 +71,7 @@ struct BSmartCollapsingPager<Selection: Hashable, Header: View, Tabs: View, Cont
                             headerHeight = height
                             scrollState.headerHeight = height
                         }
+                        .contentShape(Rectangle())
                         .simultaneousGesture(headerScrollGesture)
                     tabs()
                         .background(BSmartColor.ink)
@@ -75,7 +80,7 @@ struct BSmartCollapsingPager<Selection: Hashable, Header: View, Tabs: View, Cont
                         .highPriorityGesture(headerScrollGesture)
                 }
                 .background(BSmartColor.ink)
-                .offset(y: -scrollState.collapsedHeight)
+                .modifier(BSmartCollapsingHeaderOffset(state: scrollState))
             }
             .clipped()
             .onChange(of: selection) { _, section in scrollState.select(section) }
@@ -101,5 +106,14 @@ struct BSmartCollapsingPager<Selection: Hashable, Header: View, Tabs: View, Cont
                     scrollState.scrollHeader(to: origin - value.predictedEndTranslation.height, animated: !reduceMotion)
                 }
             }
+    }
+}
+
+// Scroll ticks move only the header transform, not the pager's lists and chart builders.
+struct BSmartCollapsingHeaderOffset<Section: Hashable>: ViewModifier {
+    @ObservedObject var state: BSmartCollapsingScrollState<Section>
+
+    func body(content: Content) -> some View {
+        content.offset(y: -state.collapsedHeight)
     }
 }

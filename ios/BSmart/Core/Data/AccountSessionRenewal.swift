@@ -16,7 +16,13 @@ final class AccountSessionRenewal {
         guard let refresh = previous.refreshToken, previous.hasValidRefreshToken,
               let expiry = previous.refreshExpiresAt, expiry > Date() else { throw AccountAccessError.expired }
         // Durable before sending: a crash or lost response must not replay the old credential.
-        try storage.beginRenewal(previous)
+        // Supabase can recover a lost rotation response using the active token's parent.
+        // Keep the durable marker, but do not treat it as permanent revocation.
+        if previous.authority == .supabase, try storage.isRenewalPending() {
+            guard try storage.load()?.hasSameCredentials(as: previous) == true else { throw AccountAccessError.storage }
+        } else {
+            try storage.beginRenewal(previous)
+        }
         cancel()
         let generation = self.generation
         let task = Task { @MainActor in
@@ -28,13 +34,22 @@ final class AccountSessionRenewal {
                 try storage.completeRenewal(replacement, replacing: previous)
                 return replacement
             } catch {
+                if previous.authority == .supabase, case AccountAccessError.storage = error {
+                    // Protected Keychain may lock while rotation is in flight.
+                    // Preserve the server session so its parent can recover on unlock.
+                    throw error
+                }
                 let cleanup = Task { try? await client.signOut(token: replacement.accessToken) }
                 await cleanup.value
                 throw error
             }
         }
         pending = (previous, task)
-        return try await task.value
+        do { return try await task.value }
+        catch {
+            if previous.authority == .supabase, generation == self.generation { pending = nil }
+            throw error
+        }
     }
 
     func cancel() {

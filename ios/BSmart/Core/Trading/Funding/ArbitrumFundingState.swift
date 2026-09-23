@@ -67,12 +67,12 @@ struct CCTPSourcePreflight: Sendable {
     let maximumNetworkFee: FundingQuantity
     let checkedAt: Date
 
-    var expiresAt: Date { min(source.expiresAt, plan.quote.expiresAt, checkedAt.addingTimeInterval(30)) }
+    var expiresAt: Date { min(source.expiresAt, Date(timeIntervalSince1970: Double(plan.validBefore)), checkedAt.addingTimeInterval(30)) }
     var priorityFee: FundingQuantity { FundingQuantity(0) }
     var sourceValue: FundingQuantity { FundingQuantity(0) }
 
     func validate(wallet: DeviceWalletSummary, now: Date) throws {
-        try plan.validate(wallet: wallet, now: now)
+        try plan.validateAuthorization(wallet: wallet, now: now)
         try source.validate(wallet: wallet, now: now)
         guard now >= checkedAt, now < expiresAt, checkedAt >= source.checkedAt, checkedAt >= plan.createdAt,
               source.block.timestamp.timeIntervalSince1970 > TimeInterval(plan.validAfter),

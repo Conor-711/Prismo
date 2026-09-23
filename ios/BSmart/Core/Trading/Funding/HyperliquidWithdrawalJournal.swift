@@ -83,6 +83,37 @@ extension FundingTransactionJournal {
         }
     }
 
+    func reconcileWithdrawal(_ remote: CoordinatedWithdrawal, wallet: DeviceWalletSummary) throws -> HyperliquidWithdrawalRecord? {
+        try locked(recordingEvidence: true) { anchor, database, snapshot in
+            guard var record = snapshot.withdrawals[remote.id] else { return nil }
+            _ = try record.intent.restored(wallet: wallet)
+            guard remote.matches(record.intent) else { throw FundingJournalError.conflict }
+            let previous = record.state
+            switch remote.state {
+            case .cancelled, .expired:
+                if [.review, .signing, .signed, .submitting, .uncertain].contains(previous) { record.state = .abandoned }
+            case .accepted:
+                if [.submitting, .uncertain].contains(previous),
+                   let bytes = remote.exchangeResponse,
+                   (try? HyperliquidWithdrawalAcknowledgement.decode(bytes)) == .accepted {
+                    record.state = .accepted; record.response = bytes
+                }
+            case .rejected:
+                if [.submitting, .uncertain].contains(previous), let bytes = remote.exchangeResponse,
+                   case .rejected = try? HyperliquidWithdrawalAcknowledgement.decode(bytes) {
+                    record.state = .rejected; record.response = bytes
+                }
+            case .coreDebited:
+                if [.submitting, .uncertain, .accepted].contains(previous) { record.state = .coreDebited }
+            case .reserved, .submitting, .uncertain: break
+            }
+            guard record.state != previous else { return record }
+            record.updatedAt = try withdrawalEvidenceTime(after: record.updatedAt)
+            try appendEvent(.withdrawal(record), anchor: &anchor, database: database, records: &snapshot)
+            return record
+        }
+    }
+
     private func withdrawalEvidenceTime(after previous: Date) throws -> Date {
         let now = clock()
         guard now.timeIntervalSince1970.isFinite else { throw FundingJournalError.unavailable }

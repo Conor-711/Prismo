@@ -4,16 +4,16 @@ protocol HyperliquidOrderBroadcasting: Sendable {
     func submit(_ permit: HyperliquidOrderSubmissionPermit, lease: FundingSigningLease) async throws -> Data?
 }
 
-protocol HyperliquidWithdrawalBroadcasting: Sendable {
-    func submit(_ permit: HyperliquidWithdrawalSubmissionPermit, lease: FundingSigningLease) async throws -> Data?
-}
-
 protocol UnifiedAccountSetupBroadcasting: Sendable {
     func submit(_ permit: UnifiedAccountSetupPermit, signature: String, lease: FundingSigningLease) async throws -> Data?
 }
 
+protocol HyperliquidLeverageBroadcasting: Sendable {
+    func submit(_ permit: HyperliquidLeveragePermit, signature: String, lease: FundingSigningLease) async throws -> Data?
+}
+
 // Only a journal-issued, one-use permit can start an exchange write. No raw action/URL API.
-struct HyperliquidOrderBroadcaster: HyperliquidOrderBroadcasting, HyperliquidWithdrawalBroadcasting, UnifiedAccountSetupBroadcasting {
+struct HyperliquidOrderBroadcaster: HyperliquidOrderBroadcasting, UnifiedAccountSetupBroadcasting, HyperliquidLeverageBroadcasting {
     static let endpoint = URL(string: "https://api.hyperliquid.xyz/exchange")!
     private let configuration: URLSessionConfiguration
 
@@ -28,10 +28,6 @@ struct HyperliquidOrderBroadcaster: HyperliquidOrderBroadcasting, HyperliquidWit
     }
 
     func submit(_ permit: HyperliquidOrderSubmissionPermit, lease: FundingSigningLease) async throws -> Data? {
-        try await send { operation in try permit.start(lease: lease, operation) }
-    }
-
-    func submit(_ permit: HyperliquidWithdrawalSubmissionPermit, lease: FundingSigningLease) async throws -> Data? {
         try await send { operation in try permit.start(lease: lease, operation) }
     }
 
@@ -57,6 +53,10 @@ struct HyperliquidOrderBroadcaster: HyperliquidOrderBroadcasting, HyperliquidWit
     }
 
     func submit(_ permit: UnifiedAccountSetupPermit, signature: String, lease: FundingSigningLease) async throws -> Data? {
+        try await send { operation in try permit.start(signature: signature, lease: lease, operation) }
+    }
+
+    func submit(_ permit: HyperliquidLeveragePermit, signature: String, lease: FundingSigningLease) async throws -> Data? {
         try await send { operation in try permit.start(signature: signature, lease: lease, operation) }
     }
 }

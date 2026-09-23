@@ -52,6 +52,7 @@ from services.client_api.opinion_trades.router import make_opinion_trade_router
 from services.client_api.opinion_trades.repository import OpinionTradeRepository
 from services.client_api.opinion_trades.feed import TradeFeedRepository
 from services.client_api.opinion_trades.feed_router import make_trade_feed_router
+from services.client_api.opinion_trades.context import make_feed_context_router
 
 
 bearer = HTTPBearer(auto_error=False)
@@ -157,6 +158,7 @@ def create_app(
                                           account_http, require_installation))
     # Opt-in only after real reconciliation + profile/consent release gates pass.
     app.include_router(make_opinion_trade_router(require_installation, opinion_trade_repository))
+    app.include_router(make_feed_context_router(read_models))
     app.include_router(make_trade_feed_router(require_installation,
         TradeFeedRepository(opinion_trade_repository, read_models) if opinion_trade_repository else None))
 

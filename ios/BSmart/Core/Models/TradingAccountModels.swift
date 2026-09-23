@@ -10,6 +10,7 @@ struct AccountAuthConfiguration: Codable, Equatable {
     let depositsEnabled: Bool
     let tradingEnabled: Bool
     var withdrawalsEnabled: Bool? = nil
+    var acrossWithdrawalsEnabled: Bool? = nil
 
     static let unavailable = Self(providers: [], depositsEnabled: false, tradingEnabled: false)
 }

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>bSmart · 发现，追踪，交易</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <aside class="rail">
+    <img class="wordmark" alt="bSmart" data-brand>
+    <span class="eyebrow">FIRST STEPS / 01</span>
+    <h1>从一个值得<br>追踪的人开始。</h1>
+    <nav aria-label="引导步骤">
+      <button data-step="0"><span>01</span><div>发现聪明的投资者<small>先看他过去的判断</small></div><i data-lucide="arrow-up-right"></i></button>
+      <button data-step="1"><span>02</span><div>跟踪他们的新观点<small>把重要的更新留在身边</small></div><i data-lucide="arrow-up-right"></i></button>
+      <button data-step="2"><span>03</span><div>交易你认可的观点<small>判断由你，决定也由你</small></div><i data-lucide="arrow-up-right"></i></button>
+    </nav>
+    <div class="rail-bottom"><button class="text-button" data-profile><i data-lucide="user-round"></i>首次资料页</button><p>交互设计预览 · 本地历史数据<br>无登录、钱包或交易请求</p></div>
+  </aside>
+  <main class="device" aria-label="bSmart 新用户引导">
+    <header class="app-header"><img class="wordmark" data-brand alt="bSmart"><div class="header-actions"><button class="icon-button" data-theme-toggle aria-label="切换明暗模式" title="切换明暗模式"><i data-lucide="sun"></i></button><button class="skip" data-skip>跳过</button></div></header>
+    <div id="screen" tabindex="-1"></div>
+    <footer class="app-footer"><div class="progress" aria-label="引导进度"></div><button id="next" class="primary"></button></footer>
+  </main>
+  <button class="mobile-profile icon-button" data-profile aria-label="查看首次资料页" title="查看首次资料页"><i data-lucide="user-round"></i></button>
+  <dialog id="detail"><div id="detail-content"></div></dialog>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script src="../investor-discovery/lucide.min.js"></script>
+  <script src="data.js"></script><script src="app.js"></script>
+</body>
+</html>

@@ -2,14 +2,13 @@ import SwiftUI
 
 struct TickerOwnHoldingsSection: View {
     @EnvironmentObject private var model: AppModel
-    @EnvironmentObject private var paper: PaperTradingEngine
+    @EnvironmentObject private var account: AccountAccessStore
+    @EnvironmentObject private var wallet: DeviceWalletStore
+    @Environment(\.scenePhase) private var scenePhase
     let symbol: String
 
     private var external: PortfolioPosition? {
         model.position(for: symbol).flatMap { $0.isPosition ? $0 : nil }
-    }
-    private var appPositions: [PaperTradingPosition] {
-        paper.account.positions.filter { $0.symbol.caseInsensitiveCompare(symbol) == .orderedSame }
     }
 
     var body: some View {
@@ -17,19 +16,32 @@ struct TickerOwnHoldingsSection: View {
             HStack {
                 Text("Your position".bSmartLocalized).font(.headline)
                 Spacer()
-                if external == nil && appPositions.isEmpty {
-                    Text("No position".bSmartLocalized)
-                        .font(.subheadline).foregroundStyle(BSmartColor.tertiaryText)
-                }
             }
             if let external {
                 accountHeading("External holdings", value: externalWeight(external))
                 PortfolioHoldingRow(holding: PortfolioHoldingSnapshot(external: external))
             }
-            ForEach(appPositions) { position in
-                accountHeading("bSmart account", value: position.positionEquity
-                    .formatted(.bSmartDollars.precision(.fractionLength(2))))
-                PortfolioHoldingRow(holding: PortfolioHoldingSnapshot(inApp: position))
+            if account.identity == nil {
+                NavigationLink { TradingAccountView() } label: {
+                    Label("Sign in".bSmartLocalized, systemImage: "person.crop.circle")
+                        .frame(minHeight: 44)
+                }
+            } else if case .verified(let local) = wallet.state, local.accountID == account.identity?.id {
+                TradingPositionsView(wallet: local, title: "Internal account", symbol: symbol)
+                    .id(local.accountID.uuidString + local.address)
+            } else if wallet.isBusy || account.isBusy {
+                BSmartSkeletonRows(style: .simple, count: 1)
+            } else if case .recoveryRequired = wallet.state {
+                NavigationLink { DeviceWalletRecoveryView() } label: {
+                    Label("Restore wallet".bSmartLocalized, systemImage: "lock.shield")
+                        .frame(minHeight: 44)
+                }
+            } else {
+                if let error = wallet.errorMessage {
+                    Text(error).font(.subheadline).foregroundStyle(BSmartColor.bear)
+                }
+                Button("Retry".bSmartLocalized) { Task { await wallet.prepare() } }
+                    .frame(minHeight: 44)
             }
         }
         .padding(.vertical, 16)
@@ -37,6 +49,10 @@ struct TickerOwnHoldingsSection: View {
         .overlay(alignment: .bottom) { Divider().overlay(BSmartColor.line) }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("ticker.holdings.\(symbol)")
+        .task(id: "\(account.walletAccountID?.uuidString ?? "")-\(account.isBusy)-\(scenePhase == .active)") {
+            guard account.identity != nil, !account.isBusy, scenePhase == .active else { return }
+            await wallet.prepare()
+        }
     }
 
     private func accountHeading(_ title: String, value: String?) -> some View {
@@ -62,6 +78,7 @@ struct TickerAboutSection: View {
     let companyName: String
     let profile: TickerProfile?
     let market: HyperliquidPerpMarket?
+    let isCrypto: Bool?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -77,7 +94,7 @@ struct TickerAboutSection: View {
                 }
             }
             HStack(spacing: 12) {
-                BSmartAssetMark(ticker: symbol, size: 32)
+                BSmartAssetMark(ticker: symbol, size: 32, isCrypto: isCrypto)
                 Text(companyName).font(.subheadline.weight(.semibold))
                     .fixedSize(horizontal: false, vertical: true)
             }

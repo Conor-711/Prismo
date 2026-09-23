@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 
 enum HyperliquidTradingCheckError: Error, Equatable {
     case unavailable, invalidResponse, stale, accountChanged, unsupportedCollateral
@@ -17,6 +18,22 @@ enum HyperliquidExecutionQuery: Equatable, Sendable {
     case builderApproval(owner: String, builder: String)
     case orderStatus(owner: String, cloid: String)
     case fills(owner: String, start: UInt64, end: UInt64)
+
+    var diagnosticKind: String {
+        switch self {
+        case .dexs: "dexs"
+        case .metadata: "metadata"
+        case .mode: "mode"
+        case .active: "active"
+        case .positions: "positions"
+        case .openOrders: "open_orders"
+        case .book: "book"
+        case .fees: "fees"
+        case .builderApproval: "builder_approval"
+        case .orderStatus: "order_status"
+        case .fills: "fills"
+        }
+    }
 
     func body() throws -> Data {
         var fields: [String: String]
@@ -74,9 +91,13 @@ protocol HyperliquidExecutionReading: Sendable {
 
 final class HyperliquidExecutionReader: HyperliquidExecutionReading, @unchecked Sendable {
     static let endpoint = URL(string: "https://api.hyperliquid.xyz/info")!
+    private static let logger = Logger(subsystem: "today.bsmart.ios", category: "TradingReadLatency")
     private let session: URLSession
+    private let infoConnection: HyperliquidInfoConnection?
 
-    init(configuration: URLSessionConfiguration = .ephemeral) {
+    init(configuration: URLSessionConfiguration = .ephemeral, useWebSocket: Bool = true,
+         connection: HyperliquidInfoConnection = .shared) {
+        infoConnection = useWebSocket ? connection : nil
         let config = configuration.copy() as! URLSessionConfiguration
         config.urlCache = nil; config.urlCredentialStorage = nil; config.httpCookieStorage = nil
         config.httpShouldSetCookies = false; config.httpAdditionalHeaders = nil
@@ -89,6 +110,32 @@ final class HyperliquidExecutionReader: HyperliquidExecutionReading, @unchecked 
 
     func read(_ query: HyperliquidExecutionQuery) async throws -> Data {
         try Task.checkCancellation()
+        let started = ContinuousClock.now
+        var transport = infoConnection == nil ? "http" : "websocket"
+        var outcome = "ok"
+        defer {
+            let elapsed = started.duration(to: .now).components
+            let milliseconds = elapsed.seconds * 1000 + elapsed.attoseconds / 1_000_000_000_000_000
+            Self.logger.notice("query=\(query.diagnosticKind, privacy: .public) transport=\(transport, privacy: .public) outcome=\(outcome, privacy: .public) elapsed_ms=\(milliseconds)")
+        }
+        if let infoConnection {
+            do { return try await infoConnection.read(query) }
+            catch is CancellationError { throw CancellationError() }
+            catch HyperliquidInfoSocketError.unavailable {
+                // Read-only fallback, never an exchange write or a replayed signed order.
+                try Task.checkCancellation()
+                transport = "http_fallback"
+            }
+            catch HyperliquidInfoSocketError.rejected {
+                outcome = "socket_rejected"
+                throw HyperliquidTradingCheckError.unavailable
+            }
+            catch HyperliquidInfoSocketError.invalidResponse {
+                // A malformed socket frame does not authorize an order. Retry the
+                // read-only observation over the bounded HTTP transport.
+                transport = "http_fallback"
+            }
+        }
         let responseLimit: Int
         if case .fills = query { responseLimit = 2_097_152 } else { responseLimit = 1_048_576 }
         var request = URLRequest(url: Self.endpoint)
@@ -100,12 +147,25 @@ final class HyperliquidExecutionReader: HyperliquidExecutionReading, @unchecked 
         do {
             let (bytes, response) = try await session.bytes(for: request)
             defer { bytes.task.cancel() }
-            guard let http = response as? HTTPURLResponse, http.statusCode == 200,
-                  http.url == Self.endpoint, http.mimeType == "application/json",
-                  http.expectedContentLength <= responseLimit else { throw HyperliquidTradingCheckError.unavailable }
+            guard let http = response as? HTTPURLResponse else {
+                outcome = "http_invalid"
+                throw HyperliquidTradingCheckError.unavailable
+            }
+            guard http.statusCode == 200 else {
+                outcome = "http_\(http.statusCode)"
+                throw HyperliquidTradingCheckError.unavailable
+            }
+            guard http.url == Self.endpoint, http.mimeType == "application/json",
+                  http.expectedContentLength <= responseLimit else {
+                outcome = "http_invalid"
+                throw HyperliquidTradingCheckError.unavailable
+            }
             var data = Data()
             for try await byte in bytes {
-                guard data.count < responseLimit else { throw HyperliquidTradingCheckError.invalidResponse }
+                guard data.count < responseLimit else {
+                    outcome = "http_oversize"
+                    throw HyperliquidTradingCheckError.invalidResponse
+                }
                 data.append(byte)
             }
             try Task.checkCancellation()
@@ -114,6 +174,7 @@ final class HyperliquidExecutionReader: HyperliquidExecutionReading, @unchecked 
         catch let error as HyperliquidTradingCheckError { throw error }
         catch {
             if Task.isCancelled { throw CancellationError() }
+            outcome = "http_transport"
             throw HyperliquidTradingCheckError.unavailable
         }
     }

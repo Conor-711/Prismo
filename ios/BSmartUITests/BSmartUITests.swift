@@ -5,17 +5,32 @@ final class BSmartUITests: XCTestCase {
         continueAfterFailure = false
     }
 
-    func testRootNavigationIncludesFeedBeforeProfile() {
+    func testRootNavigationShowsFiveTabsInRequestedOrder() {
         let app = launch(scenario: "loaded")
 
         XCTAssertTrue(app.descendants(matching: .any)["app.tab.today"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.descendants(matching: .any)["app.tab.portfolio"].exists)
-        XCTAssertTrue(app.descendants(matching: .any)["app.tab.smart"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["app.tab.search"].exists)
         XCTAssertTrue(app.descendants(matching: .any)["app.tab.feed"].exists)
-        XCTAssertGreaterThan(
-            app.descendants(matching: .any)["app.tab.feed"].frame.minX,
-            app.descendants(matching: .any)["app.tab.smart"].frame.minX
+        XCTAssertTrue(app.descendants(matching: .any)["app.tab.friends"].exists)
+        XCTAssertLessThan(
+            app.descendants(matching: .any)["app.tab.today"].frame.minX,
+            app.descendants(matching: .any)["app.tab.search"].frame.minX
         )
+        XCTAssertLessThan(app.buttons["app.tab.search"].frame.minX, app.buttons["app.tab.feed"].frame.minX)
+        XCTAssertLessThan(app.buttons["app.tab.feed"].frame.minX, app.buttons["app.tab.friends"].frame.minX)
+        XCTAssertLessThan(app.buttons["app.tab.friends"].frame.minX, app.buttons["app.tab.portfolio"].frame.minX)
+        app.buttons["app.tab.friends"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["friends.screen"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["friends.tab.Chats"].isSelected)
+        XCTAssertFalse(app.segmentedControls.firstMatch.exists)
+        let chatsPage = app.scrollViews["friends.page.Chats"]
+        XCTAssertTrue(chatsPage.exists)
+        chatsPage.swipeLeft()
+        XCTAssertFalse(app.buttons["friends.tab.Follows"].exists)
+        XCTAssertTrue(app.buttons["friends.tab.Activity"].isSelected)
+        app.buttons["friends.tab.Chats"].tap()
+        XCTAssertTrue(app.buttons["friends.tab.Chats"].isSelected)
     }
 
     func testLoadedPortfolioOpensTodayWithoutBlockingLoader() {
@@ -270,6 +285,7 @@ final class BSmartUITests: XCTestCase {
     func testTodayInvestorViewOpensViewDetailInsteadOfAccountProfile() {
         let app = launch(scenario: "loaded")
         selectTodayScene("investors", in: app)
+        app.buttons["today.smart-updates.title"].tap()
         app.segmentedControls["smart-updates.source-filter"].buttons["Smart Account"].tap()
         let representativeView = app.descendants(matching: .any).matching(
             NSPredicate(format: "identifier BEGINSWITH %@", "smart-updates.evidence.account.")
@@ -429,11 +445,10 @@ final class BSmartUITests: XCTestCase {
         keepScreenshot(app, named: "Smart Account evidence detail")
         app.navigationBars.buttons.element(boundBy: 0).tap()
 
-        for _ in 0..<6 {
-            if app.buttons["Track record"].isHittable { break }
+        for _ in 0..<10 {
+            if app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "account.work.select.")).firstMatch.isHittable { break }
             app.swipeDown()
         }
-        app.buttons["Track record"].tap()
         for _ in 0..<8 {
             if app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "account.work.select.")).firstMatch.isHittable { break }
             app.swipeUp()
@@ -441,7 +456,7 @@ final class BSmartUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Representative works"].waitForExistence(timeout: 2))
         XCTAssertFalse(app.staticTexts["Top 3 tickers by cumulative Score contribution"].exists)
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "account.work.select.")).firstMatch.exists)
-        XCTAssertTrue(app.staticTexts["Score contribution"].exists)
+        XCTAssertTrue(app.staticTexts["Stock price change"].exists)
         XCTAssertTrue(app.descendants(matching: .any)["account.work.chart"].exists)
         XCTAssertFalse(app.staticTexts["How to read this Score"].exists)
     }
@@ -592,16 +607,16 @@ final class BSmartUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["app.tabbar"].waitForExistence(timeout: 5))
         XCTAssertTrue(tab(.today, in: app).exists)
         XCTAssertTrue(tab(.portfolio, in: app).exists)
-        XCTAssertTrue(tab(.smart, in: app).exists)
+        XCTAssertTrue(app.buttons["app.tab.search"].exists)
         XCTAssertTrue(tab(.feed, in: app).exists)
-        XCTAssertLessThan(tab(.smart, in: app).frame.minX, tab(.portfolio, in: app).frame.minX)
-        XCTAssertLessThan(tab(.smart, in: app).frame.minX, tab(.feed, in: app).frame.minX)
+        XCTAssertLessThan(app.buttons["app.tab.search"].frame.minX, tab(.portfolio, in: app).frame.minX)
+        XCTAssertLessThan(app.buttons["app.tab.search"].frame.minX, tab(.feed, in: app).frame.minX)
         tab(.portfolio, in: app).tap()
         app.buttons["profile.ai.open"].tap()
 
         XCTAssertTrue(app.descendants(matching: .any)["ai.screen"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Mr Collie"].exists)
-        XCTAssertTrue(app.staticTexts["Portfolio intelligence"].exists)
+        XCTAssertTrue(app.buttons["ai.new-conversation"].exists)
         XCTAssertTrue(app.staticTexts["What should we look into?"].exists)
         XCTAssertTrue(app.staticTexts["Suggested questions"].exists)
 
@@ -615,9 +630,9 @@ final class BSmartUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["event-detail.screen"].waitForExistence(timeout: 3))
         app.buttons["detail.back"].tap()
         XCTAssertTrue(app.buttons["ai.back"].waitForExistence(timeout: 5))
-        XCTAssertFalse(tab(.feed, in: app).exists)
+        XCTAssertFalse(app.buttons["app.tab.feed"].exists)
         app.buttons["ai.back"].tap()
-        XCTAssertTrue(tab(.feed, in: app).waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["app.tab.feed"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["profile.ai.open"].isHittable)
     }
 
@@ -630,54 +645,65 @@ final class BSmartUITests: XCTestCase {
             .matching(NSPredicate(format: "label == %@", "Message Mr Collie"))
             .firstMatch
         XCTAssertTrue(composer.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["ai.send"].isEnabled)
         composer.tap()
         composer.typeText("What changed in NVDA?")
         app.buttons["Ask Mr Collie"].tap()
 
         XCTAssertTrue(app.staticTexts["What changed in NVDA?"].waitForExistence(timeout: 2))
         XCTAssertTrue(app.staticTexts["NVDA needs your attention"].waitForExistence(timeout: 3))
+        app.buttons["ai.new-conversation"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["ai.welcome"].waitForExistence(timeout: 3))
+        XCTAssertFalse(app.buttons["ai.send"].isEnabled)
+        XCTAssertFalse(app.staticTexts["NVDA needs your attention"].exists)
     }
 
-    func testFirstUseCanConnectBrokerageFollowAccountAndOpenPersonalFeed() {
+    func testAIChineseLightLayoutKeepsComposerVisibleWithLargeText() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-reset-state", "--ui-scenario=loaded", "--ui-trading-fixture",
+                               "--ui-appearance", "light", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN",
+                               "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryXXXL"]
+        app.launch()
+        let profile = app.buttons["app.tab.portfolio"]
+        XCTAssertTrue(profile.waitForExistence(timeout: 5))
+        profile.tap()
+        app.buttons["profile.ai.open"].tap()
+        let composer = app.descendants(matching: .any)["ai.composer"].firstMatch
+        XCTAssertTrue(composer.waitForExistence(timeout: 5))
+        XCTAssertTrue(composer.isHittable)
+        XCTAssertGreaterThanOrEqual(composer.frame.minX, app.frame.minX + 12)
+        XCTAssertLessThan(composer.frame.maxY, app.frame.maxY)
+        XCTAssertGreaterThanOrEqual(app.buttons["ai.send"].frame.height, 44)
+        let question = app.buttons["ai.prompt.priority"]
+        for _ in 0..<3 where !question.isHittable { app.scrollViews["ai.timeline"].swipeUp() }
+        XCTAssertTrue(question.isHittable)
+        question.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["ai.message.assistant"].waitForExistence(timeout: 5))
+        XCTAssertTrue(composer.isHittable)
+        app.buttons["ai.back"].tap()
+        XCTAssertTrue(app.buttons["app.tab.feed"].waitForExistence(timeout: 5))
+    }
+
+    func testFirstUseCanDiscoverTrackPreviewTradeAndOpenApp() {
         let app = launch(scenario: "first-use")
 
         XCTAssertTrue(app.descendants(matching: .any)["onboarding.screen"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any)["onboarding.investor-pool"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any)["onboarding.representative-work"].exists)
         app.buttons["onboarding.continue"].tap()
-        XCTAssertTrue(app.staticTexts["See bSmart in action"].waitForExistence(timeout: 3))
-        keepScreenshot(app, named: "Onboarding product examples")
+        XCTAssertTrue(app.descendants(matching: .any)["onboarding.latest-view"].waitForExistence(timeout: 3))
+        app.buttons["onboarding.follow-featured"].tap()
+        XCTAssertTrue(app.staticTexts["Tracking"].waitForExistence(timeout: 2))
         app.buttons["onboarding.continue"].tap()
 
-        let connectBrokerage = app.buttons["onboarding.connect-brokerage"]
-        XCTAssertTrue(connectBrokerage.waitForExistence(timeout: 3))
-        connectBrokerage.tap()
-
-        XCTAssertTrue(app.descendants(matching: .any)["brokerage-connections.screen"].waitForExistence(timeout: 3))
-        app.buttons["brokerage.provider.robinhood"].tap()
-        XCTAssertTrue(app.descendants(matching: .any)["brokerage-setup.robinhood"].waitForExistence(timeout: 3))
-        app.buttons["brokerage.preview-authorization"].tap()
-        XCTAssertTrue(app.staticTexts["Authorization preview complete"].waitForExistence(timeout: 3))
-        app.buttons["brokerage.finish-prototype"].tap()
-        XCTAssertTrue(connectBrokerage.waitForExistence(timeout: 3))
-        keepScreenshot(app, named: "Onboarding connect and track")
-
-        let followAccount = app.buttons
-            .matching(NSPredicate(format: "identifier BEGINSWITH %@", "onboarding.follow-account."))
-            .firstMatch
-        XCTAssertTrue(followAccount.waitForExistence(timeout: 3))
-        for _ in 0..<3 where !followAccount.isHittable {
-            app.swipeUp()
-        }
-        followAccount.tap()
-
-        let finishButton = app.buttons["onboarding.finish"]
-        let enabled = NSPredicate(format: "isEnabled == true")
-        expectation(for: enabled, evaluatedWith: finishButton)
-        waitForExpectations(timeout: 2)
-        finishButton.tap()
+        XCTAssertTrue(app.buttons["onboarding.trade-preview"].waitForExistence(timeout: 3))
+        app.buttons["onboarding.trade-preview"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["onboarding.order-preview"].waitForExistence(timeout: 3))
+        app.buttons["Back to the opinion"].tap()
+        app.buttons["onboarding.finish"].tap()
 
         XCTAssertTrue(app.descendants(matching: .any)["today.screen"].waitForExistence(timeout: 3))
-        XCTAssertTrue(app.buttons["today.portfolio-snapshot.nvda"].waitForExistence(timeout: 3))
-        XCTAssertFalse(app.buttons["today.scope.watchlist"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["app.tab.today"].waitForExistence(timeout: 3))
     }
 
     func testPortfolioAllTickersOpensIntelligenceWithUnifiedSmartActivity() {
@@ -771,30 +797,18 @@ final class BSmartUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["2"].exists)
     }
 
-    func testAlertSettingsExposeScheduleAndPerTickerControls() {
+    func testSettingsNoLongerExposeNotificationPreferences() {
         let app = launch(scenario: "loaded")
 
         XCTAssertFalse(app.staticTexts["DEMO"].exists)
-        let openSettings = app.buttons["today.settings"]
+        tab(.portfolio, in: app).tap()
+        let openSettings = app.buttons["portfolio.settings"]
         XCTAssertTrue(openSettings.waitForExistence(timeout: 5))
         openSettings.tap()
 
         XCTAssertTrue(app.descendants(matching: .any)["settings.screen"].waitForExistence(timeout: 3))
-        app.buttons["settings.notifications"].tap()
-
-        XCTAssertTrue(app.descendants(matching: .any)["alerts.screen"].waitForExistence(timeout: 3))
-        XCTAssertTrue(app.staticTexts["Delivery time"].exists)
-        XCTAssertTrue(app.staticTexts["Quiet hours"].exists)
-
-        let nvdaAlerts = app.switches["alerts.ticker.NVDA"]
-        XCTAssertTrue(nvdaAlerts.waitForExistence(timeout: 2))
-        for _ in 0..<3 where !nvdaAlerts.isHittable {
-            app.swipeUp()
-        }
-        XCTAssertTrue(nvdaAlerts.isHittable)
-        XCTAssertEqual(nvdaAlerts.value as? String, "1")
-        nvdaAlerts.tap()
-        XCTAssertEqual(nvdaAlerts.value as? String, "0")
+        XCTAssertFalse(app.buttons["settings.notifications"].exists)
+        XCTAssertTrue(app.buttons["settings.language.en"].exists)
     }
 
     func testTodayDoesNotSurfaceGenericOpportunityRadar() {
@@ -804,7 +818,7 @@ final class BSmartUITests: XCTestCase {
         XCTAssertFalse(app.descendants(matching: .any)["today.opportunity-radar"].exists)
     }
 
-    func testLocalDataResetReturnsToPortfolioSetup() {
+    func testSettingsDoNotExposeLocalDataReset() {
         let app = launch(scenario: "loaded")
 
         tab(.portfolio, in: app).tap()
@@ -812,13 +826,10 @@ final class BSmartUITests: XCTestCase {
         app.buttons["Open settings"].tap()
 
         XCTAssertTrue(app.descendants(matching: .any)["settings.screen"].waitForExistence(timeout: 3))
-        app.descendants(matching: .any)["settings.reset-local-data"].tap()
-        app.buttons["Reset local app data"].tap()
-
-        XCTAssertTrue(app.descendants(matching: .any)["onboarding.screen"].waitForExistence(timeout: 3))
+        XCTAssertFalse(app.descendants(matching: .any)["settings.reset-local-data"].exists)
     }
 
-    func testSettingsExposeDemoMethodologyAndRiskLimits() {
+    func testSettingsRemoveDataPrivacyGroupAndKeepFeedback() {
         let app = launch(scenario: "loaded")
 
         tab(.portfolio, in: app).tap()
@@ -826,18 +837,9 @@ final class BSmartUITests: XCTestCase {
         app.buttons["Open settings"].tap()
 
         XCTAssertTrue(app.descendants(matching: .any)["settings.screen"].waitForExistence(timeout: 3))
-        app.buttons["settings.data-methodology"].tap()
-
-        XCTAssertTrue(app.descendants(matching: .any)["methodology.screen"].waitForExistence(timeout: 3))
-        XCTAssertTrue(app.staticTexts["This build uses demonstration evidence and events."].exists)
-        XCTAssertTrue(app.staticTexts["Smart Account"].exists)
-
-        app.navigationBars["Data & methodology"].buttons.firstMatch.tap()
-        app.buttons["settings.risk-disclosure"].tap()
-
-        XCTAssertTrue(app.descendants(matching: .any)["risk-disclosure.screen"].waitForExistence(timeout: 3))
-        XCTAssertTrue(app.staticTexts["Score limitations"].exists)
-        XCTAssertTrue(app.staticTexts["Market risk"].exists)
+        XCTAssertFalse(app.buttons["settings.data-methodology"].exists)
+        XCTAssertFalse(app.buttons["settings.risk-disclosure"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["settings.send-feedback"].exists)
     }
 
     func testLanguageCanSwitchImmediatelyInsideSettings() {
@@ -875,31 +877,40 @@ final class BSmartUITests: XCTestCase {
         let app = launch(scenario: "loaded", appearance: "light")
 
         XCTAssertTrue(app.descendants(matching: .any)["today.screen"].waitForExistence(timeout: 5))
-        keepScreenshot(app, named: "Light appearance - Today")
+        XCTAssertTrue(app.buttons["discovery.open-directory"].isHittable)
 
-        let settings = app.buttons["today.settings"]
+        tab(.portfolio, in: app).tap()
+        let settings = app.buttons["portfolio.settings"]
         XCTAssertTrue(settings.waitForExistence(timeout: 3))
         settings.tap()
         XCTAssertTrue(app.descendants(matching: .any)["settings.screen"].waitForExistence(timeout: 3))
         let lightAppearance = app.buttons["settings.appearance.light"]
         XCTAssertTrue(lightAppearance.waitForExistence(timeout: 2))
         XCTAssertTrue(lightAppearance.isSelected)
-        keepScreenshot(app, named: "Light appearance - Settings")
         app.buttons["Done"].tap()
 
-        tab(.smart, in: app).tap()
+        tab(.today, in: app).tap()
+        app.buttons["discovery.open-directory"].tap()
         XCTAssertTrue(app.descendants(matching: .any)["smart.screen"].waitForExistence(timeout: 3))
-        keepScreenshot(app, named: "Light appearance - Smart")
-        let filters = app.buttons["Filters"]
+        XCTAssertFalse(app.buttons["app.tab.today"].isHittable)
+        let filters = app.buttons["smart.account.filters"]
         XCTAssertTrue(filters.waitForExistence(timeout: 2))
         filters.tap()
         XCTAssertTrue(app.navigationBars["Filters"].waitForExistence(timeout: 2))
-        keepScreenshot(app, named: "Light appearance - Smart filters")
         app.buttons["Done"].tap()
+        app.buttons["detail.back"].tap()
+        XCTAssertTrue(app.buttons["app.tab.today"].waitForExistence(timeout: 3))
 
         tab(.portfolio, in: app).tap()
         XCTAssertTrue(app.descendants(matching: .any)["portfolio.screen"].waitForExistence(timeout: 3))
-        keepScreenshot(app, named: "Light appearance - Portfolio")
+        XCTAssertTrue(app.buttons["portfolio.deposit"].isHittable)
+        XCTAssertTrue(app.buttons["portfolio.withdraw"].isHittable)
+        tab(.feed, in: app).tap()
+        XCTAssertTrue(app.buttons["discover.tab.popular"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["discover.tab.popular"].isSelected)
+        XCTAssertTrue(app.buttons["discover.tab.latest"].isHittable)
+        app.buttons["app.tab.search"].tap()
+        XCTAssertTrue(app.textFields["search.input"].waitForExistence(timeout: 5))
 
     }
 

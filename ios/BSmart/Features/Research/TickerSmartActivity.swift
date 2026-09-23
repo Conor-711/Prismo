@@ -572,7 +572,7 @@ struct TickerPriceSmartActivityPanel: View {
         }
         .chartYAxis {
             AxisMarks(position: .trailing, values: .automatic(desiredCount: 4)) { value in
-                AxisGridLine().foregroundStyle(BSmartColor.line.opacity(0.5))
+                AxisGridLine().foregroundStyle(BSmartColor.chartAxisGrid)
                 AxisValueLabel {
                     if let price = value.as(Double.self) {
                         Text(price.tickerActivityCompactCurrency)

@@ -8,7 +8,7 @@ final class HyperliquidExecutionReaderTests: XCTestCase {
         let config = URLSessionConfiguration.ephemeral
         config.protocolClasses = [ExecutionURLProtocol.self]
         config.httpAdditionalHeaders = ["Authorization": "private", "Cookie": "private", "X-API-Key": "private"]
-        let reader = HyperliquidExecutionReader(configuration: config)
+        let reader = HyperliquidExecutionReader(configuration: config, useWebSocket: false)
         let queries: [(HyperliquidExecutionQuery, [String: String])] = [
             (.dexs, ["type": "perpDexs"]), (.metadata(dex: "xyz"), ["type": "meta", "dex": "xyz"]),
             (.mode(owner: owner), ["type": "userAbstraction", "user": owner]),
@@ -81,10 +81,48 @@ final class HyperliquidExecutionReaderTests: XCTestCase {
         await fulfillment(of: [stopped], timeout: 2)
     }
 
+    func testUnavailableSocketFallsBackToBoundedHTTP() async throws {
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [ExecutionURLProtocol.self]
+        let connection = HyperliquidInfoConnection(makeSocket: { UnavailableInfoSocket() })
+        let reader = HyperliquidExecutionReader(configuration: config, connection: connection)
+        ExecutionURLProtocol.configure(data: Data("[]".utf8))
+        let data = try await reader.read(.dexs)
+        XCTAssertEqual(data, Data("[]".utf8))
+        XCTAssertEqual(ExecutionURLProtocol.captured?.0.url?.absoluteString, "https://api.hyperliquid.xyz/info")
+        ExecutionURLProtocol.configure(status: 429, data: Data())
+        do { _ = try await reader.read(.dexs); XCTFail("Fallback accepted rate limit") }
+        catch { XCTAssertTrue(error is HyperliquidTradingCheckError) }
+    }
+
+    func testMalformedSocketFallsBackOnlyToBoundedHTTPRead() async throws {
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [ExecutionURLProtocol.self]
+        let connection = HyperliquidInfoConnection(makeSocket: { UnavailableInfoSocket(malformed: true) })
+        let reader = HyperliquidExecutionReader(configuration: config, connection: connection)
+        ExecutionURLProtocol.configure(data: Data("[]".utf8))
+        let data = try await reader.read(.dexs)
+        XCTAssertEqual(data, Data("[]".utf8))
+        XCTAssertEqual(ExecutionURLProtocol.captured?.0.url?.absoluteString, "https://api.hyperliquid.xyz/info")
+        ExecutionURLProtocol.configure(status: 429, data: Data())
+        do { _ = try await reader.read(.dexs); XCTFail("Fallback accepted rate limit") }
+        catch { XCTAssertTrue(error is HyperliquidTradingCheckError) }
+    }
+
     private func makeReader() -> HyperliquidExecutionReader {
         let config = URLSessionConfiguration.ephemeral; config.protocolClasses = [ExecutionURLProtocol.self]
-        return .init(configuration: config)
+        return .init(configuration: config, useWebSocket: false)
     }
+}
+
+private struct UnavailableInfoSocket: HyperliquidInfoSocket {
+    var malformed = false
+    func send(_ data: Data) async throws {}
+    func receive() async throws -> Data {
+        if malformed { return Data("invalid JSON".utf8) }
+        throw URLError(.networkConnectionLost)
+    }
+    func close() {}
 }
 
 private final class ExecutionURLProtocol: URLProtocol, @unchecked Sendable {

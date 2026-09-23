@@ -2,6 +2,24 @@ import XCTest
 @testable import BSmart
 
 final class FundingObservationJournalTests: XCTestCase {
+    func testViewingNotFoundStatusDoesNotTrapNeverSubmittedSignature() async throws {
+        let context = FundingJournalTestContext(); defer { context.cleanup() }
+        let journal = try context.journal(), id = UUID()
+        _ = try await context.readyWithConsent(context.transaction(), id: id, journal: journal)
+        let lookup = try await journal.sourceLookup(id: id, wallet: context.wallet)
+        let fixture = FundingObservationFixture(record: lookup.record, now: context.clock.now)
+        let rpc = FundingObservationRPC(fixture, overrides: ["transaction": .null, "receipt": .null,
+            "nonce": .string("0x0"), "pending": .string("0x0"), "authorization": .string(FundingQuantity(0).abi)])
+        let observation = try await fixture.observer(rpc: rpc).observe(lookup, wallet: context.wallet)
+        try await journal.recordSourceObservation(observation, wallet: context.wallet)
+        let finished = try await journal.finishUnsubmittedSource(id: id, wallet: context.wallet)
+        XCTAssertTrue(finished)
+        let history = try await context.journal().history(wallet: context.wallet)
+        XCTAssertEqual(history.first?.stage, .notSubmitted)
+        XCTAssertFalse(history.first?.stage.requiresReconciliation == true)
+        XCTAssertEqual(history.first?.transactionHash, lookup.record.signed?.hash)
+    }
+
     func testObservationSurvivesReopenAndNeverReleasesOrRebroadcastsSignedIntent() async throws {
         let context = FundingJournalTestContext(); defer { context.cleanup() }
         let journal = try context.journal(); let id = UUID()
@@ -22,6 +40,8 @@ final class FundingObservationJournalTests: XCTestCase {
         XCTAssertEqual(history.count, 1)
         XCTAssertEqual(history.first?.stage, .sourceExecuted)
         XCTAssertEqual(history.first?.sourceNetworkFee, FundingQuantity(2_000_000_000_000))
+        let finished = try await reopened.finishUnsubmittedSource(id: id, wallet: context.wallet)
+        XCTAssertFalse(finished)
         await expectJournalFailure { try await reopened.beginSubmission(id: id, signed: signed, wallet: context.wallet, check: check) }
         await expectJournalFailure { try await reopened.cancelReview(id: id, wallet: context.wallet) }
         let otherTransaction = try await context.transaction(nonce: "0x1", authorizationNonce: 18)

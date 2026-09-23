@@ -1,13 +1,26 @@
 import SwiftUI
 
-struct BSmartMarketRow: View {
-    let entry: AppTickerCatalogEntry
+struct BSmartMarketAssetMark: View {
+    let ticker: String
+    var isCrypto = false
 
     var body: some View {
-        HStack(spacing: 14) {
-            BSmartAssetMark(ticker: entry.symbol, size: 48)
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 7) {
+        BSmartAssetMark(ticker: ticker, size: 48, isCrypto: isCrypto)
+            .background(BSmartColor.surface, in: Circle())
+            .clipShape(Circle())
+            .overlay(Circle().strokeBorder(BSmartColor.line, lineWidth: 0.5))
+            .accessibilityHidden(true)
+    }
+}
+
+struct BSmartMarketRow: View {
+    let entry: AppTickerCatalogEntry
+    var compact = false
+
+    var body: some View {
+        HStack(spacing: compact ? 12 : 14) {
+            BSmartMarketAssetMark(ticker: entry.symbol, isCrypto: entry.isCrypto)
+            VStack(alignment: .leading, spacing: compact ? 4 : 7) {
                 HStack(spacing: 6) {
                     Text(entry.symbol)
                         .font(.system(size: 16, weight: .semibold))
@@ -27,7 +40,7 @@ struct BSmartMarketRow: View {
                     .accessibilityIdentifier("portfolio.volume.\(entry.symbol)")
             }
             Spacer(minLength: 8)
-            VStack(alignment: .trailing, spacing: 7) {
+            VStack(alignment: .trailing, spacing: compact ? 4 : 7) {
                 Text(entry.price?.bSmartMarketPrice ?? "—")
                     .font(.system(size: 17, weight: .semibold))
                     .lineLimit(1).minimumScaleFactor(0.75)
@@ -52,14 +65,14 @@ struct BSmartMarketRow: View {
             .layoutPriority(1)
         }
         .foregroundStyle(BSmartColor.primaryText)
-        .padding(.vertical, 13)
-        .frame(minHeight: 82)
+        .padding(.vertical, compact ? 8 : 13)
+        .frame(minHeight: compact ? 70 : 82)
         .contentShape(Rectangle())
     }
 
     private var volumeLabel: String {
         let volume = entry.volume24h?.bSmartCompactUSD ?? "—"
-        return volume + " Vol"
+        return volume + " " + "Volume".bSmartLocalized
     }
 
     private var changeColor: Color {

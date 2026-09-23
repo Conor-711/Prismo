@@ -17,6 +17,7 @@ struct BSmartApp: App {
     @StateObject private var deviceWallet: DeviceWalletStore
     @StateObject private var accountDeletion: AccountDeletionCoordinator
     private let syncCoordinator: BSmartSyncCoordinator?
+    private let embeddedWallet: PrivyEmbeddedWalletClient
 
     init() {
         let client: BSmartAPIClient
@@ -77,8 +78,18 @@ struct BSmartApp: App {
         let accountStorage = KeychainAccountSessionStore(service:
             (Bundle.main.bundleIdentifier ?? "today.bsmart.ios") + "." + accountNamespace)
         let access = AccountAccessStore(client: accountClient, storage: accountStorage, deletionStorage: deletionStorage)
+        (client as? SupabaseContentClient)?.bind(account: access)
         _accountAccess = StateObject(wrappedValue: access)
-        _deviceWallet = StateObject(wrappedValue: DeviceWalletStore(service: access))
+        let preferences: AccountPreferencesProviding? = isUsingDemoData ? nil : NativeAccountPreferencesClient(client: NativeTradeFeedClient(
+            account: access,
+            transport: SupabaseAccountConfiguration.resolve().map {
+                SupabaseAccountTransport(configuration: $0, requestTimeout: 8, resourceTimeout: 12)
+            }
+        ))
+        let embedded = PrivyEmbeddedWalletClient(account: access)
+        embeddedWallet = embedded
+        let vault = HybridTradingWalletVault(embedded: embedded)
+        _deviceWallet = StateObject(wrappedValue: DeviceWalletStore(service: access, vault: vault, signing: vault))
         _accountDeletion = StateObject(wrappedValue: AccountDeletionCoordinator(client: accountClient as? AccountDeleting,
             storage: deletionStorage, cleanup: DeviceAccountDeletionCleanup(account: access),
             google: NativeGoogleAccountDisconnector(), endpoint: (accountClient as? HTTPAccountAuthClient)?.accountDeletionEndpoint
@@ -86,6 +97,7 @@ struct BSmartApp: App {
         _model = StateObject(wrappedValue: AppModel(
             client: client,
             bootstrapFallbackClient: isUsingDemoData ? nil : BundleBSmartAPIClient(),
+            accountPreferences: preferences,
             directMrCollieClient: directMrCollieClient,
             portfolioBootstrapStrategy: portfolioBootstrapStrategy,
             syncCoordinator: syncCoordinator,
@@ -96,9 +108,23 @@ struct BSmartApp: App {
         ))
     }
 
+    private var mayLoadContent: Bool {
+        #if DEBUG
+        if DebugDataScenario.launched != nil && model.isUsingDemoData
+            && !ProcessInfo.processInfo.arguments.contains("--ui-auth-gate") { return true }
+        #endif
+        return accountAccess.canAccessAppContent || accountAccess.isTestSession
+    }
+
+    private var contentSessionID: String {
+        "\(mayLoadContent):\(accountAccess.identity?.id.uuidString.lowercased() ?? "guest")"
+    }
+
     var body: some Scene {
         WindowGroup {
             AppRootView()
+                .background(BSmartKeyboardDismissal().frame(width: 0, height: 0))
+                .scrollDismissesKeyboard(.interactively)
                 .environmentObject(model)
                 .environmentObject(appDelegate.router)
                 .environmentObject(notifications)
@@ -110,7 +136,20 @@ struct BSmartApp: App {
                 .environmentObject(accountAccess)
                 .environmentObject(deviceWallet)
                 .environmentObject(accountDeletion)
-                .onChange(of: accountAccess.identity) { _, _ in deviceWallet.lock() }
+                .onChange(of: accountAccess.isTestSession) { _, _ in
+                    appDelegate.router.resetForAccountChange()
+                    deviceWallet.lock()
+                    model.activateAccountContext(accountAccess.identity?.id)
+                }
+                .onChange(of: accountAccess.identity) { previous, current in
+                    if previous != nil && previous?.id != current?.id {
+                        appDelegate.router.resetForAccountChange()
+                    }
+                    model.activateAccountContext(current?.id)
+                    notifications.accountChanged()
+                    deviceWallet.lock()
+                    Task { await embeddedWallet.accountDidChange() }
+                }
                 .onReceive(NotificationCenter.default.publisher(for: ASAuthorizationAppleIDProvider.credentialRevokedNotification)
                     .receive(on: DispatchQueue.main)) { _ in
                     accountAccess.appleCredentialDidChange()
@@ -126,11 +165,27 @@ struct BSmartApp: App {
                     appDelegate.router.handle(url: url)
                 }
                 .task {
-                    appDelegate.configure(syncCoordinator: syncCoordinator)
-                    await syncCoordinator?.flush()
-                    await model.load()
+                    notifications.bind(account: accountAccess, model: model)
+                    appDelegate.configure(syncCoordinator: syncCoordinator, notifications: notifications)
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .bSmartContentPushOpened)) { _ in
+                    guard mayLoadContent else { return }
+                    Task { await model.refreshLiveIntelligence() }
+                }
+                .task(id: contentSessionID) {
+                    guard mayLoadContent else { return }
+                    model.activateAccountContext(accountAccess.identity?.id)
+                    Task { await syncCoordinator?.flush() }
+                    let contentLoad = Task { await model.load() }
+                    await model.restoreAccountState()
+                    await contentLoad.value
+                    notifications.contentDidFinishLoading()
                     await notificationPreferences.synchronize()
                     await notifications.refreshAuthorizationStatus()
+                    if NotificationService.isEnabled && !accountAccess.isTestSession && !model.isUsingDemoData && notifications.dataUpdatesEnabled
+                        && notifications.authorizationStatus == .notDetermined {
+                        await notifications.requestAuthorization()
+                    }
                     #if DEBUG
                     appDelegate.router.applyDebugLaunchSection(from: ProcessInfo.processInfo.arguments)
                     #endif
@@ -144,15 +199,22 @@ struct BSmartApp: App {
                     guard scenePhase == .active, !model.isUsingDemoData else { return }
                     try? await accountDeletion.resume()
                 }
-                .task(id: scenePhase) {
-                    guard scenePhase == .active, !model.isUsingDemoData else { return }
+                .task(id: "\(scenePhase):\(mayLoadContent)") {
+                    guard scenePhase == .active, mayLoadContent, !model.isUsingDemoData else { return }
                     while !Task.isCancelled {
                         if model.hasFinishedInitialLoad {
                             await model.refreshLiveIntelligence()
                         }
+                        await model.synchronizePendingFollows()
+                        notifications.setPushLocale(language.locale.identifier)
+                        await notifications.refreshAuthorizationStatus()
+                        await notifications.refreshLiveHoldings(account: accountAccess)
                         try? await Task.sleep(for: .seconds(60))
                     }
                 }
+                .onChange(of: model.followedSmartAccountIDs) { notifications.interestsChanged() }
+                .onChange(of: model.followedSmartMoneyIDs) { notifications.interestsChanged() }
+                .onChange(of: model.positions) { notifications.interestsChanged() }
         }
     }
 }

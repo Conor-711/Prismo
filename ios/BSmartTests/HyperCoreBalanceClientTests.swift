@@ -51,6 +51,28 @@ final class HyperCoreBalanceClientTests: XCTestCase {
         }
     }
 
+    func testTransientRateLimitRetriesReadOnlyBalanceRequest() async throws {
+        let config = URLSessionConfiguration.ephemeral; config.protocolClasses = [CoreBalanceURLProtocol.self]
+        let client = HyperCoreBalanceClient(configuration: config)
+        CoreBalanceURLProtocol.configureSequence([
+            (429, Data()), (200, Data(#""unifiedAccount""#.utf8))
+        ])
+        let value = try await client.read(.mode, owner: CoreBalanceFixture.wallet.address)
+        XCTAssertEqual(value, .string("unifiedAccount"))
+        XCTAssertEqual(CoreBalanceURLProtocol.requestCount, 2)
+    }
+
+    func testNonRetryableFailureDoesNotProbeAgain() async {
+        let config = URLSessionConfiguration.ephemeral; config.protocolClasses = [CoreBalanceURLProtocol.self]
+        let client = HyperCoreBalanceClient(configuration: config)
+        CoreBalanceURLProtocol.configureSequence([
+            (403, Data()), (200, Data(#""unifiedAccount""#.utf8))
+        ])
+        do { _ = try await client.read(.mode, owner: CoreBalanceFixture.wallet.address); XCTFail("Accepted 403") }
+        catch { XCTAssertEqual(error as? HyperCoreBalanceError, .unavailable) }
+        XCTAssertEqual(CoreBalanceURLProtocol.requestCount, 1)
+    }
+
     func testCancellationStopsAnOutstandingNetworkRequest() async {
         let started = expectation(description: "Read started"), stopped = expectation(description: "Read cancelled")
         HangingCoreBalanceURLProtocol.configure(started: started, stopped: stopped)
@@ -85,10 +107,19 @@ private final class HangingCoreBalanceURLProtocol: URLProtocol, @unchecked Senda
 private final class CoreBalanceURLProtocol: URLProtocol, @unchecked Sendable {
     private static let lock = NSLock()
     private static var response = (status: 200, mime: "application/json", data: Data(), url: Optional<URL>.none)
+    private static var sequence: [(status: Int, data: Data)] = []
+    private static var count = 0
     private static var copy: (URLRequest, Data)?
     static var captured: (URLRequest, Data)? { lock.withLock { copy } }
+    static var requestCount: Int { lock.withLock { count } }
     static func configure(status: Int = 200, mime: String = "application/json", data: Data, url: URL? = nil) {
-        lock.withLock { response = (status, mime, data, url); copy = nil }
+        lock.withLock { response = (status, mime, data, url); sequence = []; count = 0; copy = nil }
+    }
+    static func configureSequence(_ responses: [(Int, Data)]) {
+        lock.withLock {
+            sequence = responses.map { (status: $0.0, data: $0.1) }
+            count = 0; copy = nil
+        }
     }
     override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
@@ -103,7 +134,15 @@ private final class CoreBalanceURLProtocol: URLProtocol, @unchecked Sendable {
                 body.append(contentsOf: buffer.prefix(count))
             }
         }
-        let response = Self.lock.withLock { Self.copy = (request, body); return Self.response }
+        let response = Self.lock.withLock { () -> (status: Int, mime: String, data: Data, url: URL?) in
+            Self.copy = (request, body)
+            Self.count += 1
+            if !Self.sequence.isEmpty {
+                let next = Self.sequence.removeFirst()
+                return (next.status, "application/json", next.data, nil)
+            }
+            return Self.response
+        }
         let http = HTTPURLResponse(url: response.url ?? request.url!, statusCode: response.status, httpVersion: "HTTP/1.1",
                                    headerFields: ["Content-Type": response.mime])!
         client?.urlProtocol(self, didReceive: http, cacheStoragePolicy: .notAllowed)

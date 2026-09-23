@@ -225,7 +225,7 @@ struct BSmartPriceChart<Overlay: View>: View {
                     onMarker(entry.0.id)
                 } label: {
                     Text("\(entry.0.number)").font(.system(size: 12, weight: .bold).monospacedDigit())
-                        .foregroundStyle(selectedMarkerID == entry.0.id ? BSmartColor.ink : entry.0.color)
+                        .foregroundStyle(selectedMarkerID == entry.0.id ? BSmartColor.onAccent : entry.0.color)
                         .frame(width: 28, height: 28)
                         .background(selectedMarkerID == entry.0.id ? entry.0.color : BSmartColor.ink, in: Circle())
                         .overlay(Circle().stroke(entry.0.color, lineWidth: 1.5))

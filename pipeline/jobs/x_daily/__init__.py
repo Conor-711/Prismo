@@ -21,11 +21,15 @@ def write_json(path: Path, value) -> None:
 
 
 def run(*, package: str, database: str, output: str, apply: bool = False,
-        workers: int = 2, max_calls: int = 1000, publish: bool = False) -> dict:
+        workers: int = 2, max_calls: int = 1000, publish: bool = False,
+        skip_translation: bool = False, reading_package_only: bool = False) -> dict:
     if publish and not apply:
         raise ValueError("--publish requires --apply")
-    if not 1 <= workers <= 4 or max_calls < 1:
-        raise ValueError("workers must be 1..4 and max-calls must be positive")
+    target = os.environ.get("BSMART_CONTENT_PUBLISH_TARGET", "legacy")
+    if publish and target not in {"legacy", "supabase"}:
+        raise ValueError("BSMART_CONTENT_PUBLISH_TARGET must be legacy or supabase")
+    if not 1 <= workers <= 16 or max_calls < 1:
+        raise ValueError("workers must be 1..16 and max-calls must be positive")
     database_path = Path(database).expanduser().resolve()
     if not database_path.is_file():
         raise FileNotFoundError("Existing local source database required")
@@ -44,7 +48,9 @@ def run(*, package: str, database: str, output: str, apply: bool = False,
             if not apply:
                 plan = {key: value for key, value in info.items() if key != "postIds"}
                 plan.update(status="inspected", output=str(run_dir), maxCalls=max_calls,
-                            stages=["import", "candidates", "extract", "prices", "settle", "score", "reading", "export", "publish"])
+                            skipTranslation=skip_translation,
+                            readingPackageOnly=reading_package_only,
+                            stages=["import", "candidates", "extract", "prices", "settle", "score", "reading", "export", "media", "publish"])
                 write_json(run_dir / "inspection.json", plan)
                 print(json.dumps(plan, ensure_ascii=False, indent=2))
                 return plan
@@ -53,8 +59,14 @@ def run(*, package: str, database: str, output: str, apply: bool = False,
                 state = json.loads(state_path.read_text())
                 if state["database"] != str(database_path):
                     raise ValueError("This package journal belongs to another source database")
+                if state.get("skipTranslation", False) != skip_translation:
+                    raise ValueError("Translation mode changed; use the original mode or a separate --output directory")
+                if state.get("readingPackageOnly", False) != reading_package_only:
+                    raise ValueError("Reading scope changed; use the original scope or a separate --output directory")
             else:
-                state = {**info, "asOf": datetime.now(timezone.utc).isoformat(), "steps": {}, "status": "running"}
+                state = {**info, "asOf": datetime.now(timezone.utc).isoformat(), "steps": {},
+                         "status": "running", "skipTranslation": skip_translation,
+                         "readingPackageOnly": reading_package_only}
             # Config is resolved before importing modules with process-global DB engines.
             write_json(state_path, state)
             environment = {**os.environ, "DATABASE_URL": f"sqlite:///{database_path}", "PRICE_DB": str(database_path)}
@@ -67,10 +79,12 @@ def run(*, package: str, database: str, output: str, apply: bool = False,
                 python = Path(__file__).resolve().parents[3] / "services/client_api/.venv/bin/python"
                 if not python.is_file():
                     raise RuntimeError("Install the Client API runtime before publishing")
-                subprocess.run([str(python), "-m", "services.client_api.publish_daily_x",
+                module = "services.client_api.content_release" if target == "supabase" else "services.client_api.publish_daily_x"
+                subprocess.run([str(python), "-m", module,
                                 "--input-dir", str(run_dir / "release"), "--apply"],
                                cwd=Path(__file__).resolve().parents[3], check=True)
                 state["status"] = "published"
+                state["publicationTarget"] = target
                 write_json(state_path, state)
             print(json.dumps({"status": state["status"], "output": str(run_dir), "steps": state["steps"]}, ensure_ascii=False, indent=2))
             return state
@@ -81,6 +95,7 @@ def _process(state: dict, state_path: Path, staging: Path, run_dir: Path, worker
     from ...domain.smart_voice import daily_x, v0_impl as score
     from ...domain.opinions import kol_refine, kol_translate
     from ...platforms.x.archive import import_archives
+    from ...platforms.x.opinion_media import attach_media_to_release, enrich_posts
     from ...platforms.market_data.daily_prices import refresh
     from ..smart_voice.client_read_model import export_smart_account_client_read_model
 
@@ -90,6 +105,7 @@ def _process(state: dict, state_path: Path, staging: Path, run_dir: Path, worker
     state["processingVersions"] = versions
     if Path(engine.url.database or "").resolve() != Path(state["database"]):
         raise RuntimeError("Loaded pipeline DB differs from --database; run in a fresh CLI process")
+    rankings_frozen = os.environ.get("BSMART_RANKINGS_FROZEN", "true").lower() not in {"0", "false", "no"}
     con = daily_x.connect(state["database"])
     as_of = datetime.fromisoformat(state["asOf"])
     post_ids = set(state["postIds"])
@@ -114,16 +130,23 @@ def _process(state: dict, state_path: Path, staging: Path, run_dir: Path, worker
         step("extract", lambda: daily_x.extract(con, post_ids, workers, max_calls))
         step("prices", lambda: refresh(con, daily_x.price_scope(con)))
         step("settle", lambda: score.settle_calls(con, {"x"}, initialize_schema=False))
-        step("score", lambda: score.score_investors(con, sources={"x"}, initialize_schema=False))
+        step("score", (lambda: {"status": "frozen"}) if rankings_frozen else
+             (lambda: score.score_investors(con, sources={"x"}, initialize_schema=False)))
 
         def prepare_readings():
             rows = daily_x.reading_rows(con, daily_x.collections(con, as_of))
+            if state.get("readingPackageOnly", False):
+                rows = [row for row in rows if row["item_id"] in post_ids]
             if len(rows) > max_calls:
                 raise RuntimeError(f"{len(rows)} reading rows exceed --max-calls {max_calls}")
-            kol_refine.refine(sources=["x"], rows=rows, workers=workers, initialize_schema=False)
-            kol_translate.translate(sources=["x"], rows=rows, workers=workers,
-                                    initialize_schema=False, complete_text=True)
-            return daily_x.validate_readings(con, rows)
+            kol_refine.refine(sources=["x"], rows=rows, workers=workers,
+                              initialize_schema=False, complete_text=True)
+            if not state.get("skipTranslation", False):
+                kol_translate.translate(sources=["x"], rows=rows, workers=workers,
+                                        initialize_schema=False, complete_text=True)
+            quality = daily_x.validate_readings(con, rows, require_translation=not state.get("skipTranslation", False))
+            quality["readingScope"] = "package" if state.get("readingPackageOnly", False) else "display-window"
+            return quality
 
         step("reading", prepare_readings)
 
@@ -148,6 +171,27 @@ def _process(state: dict, state_path: Path, staging: Path, run_dir: Path, worker
             return {key: value["count"] for key, value in collections.items()}
 
         step("export", export)
+
+        def attach_media():
+            release = run_dir / "release"
+            selected_ids = {row.get("sourcePostId") for name in ("smart-account-updates", "smart-account-evidence")
+                            for row in json.loads((release / f"{name}.json").read_text())}
+            posts = []
+            for path in sorted(staging.glob("tweets_*.jsonl")):
+                with path.open() as stream:
+                    for line in stream:
+                        if line.strip():
+                            post = json.loads(line)
+                            if str(post.get("tweet_id")) in selected_ids:
+                                posts.append(post)
+            try:
+                enriched = enrich_posts(con, posts) if posts else {"posts": 0, "withImages": 0, "images": 0, "failed": 0}
+                return {**enriched, "attached": attach_media_to_release(con, release)}
+            except Exception as exc:
+                # Media is supplementary; a CDN or Storage failure must not block text publication.
+                return {"status": "unavailable", "errorType": type(exc).__name__}
+
+        step("media", attach_media)
         if state["status"] != "published":
             state["status"] = "ready"
         state.pop("activeStep", None)

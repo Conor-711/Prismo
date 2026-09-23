@@ -6,6 +6,10 @@ struct TodayMarketActivityView: View {
     @Namespace private var consensusTransition
     @Namespace private var alphaTransition
 
+    private var previewOpportunities: [TodayAlphaOpportunity] {
+        opportunities.filter { $0.kind == .smartAccount }
+    }
+
     var body: some View {
         LazyVStack(alignment: .leading, spacing: BSmartSpacing.medium) {
             BSmartDetailNavigationLink(id: "today-consensus-library") {
@@ -42,8 +46,8 @@ struct TodayMarketActivityView: View {
             .padding(.top, BSmartSpacing.large)
             .accessibilityIdentifier("today.alpha.title")
 
-            if opportunities.isEmpty { emptyState }
-            ForEach(opportunities.prefix(2)) { opportunity in
+            if previewOpportunities.isEmpty { emptyState }
+            ForEach(previewOpportunities.prefix(2)) { opportunity in
                 NavigationLink {
                     TodayAlphaOpportunityDetailView(opportunity: opportunity)
                         .bSmartZoomNavigationTransition(sourceID: opportunity.id, in: alphaTransition)

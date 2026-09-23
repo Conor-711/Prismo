@@ -1,0 +1,64 @@
+openapi: 3.1.0
+info:
+  title: bSmart Platform Account Profile
+  version: 1.0.0
+servers:
+  - url: https://dzyitinagewdfkzjkuiz.supabase.co/functions/v1
+security:
+  - supabaseUser: []
+    publishableKey: []
+paths:
+  /bsmart-profile:
+    get:
+      operationId: myAccountProfile
+      responses:
+        '200':
+          description: Authenticated owner's canonical profile. Cache-Control no-store.
+          content:
+            application/json:
+              schema: {$ref: './bsmart-v1.yaml#/components/schemas/AccountProfile'}
+        '401': {description: Verified Google/Apple session required.}
+        '503': {description: Profile service unavailable; do not overwrite with local data.}
+    put:
+      operationId: updateMyAccountProfile
+      description: Does not change identity or trade-amount consent. Caller identity always comes from verified auth.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [username, handle, bio, revision, avatar]
+              properties:
+                username: {type: string, minLength: 1, maxLength: 28, description: Duplicates allowed.}
+                handle: {type: string, description: Normalized to lowercase without a leading @; unique, 3-24 ASCII letters/digits/underscores, starts with letter.}
+                bio: {type: string, maxLength: 120}
+                revision: {type: integer, minimum: 0}
+                avatar:
+                  oneOf:
+                    - type: object
+                      additionalProperties: false
+                      required: [action]
+                      properties:
+                        action: {type: string, enum: [keep, remove, provider]}
+                    - type: object
+                      additionalProperties: false
+                      required: [action, jpegBase64]
+                      properties:
+                        action: {const: upload}
+                        jpegBase64: {type: string, maxLength: 266668, description: JPEG <=200000 bytes and 512x512; re-encoded without metadata.}
+      responses:
+        '200':
+          description: Updated profile; avatarURL signed for 300 seconds for private stored objects.
+          content:
+            application/json:
+              schema: {$ref: './bsmart-v1.yaml#/components/schemas/AccountProfile'}
+        '401': {description: Authentication expired.}
+        '409': {description: error=handle_taken or profile_conflict. Reload on conflict.}
+        '422': {description: error=invalid_profile or provider_avatar_unavailable.}
+        '503': {description: Service unavailable; a timeout may hide a successful commit. Reload before retry.}
+components:
+  securitySchemes:
+    supabaseUser: {type: http, scheme: bearer, bearerFormat: JWT}
+    publishableKey: {type: apiKey, in: header, name: apikey}

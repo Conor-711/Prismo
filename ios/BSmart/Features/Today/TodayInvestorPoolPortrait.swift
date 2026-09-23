@@ -9,32 +9,33 @@ struct TodayInvestorPoolPortrait: View {
     private var prominent: Bool { distance == 0 }
     private var size: CGFloat {
         switch distance {
-        case 0: min(compact ? 82 : 98, cellWidth * 1.18)
-        case 1: min(compact ? 46 : 54, cellWidth * 0.61)
-        default: min(compact ? 32 : 38, cellWidth * 0.45)
+        case 0: min(compact ? 96 : 108, cellWidth - 14)
+        default: min(compact ? 74 : 84, cellWidth - 28)
         }
     }
 
     var body: some View {
         Button(action: onSelect) {
             VStack(spacing: 6) {
-                BSmartAvatar(url: investor.account.avatarURL, name: investor.account.name, size: size)
+                BSmartAvatar(url: investor.account.avatarURL, name: investor.account.name,
+                             size: size)
                     .padding(prominent ? 4 : 2)
                     .overlay {
-                        Circle().stroke(prominent ? BSmartColor.brand.opacity(0.7) : BSmartColor.line,
-                                        lineWidth: prominent ? 1.5 : 0.5)
+                        Circle()
+                            .stroke(prominent ? BSmartColor.brand.opacity(0.7) : BSmartColor.line,
+                                    lineWidth: prominent ? 1.5 : 0.5)
                     }
-                    .overlay(alignment: .bottom) {
+                    .overlay(alignment: .bottomTrailing) {
                         SmartPlatformMark(platform: investor.account.platform, size: prominent ? 20 : 15)
                             .padding(3)
                             .background(BSmartColor.ink, in: Circle())
-                            .offset(y: 7)
+                            .offset(x: 5, y: 5)
                     }
-                    .frame(height: compact ? 112 : 136)
+                    .frame(height: compact ? 112 : 124)
                 Group {
                     if prominent {
                         Text("Top %d%%".bSmartLocalized(TodayInvestorPool.topPercent(investor)))
-                            .font(.system(size: compact ? 19 : 21, weight: .bold, design: .rounded))
+                            .font(.system(size: 17, weight: .bold, design: .rounded))
                             .foregroundStyle(BSmartColor.brand)
                             .fixedSize()
                     } else {

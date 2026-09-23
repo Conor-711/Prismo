@@ -273,13 +273,16 @@ def map_author_uploads(
     force: bool = False,
     limit: int | None = None,
     max_tickers: int = 6,
+    initialize_schema: bool = True,
+    video_ids: set[str] | None = None,
 ) -> MappingSummary:
     if max_tickers <= 0:
         raise ValueError("max_tickers must be positive")
     con = sqlite3.connect(str(db_path), timeout=60)
     con.row_factory = sqlite3.Row
     con.execute("PRAGMA busy_timeout=60000")
-    _ensure_schema(con)
+    if initialize_schema:
+        _ensure_schema(con)
     pool_version = pool_version or _latest_pool_version(con)
     valid_tickers = {
         str(row[0]).upper()
@@ -301,6 +304,12 @@ def map_author_uploads(
     if not force:
         where = "AND (r.video_id IS NULL OR r.mapping_version <> ?)"
         params.append(MAPPING_VERSION)
+    if video_ids is not None:
+        if not video_ids:
+            con.close()
+            return MappingSummary(pool_version, 0, 0, 0, 0)
+        where += " AND u.video_id IN (" + ",".join("?" for _ in video_ids) + ")"
+        params.extend(sorted(video_ids))
     sql = f"""
         SELECT u.video_id, u.channel_id, u.title, u.description
         FROM yt_channel_upload u

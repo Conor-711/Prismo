@@ -8,5 +8,6 @@ const client = createClient(url, key, { auth: { persistSession: false, autoRefre
 Deno.serve(req => handle(req, client, {
   depositsEnabled: Deno.env.get("BSMART_DEPOSITS_ENABLED") === "true",
   tradingEnabled: Deno.env.get("BSMART_TRADING_ENABLED") === "true",
-  withdrawalsEnabled: Deno.env.get("BSMART_WITHDRAWALS_ENABLED") === "true",
+  withdrawalsEnabled: false,
+  acrossWithdrawalsEnabled: Deno.env.get("BSMART_ACROSS_WITHDRAWALS_ENABLED") === "true",
 }));

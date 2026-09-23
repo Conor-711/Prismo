@@ -79,14 +79,9 @@ actor SupabaseAccountAuthClient: AccountAuthenticating {
         guard TradingAccountSession.validSupabaseRefreshToken(token) else { throw AccountAccessError.expired }
         let body = try JSONSerialization.data(withJSONObject: ["refresh_token": token])
         let response = try await exchange(grant: "refresh_token", body: body)
-        do {
-            let user = try await verifiedUser(token: response.accessToken)
-            guard user.id == response.user.id else { throw AccountAccessError.invalidResponse }
-            return try response.session(user: user, provider: provider)
-        } catch {
-            try? await signOut(token: response.accessToken)
-            throw error
-        }
+        // The authenticated token exchange already returns the authoritative user.
+        // A second network request must not revoke a successfully rotated session.
+        return try response.session(user: response.user, provider: provider)
     }
 
     func signOut(token: String) async throws {

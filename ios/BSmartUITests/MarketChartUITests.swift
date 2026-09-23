@@ -15,26 +15,31 @@ final class MarketChartUITests: XCTestCase {
         capture(app, "Ticker OHLC candles without posts")
     }
 
-    func testCompactDockAndTradeSheetCandlesInLightMode() {
+    func testCompactDockCandlesAndWalletGateInLightMode() {
         let app = launch(appearance: "light")
         app.descendants(matching: .any)["app.tab.portfolio"].tap()
+        app.buttons["portfolio.account.switch"].tap()
         app.descendants(matching: .any)["portfolio.entry.NVDA"].tap()
         let short = app.buttons["trade.open.nvda.short"]
         let long = app.buttons["trade.open.nvda"]
         XCTAssertTrue(short.waitForExistence(timeout: 8))
-        XCTAssertTrue(long.isHittable)
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "hittable == true"), object: long
+        )], timeout: 5), .completed, app.debugDescription)
         XCTAssertGreaterThanOrEqual(short.frame.height, 44)
         XCTAssertLessThanOrEqual(short.frame.height, 46)
         XCTAssertEqual(short.frame.height, long.frame.height)
         app.buttons["trade.chart-style"].tap()
         app.buttons["Candlestick chart"].tap()
         XCTAssertTrue(app.descendants(matching: .any)["hyperliquid.chart"].exists)
-        capture(app, "Ticker candles and compact dock light")
         short.tap()
-        XCTAssertTrue(app.buttons["trade.mode.chart"].waitForExistence(timeout: 8))
-        app.buttons["trade.mode.chart"].tap()
-        XCTAssertTrue(app.descendants(matching: .any)["hyperliquid.chart"].exists)
-        capture(app, "Quick order candlesticks light")
+        XCTAssertTrue(app.buttons["trade.live.wallet"].waitForExistence(timeout: 8))
+        XCTAssertFalse(app.descendants(matching: .any)["trading-order.submit"].exists)
+        XCTAssertFalse(app.descendants(matching: .any)["trade.composer"].exists)
+        XCTAssertTrue(app.buttons["trade.close"].isHittable)
+        XCTAssertFalse(app.buttons["app.tab.portfolio"].isHittable)
+        app.buttons["trade.close"].tap()
+        XCTAssertTrue(short.waitForExistence(timeout: 5))
     }
 
     private func launch(appearance: String = "dark") -> XCUIApplication {

@@ -1,0 +1,9 @@
+{
+  "kind": "account",
+  "subjectId": "test-author",
+  "platform": "X",
+  "totalTrades": 10,
+  "longTrades": 7,
+  "shortTrades": 3,
+  "sourceCount": 10
+}
