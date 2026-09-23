@@ -80,6 +80,23 @@ final class OpinionPortraitUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["ticker-intelligence.\(symbol)"].waitForExistence(timeout: 5))
     }
 
+    func testPriceTimelineStartsCollapsedAndCanBeOpenedAgain() {
+        let app = openOpinion()
+        let toggle = app.buttons["opinion.price-timeline.toggle"]
+        let chart = app.descendants(matching: .any)["opinion.evidence.chart.plot"].firstMatch
+        XCTAssertTrue(toggle.exists)
+        XCTAssertFalse(chart.exists)
+        for _ in 0..<12 where !toggle.isHittable {
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.03, dy: 0.75))
+                .press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.03, dy: 0.3)))
+        }
+        XCTAssertTrue(toggle.isHittable)
+        toggle.tap()
+        XCTAssertTrue(chart.waitForExistence(timeout: 5))
+        toggle.tap()
+        XCTAssertFalse(chart.exists)
+    }
+
     private func assertRankBelowAvatar(in app: XCUIApplication, cover: XCUIElement) {
         let rank = app.staticTexts["opinion.author-rank"]
         XCTAssertTrue(rank.isHittable)
