@@ -9,9 +9,12 @@ final class OpinionTradersUITests: XCTestCase {
         XCTAssertTrue(count.waitForExistence(timeout: 5))
         XCTAssertEqual(count.label, "3")
         XCTAssertEqual(app.staticTexts["opinion.traders.volume"].label, "$364.75")
-        count.tap()
         let casey = app.staticTexts["Casey"]
         let morgan = app.staticTexts["Morgan"]
+        XCTAssertTrue(casey.waitForExistence(timeout: 4))
+        count.tap()
+        XCTAssertFalse(casey.exists)
+        count.tap()
         XCTAssertTrue(casey.waitForExistence(timeout: 4))
         XCTAssertTrue(app.staticTexts["Some traders keep their profiles private."].exists)
         let more = app.buttons["Load more"]

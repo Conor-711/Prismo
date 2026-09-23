@@ -86,8 +86,11 @@ function quoteValidationFailure(value: unknown, source: "spot" | "perps", units:
   now = Date.now()): string | null {
   if (!record(value)) return "response_shape";
   if (!record(value.inputToken) || !record(value.outputToken) || !record(value.refundToken)) return "token_shape";
-  if (!record(value.fees) || !record(value.fees.submission) ||
-      !digits(value.fees.submission.amount) || !record(value.fees.submission.token)) return "fee_shape";
+  if (!record(value.fees)) return "fees_missing";
+  if (value.fees.submission === null) return "submission_fee_null";
+  if (!record(value.fees.submission)) return "submission_fee_missing";
+  if (!digits(value.fees.submission.amount)) return "submission_fee_amount_shape";
+  if (!record(value.fees.submission.token)) return "submission_fee_token_shape";
   if (value.swapTx !== null || !steps(value)) return "signing_steps";
   if (!digits(value.depositId) || value.inputAmount !== units) return "quote_identity";
   if (value.inputToken.chainId !== ORIGIN ||
@@ -297,9 +300,9 @@ export async function handleAcross(req: Request, client: SupabaseClient, enabled
         return reply({ error: "provider_unavailable" }, 503);
       }
       if (!validQuote(quote, input.sourceDex as "spot" | "perps", units)) {
-        console.warn("Across quote failed local validation",
-          quoteValidationFailure(quote, input.sourceDex as "spot" | "perps", units));
-        return reply({ error: "provider_unavailable" }, 503);
+        const reason = quoteValidationFailure(quote, input.sourceDex as "spot" | "perps", units);
+        console.warn("Across quote failed local validation", reason);
+        return reply({ error: reason === "submission_fee_null" ? "quote_incomplete" : "provider_unavailable" }, 503);
       }
       const { data, error: reserveError } = await client.rpc("bsmart_across_withdrawal_reserve", {
         p_account: user.id, p_id: input.id, p_wallet: owner, p_recipient: input.recipient,

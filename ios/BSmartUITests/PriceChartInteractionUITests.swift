@@ -36,6 +36,11 @@ final class PriceChartInteractionUITests: XCTestCase {
         reveal(evidence, in: app)
         evidence.tap()
         XCTAssertTrue(app.descendants(matching: .any)["smart.account.evidence.detail"].waitForExistence(timeout: 5))
+        let timeline = app.buttons["opinion.price-timeline.toggle"]
+        XCTAssertTrue(timeline.exists)
+        XCTAssertFalse(app.descendants(matching: .any)["opinion.evidence.chart.plot"].exists)
+        reveal(timeline, in: app)
+        timeline.tap()
         revealChart("opinion.evidence.chart", in: app)
         verifyInteractions("opinion.evidence.chart", in: app, pinch: true)
         XCTAssertTrue(app.buttons["opinion.evidence.marker.0"].exists)

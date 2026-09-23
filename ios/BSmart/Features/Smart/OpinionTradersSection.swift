@@ -8,7 +8,7 @@ struct OpinionTradersSection: View {
     let ticker: String
     var referencePrice: Double? = nil
     var refresh = 0
-    @State private var expanded = false
+    @State private var expansionOverride: Bool?
     @State private var page: OpinionTradersPage?
     @State private var traders: [OpinionTrader] = []
     @State private var loading = false
@@ -16,6 +16,8 @@ struct OpinionTradersSection: View {
     @State private var demoAsOf = Date()
     @State private var showDemo = false
     @State private var requestID = UUID()
+
+    private var expanded: Bool { expansionOverride ?? page?.hasTradeActivity ?? false }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -53,6 +55,7 @@ struct OpinionTradersSection: View {
         .task(id: "\(opinionID)-\(refresh)-\(account.identity?.id.uuidString ?? "signed-out")-\(account.feedRevision)") {
             clear(); await load(reset: true)
         }
+        .onChange(of: account.identity?.id) { _, _ in expansionOverride = nil }
         .onDisappear { clear() }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { Task { await load(reset: true) } }
@@ -63,7 +66,7 @@ struct OpinionTradersSection: View {
     private var liveContent: some View {
         VStack(alignment: .leading, spacing: 10) {
             Button {
-                expanded.toggle()
+                expansionOverride = !expanded
                 if expanded { Task { await load(reset: true) } }
             } label: {
                 VStack(alignment: .leading, spacing: 10) {
@@ -85,9 +88,6 @@ struct OpinionTradersSection: View {
                 .frame(minHeight: 44)
                 .contentShape(Rectangle())
             }.buttonStyle(.plain).accessibilityIdentifier("opinion.traders.expand")
-            if let page, let longs = page.longTraders, let shorts = page.shortTraders {
-                OpinionTradeSplitBar(longTraders: longs, shortTraders: shorts, compact: true)
-            }
             if failed {
                 HStack {
                     Text("Trade statistics unavailable".bSmartLocalized)
@@ -99,6 +99,9 @@ struct OpinionTradersSection: View {
                 }
             }
             if expanded, let page {
+                if let longs = page.longTraders, let shorts = page.shortTraders {
+                    OpinionTradeSplitBar(longTraders: longs, shortTraders: shorts, compact: true)
+                }
                 if page.totalTraders == 0 {
                     Text("No verified trades yet".bSmartLocalized).font(.subheadline)
                         .foregroundStyle(BSmartColor.secondaryText)

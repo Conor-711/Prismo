@@ -15,7 +15,7 @@ struct OpinionReaderView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if let summary = content.summary {
+            if let summary = content.displaySummary {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Summary".bSmartLocalized)
                         .font(.caption.weight(.semibold))

@@ -143,4 +143,28 @@ final class OpinionReadingDocumentTests: XCTestCase {
         update.translatedText = "  "
         XCTAssertNil(OpinionReadingContent(update: update, chinese: true).translation)
     }
+
+    func testSummaryAppearsOnlyForLongReadingOrMissingBody() {
+        var update = SmartAccountUpdate(id: UUID(), ticker: "MIRM", companyName: "MIRM",
+            authorId: "author", authorName: "Investor", platform: "X", score: 0,
+            platformPercentile: 0.1, direction: .bullish, lifecycle: .new, horizon: "20D",
+            targetPrice: nil, thesis: "View", invalidation: nil, publishedAt: .now, evidenceURL: nil)
+        update.activityTitleZH = "简要观点"
+        update.originalText = "Bought more MIRM today."
+        update.translatedTextZH = "今天增加了 MIRM 仓位。"
+        XCTAssertNil(OpinionReadingContent(update: update, chinese: true).displaySummary)
+
+        update.originalText = " " + String(repeating: "word ", count: 99)
+        update.translatedTextZH = String(repeating: "中", count: 249)
+        XCTAssertNil(OpinionReadingContent(update: update, chinese: true).displaySummary)
+        update.translatedTextZH = String(repeating: "中", count: 250)
+        XCTAssertEqual(OpinionReadingContent(update: update, chinese: true).displaySummary, "简要观点")
+
+        update.translatedTextZH = "简短译文"
+        update.originalText = String(repeating: "a", count: 500)
+        XCTAssertEqual(OpinionReadingContent(update: update, chinese: true).displaySummary, "简要观点")
+        update.originalText = nil
+        update.translatedTextZH = nil
+        XCTAssertEqual(OpinionReadingContent(update: update, chinese: true).displaySummary, "简要观点")
+    }
 }

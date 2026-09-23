@@ -88,6 +88,12 @@ Deno.test("Across quote failures distinguish unsupported amounts from service er
     ports(new Error("network")));
   assert.equal(providerDown.status, 503);
   assert.equal((await providerDown.json()).error, "provider_unavailable");
+  const missingFee = await handleAcross(request("/quote", "POST", input), client, true, "key", "0xdead", {
+    quote: async () => ({ ...quote("100000000"), fees: { submission: null } }),
+    submit: async () => ({}), status: async () => ({}),
+  });
+  assert.equal(missingFee.status, 503);
+  assert.equal((await missingFee.json()).error, "quote_incomplete");
 });
 
 Deno.test("background reconciliation requires the Vault token before reading records", async () => {

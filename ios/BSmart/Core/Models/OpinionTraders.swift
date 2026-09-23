@@ -30,6 +30,10 @@ struct OpinionTradersPage: Codable {
             .precision(.fractionLength(0...2)))
     }
 
+    var hasTradeActivity: Bool {
+        totalTraders > 0 || (totalNotional ?? 0) > 0
+    }
+
     func validate(offset: Int) throws {
         if let totalNotionalUSD {
             guard totalNotionalUSD.count <= 64,

@@ -49,4 +49,14 @@ final class OpinionTradersTests: XCTestCase {
                 traders: [], nextOffset: nil, totalNotionalUSD: raw).validate(offset: 0))
         }
     }
+
+    func testDefaultExpansionRequiresNonzeroTradeActivity() {
+        let empty = OpinionTradersPage(totalTraders: 0, publicTraders: 0, traders: [], nextOffset: nil,
+                                       longTraders: 0, shortTraders: 0, totalNotionalUSD: "0.00")
+        XCTAssertFalse(empty.hasTradeActivity)
+        XCTAssertTrue(OpinionTradersPage(totalTraders: 1, publicTraders: 0, traders: [], nextOffset: nil,
+                                         totalNotionalUSD: "0").hasTradeActivity)
+        XCTAssertTrue(OpinionTradersPage(totalTraders: 0, publicTraders: 0, traders: [], nextOffset: nil,
+                                         totalNotionalUSD: "0.01").hasTradeActivity)
+    }
 }

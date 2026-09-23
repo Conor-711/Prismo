@@ -140,6 +140,20 @@ struct OpinionReadingContent {
     let translation: String?
     let summary: String?
 
+    var displaySummary: String? {
+        guard let summary else { return nil }
+        let bodies = [original, translation].compactMap { $0 }
+        guard !bodies.isEmpty else { return summary }
+        return bodies.contains { Self.readingLength($0) >= 500 } ? summary : nil
+    }
+
+    private static func readingLength(_ text: String) -> Int {
+        text.unicodeScalars.reduce(into: 0) { length, scalar in
+            guard !CharacterSet.whitespacesAndNewlines.contains(scalar) else { return }
+            length += (0x2E80...0x9FFF).contains(scalar.value) ? 2 : 1
+        }
+    }
+
     init(update: SmartAccountUpdate, chinese: Bool) {
         func nonempty(_ text: String?) -> String? {
             guard let text, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }

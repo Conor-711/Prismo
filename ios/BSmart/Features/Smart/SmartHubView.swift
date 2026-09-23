@@ -434,6 +434,8 @@ struct SmartAccountEvidenceDetailView: View {
     let update: SmartAccountUpdate
     var priceContextNote: String? = nil
     @State private var traderRefresh = 0
+    @State private var priceTimelineExpanded = false
+    @State private var showsPriceTimelineHelp = false
 
     var body: some View {
         OpinionDetailLayout(update: update) {
@@ -463,6 +465,7 @@ struct SmartAccountEvidenceDetailView: View {
         .bSmartTradeDock(symbol: update.ticker, opinionSource: .init(opinionID: update.id, ticker: update.ticker, authorID: update.authorId),
                         onTradeDismiss: { traderRefresh += 1 })
         .bSmartPage()
+        .onChange(of: update.id) { _, _ in priceTimelineExpanded = false }
     }
 
     private func settlementEvidence(_ settlement: SmartAccountSettlementEvidence) -> some View {
@@ -508,17 +511,39 @@ struct SmartAccountEvidenceDetailView: View {
 
     private func priceContext(_ evidence: SmartAccountPriceEvidence) -> some View {
         VStack(alignment: .leading, spacing: BSmartSpacing.medium) {
-            BSmartSectionHeader(
-                title: "Price timeline",
-                detail: "Publication, entry and settlement windows on real daily OHLC"
-            )
-            EvidenceChartGuide(kind: "Price history", detail: "1–3 match evidence below")
-            PriceEvidenceChart(update: update, evidence: evidence)
-                .frame(height: 286)
-            SmartAccountOpinionEvidenceList(update: update, evidence: evidence)
-            PriceEvidenceMilestones(update: update, evidence: evidence, settlement: update.settlement)
+            HStack(spacing: 8) {
+                Button {
+                    priceTimelineExpanded.toggle()
+                } label: {
+                    HStack {
+                        Text("Price timeline".bSmartLocalized)
+                            .font(.headline)
+                            .foregroundStyle(BSmartColor.primaryText)
+                        Spacer()
+                        Image(systemName: priceTimelineExpanded ? "chevron.up" : "chevron.down")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(BSmartColor.secondaryText)
+                    }
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("opinion.price-timeline.toggle")
+                BSmartHelpButton { showsPriceTimelineHelp = true }
+            }
+            if priceTimelineExpanded {
+                EvidenceChartGuide(kind: "Price history", detail: "1–3 match evidence below")
+                PriceEvidenceChart(update: update, evidence: evidence)
+                    .frame(height: 286)
+                SmartAccountOpinionEvidenceList(update: update, evidence: evidence)
+                PriceEvidenceMilestones(update: update, evidence: evidence, settlement: update.settlement)
+            }
         }
         .padding(.vertical, 8)
+        .sheet(isPresented: $showsPriceTimelineHelp) {
+            BSmartHelpSheet(title: "Price timeline",
+                message: "Publication, entry and settlement windows on real daily OHLC")
+        }
     }
 
 

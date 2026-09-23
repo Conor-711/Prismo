@@ -42,9 +42,9 @@ final class OpinionPortraitUITests: XCTestCase {
         XCTAssertFalse(app.descendants(matching: .any)["app.tabbar"].isHittable)
         let traders = app.staticTexts["opinion.traders.count"]
         XCTAssertTrue(traders.waitForExistence(timeout: 5))
-        let summary = app.descendants(matching: .any)["opinion.reader.summary"].firstMatch
-        XCTAssertTrue(summary.exists)
-        XCTAssertLessThanOrEqual(traders.frame.maxY, summary.frame.minY)
+        let reader = app.descendants(matching: .any)["opinion.reader"].firstMatch
+        XCTAssertTrue(reader.exists)
+        XCTAssertLessThanOrEqual(traders.frame.maxY, reader.frame.minY)
         for _ in 0..<4 {
             app.coordinate(withNormalizedOffset: CGVector(dx: 0.03, dy: 0.75))
                 .press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.03, dy: 0.25)))

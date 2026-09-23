@@ -2,6 +2,7 @@ import Foundation
 
 enum AcrossWithdrawalError: String, Error, LocalizedError {
     case quoteUnavailable = "quote_unavailable"
+    case quoteIncomplete = "quote_incomplete"
     case providerUnavailable = "provider_unavailable"
     case providerNotAuthorized = "provider_not_authorized"
     case unavailable = "withdrawal_unavailable"
@@ -17,6 +18,9 @@ enum AcrossWithdrawalError: String, Error, LocalizedError {
         switch self {
         case .quoteUnavailable:
             "Across could not quote this amount or route. Change the amount or try later.".bSmartLocalized
+        case .quoteIncomplete:
+            "Across returned a quote without its submission fee. No transfer was made; please contact support."
+                .bSmartLocalized
         case .providerUnavailable, .unavailable:
             "Across is temporarily unavailable. Refresh withdrawal status before trying again.".bSmartLocalized
         case .providerNotAuthorized:
