@@ -1,6 +1,25 @@
 from __future__ import annotations
 
+from pathlib import Path
+
+from ...jobs.congress_capture import capture_trades
 from ...jobs.congress_score import DEFAULT_DATASET_URL, run_congress_score
+
+
+def cmd_congress_fetch(args) -> None:
+    root = Path(__file__).resolve().parents[3]
+    output = Path(args.output).expanduser().resolve()
+    snapshot = capture_trades(
+        root=root, output=output, since=args.since, until=args.until,
+        page_size=args.page_size, max_pages=args.max_pages, credit_budget=args.credit_budget,
+    )
+    print(
+        f"fetched={snapshot['fetched_count']} total={snapshot['total_count']} "
+        f"pages={snapshot['pages_fetched']} "
+        f"possibly_truncated={snapshot['possibly_truncated']} output={output}"
+    )
+    if snapshot["possibly_truncated"]:
+        print("Warning: page cap reached; rerun with a larger --max-pages or a narrower date window.")
 
 
 def cmd_congress_score(args) -> None:
@@ -19,6 +38,20 @@ def cmd_congress_score(args) -> None:
 
 
 def register_commands(sub, root) -> None:
+    fetch_parser = sub.add_parser(
+        "congress-fetch",
+        help="Capture Disclosed Capitol trades into a local, incrementally updated snapshot.",
+    )
+    fetch_parser.add_argument("--since", help="Inclusive start date; defaults to 30 days or a 7-day overlap.")
+    fetch_parser.add_argument("--until", help="Inclusive end date; defaults to today UTC.")
+    fetch_parser.add_argument("--page-size", type=int, default=50)
+    fetch_parser.add_argument("--max-pages", type=int, default=1)
+    fetch_parser.add_argument("--credit-budget", type=int, default=100)
+    fetch_parser.add_argument(
+        "--output", default=str(root / "data" / "exports" / "congress" / "disclosed_capitol.json")
+    )
+    fetch_parser.set_defaults(func=cmd_congress_fetch)
+
     parser = sub.add_parser(
         "congress-score",
         help="Score one year of House and Senate STOCK Act transactions.",

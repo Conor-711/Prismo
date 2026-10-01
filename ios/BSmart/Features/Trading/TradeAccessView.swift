@@ -13,6 +13,7 @@ extension EnvironmentValues {
 
 enum BSmartTradeButtonStyle {
     case compact
+    case mirror
     case prominent
     case side
 }
@@ -33,6 +34,7 @@ struct BSmartTradeButton: View {
     }
 
     private var title: String {
+        if style == .mirror { return "Mirror".bSmartLocalized }
         if style != .compact {
             return (initialSide == .long ? "Long" : "Short").bSmartLocalized
         }
@@ -49,24 +51,27 @@ struct BSmartTradeButton: View {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             showsTrading = true
         } label: {
-            HStack(spacing: style == .side ? 5 : 7) {
-                if style == .compact {
-                    Image(systemName: "arrow.up.arrow.down")
-                        .font(.system(size: 10, weight: .bold))
+            HStack(spacing: style == .side ? 5 : 8) {
+                if style == .compact || style == .mirror {
+                    Image(systemName: style == .mirror ? "square.on.square" : "arrow.up.arrow.down")
+                        .font(.system(size: style == .mirror ? 13 : 11, weight: .bold))
+                        .foregroundStyle(style == .mirror ? BSmartColor.brand : accent)
                 }
                 Text(title)
-                    .font(.system(size: style == .compact ? 11 : 15, weight: .semibold))
+                    .font(.system(size: style == .compact ? 11 : style == .mirror ? 14 : 15,
+                                  weight: style == .mirror ? .bold : .semibold))
             }
-            .foregroundStyle(style == .compact ? accent : BSmartColor.onAccent)
-            .padding(.horizontal, style == .compact ? 12 : 14)
-            .frame(maxWidth: style == .prominent ? .infinity : nil)
-            .frame(height: style == .compact ? 32 : 44)
+            .foregroundStyle(style == .compact ? accent : style == .mirror
+                             ? BSmartColor.primaryText : BSmartColor.onAccent)
+            .padding(.horizontal, style == .mirror ? 14 : style == .compact ? 12 : 14)
+            .frame(maxWidth: style == .prominent || style == .mirror ? .infinity : nil)
+            .frame(height: style == .compact ? 32 : style == .mirror ? 40 : 44)
             .background {
                 if style == .compact {
                     Capsule().fill(accent.opacity(0.11))
                 } else {
                     RoundedRectangle(cornerRadius: BSmartRadius.control, style: .continuous)
-                        .fill(accent)
+                        .fill(style == .mirror ? BSmartColor.ink.opacity(0.55) : accent)
                 }
             }
             .overlay {
@@ -74,12 +79,13 @@ struct BSmartTradeButton: View {
                     Capsule().stroke(accent.opacity(0.7), lineWidth: 0.8)
                 } else {
                     RoundedRectangle(cornerRadius: BSmartRadius.control, style: .continuous)
-                        .stroke(BSmartColor.controlOutline, lineWidth: 0.6)
+                        .strokeBorder(style == .mirror ? BSmartColor.brand.opacity(0.35)
+                                      : BSmartColor.controlOutline, lineWidth: 0.8)
                 }
             }
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(BSmartTradePressStyle())
         .accessibilityLabel("%@ %@".bSmartLocalized(title, symbol.uppercased()))
         .accessibilityIdentifier(accessibilityIdentifier)
         .sheet(isPresented: $showsTrading, onDismiss: { onTradeDismiss?() }) {
@@ -88,6 +94,15 @@ struct BSmartTradeButton: View {
             }
             .environment(\.opinionTradeSource, opinionSource?.matches(symbol: symbol) == true ? opinionSource : nil)
         }
+    }
+}
+
+private struct BSmartTradePressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .opacity(configuration.isPressed ? 0.86 : 1)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
     }
 }
 
@@ -148,7 +163,7 @@ struct BSmartTradeDock: View {
                     .frame(maxWidth: .infinity, minHeight: 46)
                     .background(BSmartColor.brand, in: RoundedRectangle(cornerRadius: BSmartRadius.control))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.bSmartPlain)
                 .accessibilityIdentifier("trade.external.open")
             } else {
                 HStack(spacing: 10) {
@@ -173,9 +188,9 @@ struct BSmartTradeDock: View {
                 .accessibilityIdentifier("trade.external.sheet")
                 .background(BSmartColor.ink)
                 .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
+                    ToolbarItem(placement: .topBarTrailing) { Group {
                         Button("Done".bSmartLocalized) { showsExternalVenues = false }
-                    }
+                    }.buttonStyle(.bSmartToolbar) }.bSmartHideSystemBackground()
                 }
             }
             .presentationDetents([.height(430)])
@@ -206,7 +221,6 @@ extension View {
 
 struct BSmartTradeSheet: View {
     @StateObject private var store: HyperliquidTradingStore
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     let symbol: String
     let initialSide: PaperTradeSide
@@ -214,11 +228,6 @@ struct BSmartTradeSheet: View {
     let coin: String?
     let initialAmount: String
     let initialReduction: Bool
-
-    private var showsExternalVenues: Bool {
-        store.activeMarket == nil && store.verifiedNoMarketSymbol == symbol.uppercased() && !initialReduction
-            && !ExternalTradeLinks.destinations(for: symbol).isEmpty
-    }
 
     init(symbol: String, initialSide: PaperTradeSide, store: HyperliquidTradingStore,
          coin: String? = nil, initialAmount: String = "", initialReduction: Bool = false,
@@ -232,31 +241,32 @@ struct BSmartTradeSheet: View {
 
     var body: some View {
         NavigationStack {
-                HyperliquidTradingView(
-                    symbol: symbol,
-                    initialSide: initialSide,
-                    presentation: .quick,
-                    initialCoin: coin, initialAmount: initialAmount, initialReduction: initialReduction,
-                    onClose: onClose
-                )
+            HyperliquidTradingView(
+                symbol: symbol,
+                initialSide: initialSide,
+                presentation: .quick,
+                initialCoin: coin, initialAmount: initialAmount, initialReduction: initialReduction
+            )
                 .padding(BSmartSpacing.large)
-            .background(BSmartColor.ink)
-            .toolbar(.hidden, for: .navigationBar)
-            .overlay(alignment: .topTrailing) {
-                if store.activeMarket == nil {
-                    Button(action: onClose) {
-                        Image(systemName: "xmark")
-                            .frame(width: 44, height: 44)
-                    }
-                    .foregroundStyle(BSmartColor.secondaryText)
-                    .accessibilityLabel("Close".bSmartLocalized)
-                    .accessibilityIdentifier("trade.close")
-                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .background(BSmartColor.ink)
+                .toolbar(.hidden, for: .navigationBar)
+        }
+        .overlay(alignment: .topTrailing) {
+            Button(action: onClose) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 12, weight: .bold))
+                    .frame(width: 44, height: 44)
             }
+            .buttonStyle(.bSmartPlain)
+            .foregroundStyle(BSmartColor.secondaryText)
+            .accessibilityLabel("Close".bSmartLocalized)
+            .accessibilityIdentifier("trade.close")
+            .padding(.top, BSmartSpacing.large)
+            .padding(.trailing, BSmartSpacing.large)
         }
         .environmentObject(store)
-        .presentationDetents(showsExternalVenues && !dynamicTypeSize.isAccessibilitySize
-                             ? [.height(480)] : [.large])
+        .presentationDetents([.large])
         .presentationDragIndicator(.visible)
         .presentationBackground(BSmartColor.ink)
         .bSmartPage()

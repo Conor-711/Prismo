@@ -40,6 +40,7 @@ struct ArbitrumReceiveView: View {
         }
         .onDisappear { networkConfirmed = false; clear() }
         .accessibilityIdentifier("wallet.receive-screen")
+        .bSmartDetailPage()
         .bSmartPage()
     }
 

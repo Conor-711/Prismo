@@ -6,7 +6,7 @@ from pathlib import Path
 from sqlalchemy import create_engine
 from dotenv import dotenv_values
 from ..config import REPO_ROOT, normalize_database_url
-from .publisher import publish, rollback
+from .publisher import publish, publish_price_enrichment, rollback
 from .push import load_push_environment, enabled, drain
 
 
@@ -28,26 +28,35 @@ def main():
     action = parser.add_mutually_exclusive_group(required=True)
     action.add_argument("--input-dir", type=Path)
     action.add_argument("--rollback", metavar="REVISION")
+    action.add_argument("--price-enrichment", type=Path,
+                        help="JSON export of updates; only matching priceOutcome fields are published")
     parser.add_argument("--baseline", action="store_true")
     parser.add_argument("--reencode-baseline", action="store_true")
     parser.add_argument("--apply", action="store_true")
     parser.add_argument("--allow-drop", action="store_true")
     parser.add_argument("--historical-test", action="store_true", help="Explicit operator test with old data; preserve source dates and suppress push")
     parser.add_argument("--restore-rankings", action="store_true", help="Restore and freeze ranking fields from the reviewed baseline, preserving current content")
+    parser.add_argument("--content-only", action="store_true", help="Commit content and write its receipt without catalog or push side effects")
     args = parser.parse_args()
     load_push_environment()
     url = publication_database_url()
     if not url.startswith(("postgresql", "postgres://")):
         parser.error("Set protected BSMART_CONTENT_DATABASE_URL to Supabase PostgreSQL")
     engine = create_engine(normalize_database_url(url), pool_pre_ping=True,
-                           connect_args={"connect_timeout": 10, "prepare_threshold": None, "tcp_user_timeout": 20000, "keepalives_idle": 10, "keepalives_interval": 5, "keepalives_count": 3, "options": "-c statement_timeout=30000 -c lock_timeout=10000"})
+                           connect_args={"connect_timeout": 10, "prepare_threshold": None, "tcp_user_timeout": 120000, "keepalives_idle": 10, "keepalives_interval": 5, "keepalives_count": 3, "options": "-c statement_timeout=120000 -c lock_timeout=10000"})
     try:
-        result = rollback(engine, args.rollback, apply=args.apply) if args.rollback else publish(
-            engine, args.input_dir.resolve(), baseline=args.baseline, apply=args.apply,
-            allow_drop=args.allow_drop, reencode_baseline=args.reencode_baseline, historical_test=args.historical_test,
-            restore_rankings=args.restore_rankings)
+        if args.rollback:
+            result = rollback(engine, args.rollback, apply=args.apply)
+        elif args.price_enrichment:
+            result = publish_price_enrichment(
+                engine, json.loads(args.price_enrichment.read_text()), apply=args.apply)
+        else:
+            result = publish(
+                engine, args.input_dir.resolve(), baseline=args.baseline, apply=args.apply,
+                allow_drop=args.allow_drop, reencode_baseline=args.reencode_baseline, historical_test=args.historical_test,
+                restore_rankings=args.restore_rankings)
         catalog_failed = False
-        if args.apply and result['status'] in {'published', 'already-published'} and not args.historical_test:
+        if args.apply and not args.content_only and result['status'] in {'published', 'already-published'} and not args.historical_test and not args.price_enrichment:
             from ..opinion_trades.publish_catalog import sync_active_content
             try:
                 result['tradeCatalog'] = sync_active_content(engine, apply=True)
@@ -57,7 +66,7 @@ def main():
                     'message': 'Content is active, but trade catalog sync failed; retry --active-content --apply',
                 }
                 catalog_failed = True
-        if args.apply and not args.baseline and not args.restore_rankings and not args.rollback and not args.historical_test and enabled():
+        if args.apply and not args.content_only and not args.baseline and not args.restore_rankings and not args.rollback and not args.historical_test and not args.price_enrichment and enabled():
             try:
                 result["notifications"] = drain(engine)
             except Exception:

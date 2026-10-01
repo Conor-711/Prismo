@@ -67,3 +67,61 @@ def test_invalid_or_stale_partition_does_not_change_active(engine, tmp_path):
     path.write_bytes(encoded(manifest))
     with pytest.raises(ValueError, match='Incomplete'):
         load_partition(directory)
+
+
+def test_reviewed_partial_youtube_release_has_a_bounded_grace_window(tmp_path):
+    _, directory = release(tmp_path)
+    path = directory / 'platform-manifest.json'
+    manifest = json.loads(path.read_text())
+    updates_path = directory / 'smart-account-updates.json'
+    updates = json.loads(updates_path.read_text())
+    video_id = 'video-1'
+    updates[0]['sourcePostId'] = video_id
+    raw = encoded(updates)
+    updates_path.write_bytes(raw)
+    manifest['collections']['smart-account-updates']['sha256'] = hashlib.sha256(raw).hexdigest()
+    manifest.update(partial=True, analysisComplete=False,
+                    processedVideoIds=[video_id], deferredVideoIds=['later-video'],
+                    crawlFrom=(datetime.now(timezone.utc) - timedelta(hours=18)).isoformat(),
+                    crawlThrough=(datetime.now(timezone.utc) - timedelta(hours=16)).isoformat())
+    path.write_bytes(encoded(manifest))
+    assert load_partition(directory)[1]['partial'] is True
+    manifest['partial'] = False
+    path.write_bytes(encoded(manifest))
+    with pytest.raises(ValueError, match='stale'):
+        load_partition(directory)
+    manifest['partial'] = True
+    manifest['deferredVideoIds'] = [video_id]
+    path.write_bytes(encoded(manifest))
+    with pytest.raises(ValueError, match='Invalid partial'):
+        load_partition(directory)
+
+
+def test_partial_youtube_backfill_can_complete_the_original_window(tmp_path):
+    _, directory = release(tmp_path)
+    path = directory / 'platform-manifest.json'
+    manifest = json.loads(path.read_text())
+    manifest.update(partialBackfill=True, priorPartialRevision='a' * 64,
+                    crawlFrom=(datetime.now(timezone.utc) - timedelta(days=3, hours=6)).isoformat(),
+                    crawlThrough=(datetime.now(timezone.utc) - timedelta(days=3)).isoformat())
+    path.write_bytes(encoded(manifest))
+    assert load_partition(directory)[1]['partialBackfill'] is True
+    manifest.pop('priorPartialRevision')
+    path.write_bytes(encoded(manifest))
+    with pytest.raises(ValueError, match='Invalid partial backfill'):
+        load_partition(directory)
+
+
+def test_reddit_catchup_accepts_one_day_but_rejects_older_window(tmp_path):
+    _, directory = release(tmp_path, 'reddit')
+    path = directory / 'platform-manifest.json'
+    manifest = json.loads(path.read_text())
+    manifest.update(crawlFrom=(datetime.now(timezone.utc) - timedelta(hours=20)).isoformat(),
+                    crawlThrough=(datetime.now(timezone.utc) - timedelta(hours=18)).isoformat())
+    path.write_bytes(encoded(manifest))
+    assert load_partition(directory)[1]['platform'] == 'reddit'
+    manifest.update(crawlFrom=(datetime.now(timezone.utc) - timedelta(hours=28)).isoformat(),
+                    crawlThrough=(datetime.now(timezone.utc) - timedelta(hours=26)).isoformat())
+    path.write_bytes(encoded(manifest))
+    with pytest.raises(ValueError, match='stale'):
+        load_partition(directory)

@@ -28,7 +28,7 @@ struct TickerChartOpinionOverlay: View {
                     } label: {
                         bubble(placement.opinion)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.bSmartPlain)
                     .frame(width: policy.footprint.width, height: policy.footprint.height)
                     .contentShape(Rectangle())
                     .position(x: placement.frame.midX, y: placement.frame.midY)

@@ -20,22 +20,26 @@ struct IntelligenceMethodView: View {
                     body: "Public investment creators from X, YouTube, Reddit, Xueqiu and Toss are evaluated from their historical calls. Score represents the strength of observed historical evidence and market consensus around an account; it is not a guarantee of future performance."
                 )
 
-                methodSection(
-                    title: "Smart Money",
-                    symbol: SignalEvidenceSource.smartMoney.symbol,
-                    body: "bSmart scores public capital accounts in tokenized US equity markets and reports observed entries, adds, reductions and exits when coverage passes the minimum evidence threshold. Consumer-facing names are stable aliases, not verified owner identities."
-                )
+                if BSmartProductVisibility.onchainSmartMoney {
+                    methodSection(
+                        title: "Smart Money",
+                        symbol: SignalEvidenceSource.smartMoney.symbol,
+                        body: "bSmart scores public capital accounts in tokenized US equity markets and reports observed entries, adds, reductions and exits when coverage passes the minimum evidence threshold. Consumer-facing names are stable aliases, not verified owner identities."
+                    )
 
-                methodSection(
-                    title: "Evidence relationships",
-                    symbol: "arrow.left.arrow.right",
-                    body: "Confirmation means account views and qualifying capital moved in the same direction. Divergence means they moved in opposing directions. Account leads and Money leads identify which evidence changed before the other side was available."
-                )
+                    methodSection(
+                        title: "Evidence relationships",
+                        symbol: "arrow.left.arrow.right",
+                        body: "Confirmation means account views and qualifying capital moved in the same direction. Divergence means they moved in opposing directions. Account leads and Money leads identify which evidence changed before the other side was available."
+                    )
+                }
 
                 methodSection(
                     title: "Coverage",
                     symbol: "chart.bar.doc.horizontal",
-                    body: "Every event carries an as-of time, data status and limitations. Missing Smart Money evidence is shown as unavailable rather than treated as neutral. Delayed or insufficient coverage cannot be promoted into a confirmed relationship."
+                    body: BSmartProductVisibility.onchainSmartMoney
+                        ? "Every event carries an as-of time, data status and limitations. Missing Smart Money evidence is shown as unavailable rather than treated as neutral. Delayed or insufficient coverage cannot be promoted into a confirmed relationship."
+                        : "Every view carries a publication time and source. Rankings summarize observed historical evidence and do not guarantee future performance."
                 )
             }
             .padding(BSmartSpacing.large)
@@ -44,6 +48,7 @@ struct IntelligenceMethodView: View {
         .navigationTitle("Data & methodology")
         .navigationBarTitleDisplayMode(.inline)
         .accessibilityIdentifier("methodology.screen")
+        .bSmartDetailPage()
         .bSmartPage()
     }
 

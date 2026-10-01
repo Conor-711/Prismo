@@ -1,0 +1,513 @@
+openapi: 3.1.0
+info:
+  title: bSmart EVM Equity Discovery, Preview and Intent Ledger
+  version: 0.5.1
+  description: Discovery, non-executable previews and persistent pre-execution intents. No signatures, orders, approvals or transfers.
+servers:
+  - url: https://dzyitinagewdfkzjkuiz.supabase.co/functions/v1/bsmart-equities
+security: [{ accountBearer: [] }]
+paths:
+  /intents/{id}/prepare:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+    post:
+      operationId: prepareEquityOrder
+      description: Default-off, non-signable preparation. Refreshes quotes, selects the best net output among already funded and approved verified candidates, and atomically persists private canonical material and a wallet-wide reservation. Shares exclusion with coordinated withdrawals. Replays return the same preparation, not another quote. Explicit pre-authorization cancellation releases the reservation; expiry alone never releases it. No signature payload, approval, transfer or order submission.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/IntentVersionRequest' }
+      responses:
+        '200':
+          description: Safe preparation summary. No-store. signingEnabled and executionEnabled remain false.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PreparationResponse' }
+        '401': { description: Real authenticated account required. }
+        '404': { description: Absent or other-account intent. }
+        '409': { description: Wallet/version conflict, existing activity, expired quote, no verified funded and approved candidate, or preparation already released. }
+        '413': { description: Body exceeds 4096 bytes. }
+        '422': { description: Invalid version or unexpected fields. }
+        '503': { description: Preparation disabled, migration missing or providers unavailable. }
+  /intents/{id}/funding-preview:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+    post:
+      operationId: previewEquityFunding
+      description: Read-only planning from a fresh saved quote and server-bound wallet. Execution-chain USDC first; bounded HL withdrawal for a deficit; sale return uses quoted minimum proceeds, never an existing USDC balance. No reservations, signatures, transfers or intent mutations. Rechecks version, wallet, balances and active withdrawals before returning.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/IntentVersionRequest' }
+      responses:
+        '200':
+          description: Non-executable plans and per-chain failures, possibly no usable plan. No-store.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FundingPreviewResponse' }
+        '401': { description: Real authenticated account required. }
+        '404': { description: Absent or other-account intent. }
+        '409': { description: Changed version, wallet, market, expired preview or concurrent funding activity. }
+        '413': { description: Body exceeds 4096 bytes. }
+        '422': { description: Invalid version or unexpected fields. }
+        '503': { description: Funding preview disabled or balance/provider/database unavailable. }
+  /intents:
+    post:
+      operationId: createEquityIntent
+      description: Persist a draft for the server-bound wallet. clientIntentId is unique per account; identical retries return the same record, different content or owner returns 409. Does not quote or trade.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                clientIntentId: { type: string, format: uuid }
+                input: { $ref: '#/components/schemas/PreviewRequest' }
+              required: [clientIntentId, input]
+      responses:
+        '200':
+          description: Created or replayed draft, possibly already cancelled or quoted. No-store.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IntentResponse' }
+        '401': { description: Real authenticated account required. }
+        '409': { description: Idempotency content or wallet conflict. }
+        '413': { description: Body exceeds 4096 bytes. }
+        '422': { description: Invalid fields, amount, UUID or content type. }
+        '503': { description: Ledger disabled, wallet unavailable or migration not applied. }
+  /intents/{id}:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+    get:
+      operationId: getEquityIntent
+      description: Account-isolated recovery read. Quote expiry remains explicit; a saved preview never authorizes execution. Internal lease credentials are not returned.
+      responses:
+        '200':
+          description: Intent and independently tracked legs. No-store.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IntentResponse' }
+        '401': { description: Real authenticated account required. }
+        '404': { description: Intent absent or owned by another account. }
+        '503': { description: Ledger disabled or database unavailable. }
+  /intents/{id}/preview:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+    post:
+      operationId: refreshEquityIntentPreview
+      description: Recompute from immutable saved input, recheck bound owner, and compare-and-swap expectedVersion. Concurrent cancel or quote refresh rejects the late result. No signing or execution.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/IntentVersionRequest' }
+      responses:
+        '200':
+          description: Persisted non-executable quote and incremented version. No-store.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IntentResponse' }
+        '401': { description: Real authenticated account required. }
+        '404': { description: Absent intent. }
+        '409': { description: Stale version, wallet changed, or state not refreshable. }
+        '413': { description: Body exceeds 4096 bytes. }
+        '422': { description: Invalid version or request fields. }
+        '503': { description: Preview or ledger disabled, provider or database unavailable. }
+  /intents/{id}/cancel:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+    post:
+      operationId: cancelEquityIntent
+      description: Compare-and-swap draft or quoted only. Never claims to cancel an already submitted transaction or recover money.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/IntentVersionRequest' }
+      responses:
+        '200':
+          description: Cancelled intent. Exact retry after a lost success response is idempotent.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IntentResponse' }
+        '401': { description: Real authenticated account required. }
+        '404': { description: Absent intent. }
+        '409': { description: Stale version or execution already started. }
+        '413': { description: Body exceeds 4096 bytes. }
+        '422': { description: Invalid version or request fields. }
+        '503': { description: Ledger disabled or database unavailable. }
+  /route:
+    get:
+      operationId: getEVMEquityRoute
+      description: Complete fresh HL catalog first, including unsupported collateral. Only verified absence allows the 50-name EVM discovery inventory. Existing positions retain their venue.
+      parameters:
+        - { in: query, name: ticker, required: true, schema: { type: string, pattern: '^[A-Za-z][A-Za-z0-9.-]{0,15}$' } }
+      responses:
+        '200':
+          description: Discovery, not proof of liquidity or execution readiness. No-store.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EVMEquityRoute' }
+        '401': { description: Real server-verified Apple or Google account required. }
+        '404': { description: Unsupported method or endpoint; execution mutations do not exist. }
+        '422': { description: Invalid or duplicate query parameters. }
+        '503': { description: Discovery disabled, incomplete or stale catalogs, identity drift, or provider failure. No venue fallback. }
+  /preview:
+    post:
+      operationId: previewEVMEquity
+      description: Wallet derived from authenticated account. Buy requires fresh HL absence. Sell independently checks current issuer identity and owned ERC20 balance, preserving exits after HL listings. Candidate chains are evaluated by the server, not chosen by the user. This endpoint never creates an order.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PreviewRequest' }
+      responses:
+        '200':
+          description: At least one validated indicative candidate, with balance and allowance blockers. Always non-executable; no signing payload. No-store.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PreviewResponse' }
+        '401': { description: Server-verified Apple or Google account required. }
+        '409': { description: Buy belongs on HL, issuer halted, or no supported instrument. }
+        '413': { description: Request body exceeds 4096 bytes. }
+        '422': { description: Invalid amount, constraints, content type, query or unknown fields. }
+        '503': { description: Preview disabled, missing wallet binding, all candidates failed, or stale metadata. No execution fallback. }
+components:
+  securitySchemes:
+    accountBearer: { type: http, scheme: bearer, bearerFormat: JWT }
+  schemas:
+    EquitySigningPayload:
+      type: object
+      additionalProperties: false
+      description: Internal future native codec boundary only; NOT served by HTTP. Immutable order material may be returned internally only after signing exposure is durably recorded. Signing, timeout, a lost response or a wallet rejection must not release the reservation or replace the order. Execution remains disabled. No arbitrary typed data, hooks, approval or funding authority.
+      required: [schema, state, signingStartedAt, preparationHash, prepared, executionEnabled]
+      properties:
+        schema: { const: equity_signing_v1 }
+        state: { const: signing }
+        signingStartedAt: { type: string, format: date-time }
+        preparationHash: { type: string, pattern: '^[0-9a-f]{64}$' }
+        prepared: { $ref: '#/components/schemas/CowPreparedOrder' }
+        executionEnabled: { const: false }
+    PreparationResponse:
+      type: object
+      additionalProperties: false
+      required: [intentId, version, owner, fingerprint, orderUid, network, expiresAt, state, reservationsImplemented, signingEnabled, executionEnabled]
+      properties:
+        intentId: { type: string, format: uuid }
+        version: { type: integer, minimum: 0, maximum: 2147483646 }
+        owner: { type: string, pattern: '^0x[0-9a-f]{40}$' }
+        fingerprint: { type: string, pattern: '^[0-9a-f]{64}$' }
+        orderUid: { type: string, pattern: '^0x[0-9a-f]{112}$' }
+        network: { enum: [Ethereum, Ink] }
+        expiresAt: { type: string, format: date-time }
+        state: { const: reserved }
+        reservationsImplemented: { const: true }
+        signingEnabled: { const: false }
+        executionEnabled: { const: false }
+    CowPreparedOrder:
+      type: object
+      additionalProperties: false
+      description: Internal server-generated canonical preparation, never returned by current HTTP endpoints. Not consent, a reservation or permission to submit. Must be bound again to a fresh server intent and chain state after signature; do not accept this object from clients.
+      required: [schema, intentId, intentVersion, account, fingerprint, owner, instrument, side, order, domain, orderUid, orderDigest, expiresAt]
+      properties:
+        schema: { const: cow_order_v1 }
+        intentId: { type: string, format: uuid }
+        intentVersion: { type: integer, minimum: 0, maximum: 2147483646 }
+        account: { type: string, format: uuid }
+        fingerprint: { type: string, pattern: '^[0-9a-f]{64}$' }
+        owner: { type: string, pattern: '^0x[0-9a-f]{40}$' }
+        instrument: { $ref: '#/components/schemas/EVMInstrument' }
+        side: { enum: [buy, sell] }
+        order: { $ref: '#/components/schemas/CowOrderParameters' }
+        domain: { $ref: '#/components/schemas/CowSigningDomain' }
+        orderUid: { type: string, pattern: '^0x[0-9a-f]{112}$' }
+        orderDigest: { type: string, pattern: '^0x[0-9a-f]{64}$' }
+        expiresAt: { type: string, format: date-time }
+    CowSigningDomain:
+      type: object
+      additionalProperties: false
+      required: [name, version, chainId, verifyingContract]
+      properties:
+        name: { const: Gnosis Protocol }
+        version: { const: v2 }
+        chainId: { enum: [1, 57073] }
+        verifyingContract: { type: string, pattern: '^0x[0-9a-fA-F]{40}$', description: Exact official SDK production deployment for this chain, no client overrides. }
+    CowOrderParameters:
+      type: object
+      additionalProperties: false
+      required: [sellToken, buyToken, receiver, sellAmount, buyAmount, validTo, appData, feeAmount, kind, partiallyFillable, sellTokenBalance, buyTokenBalance]
+      properties:
+        sellToken: { type: string, pattern: '^0x[0-9a-f]{40}$' }
+        buyToken: { type: string, pattern: '^0x[0-9a-f]{40}$' }
+        receiver: { type: string, pattern: '^0x[0-9a-f]{40}$' }
+        sellAmount: { allOf: [{ $ref: '#/components/schemas/RawAmount' }, { not: { const: '0' } }] }
+        buyAmount: { allOf: [{ $ref: '#/components/schemas/RawAmount' }, { not: { const: '0' } }] }
+        validTo: { type: integer, minimum: 1, maximum: 4294967295 }
+        appData: { const: '0x0000000000000000000000000000000000000000000000000000000000000000' }
+        feeAmount: { const: '0' }
+        kind: { const: sell }
+        partiallyFillable: { const: false }
+        sellTokenBalance: { const: erc20 }
+        buyTokenBalance: { const: erc20 }
+    CowReconciliationObservation:
+      type: object
+      additionalProperties: false
+      description: Internal read-only worker observation, not an HTTP endpoint or a ledger transition. A provider terminal status never releases funds by itself. Confirmed requires finalized canonical receipts, matching settlement Trade and net receiver ERC20 transfers. No automatic return or resubmission.
+      required: [orderUid, state, providerStatus, executedInputAmountRaw, receivedOutputAmountRaw, saleProceedsUsdcRaw, transactionHash, checkedAt, error, resubmitAllowed, returnReady]
+      properties:
+        orderUid: { type: string, pattern: '^0x[0-9a-f]{112}$' }
+        state: { enum: [pending, unknown, needs_reconciliation, confirmed] }
+        providerStatus: { type: [string, 'null'], enum: [open, fulfilled, cancelled, expired, presignaturePending, null] }
+        executedInputAmountRaw: { oneOf: [{ $ref: '#/components/schemas/RawAmount' }, { type: 'null' }] }
+        receivedOutputAmountRaw: { oneOf: [{ $ref: '#/components/schemas/RawAmount' }, { type: 'null' }] }
+        saleProceedsUsdcRaw: { oneOf: [{ $ref: '#/components/schemas/RawAmount' }, { type: 'null' }], description: Only a confirmed sell's actual net received USDC; never wallet balance or pre-sale estimate. }
+        transactionHash: { type: [string, 'null'], pattern: '^0x[0-9a-f]{64}$' }
+        checkedAt: { type: string, format: date-time }
+        error: { type: [string, 'null'] }
+        resubmitAllowed: { const: false }
+        returnReady: { const: false, description: Credit proof is not user return consent or gas sponsorship. }
+      allOf:
+        - if:
+            properties: { state: { const: confirmed } }
+          then:
+            properties:
+              providerStatus: { const: fulfilled }
+              executedInputAmountRaw: { allOf: [{ $ref: '#/components/schemas/RawAmount' }, { not: { const: '0' } }] }
+              receivedOutputAmountRaw: { allOf: [{ $ref: '#/components/schemas/RawAmount' }, { not: { const: '0' } }] }
+              transactionHash: { type: string }
+              error: { type: 'null' }
+          else:
+            properties:
+              executedInputAmountRaw: { type: 'null' }
+              receivedOutputAmountRaw: { type: 'null' }
+              saleProceedsUsdcRaw: { type: 'null' }
+              transactionHash: { type: 'null' }
+    FundingPreviewResponse:
+      type: object
+      additionalProperties: false
+      required: [intentId, version, owner, side, plans, failures, observedAt, executionEnabled, gasCoverage, reservationsImplemented, returnTransferImplemented]
+      properties:
+        intentId: { type: string, format: uuid }
+        version: { type: integer, minimum: 0 }
+        owner: { type: string, pattern: '^0x[0-9a-f]{40}$' }
+        side: { enum: [buy, sell] }
+        observedAt: { type: string, format: date-time }
+        executionEnabled: { const: false }
+        gasCoverage: { const: unverified }
+        reservationsImplemented: { const: false }
+        returnTransferImplemented: { const: false }
+        failures:
+          type: array
+          maxItems: 2
+          items:
+            type: object
+            additionalProperties: false
+            required: [network, error]
+            properties:
+              network: { enum: [Ethereum, Ink] }
+              error: { type: string }
+        plans:
+          type: array
+          maxItems: 2
+          items:
+            type: object
+            additionalProperties: false
+            required: [instrument, orderFingerprint, executionChainUsdcRaw, deficitUsdcRaw, source, saleProceedsBasis, bridge, costBoundUsdcRaw, costScope, expiresAt, blockers]
+            properties:
+              instrument: { $ref: '#/components/schemas/EVMInstrument' }
+              orderFingerprint: { type: string, pattern: '^[0-9a-f]{64}$' }
+              executionChainUsdcRaw: { $ref: '#/components/schemas/RawAmount' }
+              deficitUsdcRaw: { $ref: '#/components/schemas/RawAmount' }
+              source: { enum: [execution_chain, hyperliquid, sale_proceeds] }
+              saleProceedsBasis: { enum: [null, quoted_minimum] }
+              bridge:
+                oneOf:
+                  - { type: 'null' }
+                  - { $ref: '#/components/schemas/FundingBridgeQuote' }
+              costBoundUsdcRaw: { $ref: '#/components/schemas/RawAmount' }
+              costScope: { enum: [buy_cow_network_and_bridge, sell_bridge_only] }
+              expiresAt: { type: string, format: date-time }
+              blockers: { type: array, uniqueItems: true, items: { type: string } }
+    FundingBridgeQuote:
+      type: object
+      additionalProperties: false
+      required: [provider, source, destination, inputAmountRaw, inputDecimals, expectedOutputAmountRaw, minimumOutputAmountRaw, outputDecimals, maximumLossUsdcRaw, originNativeGasRequired, mechanism, refundNetworks, observedAt, expiresAt]
+      properties:
+        provider: { const: relay }
+        source: { enum: [HyperCorePerps, HyperCoreSpot, Ethereum, Ink] }
+        destination: { enum: [HyperCorePerps, Ethereum, Ink] }
+        inputAmountRaw: { $ref: '#/components/schemas/RawAmount' }
+        inputDecimals: { enum: [6, 8] }
+        expectedOutputAmountRaw: { $ref: '#/components/schemas/RawAmount' }
+        minimumOutputAmountRaw: { $ref: '#/components/schemas/RawAmount' }
+        outputDecimals: { enum: [6, 8] }
+        maximumLossUsdcRaw: { $ref: '#/components/schemas/RawAmount' }
+        originNativeGasRequired: { type: boolean }
+        mechanism: { enum: [hypercore_nonce_mapping, permit_candidate, evm_transaction] }
+        refundNetworks:
+          type: array
+          minItems: 1
+          maxItems: 2
+          uniqueItems: true
+          items: { enum: [HyperCorePerps, HyperCoreSpot, Ethereum, Ink] }
+        observedAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time }
+    IntentVersionRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion]
+      properties:
+        expectedVersion: { type: integer, minimum: 0, maximum: 2147483646 }
+    IntentResponse:
+      type: object
+      additionalProperties: false
+      required: [intent, legs, executionEnabled]
+      properties:
+        executionEnabled: { const: false }
+        intent:
+          type: object
+          additionalProperties: false
+          required: [id, clientIntentId, owner, input, state, version, preview, quoteExpiresAt, createdAt, updatedAt]
+          properties:
+            id: { type: string, format: uuid }
+            clientIntentId: { type: string, format: uuid }
+            owner: { type: string, pattern: '^0x[0-9a-f]{40}$' }
+            input: { $ref: '#/components/schemas/PreviewRequest' }
+            state: { enum: [draft, quoted, authorized, funding_pending, funded, order_pending, filled, return_pending, completed, expired, rejected, cancelled, refund_pending, needs_reconciliation] }
+            version: { type: integer, minimum: 0 }
+            preview:
+              oneOf:
+                - { type: 'null' }
+                - { $ref: '#/components/schemas/PreviewResponse' }
+            quoteExpiresAt: { type: [string, 'null'], format: date-time }
+            createdAt: { type: string, format: date-time }
+            updatedAt: { type: string, format: date-time }
+        legs:
+          type: array
+          maxItems: 8
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, kind, legIndex, sourceNetwork, destinationNetwork, state, provider, providerId, attempts, checkedAt]
+            properties:
+              id: { type: string, format: uuid }
+              kind: { enum: [funding, approval, order, return] }
+              legIndex: { type: integer, minimum: 0, maximum: 1 }
+              sourceNetwork: { enum: [Ethereum, Ink, Arbitrum, HyperCore] }
+              destinationNetwork: { enum: [Ethereum, Ink, Arbitrum, HyperCore] }
+              state: { enum: [reserved, submitting, submitted, unknown, confirmed, failed] }
+              provider: { enum: [cow, across, relay, wallet] }
+              providerId: { type: string, maxLength: 256 }
+              attempts: { type: integer, minimum: 0, maximum: 1 }
+              checkedAt: { type: [string, 'null'], format: date-time }
+    PreviewRequest:
+      type: object
+      additionalProperties: false
+      required: [ticker, side, amount, slippageBps, maxNetworkFeeBps]
+      properties:
+        ticker: { type: string, pattern: '^[A-Za-z][A-Za-z0-9.-]{0,15}$' }
+        side: { enum: [buy, sell] }
+        amount: { type: string, pattern: '^(0|[1-9][0-9]{0,20})(\.[0-9]{1,18})?$', description: Buy USDC amount (maximum 100000); sell adjusted ERC20 balance units, not internal sharesOf units. Positive, exact decimals from chain. }
+        slippageBps: { type: integer, minimum: 0, maximum: 1000 }
+        maxNetworkFeeBps: { type: integer, minimum: 0, maximum: 1000, description: Ceiling for quoted network cost only. Does not include bridge, approval or every dynamic protocol fee. }
+        minimumOutput: { type: string, pattern: '^(0|[1-9][0-9]{0,20})(\.[0-9]{1,18})?$', description: Optional additional minimum, in adjusted ERC20 units for buy or USDC for sell. }
+    PreviewResponse:
+      type: object
+      additionalProperties: false
+      required: [ticker, side, candidates, failures, executionEnabled, gasCoverage, defaultSaleProceedsDestination, returnTransferImplemented]
+      properties:
+        ticker: { type: string }
+        side: { enum: [buy, sell] }
+        candidates:
+          type: array
+          minItems: 1
+          maxItems: 2
+          items: { $ref: '#/components/schemas/PreviewCandidate' }
+        failures:
+          type: array
+          maxItems: 2
+          items:
+            type: object
+            additionalProperties: false
+            required: [network, error]
+            properties:
+              network: { enum: [Ethereum, Ink] }
+              error: { type: string }
+        executionEnabled: { const: false }
+        gasCoverage: { const: unverified }
+        defaultSaleProceedsDestination: { const: hyperliquid_perps }
+        returnTransferImplemented: { const: false }
+    PreviewCandidate:
+      type: object
+      additionalProperties: false
+      required: [instrument, owner, receiver, inputAmountRaw, quotedOutputAmountRaw, minimumOutputAmountRaw, estimatedNetworkFeeAmountRaw, protocolFeeBps, inputDecimals, outputDecimals, balanceRaw, allowanceRaw, stateBlock, multiplierRaw, observedAt, expiresAt, providerVerified, blockers, fingerprint, executable]
+      properties:
+        instrument: { $ref: '#/components/schemas/EVMInstrument' }
+        owner: { type: string, pattern: '^0x[0-9a-f]{40}$' }
+        receiver: { type: string, pattern: '^0x[0-9a-f]{40}$' }
+        inputAmountRaw: { $ref: '#/components/schemas/RawAmount' }
+        quotedOutputAmountRaw: { $ref: '#/components/schemas/RawAmount' }
+        minimumOutputAmountRaw: { $ref: '#/components/schemas/RawAmount' }
+        estimatedNetworkFeeAmountRaw: { $ref: '#/components/schemas/RawAmount' }
+        protocolFeeBps: { type: integer, minimum: 0, maximum: 9999 }
+        inputDecimals: { type: integer, minimum: 0, maximum: 18 }
+        outputDecimals: { type: integer, minimum: 0, maximum: 18 }
+        balanceRaw: { $ref: '#/components/schemas/RawAmount' }
+        allowanceRaw: { $ref: '#/components/schemas/RawAmount' }
+        stateBlock: { $ref: '#/components/schemas/RawAmount' }
+        multiplierRaw: { $ref: '#/components/schemas/RawAmount' }
+        observedAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time }
+        providerVerified: { type: boolean, description: Simulation flag, not funded execution or sponsorship proof. }
+        blockers: { type: array, uniqueItems: true, items: { enum: [funding_required, approval_required, quote_unverified, execution_disabled, gas_sponsorship_unverified] } }
+        fingerprint: { type: string, pattern: '^[0-9a-f]{64}$', description: SHA256 binding of account, instrument, constraints, normalized SDK order/domain and chain observation. Not a signature or authorization token. }
+        executable: { const: false }
+    RawAmount:
+      type: string
+      pattern: '^(0|[1-9][0-9]{0,77})$'
+    EVMEquityRoute:
+      type: object
+      additionalProperties: false
+      required: [ticker, venue, product, status, reason, market, instruments, observedAt, executionEnabled, gasCoverage, defaultSaleProceedsDestination]
+      properties:
+        ticker: { type: string }
+        venue: { enum: [hyperliquid, xstocks, none] }
+        product: { enum: [perpetual, spot, none] }
+        status: { enum: [available, blocked, unsupported] }
+        reason: { enum: [hl_listed, hl_collateral_unsupported, xstocks_listed, xstocks_halted, not_in_v1, not_listed, no_evm_deployment] }
+        market:
+          oneOf:
+            - type: 'null'
+            - type: object
+              additionalProperties: false
+              required: [coin, dex, collateralToken, maxLeverage]
+              properties:
+                coin: { type: string }
+                dex: { type: string }
+                collateralToken: { type: integer, minimum: 0 }
+                maxLeverage: { type: integer, minimum: 1 }
+        instruments:
+          type: array
+          maxItems: 2
+          items: { $ref: '#/components/schemas/EVMInstrument' }
+        observedAt: { type: string, format: date-time }
+        executionEnabled: { const: false }
+        gasCoverage: { const: unverified }
+        defaultSaleProceedsDestination: { const: hyperliquid_perps }
+    EVMInstrument:
+      type: object
+      additionalProperties: false
+      required: [assetId, symbol, network, chainId, token, usdc, tokenVariant, maxLeverage]
+      properties:
+        assetId: { type: string, format: uuid }
+        symbol: { type: string }
+        network: { enum: [Ethereum, Ink] }
+        chainId: { enum: [1, 57073] }
+        token: { type: string, pattern: '^0x[0-9a-f]{40}$' }
+        usdc: { type: string, pattern: '^0x[0-9a-f]{40}$' }
+        tokenVariant: { const: raw }
+        maxLeverage: { const: 1 }

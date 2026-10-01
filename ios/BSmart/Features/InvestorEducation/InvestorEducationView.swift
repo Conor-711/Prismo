@@ -69,7 +69,7 @@ struct InvestorEducationView: View {
                     .background(platformID == platform.id ? BSmartColor.brand.opacity(0.12) : Color.clear,
                                 in: RoundedRectangle(cornerRadius: 6))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.bSmartPlain)
                 .accessibilityIdentifier("education.platform.\(platform.id)")
                 .accessibilityAddTraits(platformID == platform.id ? .isSelected : [])
             }
@@ -114,7 +114,7 @@ struct InvestorEducationView: View {
                       systemImage: focused ? "arrow.uturn.backward" : "person.crop.circle.badge.checkmark")
                     .font(.subheadline.bold()).frame(maxWidth: .infinity, minHeight: 50)
                     .background(BSmartColor.brand.opacity(0.12), in: RoundedRectangle(cornerRadius: 6))
-            }.buttonStyle(.plain).foregroundStyle(BSmartColor.brand).accessibilityIdentifier("education.filter")
+            }.buttonStyle(.bSmartPlain).foregroundStyle(BSmartColor.brand).accessibilityIdentifier("education.filter")
             Text("Follow them. Find their next stock idea in Tracking.".bSmartLocalized)
                 .font(.title3.bold()).fixedSize(horizontal: false, vertical: true)
             ForEach(Array(discovery.candidates(sector: nil).sorted { lhs, rhs in
@@ -138,7 +138,7 @@ struct InvestorEducationView: View {
                         Image(systemName: model.isFollowingSmartAccount(investor.account.id) ? "checkmark" : "plus")
                             .font(.body.bold()).frame(width: 44, height: 44)
                             .background(BSmartColor.brand.opacity(0.12), in: Circle())
-                    }.buttonStyle(.plain).foregroundStyle(BSmartColor.brand)
+                    }.buttonStyle(.bSmartPlain).foregroundStyle(BSmartColor.brand)
                         .accessibilityLabel((model.isFollowingSmartAccount(investor.account.id) ? "Following" : "Follow").bSmartLocalized)
                 }.padding(.vertical, 4).accessibilityIdentifier("education.investor.\(investor.account.id)")
             }
@@ -146,7 +146,7 @@ struct InvestorEducationView: View {
                 HStack { Text("Discover investors".bSmartLocalized); Spacer(); Image(systemName: "arrow.right") }
                     .font(.headline).padding(18).foregroundStyle(BSmartColor.onAccent)
                     .background(BSmartColor.brand, in: RoundedRectangle(cornerRadius: 6))
-            }.buttonStyle(.plain).accessibilityIdentifier("education.discover")
+            }.buttonStyle(.bSmartPlain).accessibilityIdentifier("education.discover")
         }
     }
 

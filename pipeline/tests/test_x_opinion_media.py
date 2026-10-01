@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import zipfile
 from pathlib import Path
 
 from pipeline.platforms.x.opinion_media import attach_media_to_release, enrich_posts, image_sources
+from pipeline.platforms.x.backfill_media import indexed_photo_urls
 
 
 class _Response:
@@ -85,3 +87,22 @@ def test_failed_upload_is_not_cached(monkeypatch):
     result = enrich_posts(connection, [{"tweet_id": "123", "text": "photo"}], store=FailedStore(), session=_Session(""))
     assert result["failed"] == 1
     assert connection.execute("SELECT count(*) FROM x_post_media").fetchone()[0] == 0
+
+
+def test_indexed_photos_only_include_own_valid_images(tmp_path: Path):
+    package = tmp_path / "photos.zip"
+    rows = [
+        {"tweet_id": "123", "media_tweet_id": "123", "relationship": "self",
+         "download_url": "https://pbs.twimg.com/media/a?format=jpg"},
+        {"tweet_id": "123", "media_tweet_id": "999", "relationship": "referenced",
+         "download_url": "https://pbs.twimg.com/media/b?format=jpg"},
+        {"tweet_id": "123", "media_tweet_id": "123", "relationship": "self",
+         "download_url": "https://example.com/not-allowed.jpg"},
+        {"tweet_id": "456", "media_tweet_id": "456", "relationship": "self",
+         "download_url": "https://pbs.twimg.com/media/c?format=jpg"},
+    ]
+    with zipfile.ZipFile(package, "w") as archive:
+        archive.writestr("media_index.jsonl", "\n".join(json.dumps(row) for row in rows))
+    assert indexed_photo_urls(package, {"123"}) == {
+        "123": ["https://pbs.twimg.com/media/a?format=jpg"]
+    }

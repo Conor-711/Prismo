@@ -360,7 +360,6 @@ struct TodayAlphaOpportunity: Identifiable, Hashable {
 
 struct TodayAlphaOpportunityRail: View {
     let opportunities: [TodayAlphaOpportunity]
-    @Namespace private var alphaTransition
     @State private var visibleOpportunityID: String?
 
     private var selectedIndex: Int {
@@ -378,18 +377,10 @@ struct TodayAlphaOpportunityRail: View {
                         ZStack(alignment: .bottom) {
                             NavigationLink {
                                 TodayAlphaOpportunityDetailView(opportunity: opportunity)
-                                    .bSmartZoomNavigationTransition(
-                                        sourceID: opportunity.id,
-                                        in: alphaTransition
-                                    )
                             } label: {
                                 TodayAlphaOpportunityCard(opportunity: opportunity)
-                                    .bSmartMatchedTransitionSource(
-                                        id: opportunity.id,
-                                        in: alphaTransition
-                                    )
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.bSmartPlain)
                             .accessibilityIdentifier("today.smart-alpha.\(opportunity.kind.rawValue).\(opportunity.ticker.lowercased())")
 
                         }
@@ -642,7 +633,7 @@ struct TodayAlphaOpportunityDetailView: View {
                     .overlay { Circle().stroke(BSmartColor.line, lineWidth: 0.75) }
                     .contentShape(Circle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.bSmartPlain)
             .accessibilityLabel("Back".bSmartLocalized)
             .accessibilityIdentifier("today.smart-alpha.back")
 
@@ -755,7 +746,7 @@ struct TodayAlphaOpportunityDetailView: View {
                         } label: {
                             alphaAccountRow(update, isExpanded: expandedUpdateIDs.contains(update.id))
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.bSmartPlain)
                         .accessibilityIdentifier("today.smart-alpha-account.\(index)")
 
                         if expandedUpdateIDs.contains(update.id) {

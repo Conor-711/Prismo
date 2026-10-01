@@ -18,10 +18,26 @@ def load_partition(directory):
         raise ValueError('Invalid platform release')
     if set(manifest.get('collections', {})) != set(NAMES) or manifest.get('crawlComplete') is not True:
         raise ValueError('Incomplete platform release')
+    partial = source == 'youtube' and manifest.get('partial') is True
+    partial_backfill = source == 'youtube' and manifest.get('partialBackfill') is True
+    if partial and partial_backfill:
+        raise ValueError('Invalid platform release mode')
+    if partial:
+        processed = manifest.get('processedVideoIds')
+        deferred = manifest.get('deferredVideoIds')
+        if (manifest.get('analysisComplete') is not False or
+                not isinstance(processed, list) or not processed or
+                not isinstance(deferred, list) or not deferred or
+                any(not isinstance(value, str) or not value for value in processed + deferred) or
+                set(processed) & set(deferred)):
+            raise ValueError('Invalid partial platform release')
+    if partial_backfill and not isinstance(manifest.get('priorPartialRevision'), str):
+        raise ValueError('Invalid partial backfill reference')
     window_from, window_through = date(manifest['crawlFrom']), date(manifest['crawlThrough'])
     if window_from > window_through or window_through - window_from > timedelta(days=7):
         raise ValueError('Invalid crawl window')
-    if window_through < datetime.now(timezone.utc) - timedelta(hours=12):
+    max_age = timedelta(days=7) if partial_backfill else timedelta(hours=24 if partial or source == 'reddit' else 12)
+    if window_through < datetime.now(timezone.utc) - max_age:
         raise ValueError('Crawl window is stale')
     if manifest.get('sourceThrough') and not window_from <= date(manifest['sourceThrough']) <= window_through:
         raise ValueError('Source date outside crawl window')
@@ -42,6 +58,8 @@ def load_partition(directory):
                 raise ValueError('Invalid platform author identity')
             ids.add(item['id'])
         collections[name] = items
+    if partial and any(item['sourcePostId'] not in processed for item in collections['smart-account-updates']):
+        raise ValueError('Partial release includes an unprocessed video')
     authors = {r['id'] for r in collections['smart-accounts']}
     if not authors or any(r['authorId'] not in authors for n in NAMES[1:] for r in collections[n]):
         raise ValueError('Missing platform authors')

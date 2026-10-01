@@ -45,7 +45,7 @@ struct PortfolioAppAccountView: View {
                     }
                 }
             }
-            .buttonStyle(.plain).padding(24)
+            .buttonStyle(.bSmartPlain).padding(24)
             .frame(maxWidth: 560).frame(maxWidth: .infinity)
         }
         .safeAreaPadding(.bottom, 88)

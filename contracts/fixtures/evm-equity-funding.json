@@ -1,0 +1,48 @@
+{
+  "request": {"expectedVersion": 1},
+  "response": {
+    "intentId": "12345678-1234-1234-1234-123456789abc",
+    "version": 1,
+    "owner": "0x2222222222222222222222222222222222222222",
+    "side": "buy",
+    "plans": [{
+      "instrument": {
+        "assetId": "12345678-1234-1234-1234-123456789abc",
+        "symbol": "ASTSx", "network": "Ethereum", "chainId": 1,
+        "token": "0x1111111111111111111111111111111111111111",
+        "usdc": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "tokenVariant": "raw", "maxLeverage": 1
+      },
+      "orderFingerprint": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "executionChainUsdcRaw": "20000000",
+      "deficitUsdcRaw": "80000000",
+      "source": "hyperliquid",
+      "saleProceedsBasis": null,
+      "bridge": {
+        "provider": "relay", "source": "HyperCorePerps", "destination": "Ethereum",
+        "inputAmountRaw": "8050000000", "inputDecimals": 8,
+        "expectedOutputAmountRaw": "80400000", "minimumOutputAmountRaw": "80400000", "outputDecimals": 6,
+        "maximumLossUsdcRaw": "100000", "originNativeGasRequired": false,
+        "mechanism": "hypercore_nonce_mapping", "refundNetworks": ["HyperCorePerps", "Ethereum"],
+        "observedAt": "2026-10-01T00:00:00.000Z", "expiresAt": "2026-10-01T00:00:30.000Z"
+      },
+      "costBoundUsdcRaw": "600000", "costScope": "buy_cow_network_and_bridge",
+      "expiresAt": "2026-10-01T00:00:30.000Z",
+      "blockers": ["approval_required", "execution_disabled", "quote_unverified", "gas_sponsorship_unverified",
+        "funding_authorization_required", "wallet_reservation_required", "signing_validation_required"]
+    }],
+    "failures": [],
+    "observedAt": "2026-10-01T00:00:00.000Z",
+    "executionEnabled": false,
+    "gasCoverage": "unverified",
+    "reservationsImplemented": false,
+    "returnTransferImplemented": false
+  },
+  "unavailableResponse": {
+    "intentId": "12345678-1234-1234-1234-123456789abc",
+    "version": 1, "owner": "0x2222222222222222222222222222222222222222", "side": "buy",
+    "plans": [], "failures": [{"network": "Ethereum", "error": "bridge_quote_unavailable"}],
+    "observedAt": "2026-10-01T00:00:00.000Z", "executionEnabled": false,
+    "gasCoverage": "unverified", "reservationsImplemented": false, "returnTransferImplemented": false
+  }
+}

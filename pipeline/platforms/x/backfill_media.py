@@ -6,13 +6,36 @@ import hashlib
 import json
 import shutil
 import sqlite3
+import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-from .opinion_media import attach_media_to_release, enrich_posts
+from .opinion_media import MAX_IMAGES, _image_url, attach_media_to_release, enrich_posts
 
 
-def prepare(source: Path, destination: Path, database: Path, since: str) -> dict:
+def indexed_photo_urls(package: Path, tweet_ids: set[str]) -> dict[str, list[str]]:
+    photos: dict[str, list[str]] = {}
+    with zipfile.ZipFile(package) as archive:
+        if "media_index.jsonl" not in archive.namelist():
+            return photos
+        if archive.getinfo("media_index.jsonl").file_size > 64 * 1024 * 1024:
+            raise ValueError("Media index exceeds size limit")
+        with archive.open("media_index.jsonl") as stream:
+            for line in stream:
+                entry = json.loads(line)
+                tweet_id = str(entry.get("tweet_id") or "")
+                if (tweet_id not in tweet_ids or entry.get("relationship") != "self"
+                        or str(entry.get("media_tweet_id") or "") != tweet_id):
+                    continue
+                url = _image_url(entry.get("download_url"))
+                images = photos.setdefault(tweet_id, [])
+                if url and url not in images and len(images) < MAX_IMAGES:
+                    images.append(url)
+    return photos
+
+
+def prepare(source: Path, destination: Path, database: Path, since: str,
+            index_package: Path | None = None) -> dict:
     if destination.exists():
         raise FileExistsError(destination)
     source_manifest = json.loads((source / "daily-x-manifest.json").read_text())
@@ -22,6 +45,10 @@ def prepare(source: Path, destination: Path, database: Path, since: str) -> dict
         tweet_id = str(row.get("sourcePostId") or "")
         if row.get("platform") == "X" and row.get("publishedAt", "") >= since and tweet_id.isdigit():
             posts.setdefault(tweet_id, {"tweet_id": tweet_id, "text": row.get("originalText") or ""})
+    if index_package:
+        indexed = indexed_photo_urls(index_package, set(posts))
+        posts = {tweet_id: {**posts[tweet_id], "media_urls": urls}
+                 for tweet_id, urls in indexed.items()}
     destination.mkdir(parents=True)
     for name in ("smart-accounts", "smart-account-updates", "smart-account-evidence"):
         shutil.copy2(source / f"{name}.json", destination / f"{name}.json")
@@ -43,8 +70,10 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--database", type=Path, required=True)
     parser.add_argument("--since", default="2026-09-22")
+    parser.add_argument("--index-package", type=Path)
     args = parser.parse_args()
-    print(json.dumps(prepare(args.source, args.output, args.database, args.since), ensure_ascii=False, indent=2))
+    print(json.dumps(prepare(args.source, args.output, args.database, args.since,
+                             args.index_package), ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":

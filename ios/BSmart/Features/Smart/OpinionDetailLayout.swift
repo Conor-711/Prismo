@@ -13,11 +13,14 @@ struct OpinionDetailLayout<Content: View>: View {
         let profile = model.smartAccountProfile(for: update)
         let rank = profile.resolvedRank > 0 ? "#\(profile.resolvedRank) · " : ""
         let percentile = max(1, Int(ceil(update.platformPercentile * 100)))
+        let standing = update.platform == "bsmart"
+            ? (SmartAccountRankPresentation.label(profile) ?? "Verified trader")
+            : "Top \(percentile)%"
         let summary = OpinionReadingContent(update: update, chinese: BSmartLocalization.isSimplifiedChinese).summary
             ?? update.thesis
         return .init(kind: .opinion, id: update.id.uuidString.lowercased(),
                      title: SocialSharedContent.clipped(update.authorName, utf16Limit: 100),
-                     detail: SocialSharedContent.clipped("\(rank)Top \(percentile)% · \(update.platform)", utf16Limit: 120),
+                     detail: SocialSharedContent.clipped("\(rank)\(standing) · \(update.platform)", utf16Limit: 120),
                      summary: SocialSharedContent.clipped(summary, utf16Limit: 300), ticker: update.ticker.uppercased(),
                      publishedAt: ISO8601DateFormatter().string(from: update.publishedAt),
                      avatarURL: SocialSharedContent.shareableAvatarURL(update.authorAvatarURL ?? profile.avatarURL))
@@ -53,11 +56,12 @@ struct OpinionDetailLayout<Content: View>: View {
         .toolbar(.visible, for: .navigationBar)
         .toolbarBackground(collapsed ? .visible : .hidden, for: .navigationBar)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItem(placement: .topBarTrailing) { Group {
                 BSmartIconButton(symbol: "paperplane.fill", accessibilityLabel: "Share",
                                  color: BSmartColor.brand) { showsChatShare = true }
                     .accessibilityIdentifier("opinion.share")
-            }
+            }.buttonStyle(.bSmartToolbar) }
+            .bSmartHideSystemBackground()
         }
         .sheet(isPresented: $showsChatShare) { ShareToChatSheet(content: sharedContent) }
         .task(id: update.ticker) {

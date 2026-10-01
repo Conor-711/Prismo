@@ -27,24 +27,14 @@ private struct TickerDestinationContent: View {
 
 private struct TickerLogoDestinationModifier: ViewModifier {
     let symbol: String
-    @State private var isPresented = false
-    @Namespace private var transition
 
     func body(content: Content) -> some View {
-        content
-            .contentShape(Rectangle())
-            .highPriorityGesture(TapGesture().onEnded { isPresented = true })
-            .accessibilityAddTraits(.isButton)
-            .accessibilityLabel(symbol)
-            .accessibilityIdentifier("ticker.logo.\(symbol.uppercased())")
-            .accessibilityAction { isPresented = true }
-            .bSmartMatchedTransitionSource(id: symbol, in: transition)
-            .fullScreenCover(isPresented: $isPresented) {
-                NavigationStack {
-                    TickerDestinationView(symbol: symbol)
-                }
-                .bSmartZoomNavigationTransition(sourceID: symbol, in: transition)
-            }
+        NavigationLink { TickerDestinationView(symbol: symbol) } label: {
+            content.contentShape(Rectangle())
+        }
+        .buttonStyle(.bSmartPlain)
+        .accessibilityLabel(symbol)
+        .accessibilityIdentifier("ticker.logo.\(symbol.uppercased())")
     }
 }
 

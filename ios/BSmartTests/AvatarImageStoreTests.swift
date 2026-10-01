@@ -123,6 +123,42 @@ final class AvatarImageStoreTests: XCTestCase {
         XCTAssertEqual(count, 2)
     }
 
+    func testRotatingProfileSignaturesShareMemoryAndDiskWithoutRedownloading() async throws {
+        let path = "https://test.supabase.co/storage/v1/object/sign/bsmart-profile-avatars/11111111-1111-4111-8111-111111111111/22222222-2222-4222-8222-222222222222.jpg"
+        let firstURL = URL(string: path + "?token=first")!
+        let nextURL = URL(string: path + "?token=next")!
+        let fetcher = StubAvatarFetcher(data: imageData(), delay: .milliseconds(20))
+        let store = AvatarImageStore(fetcher: fetcher, directory: directory)
+        async let first = store.image(for: firstURL)
+        async let next = store.image(for: nextURL)
+        let results = await (first, next)
+        XCTAssertNotNil(results.0)
+        XCTAssertEqual(results.1?.sourceURL, nextURL)
+        let requests = await fetcher.requests
+        XCTAssertEqual(requests, 1)
+        let offline = StubAvatarFetcher(data: Data(), mode: .offline)
+        let restarted = AvatarImageStore(fetcher: offline, directory: directory)
+        let cached = await restarted.image(for: nextURL)
+        XCTAssertEqual(cached?.sourceURL, nextURL)
+        let offlineRequests = await offline.requests
+        XCTAssertEqual(offlineRequests, 0)
+    }
+
+    func testStableIdentityDoesNotMergeReplacedAvatarsOtherBucketsOrTransformations() {
+        let path = "https://test.supabase.co/storage/v1/object/sign/bsmart-profile-avatars/11111111-1111-4111-8111-111111111111/22222222-2222-4222-8222-222222222222.jpg"
+        let original = URL(string: path + "?token=first")!
+        let replaced = URL(string: path.replacingOccurrences(of: "22222222-2222-4222-8222-222222222222", with: "33333333-3333-4333-8333-333333333333") + "?token=first")!
+        XCTAssertNotEqual(AvatarResourceIdentity.url(for: original), AvatarResourceIdentity.url(for: replaced))
+        let transformed = URL(string: path + "?token=next&width=32")!
+        XCTAssertNotEqual(AvatarResourceIdentity.url(for: original), AvatarResourceIdentity.url(for: transformed))
+        for value in [path.replacingOccurrences(of: "bsmart-profile-avatars", with: "private-documents"),
+                      path.replacingOccurrences(of: "test.supabase.co", with: "test.supabase.co.evil.invalid"),
+                      path.replacingOccurrences(of: "22222222-2222-4222-8222-222222222222", with: "mutable")] {
+            let url = URL(string: value + "?token=first")!
+            XCTAssertEqual(AvatarResourceIdentity.url(for: url), url)
+        }
+    }
+
     func testDiskPrunesExpiredAndExcessFiles() throws {
         let now = Date()
         var cache = AvatarDiskCache(directory: directory)

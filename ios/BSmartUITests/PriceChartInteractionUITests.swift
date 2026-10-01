@@ -43,7 +43,11 @@ final class PriceChartInteractionUITests: XCTestCase {
 
     func testSmartMoneyEntriesUseSameControlsInLightMode() {
         let app = launch(appearance: "light")
-        app.descendants(matching: .any)["app.tab.smart"].tap()
+        app.buttons["discovery.open-directory"].tap()
+        guard app.descendants(matching: .any)["smart.section.money"].exists else {
+            XCTAssertFalse(app.descendants(matching: .any)["smart.money.row.first"].exists)
+            return
+        }
         app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Smart Money")).firstMatch.tap()
         let account = app.descendants(matching: .any)["smart.money.row.first"]
         XCTAssertTrue(account.waitForExistence(timeout: 5))

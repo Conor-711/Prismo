@@ -416,6 +416,7 @@ def test_service_covers_every_contract_operation() -> None:
     }
 
     assert actual == expected
+    assert ("/v1/mr-collie/query", "POST") not in actual
 
 
 def normalize_path(path: str) -> str:

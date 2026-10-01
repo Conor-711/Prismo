@@ -26,14 +26,14 @@ struct SocialPerson: Decodable, Identifiable, Hashable {
     var id: UUID { profile.id }
 }
 
-struct SocialConversation: Decodable, Identifiable {
+struct SocialConversation: Decodable, Identifiable, Equatable {
     let profile: FeedPublicProfile
     let lastMessage: SocialMessage
     let unreadCount: Int
     var id: UUID { profile.id }
 }
 
-struct SocialSnapshot: Decodable {
+struct SocialSnapshot: Decodable, Equatable {
     let following: [SocialPerson]
     let followers: [SocialPerson]
     let conversations: [SocialConversation]
@@ -75,12 +75,13 @@ struct SocialMessagesPage: Decodable {
 
 @MainActor
 struct NativeSocialClient {
+    private static let defaultTransport = SupabaseAccountConfiguration.resolve().map { SupabaseAccountTransport(configuration: $0) }
     let account: AccountAccessStore
     var transport: SupabaseAccountTransport?
 
     init(account: AccountAccessStore, transport: SupabaseAccountTransport? = nil) {
         self.account = account
-        self.transport = transport ?? SupabaseAccountConfiguration.resolve().map { SupabaseAccountTransport(configuration: $0) }
+        self.transport = transport ?? Self.defaultTransport
     }
 
     private func request<T: Decodable>(_ path: String = "", method: String = "GET",
@@ -141,7 +142,15 @@ struct NativeSocialClient {
         }
         let page: SocialMessagesPage = try await request("/chat/\(room.id)", query: query, accountID: accountID)
         try page.validate()
+        if before == nil, account.identity?.id == accountID {
+            SocialChatRecentPages.shared.store(page, roomID: room.id, accountID: accountID)
+        }
         return page
+    }
+
+    func cachedChat(_ room: SocialChatRoom, accountID: UUID) -> SocialMessagesPage? {
+        guard account.identity?.id == accountID else { return nil }
+        return SocialChatRecentPages.shared.page(roomID: room.id, accountID: accountID)
     }
 
     func send(_ draft: SocialChatDraft, room: SocialChatRoom, accountID: UUID) async throws -> SocialMessage {
@@ -150,5 +159,39 @@ struct NativeSocialClient {
             body: JSONEncoder().encode(draft), accountID: accountID)
         guard result.isValid, result.isMine, result.id == draft.id else { throw AccountAccessError.invalidResponse }
         return result
+    }
+}
+
+@MainActor
+final class SocialChatRecentPages {
+    static let shared = SocialChatRecentPages()
+    private var accountID: UUID?
+    private var pages: [String: (page: SocialMessagesPage, at: Date)] = [:]
+    private let now: () -> Date
+    private let maximumRooms: Int
+    init(maximumRooms: Int = 8, now: @escaping () -> Date = Date.init) {
+        self.maximumRooms = max(1, maximumRooms)
+        self.now = now
+    }
+    func activate(accountID: UUID?) {
+        guard self.accountID != accountID else { return }
+        self.accountID = accountID
+        pages.removeAll()
+    }
+    func page(roomID: String, accountID: UUID) -> SocialMessagesPage? {
+        activate(accountID: accountID)
+        guard let entry = pages[roomID], now().timeIntervalSince(entry.at) < 240 else {
+            pages[roomID] = nil
+            return nil
+        }
+        return entry.page
+    }
+    func store(_ page: SocialMessagesPage, roomID: String, accountID: UUID) {
+        guard (try? page.validate()) != nil else { return }
+        activate(accountID: accountID)
+        pages[roomID] = (page, now())
+        while pages.count > maximumRooms, let oldest = pages.min(by: { $0.value.at < $1.value.at })?.key {
+            pages[oldest] = nil
+        }
     }
 }

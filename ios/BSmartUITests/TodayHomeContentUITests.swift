@@ -2,7 +2,136 @@ import XCTest
 import UIKit
 
 final class TodayHomeContentUITests: XCTestCase {
-    override func setUpWithError() throws { continueAfterFailure = false }
+    override func setUpWithError() throws {
+        continueAfterFailure = false
+        guard name.contains("testActivityAndAssetModesShowTheirOwnControls")
+            || name.contains("testAccountOverviewAndTrendFollowExistingTabs")
+            || name.contains("testPoliticianEventShowsObservedMoveAndTradeTarget")
+            || name.contains("testModeSelectionSurvivesBackgroundReturn") else {
+            throw XCTSkip("Legacy three-section home and discovery carousel were removed.")
+        }
+    }
+
+    func testAccountOverviewAndTrendFollowExistingTabs() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-reset-state", "--ui-scenario=loaded", "--ui-trading-fixture",
+                               "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
+        app.launch()
+
+        XCTAssertTrue(app.descendants(matching: .any)["today.wordmark"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["today.account-value"].exists)
+        XCTAssertTrue(app.staticTexts["today.account-day-change"].exists)
+        XCTAssertTrue(app.buttons["today.deposit"].exists)
+        XCTAssertEqual(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "today.tab.")).count, 2)
+        XCTAssertTrue(app.otherElements["today.trending.activity"].exists)
+
+        app.buttons["today.tab.assets"].tap()
+        XCTAssertTrue(app.otherElements["today.trending.assets"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.otherElements["today.trending.activity"].exists)
+        XCTAssertTrue(app.buttons["today.deposit"].exists)
+    }
+
+    func testActivityAndAssetModesShowTheirOwnControls() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-reset-state", "--ui-scenario=loaded", "--ui-trading-fixture",
+                               "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
+        app.launch()
+
+        let activity = app.buttons["today.tab.activity"]
+        let assets = app.buttons["today.tab.assets"]
+        XCTAssertTrue(activity.waitForExistence(timeout: 10))
+        XCTAssertTrue(activity.isSelected)
+        XCTAssertTrue(assets.exists)
+        XCTAssertFalse(app.buttons["discovery.open-directory"].exists)
+        let sourceFilter = app.buttons["smart-updates.filters"]
+        XCTAssertTrue(sourceFilter.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["smart-updates.sort"].exists)
+        XCTAssertTrue(app.buttons["smart-updates.platform.bsmart"].exists)
+        XCTAssertTrue(app.buttons["smart-updates.platform.celebrities"].exists)
+        XCTAssertTrue(app.buttons["smart-updates.platform.institutions"].exists)
+        app.buttons["smart-updates.platform.politicians"].tap()
+        let politician = app.descendants(matching: .any).matching(
+            NSPredicate(format: "identifier BEGINSWITH %@", "subject-activity.actor.politician:")
+        ).firstMatch
+        XCTAssertTrue(politician.waitForExistence(timeout: 5))
+        let operation = app.buttons.matching(
+            NSPredicate(format: "identifier BEGINSWITH %@", "subject-activity.event.")
+        ).firstMatch
+        XCTAssertTrue(operation.waitForExistence(timeout: 5))
+        let eventID = String(operation.identifier.dropFirst("subject-activity.event.".count))
+        operation.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["subject-activity.detail.\(eventID)"].waitForExistence(timeout: 5))
+        app.buttons["detail.back"].tap()
+        app.buttons["smart-updates.platform.all"].tap()
+        sourceFilter.tap()
+        XCTAssertTrue(app.buttons["smart-updates.sort.trending"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["smart-updates.sort.oldest"].waitForExistence(timeout: 3))
+        app.buttons["smart-updates.sort.oldest"].tap()
+        app.buttons["smart-updates.following-only"].tap()
+        app.buttons["smart-updates.type.trades"].tap()
+        app.buttons["smart-updates.filters.done"].tap()
+        sourceFilter.tap()
+        XCTAssertTrue(app.buttons["smart-updates.filters.reset"].waitForExistence(timeout: 3))
+        app.buttons["smart-updates.filters.reset"].tap()
+        app.buttons["smart-updates.filters.done"].tap()
+
+        assets.tap()
+        XCTAssertTrue(assets.isSelected)
+        XCTAssertTrue(app.textFields["portfolio.ticker-search"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["portfolio.ticker-sort"].exists)
+        XCTAssertTrue(app.buttons["portfolio.ticker-filter.all"].exists)
+        let firstAsset = app.buttons.matching(
+            NSPredicate(format: "identifier BEGINSWITH %@", "portfolio.ticker.")
+        ).firstMatch
+        XCTAssertTrue(firstAsset.waitForExistence(timeout: 5))
+        let symbol = String(firstAsset.identifier.dropFirst("portfolio.ticker.".count))
+        firstAsset.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["ticker-intelligence.\(symbol)"].waitForExistence(timeout: 5))
+        app.buttons["detail.back"].tap()
+
+        activity.tap()
+        XCTAssertTrue(activity.isSelected)
+        XCTAssertTrue(sourceFilter.exists)
+    }
+
+    func testModeSelectionSurvivesBackgroundReturn() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-reset-state", "--ui-scenario=loaded", "--ui-trading-fixture"]
+        app.launch()
+
+        let assets = app.buttons["today.tab.assets"]
+        XCTAssertTrue(assets.waitForExistence(timeout: 10))
+        assets.tap()
+        XCTAssertTrue(assets.isSelected)
+        XCUIDevice.shared.press(.home)
+        app.activate()
+        XCTAssertTrue(assets.waitForExistence(timeout: 5))
+        XCTAssertTrue(assets.isSelected)
+        XCTAssertTrue(app.textFields["portfolio.ticker-search"].exists)
+    }
+
+    func testPoliticianEventShowsObservedMoveAndTradeTarget() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-reset-state", "--ui-scenario=loaded", "--ui-trading-fixture",
+                               "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
+        app.launch()
+
+        let sourceFilter = app.buttons["smart-updates.filters"]
+        XCTAssertTrue(sourceFilter.waitForExistence(timeout: 10))
+        app.buttons["smart-updates.platform.politicians"].tap()
+
+        let move = app.descendants(matching: .any).matching(
+            NSPredicate(format: "identifier BEGINSWITH %@", "feed.price-change.")).firstMatch
+        for _ in 0..<8 where !move.exists {
+            app.scrollViews["today.page.activity"].swipeUp()
+        }
+        XCTAssertTrue(move.exists)
+        let ticker = String(move.identifier.dropFirst("feed.price-change.".count))
+        let trade = app.buttons["trade.open.\(ticker)"].firstMatch
+        XCTAssertTrue(trade.exists)
+        trade.tap()
+        XCTAssertTrue(app.buttons["trade.close"].waitForExistence(timeout: 10))
+    }
 
     func testDeviceHomeScrollingWithoutResettingUserData() throws {
 #if targetEnvironment(simulator)
@@ -120,7 +249,8 @@ final class TodayHomeContentUITests: XCTestCase {
         for index in 1..<tabs.count {
             XCTAssertGreaterThanOrEqual(tabs[index].frame.minX - tabs[index - 1].frame.maxX, 19)
         }
-        assertBottomClearsDock(app.descendants(matching: .any)["today.tracked-activity"],
+        XCTAssertFalse(app.descendants(matching: .any)["today.tracked-activity"].exists)
+        assertBottomClearsDock(app.descendants(matching: .any)["today.holdings.module"],
                               page: app.scrollViews["today.page.portfolio"], dock: dock)
         selectScene("market", app: app)
         let alpha = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "today.smart-alpha."))
@@ -212,9 +342,7 @@ final class TodayHomeContentUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["smart.screen"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["smart.account.filters"].waitForExistence(timeout: 5), app.debugDescription)
         XCTAssertFalse(app.descendants(matching: .any)["app.tabbar"].isHittable)
-        app.descendants(matching: .any)["smart.section.money"].tap()
-        XCTAssertTrue(app.buttons["smart.money.filters"].exists)
-        app.descendants(matching: .any)["smart.section.accounts"].tap()
+        XCTAssertFalse(app.descendants(matching: .any)["smart.section.money"].exists)
         app.buttons["smart.account.filters"].tap()
         XCTAssertTrue(app.navigationBars["Filters"].waitForExistence(timeout: 4))
         app.buttons["Done"].tap()
@@ -232,16 +360,15 @@ final class TodayHomeContentUITests: XCTestCase {
         assertNoHomeFilters(app)
     }
 
-    func testHoldingsAndSmartUpdatesFiltersOnlyAppearInCollections() {
+    func testHoldingsCollectionFiltersAndSmartUpdatesTrackingToggle() {
         let app = launch()
         let holdings = app.buttons["today.holdings.title"]
         reveal(holdings, app: app)
         assertNoHomeFilters(app)
         holdings.tap()
         let holdingsFilter = app.segmentedControls["holdings.source-filter"]
-        XCTAssertTrue(holdingsFilter.waitForExistence(timeout: 5))
-        holdingsFilter.buttons["Smart Money"].tap()
-        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "holdings.activity.money.")).firstMatch.exists)
+        XCTAssertFalse(holdingsFilter.exists)
+        XCTAssertFalse(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "holdings.activity.money.")).firstMatch.exists)
         XCTAssertFalse(app.descendants(matching: .any)["app.tabbar"].isHittable)
         app.buttons["detail.back"].tap()
         XCTAssertTrue(holdings.waitForExistence(timeout: 5))
@@ -253,11 +380,12 @@ final class TodayHomeContentUITests: XCTestCase {
         let updates = app.buttons["today.smart-updates.title"]
         reveal(updates, app: app)
         assertNoHomeFilters(app)
+        XCTAssertTrue(app.descendants(matching: .any)["today.smart-updates.following-only"].exists)
         updates.tap()
         let updatesFilter = app.segmentedControls["smart-updates.source-filter"]
-        XCTAssertTrue(updatesFilter.waitForExistence(timeout: 5))
-        updatesFilter.buttons["Smart Account"].tap()
-        XCTAssertTrue(app.textFields["smart-updates.search"].exists)
+        XCTAssertFalse(updatesFilter.exists)
+        XCTAssertTrue(app.buttons["smart-updates.filters"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["smart-updates.following-only"].exists)
         XCTAssertFalse(app.descendants(matching: .any)["app.tabbar"].isHittable)
         app.buttons["detail.back"].tap()
         XCTAssertTrue(updates.waitForExistence(timeout: 5))

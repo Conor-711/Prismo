@@ -11,6 +11,7 @@ struct AppSearchView: View {
     @State private var category = AppSearchCategory.all
     @State private var overview = AppSearchOverviewData()
     @State private var indexRevision = 0
+    @State private var builtCatalogKey: CatalogKey?
     @State private var visibleLimit = 30
     @State private var selection: AppSearchItem?
     @FocusState private var focused: Bool
@@ -29,7 +30,7 @@ struct AppSearchView: View {
     private struct CatalogKey: Hashable {
         let active: Bool
         let refreshed: Date?
-        let markets, evidence: Int
+        let markets, evidence, feed, directory: Int
     }
     private struct QueryKey: Hashable {
         let active: Bool
@@ -39,8 +40,9 @@ struct AppSearchView: View {
     }
     private var catalogKey: CatalogKey {
         CatalogKey(active: active, refreshed: model.lastDataRefreshAt,
-                   markets: trading.marketCatalog.count,
-                   evidence: model.smartAccountEvidenceByAuthor.values.reduce(0) { $0 + $1.count })
+                   markets: trading.catalogRevision,
+                   evidence: model.smartAccountEvidenceByAuthor.values.reduce(0) { $0 + $1.count },
+                   feed: model.todayFeedRevision, directory: model.directoryRevision)
     }
     private var queryKey: QueryKey {
         QueryKey(active: active, query: query, revision: indexRevision, account: account.identity?.id)
@@ -96,12 +98,14 @@ struct AppSearchView: View {
     }
 
     private func refreshIndex() async {
-        guard active else { return }
+        guard active, builtCatalogKey != catalogKey else { return }
+        let key = catalogKey
         let items = model.searchItems(markets: trading.marketCatalog)
         overview = AppSearchOverviewData(items: items,
             trendingSymbols: TodayViewpointPackage.packages(from: model.smartAccountUpdates, maximumPackages: 6).map(\.ticker))
         await store.replaceIndex(items: items)
-        guard !Task.isCancelled else { return }
+        guard !Task.isCancelled, key == catalogKey else { return }
+        builtCatalogKey = key
         indexRevision += 1
     }
 
@@ -125,12 +129,12 @@ struct AppSearchView: View {
             if !query.isEmpty {
                 Button { query = ""; category = .all; focused = true } label: {
                     Image(systemName: "xmark.circle.fill").frame(width: 28, height: 36)
-                }.buttonStyle(.plain).foregroundStyle(BSmartColor.secondaryText)
+                }.buttonStyle(.bSmartPlain).foregroundStyle(BSmartColor.secondaryText)
                     .accessibilityLabel("Clear".bSmartLocalized).accessibilityIdentifier("search.clear")
             }
             if focused {
                 Button { focused = false } label: { Image(systemName: "keyboard.chevron.compact.down").frame(width: 28, height: 36) }
-                    .buttonStyle(.plain).accessibilityLabel("Dismiss keyboard".bSmartLocalized)
+                    .buttonStyle(.bSmartPlain).accessibilityLabel("Dismiss keyboard".bSmartLocalized)
                     .accessibilityIdentifier("search.dismiss-keyboard")
             }
         }
@@ -152,7 +156,7 @@ struct AppSearchView: View {
                             .overlay(alignment: .bottom) {
                                 if value == category { Rectangle().fill(BSmartColor.brand).frame(height: 2) }
                             }
-                    }.buttonStyle(.plain).accessibilityAddTraits(value == category ? .isSelected : [])
+                    }.buttonStyle(.bSmartPlain).accessibilityAddTraits(value == category ? .isSelected : [])
                         .accessibilityIdentifier("search.filter.\(value.rawValue)")
                 }
             }.padding(.horizontal, 20)
@@ -238,14 +242,14 @@ struct AppSearchView: View {
             Spacer()
             if let more {
                 Button { category = more; focused = false } label: { Image(systemName: "chevron.right").frame(width: 40, height: 32) }
-                    .buttonStyle(.plain).accessibilityLabel("View all".bSmartLocalized)
+                    .buttonStyle(.bSmartPlain).accessibilityLabel("View all".bSmartLocalized)
             }
         }.padding(.bottom, 6)
     }
     private func rows(_ items: [AppSearchItem]) -> some View {
         ForEach(items) { item in
             Button { open(item) } label: { AppSearchResultRow(item: item) }
-                .buttonStyle(.plain).accessibilityIdentifier("search.result.\(item.id)")
+                .buttonStyle(.bSmartPlain).accessibilityIdentifier("search.result.\(item.id)")
             if item.category != .opinions { Divider().overlay(BSmartColor.softDivider) }
         }
     }
@@ -263,7 +267,7 @@ struct AppSearchView: View {
                         ForEach(store.recentQueries, id: \.self) { value in
                             Button { query = value; category = .all } label: {
                                 Label(value, systemImage: "clock.arrow.circlepath").font(.subheadline).padding(.vertical, 8)
-                            }.buttonStyle(.plain)
+                            }.buttonStyle(.bSmartPlain)
                         }
                     }
                 }

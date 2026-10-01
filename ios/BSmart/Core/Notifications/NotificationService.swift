@@ -2,15 +2,16 @@ import Foundation
 import UIKit
 import UserNotifications
 
-private struct PushInterestSnapshot: Codable {
+struct PushInterestSnapshot: Codable {
     var authors = Set<String>()
     var money = Set<String>()
     var tickers = Set<String>()
     var holdings = Set<String>()
 
     @MainActor static func from(_ model: AppModel) -> Self {
-        .init(authors: Set(model.followedSmartAccountIDs.map { $0.lowercased() }),
-              money: Set(model.followedSmartMoneyIDs.map { $0.lowercased() }),
+        .init(authors: Set(model.followedSmartAccountIDs.union(model.followedSubjectIDs).map { $0.lowercased() }),
+              money: BSmartProductVisibility.onchainSmartMoney
+                  ? Set(model.followedSmartMoneyIDs.map { $0.lowercased() }) : [],
               tickers: Set(model.watchlist.map { $0.ticker.uppercased() }),
               holdings: Set(model.heldPositions.map { $0.ticker.uppercased() }))
     }
@@ -123,6 +124,8 @@ final class NotificationService: ObservableObject {
                 if let data = UserDefaults.standard.data(forKey: key),
                    let saved = try? JSONDecoder().decode(PushInterestSnapshot.self, from: data) {
                     scopedInterests = saved
+                    // Subject follows were absent from the previous account-scoped push snapshot.
+                    scopedInterests.authors.formUnion(model.followedSubjectIDs.map { $0.lowercased() })
                 } else if UserDefaults.standard.string(forKey: "bsmart.push.interests.owner.v1") == nil {
                     // Existing device-wide follows are migrated only to the first verified account.
                     UserDefaults.standard.set(id.uuidString, forKey: "bsmart.push.interests.owner.v1")

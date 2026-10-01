@@ -1,5 +1,10 @@
 import Foundation
 
+enum BSmartProductVisibility {
+    // Restore the on-chain research surfaces without changing stored follows or source data.
+    static let onchainSmartMoney = false
+}
+
 enum BSmartLiveDataSource: String, Codable, CaseIterable, Hashable {
     case smartAccount
     case smartMoney
@@ -272,6 +277,7 @@ struct SmartAccountUpdate: Identifiable, Codable, Hashable {
     var originalText: String? = nil
     var imageURLs: [URL]? = nil
     var priceEvidence: SmartAccountPriceEvidence? = nil
+    var priceOutcome: SmartAccountPriceOutcome? = nil
     var sourcePostId: String? = nil
     var sourceURL: URL? = nil
     var ingestedAt: Date? = nil
@@ -292,6 +298,63 @@ struct SmartAccountUpdate: Identifiable, Codable, Hashable {
     var activityTitleEN: String? = nil
     var supportingSources: [OpinionSupportingSource]? = nil
     var firstOpinion: SmartAccountFirstOpinion? = nil
+    var sourceKind: String? = nil
+    var nativeTrade: NativeTradeContext? = nil
+}
+
+struct NativeTradeContext: Codable, Hashable {
+    struct Base: Codable, Hashable {
+        let kind: String?
+        let subjectID: String?
+        let eventID: String?
+        let subjectEvent: TodaySubjectEvent?
+        let nativeUpdateID: UUID?
+        let opinionID: UUID?
+        let authorID: String?
+        let ticker: String?
+        let companyName: String?
+        let platform: String?
+        let direction: SignalDirection?
+        let publishedAt: Date?
+        let sourceURL: URL?
+        let thesis: String?
+        let authorName: String
+        let avatarURL: URL?
+        let body: String
+
+        var linkedUpdate: SmartAccountUpdate? {
+            guard let id = opinionID ?? nativeUpdateID,
+                  let authorID, let ticker, let platform, let publishedAt else { return nil }
+            var update = SmartAccountUpdate(id: id, ticker: ticker,
+                companyName: companyName ?? ticker, authorId: authorID, authorName: authorName,
+                platform: platform, score: 0, platformPercentile: 1,
+                direction: direction ?? .neutral, lifecycle: .new, horizon: "unknown",
+                targetPrice: nil, thesis: thesis ?? body, invalidation: nil,
+                publishedAt: publishedAt, evidenceURL: sourceURL,
+                authorAvatarURL: avatarURL, originalText: body, sourceURL: sourceURL)
+            if nativeUpdateID != nil { update.sourceKind = "native_opinion" }
+            return update
+        }
+    }
+
+    let sourceKind: String
+    let eventKind: String?
+    let status: String
+    let marketCoin: String
+    let side: String
+    let notionalUSD: String?
+    let leverage: Int?
+    let unrealizedPnlUSD: String?
+    let realizedPnlUSD: String?
+    let entryPriceUSD: String?
+    let currentPriceUSD: String?
+    let exitPriceUSD: String?
+    let base: Base?
+
+    var isClosed: Bool { status == "closed" }
+    var isOpen: Bool { status == "open" }
+    var isLong: Bool { side == "long" }
+    var isClosingRecord: Bool { eventKind == "closing" || (eventKind == nil && isClosed && entryPriceUSD == nil) }
 }
 
 struct PriceCandle: Identifiable, Codable, Hashable {
@@ -314,6 +377,14 @@ struct SmartAccountPriceEvidence: Codable, Hashable {
     let source: String
     let candles: [PriceCandle]
     var opinionMarkers: [SmartAccountOpinionMarker]? = nil
+}
+
+struct SmartAccountPriceOutcome: Codable, Hashable {
+    let startDay: String
+    let startPrice: Double
+    let latestDay: String
+    let latestPrice: Double
+    let priceBasis: String
 }
 
 struct SmartAccountOpinionMarker: Identifiable, Codable, Hashable {
@@ -449,6 +520,15 @@ struct PortfolioSignal: Identifiable, Codable, Hashable {
     var resolvedDataStatus: SignalDataStatus { dataStatus ?? .current }
     var resolvedLimitations: [String] { limitations ?? [] }
 
+    var isVisibleInProduct: Bool {
+        guard !BSmartProductVisibility.onchainSmartMoney else { return true }
+        guard !evidence.isEmpty, evidence.allSatisfy({ $0.source == .smartAccount }) else { return false }
+        switch kind {
+        case .smartAccountNewView, .smartAccountShift, .smartAccountConsensus: return true
+        default: return false
+        }
+    }
+
     func evidence(for source: SignalEvidenceSource) -> [PortfolioSignalEvidence] {
         evidence.filter { $0.source == source }
     }
@@ -463,47 +543,6 @@ struct DailyDigestSnapshot: Identifiable, Codable, Hashable {
     let title: String
     let summary: String
     let signals: [PortfolioSignal]
-}
-
-struct MrCollieQuery: Codable, Hashable {
-    let question: String
-    let locale: String
-    let conversation: [MrCollieConversationTurn]
-}
-
-struct MrCollieConversationTurn: Codable, Hashable {
-    enum Role: String, Codable, Hashable {
-        case user
-        case assistant
-    }
-
-    let role: Role
-    let content: String
-}
-
-struct MrCollieEvidence: Identifiable, Codable, Hashable {
-    let id: String
-    let source: String
-    let sourceType: SignalEvidenceSource
-    let title: String
-    let detail: String
-    let metric: String?
-    let observedAt: Date?
-}
-
-struct MrCollieResponse: Codable, Hashable {
-    let question: String
-    let title: String
-    let summary: String
-    let context: String?
-    let nextStep: String
-    let ticker: String?
-    let signalId: UUID?
-    let evidence: [MrCollieEvidence]
-    let generatedAt: Date
-    let dataAsOf: Date
-    let contextVersion: String
-    let model: String
 }
 
 struct SmartAccountSnapshot: Codable, Hashable {
@@ -681,6 +720,8 @@ struct SmartAccountProfile: Identifiable, Codable, Hashable {
     var description: String? = nil
 
     var representativeWork: SmartAccountRepresentativeIntro? = nil
+    var followBacktest: SmartAccountFollowBacktest? = nil
+    var nativePerformance: NativeInvestorPerformance? = nil
 
     var resolvedRank: Int { rank ?? platformRank ?? 0 }
     var resolvedPlatformRank: Int { platformRank ?? rank ?? 0 }
@@ -692,6 +733,26 @@ struct SmartAccountProfile: Identifiable, Codable, Hashable {
     var resolvedCoveredTickers: Int { coveredTickers ?? 0 }
     var resolvedTopTickers: [String] { topTickers ?? recentTicker.map { [$0] } ?? [] }
     var resolvedStyle: String { style ?? "Mixed" }
+}
+
+struct SmartAccountFollowBacktest: Codable, Hashable {
+    let source: String
+    let investorID: String
+    let startDay: String
+    let endDay: String
+    let signalCount: Int
+    let tradeCount: Int
+    let tradeHitRate: Double
+    let totalReturn: Double
+
+    var winLossCounts: (wins: Int, losses: Int)? {
+        guard tradeCount > 0, tradeHitRate.isFinite, (0...1).contains(tradeHitRate) else { return nil }
+        let rawWins = Double(tradeCount) * tradeHitRate
+        guard rawWins.isFinite, rawWins < Double(Int.max) else { return nil }
+        let wins = Int(rawWins.rounded())
+        guard abs(rawWins - Double(wins)) < 0.000001 else { return nil }
+        return (wins, tradeCount - wins)
+    }
 }
 
 struct SmartMoneySignal: Identifiable, Codable, Hashable {

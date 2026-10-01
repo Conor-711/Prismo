@@ -115,7 +115,7 @@ struct TradeOrderComposer: View {
                 .frame(width: 44, height: 38)
                 .background(showsChart == chart ? BSmartColor.elevated : .clear, in: RoundedRectangle(cornerRadius: 6))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.bSmartPlain)
         .accessibilityLabel(title.bSmartLocalized)
         .accessibilityAddTraits(showsChart == chart ? .isSelected : [])
         .accessibilityIdentifier(chart ? "trade.mode.chart" : "trade.mode.keypad")
@@ -172,7 +172,7 @@ struct TradeOrderComposer: View {
                         .frame(maxWidth: .infinity, minHeight: 40)
                         .background(BSmartColor.recessed, in: RoundedRectangle(cornerRadius: 8))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.bSmartPlain)
                 .accessibilityIdentifier("trade.amount.preset.\(dollars)")
             }
         }
@@ -201,7 +201,7 @@ struct TradeOrderComposer: View {
                     .frame(maxWidth: .infinity, minHeight: 44)
                     .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.bSmartPlain)
                 .accessibilityLabel(key == "delete" ? "Delete".bSmartLocalized : key)
                 .accessibilityIdentifier("trade.key.\(key)")
                 }
@@ -285,7 +285,7 @@ struct TradeOrderComposer: View {
                     .background(accent, in: RoundedRectangle(cornerRadius: 8))
                     .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.bSmartPlain)
             .accessibilityIdentifier("trade.order.done")
         }
         .padding(.vertical, 48)

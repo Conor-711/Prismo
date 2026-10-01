@@ -1,0 +1,17 @@
+{
+  "createRequest": {
+    "clientIntentId": "fedcba98-7654-4321-8765-123456789abc",
+    "input": { "ticker": "ASTS", "side": "buy", "amount": "100", "slippageBps": 50, "maxNetworkFeeBps": 100 }
+  },
+  "response": {
+    "intent": {
+      "id": "12345678-1234-4234-8234-123456789abc",
+      "clientIntentId": "fedcba98-7654-4321-8765-123456789abc",
+      "owner": "0x2222222222222222222222222222222222222222",
+      "input": { "ticker": "ASTS", "side": "buy", "amount": "100", "slippageBps": 50, "maxNetworkFeeBps": 100 },
+      "state": "draft", "version": 0, "preview": null, "quoteExpiresAt": null,
+      "createdAt": "2026-10-01T00:00:00.000Z", "updatedAt": "2026-10-01T00:00:00.000Z"
+    },
+    "legs": [], "executionEnabled": false
+  }
+}

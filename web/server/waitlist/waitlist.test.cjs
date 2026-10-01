@@ -21,32 +21,35 @@ function seedLegacy(kv, email = "reader@example.com") {
 const answers = { channels: ["accounts", "onchain", "other"], otherChannel: "  投资播客  ", contact: { platform: "telegram", handle: "  @reader  " } };
 
 test("survey stores normalized multiple choices, other text and each supported contact platform", async () => {
-  for (const platform of ["telegram", "wechat", "twitter"]) {
+  for (const platform of ["telegram", "wechat", "twitter", "discord"]) {
     const kv = new MemoryKV();
     const survey = { ...answers, channels: [...answers.channels, "accounts"], contact: { platform, handle: "  reader账号  ", secret: "discard" }, arbitrary: "discard" };
     assert.equal((await handleWaitlist(request({ survey }), { WAITLIST: kv })).status, 200);
     const record = JSON.parse([...kv.values.values()][0]);
     assert.deepEqual(record.survey, { channels: answers.channels, otherChannel: "投资播客", contact: { platform, handle: "reader账号" } });
-    assert.equal(record.surveyVersion, "investment-interests-required-2026-09-15");
+    assert.equal(record.surveyVersion, "investment-interests-optional-2026-09-26");
     assert.ok(Number.isFinite(Date.parse(record.surveySubmittedAt)));
   }
 });
 
-test("all three fields are required, including older clients with no survey", async () => {
+test("email-only and partially completed surveys are accepted", async () => {
   for (const survey of [
     undefined,
+    {},
     { channels: [], otherChannel: "", contact: null },
     { channels: ["institutions", "insiders", "politicians"], otherChannel: "", contact: null },
     { channels: [], otherChannel: "", contact: { platform: "twitter", handle: "https://x.com/reader" } },
   ]) {
     const kv = new MemoryKV();
-    assert.equal((await handleWaitlist(request({ survey }), { WAITLIST: kv })).status, 400);
-    assert.equal(kv.writes.length, 0);
+    assert.equal((await handleWaitlist(request({ survey }), { WAITLIST: kv })).status, 200);
+    const record = JSON.parse([...kv.values.values()][0]);
+    assert.deepEqual(new Set(record.survey.channels), new Set(survey?.channels || []));
+    assert.deepEqual(record.survey.contact, survey?.contact || null);
   }
 });
 
 test("invalid surveys return a field error without writing anything", async () => {
-  for (const survey of [null, [], "wrong", {},
+  for (const survey of [null, [], "wrong",
     { ...answers, channels: "accounts" }, { ...answers, channels: ["unknown"] },
     { ...answers, channels: Array(7).fill("accounts") }, { ...answers, channels: [null] },
     { ...answers, otherChannel: " " }, { ...answers, otherChannel: "x".repeat(201) },

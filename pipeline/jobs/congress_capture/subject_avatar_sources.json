@@ -1,0 +1,345 @@
+{
+  "schemaVersion": 1,
+  "bundledOverrides": [
+    {"id":"institution:citadel","filename":"avatar.png","sha256":"23bfa3f5e36b90c91736cd1b23fad39e85f0b76a336bbde3183f950f3f4507ac"},
+    {"id":"politician:P000197","filename":"avatar.png","sha256":"ac76a57699844ff183ba50f3ecaf189249d583156dd1c8e692ed498689bfd271"},
+    {"id":"celebrity:duan-yongping","filename":"avatar.png","sha256":"663bb1c81354ad76530b500886cb54a41ccb113e7c4a4eab7ec2bc049b217877"},
+    {"id":"celebrity:ken-griffin","filename":"avatar.png","sha256":"cb2dad7c4f547c395d00ea695594878b38731b1ca1004a91af24e961b2525243"},
+    {"id":"celebrity:bill-ackman","filename":"avatar.png","sha256":"18cb42afb86d34b39d57187be06a5426b9bd4ef3a1b783df3d82854d186f05f2"},
+    {"id":"celebrity:warren-buffett","filename":"avatar.png","sha256":"07e557d0358094ab03435985b39d9aa02ce3cf061fe3805f342e188919607e01"}
+  ],
+  "bundledOverrideSource": "User-provided original images, 2026-10-01; rights not independently verified. Remote source credits below refer to fallback images, not these overrides.",
+  "subjects": [
+    {
+      "id": "celebrity:duan-yongping",
+      "name": "Duan Yongping",
+      "url": "https://econ.ruc.edu.cn/pub/econ/images/ec7a0da401654d3183313b2f56032326.jpg",
+      "source": "https://econ.ruc.edu.cn/xwdt/eb8b92e039fb45778939b738cd7c2337.htm",
+      "credit": "Renmin University of China news photograph, Duan Yongping alumni lecture",
+      "license": "Copyright retained; editorial identity reference, no open license asserted"
+    },
+    {
+      "id": "celebrity:leopold-aschenbrenner",
+      "name": "Leopold Aschenbrenner",
+      "url": "https://storage.ghost.io/c/06/72/0672802e-16ea-4b14-9738-7e6d926836a3/content/images/size/w1080/2026/05/leopoldaschenbrenner2026-1.jpeg",
+      "source": "https://www.forourposterity.com/",
+      "credit": "Leopold Aschenbrenner personal website portrait",
+      "license": "Copyright retained; editorial identity reference, no open license asserted"
+    },
+    {
+      "id": "politician:13",
+      "name": "April McClain Delaney",
+      "url": "https://unitedstates.github.io/images/congress/225x275/M001232.jpg",
+      "source": "https://github.com/unitedstates/images",
+      "credit": "U.S. congressional photo",
+      "license": "Public domain"
+    },
+    {
+      "id": "politician:1370",
+      "name": "Michael Rulli",
+      "url": "https://unitedstates.github.io/images/congress/225x275/R000619.jpg",
+      "source": "https://github.com/unitedstates/images",
+      "credit": "U.S. congressional photo",
+      "license": "Public domain"
+    },
+    {
+      "id": "politician:17",
+      "name": "Lloyd Doggett",
+      "url": "https://unitedstates.github.io/images/congress/225x275/D000399.jpg",
+      "source": "https://github.com/unitedstates/images",
+      "credit": "U.S. congressional photo",
+      "license": "Public domain"
+    },
+    {
+      "id": "politician:1731",
+      "name": "Alan Armstrong",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/5/55/Alan_S_Armstrong_official_portrait_%28cropped_2%29.jpg",
+      "source": "https://commons.wikimedia.org/wiki/File:Alan_S_Armstrong_official_portrait_(cropped_2).jpg",
+      "credit": "U.S. Senate / Daniel Rios",
+      "license": "Public domain"
+    },
+    {
+      "id": "politician:18",
+      "name": "Byron Donalds",
+      "url": "https://unitedstates.github.io/images/congress/225x275/D000032.jpg",
+      "source": "https://github.com/unitedstates/images",
+      "credit": "U.S. congressional photo",
+      "license": "Public domain"
+    },
+    {
+      "id": "politician:2",
+      "name": "Richard W. Allen",
+      "url": "https://unitedstates.github.io/images/congress/225x275/A000372.jpg",
+      "source": "https://github.com/unitedstates/images",
+      "credit": "U.S. congressional photo",
+      "license": "Public domain"
+    },
+    {
+      "id": "politician:21",
+      "name": "Cleo Fields",
+      "url": "https://unitedstates.github.io/images/congress/225x275/F000110.jpg",
+      "source": "https://github.com/unitedstates/images",
+      "credit": "U.S. congressional photo",
+      "license": "Public domain"
+    },
+    {
+      "id": "politician:257",
+      "name": "John W. Rose",
+      "url": "https://unitedstates.github.io/images/congress/225x275/R000612.jpg",
+      "source": "https://github.com/unitedstates/images",
+      "credit": "U.S. congressional photo",
+      "license": "Public domain"
+    },
+    {
+      "id": "politician:27",
+      "name": "Josh Gottheimer",
+      "url": "https://unitedstates.github.io/images/congress/225x275/G000583.jpg",
+      "source": "https://github.com/unitedstates/images",
+      "credit": "U.S. congressional photo",
+      "license": "Public domain"
+    },
+    {
+      "id": "politician:31",
+      "name": "Kevin Hern",
+      "url": "https://unitedstates.github.io/images/congress/225x275/H001082.jpg",
+      "source": "https://github.com/unitedstates/images",
+      "credit": "U.S. congressional photo",
+      "license": "Public domain"
+    },
+    {
+      "id": "politician:322",
+      "name": "Maria Elvira Salazar",
+      "url": "https://unitedstates.github.io/images/congress/225x275/S000168.jpg",
+      "source": "https://github.com/unitedstates/images",
+      "credit": "U.S. congressional photo",
+      "license": "Public domain"
+    },
+    {
+      "id": "politician:338",
+      "name": "Cory A Booker",
+      "url": "https://unitedstates.github.io/images/congress/225x275/B001288.jpg",
+      "source": "https://github.com/unitedstates/images",
+      "credit": "U.S. congressional photo",
+      "license": "Public domain"
+    },
+    {
+      "id": "politician:34",
+      "name": "Jonathan Jackson",
+      "url": "https://unitedstates.github.io/images/congress/225x275/J000309.jpg",
+      "source": "https://github.com/unitedstates/images",
+      "credit": "U.S. congressional photo",
+      "license": "Public domain"
+    },
+    {
+      "id": "politician:346",
+      "name": "Sheldon Whitehouse",
+      "url": "https://unitedstates.github.io/images/congress/225x275/W000802.jpg",
+      "source": "https://github.com/unitedstates/images",
+      "credit": "U.S. congressional photo",
+      "license": "Public domain"
+    },
+    {
+      "id": "politician:36",
+      "name": "Thomas H. Kean",
+      "url": "https://unitedstates.github.io/images/congress/225x275/K000398.jpg",
+      "source": "https://github.com/unitedstates/images",
+      "credit": "U.S. congressional photo",
+      "license": "Public domain"
+    },
+    {
+      "id": "politician:362",
+      "name": "A. Mitchell McConnell, Jr.",
+      "url": "https://unitedstates.github.io/images/congress/225x275/M000355.jpg",
+      "source": "https://github.com/unitedstates/images",
+      "credit": "U.S. congressional photo",
+      "license": "Public domain"
+    },
+    {
+      "id": "politician:385",
+      "name": "John Boozman",
+      "url": "https://unitedstates.github.io/images/congress/225x275/B001236.jpg",
+      "source": "https://github.com/unitedstates/images",
+      "credit": "U.S. congressional photo",
+      "license": "Public domain"
+    },
+    {
+      "id": "politician:399",
+      "name": "Harold Rogers",
+      "url": "https://unitedstates.github.io/images/congress/225x275/R000395.jpg",
+      "source": "https://github.com/unitedstates/images",
+      "credit": "U.S. congressional photo",
+      "license": "Public domain"
+    },
+    {
+      "id": "politician:400",
+      "name": "Ro Khanna",
+      "url": "https://unitedstates.github.io/images/congress/225x275/K000389.jpg",
+      "source": "https://github.com/unitedstates/images",
+      "credit": "U.S. congressional photo",
+      "license": "Public domain"
+    },
+    {
+      "id": "politician:424",
+      "name": "Tony Wied",
+      "url": "https://unitedstates.github.io/images/congress/225x275/W000829.jpg",
+      "source": "https://github.com/unitedstates/images",
+      "credit": "U.S. congressional photo",
+      "license": "Public domain"
+    },
+    {
+      "id": "politician:49",
+      "name": "John McGuire",
+      "url": "https://unitedstates.github.io/images/congress/225x275/M001239.jpg",
+      "source": "https://github.com/unitedstates/images",
+      "credit": "U.S. congressional photo",
+      "license": "Public domain"
+    },
+    {
+      "id": "politician:526",
+      "name": "C. Scott Franklin",
+      "url": "https://unitedstates.github.io/images/congress/225x275/F000472.jpg",
+      "source": "https://github.com/unitedstates/images",
+      "credit": "U.S. congressional photo",
+      "license": "Public domain"
+    },
+    {
+      "id": "politician:65",
+      "name": "Pete Sessions",
+      "url": "https://unitedstates.github.io/images/congress/225x275/S000250.jpg",
+      "source": "https://github.com/unitedstates/images",
+      "credit": "U.S. congressional photo",
+      "license": "Public domain"
+    },
+    {
+      "id": "politician:72",
+      "name": "David J. Taylor",
+      "url": "https://unitedstates.github.io/images/congress/225x275/T000490.jpg",
+      "source": "https://github.com/unitedstates/images",
+      "credit": "U.S. congressional photo",
+      "license": "Public domain"
+    },
+    {
+      "id": "politician:8",
+      "name": "Gilbert Cisneros",
+      "url": "https://unitedstates.github.io/images/congress/225x275/C001123.jpg",
+      "source": "https://github.com/unitedstates/images",
+      "credit": "U.S. congressional photo",
+      "license": "Public domain"
+    },
+    {
+      "id": "celebrity:cathie-wood",
+      "name": "Cathie Wood",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/4/44/Cathie_Wood_ARK_Invest_Photo.jpg",
+      "source": "https://commons.wikimedia.org/wiki/File:Cathie_Wood_ARK_Invest_Photo.jpg",
+      "credit": "Caroline Wood",
+      "license": "CC BY-SA 4.0"
+    },
+    {
+      "id": "celebrity:bill-ackman",
+      "name": "Bill Ackman",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/d/d8/Bill_Ackman_%2826410186110%29_%28cropped%29.jpg",
+      "source": "https://commons.wikimedia.org/wiki/File:Bill_Ackman_(26410186110)_(cropped).jpg",
+      "credit": "Senate Democrats",
+      "license": "CC BY 2.0"
+    },
+    {
+      "id": "celebrity:david-tepper",
+      "name": "David Tepper",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/3/3d/David_Tepper_01.jpg",
+      "source": "https://commons.wikimedia.org/wiki/File:David_Tepper_01.jpg",
+      "credit": "Appaloosa Management",
+      "license": "CC BY-SA 3.0"
+    },
+    {
+      "id": "celebrity:daniel-loeb",
+      "name": "Daniel Loeb",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/1/14/Daniel_Loeb%2C_Third_Point.jpg",
+      "source": "https://commons.wikimedia.org/wiki/File:Daniel_Loeb,_Third_Point.jpg",
+      "credit": "Hedge Funds",
+      "license": "CC BY 3.0"
+    },
+    {
+      "id": "celebrity:michael-burry",
+      "name": "Michael Burry",
+      "local": "docs/product/prototypes/actor-event-home/assets/michael-burry.png",
+      "source": "User-provided reference image",
+      "credit": "User-provided",
+      "license": "User-provided"
+    },
+    {
+      "id": "celebrity:warren-buffett",
+      "name": "Warren Buffett",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/d/df/Warren_Buffett_in_2010_%28cropped%29.jpg",
+      "source": "https://commons.wikimedia.org/wiki/File:Warren_Buffett_in_2010_(cropped).jpg",
+      "credit": "U.S. White House",
+      "license": "Public domain"
+    },
+    {"id":"celebrity:chase-coleman","name":"Chase Coleman","url":"https://www.tigerglobal.com/templates/tigerglobal/media/Chase-Coleman.png","source":"https://www.tigerglobal.com/chase-coleman","credit":"Tiger Global","license":"Official profile photo; rights not independently verified"},
+    {"id":"celebrity:cliff-asness","name":"Cliff Asness","url":"https://funds.aqr.com/-/media/Funds/Fund-Manager-Portraits/Cliff_Asness_292x400.jpg?sc_lang=en","source":"https://funds.aqr.com/funds/aqr-global-fund","credit":"AQR Capital Management","license":"Official profile photo; rights not independently verified"},
+    {"id":"celebrity:david-einhorn","name":"David Einhorn","url":"https://upload.wikimedia.org/wikipedia/commons/5/5d/David_Einhorn.jpg","source":"https://commons.wikimedia.org/wiki/File:David_Einhorn.jpg","credit":"Wikimedia Commons","license":"Public domain"},
+    {"id":"celebrity:ken-griffin","name":"Ken Griffin","url":"https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e8/Kenneth_C._Griffin_photo.jpg/330px-Kenneth_C._Griffin_photo.jpg","source":"https://commons.wikimedia.org/wiki/File:Kenneth_C._Griffin_photo.jpg","credit":"Paul Elledge","license":"CC BY-SA 4.0"},
+    {"id":"celebrity:li-lu","name":"Li Lu","url":"https://cdn.prod.website-files.com/5ef3c7300432b4eb48659917/68fa5947d6184e3b91deb2a7_Li_Lu0062_edit1_RELEASE2v2.jpg","source":"https://www.himcap.com/","credit":"Himalaya Capital","license":"Official profile photo; rights not independently verified"},
+    {"id":"celebrity:nelson-peltz","name":"Nelson Peltz","url":"https://www.ir-impact.com/archive/files/inline-images/Nelson%20Peltz%20%28April%202014%2911.jpg","source":"https://www.ir-impact.com/2023/01/nelson-peltz-makes-move-join-disney-board/","credit":"IR Impact","license":"Editorial photo; rights not independently verified"},
+    {"id":"celebrity:ole-andreas-halvorsen","name":"Ole Andreas Halvorsen","url":"https://i.insider.com/56aa7b02c08a80ae2f8bc7e0?width=300","source":"https://www.businessinsider.com/former-viking-cio-ben-jacobs-is-starting-fund-called-anomaly-2019-10","credit":"Business Insider","license":"Editorial photo; rights not independently verified"},
+    {"id":"celebrity:paul-singer","name":"Paul Singer","url":"https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9c/The_Global_Financial_Context_Paul_Singer_%28cropped%29.jpg/330px-The_Global_Financial_Context_Paul_Singer_%28cropped%29.jpg","source":"https://commons.wikimedia.org/wiki/File:The_Global_Financial_Context_Paul_Singer_(cropped).jpg","credit":"World Economic Forum / Remy Steinegger","license":"CC BY-SA 2.0"},
+    {"id":"celebrity:peter-thiel","name":"Peter Thiel","url":"https://www.ipsnews.net/Library/2017/06/640px-Peter_Thiel_by_Dan_Taylor.jpg","source":"https://commons.wikimedia.org/wiki/File:Peter_Thiel_by_Dan_Taylor.jpg","credit":"Dan Taylor","license":"CC BY 2.0"},
+    {"id":"celebrity:philippe-laffont","name":"Philippe Laffont","url":"https://images.ctfassets.net/rw6jo3jtgjpa/sCoVp8XCmkP6z2Kz7YA53/c251bdc74da2754e44ba262e37586e89/pl_large.png?fm=jpg&w=384&q=80","source":"https://www.coatue.com/ctek/why-ctek","credit":"Coatue Management","license":"Official profile photo; rights not independently verified"},
+    {"id":"celebrity:seth-klarman","name":"Seth Klarman","url":"https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b8/Seth_Klarman_at_147th_Preakness_Stakes.jpg/330px-Seth_Klarman_at_147th_Preakness_Stakes.jpg","source":"https://commons.wikimedia.org/wiki/File:Seth_Klarman_at_147th_Preakness_Stakes.jpg","credit":"Wikimedia Commons contributor","license":"CC BY 2.0"},
+    {"id":"celebrity:stanley-druckenmiller","name":"Stanley Druckenmiller","url":"https://www.grantspub.com/images/speakers/Druckenmiller.jpg","source":"https://www.grantspub.com/includes/cfn_speakerBio.cfm?sid=155","credit":"Grant's Interest Rate Observer","license":"Editorial speaker photo; rights not independently verified"},
+    {"id":"celebrity:steve-cohen","name":"Steve Cohen","url":"https://point72.com/wp-content/uploads/2022/06/Steve-Headshot-2024-Web-Final-scaled-e1733852659184-768x1024-c-default.jpg","source":"https://point72.com/leader/steven-a-cohen/","credit":"Point72","license":"Official profile photo; rights not independently verified"},
+    {"id":"institution:appaloosa","name":"Appaloosa","url":"https://photos5.appleinsider.com/gallery/26067-36531-appaloosa-xl.jpg","source":"https://appleinsider.com/articles/18/05/16/appaloosa-management-bailed-on-aapl-in-q1-sold-45-million-shares","credit":"Appaloosa Management","license":"Brand mark; trademark"},
+    {"id":"institution:aqr","name":"AQR Capital Management","url":"https://upload.wikimedia.org/wikipedia/commons/c/cf/AQR_Capital_Management_Logo.png","source":"https://commons.wikimedia.org/wiki/File:AQR_Capital_Management_Logo.png","credit":"AQR Capital Management","license":"PD text logo; trademark"},
+    {"id":"institution:balyasny","name":"Balyasny Asset Management","url":"https://thumb.wikimedia.org/wikipedia/commons/thumb/1/16/Balyasny_Asset_Management_2025_logo.png/330px-Balyasny_Asset_Management_2025_logo.png","source":"https://commons.wikimedia.org/wiki/File:Balyasny_Asset_Management_2025_logo.png","credit":"Balyasny Asset Management","license":"PD text logo; trademark"},
+    {"id":"institution:baupost","name":"Baupost Group","url":"https://thumb.wikimedia.org/wikipedia/commons/thumb/1/15/The_Baupost_Group_Logo.svg/330px-The_Baupost_Group_Logo.svg.png","source":"https://commons.wikimedia.org/wiki/File:The_Baupost_Group_Logo.svg","credit":"The Baupost Group","license":"PD text logo; trademark"},
+    {"id":"institution:berkshire","name":"Berkshire Hathaway","url":"https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6e/Berkshire-Hathaway-Logo.svg/330px-Berkshire-Hathaway-Logo.svg.png","source":"https://commons.wikimedia.org/wiki/File:Berkshire-Hathaway-Logo.svg","credit":"Berkshire Hathaway","license":"PD text logo; trademark"},
+    {"id":"institution:capital-research-global","name":"Capital Research Global Investors","url":"https://thumb.wikimedia.org/wikipedia/commons/thumb/3/33/Capital_Group_Logo.svg/330px-Capital_Group_Logo.svg.png","source":"https://commons.wikimedia.org/wiki/File:Capital_Group_Logo.svg","credit":"Capital Group","license":"PD text logo; trademark"},
+    {"id":"institution:coatue","name":"Coatue Management","url":"https://thumb.wikimedia.org/wikipedia/commons/thumb/4/40/Coatue-logo.png/330px-Coatue-logo.png","source":"https://commons.wikimedia.org/wiki/File:Coatue-logo.png","credit":"Coatue Management","license":"PD text logo; trademark"},
+    {"id":"institution:de-shaw","name":"D. E. Shaw","url":"https://thumb.wikimedia.org/wikipedia/commons/thumb/6/60/D._E._Shaw_%26_Co._logo.png/330px-D._E._Shaw_%26_Co._logo.png","source":"https://commons.wikimedia.org/wiki/File:D._E._Shaw_%26_Co._logo.png","credit":"D. E. Shaw & Co.","license":"PD text logo; trademark"},
+    {"id":"institution:dodge-cox","name":"Dodge & Cox","url":"https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e9/Dodge-and-cox-logo.PNG/330px-Dodge-and-cox-logo.PNG","source":"https://commons.wikimedia.org/wiki/File:Dodge-and-cox-logo.PNG","credit":"Dodge & Cox","license":"PD text logo; trademark"},
+    {"id":"institution:duquesne","name":"Duquesne Family Office","url":"https://ui-avatars.com/api/?name=Duquesne&size=256&background=18262C&color=FFFFFF&bold=true&format=png","source":"https://ui-avatars.com/","credit":"bSmart editorial monogram; not an official Duquesne logo","license":"Editorial placeholder"},
+    {"id":"institution:elliott","name":"Elliott Investment Management","url":"https://thumb.wikimedia.org/wikipedia/commons/thumb/7/72/Elliott_Management_Corporation_logo.svg/330px-Elliott_Management_Corporation_logo.svg.png","source":"https://commons.wikimedia.org/wiki/File:Elliott_Management_Corporation_logo.svg","credit":"Elliott Investment Management","license":"PD text logo; trademark"},
+    {"id":"institution:glenview","name":"Glenview Capital","url":"https://upload.wikimedia.org/wikipedia/commons/2/2c/Glenview_Capital_Management_logo.gif","source":"https://commons.wikimedia.org/wiki/File:Glenview_Capital_Management_logo.gif","credit":"Glenview Capital Management","license":"PD text logo; trademark"},
+    {"id":"institution:greenlight","name":"Greenlight Capital","url":"https://www.greenlightcapital.com/templates/greenlight/media/logo.png","source":"https://www.greenlightcapital.com/","credit":"Greenlight Capital","license":"Brand mark; trademark"},
+    {"id":"institution:himalaya","name":"Himalaya Capital","url":"https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b5/Himalaya_Capital.png/330px-Himalaya_Capital.png","source":"https://commons.wikimedia.org/wiki/File:Himalaya_Capital.png","credit":"Himalaya Capital","license":"PD text logo; trademark"},
+    {"id":"institution:lone-pine","name":"Lone Pine Capital","url":"https://thumb.wikimedia.org/wikipedia/commons/thumb/b/bb/Lone-Pine-Capital.svg/330px-Lone-Pine-Capital.svg.png","source":"https://commons.wikimedia.org/wiki/File:Lone-Pine-Capital.svg","credit":"Lone Pine Capital","license":"PD text logo; trademark"},
+    {"id":"institution:marshall-wace","name":"Marshall Wace","url":"https://www.mwam.com/wp-content/themes/FoundationPress/dist/assets/images/logo-black.png","source":"https://www.mwam.com/","credit":"Marshall Wace","license":"Brand mark; trademark"},
+    {"id":"institution:maverick","name":"Maverick Capital","url":"https://upload.wikimedia.org/wikipedia/commons/1/19/Maverick_Capital.png","source":"https://commons.wikimedia.org/wiki/File:Maverick_Capital.png","credit":"Maverick Capital","license":"PD text logo; trademark"},
+    {"id":"institution:millennium","name":"Millennium Management","url":"https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d8/Millennium_Management_logo_2024.png/330px-Millennium_Management_logo_2024.png","source":"https://commons.wikimedia.org/wiki/File:Millennium_Management_logo_2024.png","credit":"Millennium Management","license":"PD text logo; trademark"},
+    {"id":"institution:pershing-square","name":"Pershing Square","url":"https://thumb.wikimedia.org/wikipedia/commons/thumb/8/82/Pershing_Square_Holdings_logo.svg/330px-Pershing_Square_Holdings_logo.svg.png","source":"https://commons.wikimedia.org/wiki/File:Pershing_Square_Holdings_logo.svg","credit":"Pershing Square Holdings","license":"PD text logo; trademark"},
+    {"id":"institution:point72","name":"Point72","url":"https://upload.wikimedia.org/wikipedia/commons/f/f9/Point72logo.png","source":"https://commons.wikimedia.org/wiki/File:Point72logo.png","credit":"Point72","license":"CC BY-SA 3.0; trademark"},
+    {"id":"institution:primecap","name":"PRIMECAP Management","url":"https://www.primecap.com/wp-content/uploads/2024/05/logo_192x.png","source":"https://www.primecap.com/","credit":"PRIMECAP Management","license":"Brand mark; trademark"},
+    {"id":"institution:renaissance","name":"Renaissance Technologies","url":"https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0f/Renaissance_Technologies.png/330px-Renaissance_Technologies.png","source":"https://commons.wikimedia.org/wiki/File:Renaissance_Technologies.png","credit":"Renaissance Technologies","license":"PD text logo; trademark"},
+    {"id":"institution:scion","name":"Scion Asset Management","url":"https://thumb.wikimedia.org/wikipedia/commons/thumb/7/76/Scion_Asset_Management.png/330px-Scion_Asset_Management.png","source":"https://commons.wikimedia.org/wiki/File:Scion_Asset_Management.png","credit":"Scion Asset Management","license":"PD text logo; trademark"},
+    {"id":"institution:select-equity","name":"Select Equity Group","url":"https://www.selectequity.com/wp-content/themes/select-equity/dist/assets/images/favicon.png","source":"https://www.selectequity.com/","credit":"Select Equity Group","license":"Brand mark; trademark"},
+    {"id":"institution:soros","name":"Soros Fund Management","url":"https://thumb.wikimedia.org/wikipedia/commons/thumb/2/23/Soros_Fund_Mgmt_logo.svg/330px-Soros_Fund_Mgmt_logo.svg.png","source":"https://commons.wikimedia.org/wiki/File:Soros_Fund_Mgmt_logo.svg","credit":"Soros Fund Management","license":"PD text logo; trademark"},
+    {"id":"institution:third-point","name":"Third Point","url":"https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6f/Third_Point_LLC_Logo.svg/330px-Third_Point_LLC_Logo.svg.png","source":"https://commons.wikimedia.org/wiki/File:Third_Point_LLC_Logo.svg","credit":"Third Point LLC","license":"CC BY-SA 4.0; trademark"},
+    {"id":"institution:tiger-global","name":"Tiger Global Management","url":"https://thumb.wikimedia.org/wikipedia/commons/thumb/0/08/Tiger_Global.png/330px-Tiger_Global.png","source":"https://commons.wikimedia.org/wiki/File:Tiger_Global.png","credit":"Tiger Global Management","license":"PD text logo; trademark"},
+    {"id":"institution:trian","name":"Trian Fund Management","url":"https://thumb.wikimedia.org/wikipedia/commons/thumb/1/17/Trian_Partners.png/330px-Trian_Partners.png","source":"https://commons.wikimedia.org/wiki/File:Trian_Partners.png","credit":"Trian Partners","license":"PD text logo; trademark"},
+    {"id":"institution:two-sigma","name":"Two Sigma","url":"https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c6/Two_Sigma_logo.svg/330px-Two_Sigma_logo.svg.png","source":"https://commons.wikimedia.org/wiki/File:Two_Sigma_logo.svg","credit":"Two Sigma","license":"PD text logo; trademark"},
+    {"id":"institution:viking-global","name":"Viking Global","url":"https://thumb.wikimedia.org/wikipedia/commons/thumb/8/86/Viking_Global_Investors_logo.png/330px-Viking_Global_Investors_logo.png","source":"https://commons.wikimedia.org/wiki/File:Viking_Global_Investors_logo.png","credit":"Viking Global Investors","license":"CC BY-SA 4.0; trademark"},
+    {
+      "id": "institution:ark",
+      "name": "ARK Investment Management",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/90/Ark_Invest_logo.svg/330px-Ark_Invest_logo.svg.png",
+      "source": "https://commons.wikimedia.org/wiki/File:Ark_Invest_logo.svg",
+      "credit": "ARK Invest",
+      "license": "PD text logo; trademark"
+    },
+    {
+      "id": "institution:bridgewater",
+      "name": "Bridgewater Associates",
+      "url": "https://www.bridgewater.com/apple-touch-icon.png",
+      "source": "https://www.bridgewater.com/",
+      "credit": "Bridgewater Associates",
+      "license": "Brand mark; trademark"
+    },
+    {
+      "id": "institution:citadel",
+      "name": "Citadel Advisors",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/Citadel_LLC_Logo.svg/330px-Citadel_LLC_Logo.svg.png",
+      "source": "https://commons.wikimedia.org/wiki/File:Citadel_LLC_Logo.svg",
+      "credit": "Citadel LLC",
+      "license": "PD text logo; trademark"
+    }
+  ]
+}

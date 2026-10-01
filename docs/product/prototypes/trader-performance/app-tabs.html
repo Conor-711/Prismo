@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <link rel="icon" href="../../../../web/public/favicon.ico">
+  <title>bSmart · 首页与发现页指标预览</title>
+  <style>
+    :root { color-scheme: dark; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", sans-serif; letter-spacing: 0; background: #111713; color: #f2f6f3; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; }
+    button, a { -webkit-tap-highlight-color: transparent; }
+    button { font: inherit; cursor: pointer; }
+    a { color: inherit; text-decoration: none; }
+    .stage { min-height: 100vh; max-width: 1240px; margin: 0 auto; display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: clamp(30px, 5vw, 76px); padding: 32px 36px 42px; }
+    .rail { padding: 16px 0; }
+    .brand { display: inline-block; margin-bottom: 78px; font-size: 28px; font-weight: 760; line-height: 1; }
+    .brand span { color: #56dabb; }
+    .rail-label { color: #849d8c; font-size: 11px; font-weight: 700; margin: 26px 10px 11px; text-transform: uppercase; letter-spacing: 1px; }
+    .rail-nav { display: grid; gap: 3px; }
+    .rail-nav button { width: 100%; display: flex; align-items: center; gap: 10px; min-height: 44px; border: 0; border-radius: 5px; color: #a7b9aa; background: transparent; padding: 0 11px; text-align: left; font-size: 13px; }
+    .rail-nav button[aria-current="true"] { color: #f2f7f3; background: #27372d; }
+    .rail-nav svg { width: 15px; height: 15px; }
+    .rail-note { margin: 33px 11px; border-top: 1px solid #364439; padding-top: 17px; color: #8ca393; font-size: 11px; line-height: 1.7; }
+    .rail-note strong { display: block; color: #cddbd0; margin-bottom: 5px; }
+    .preview-area { display: flex; justify-content: center; align-items: flex-start; min-width: 0; }
+    .device { width: 430px; min-height: 880px; border: 1px solid #3a493d; border-radius: 29px; box-shadow: 0 25px 75px #0007; overflow: hidden; background: #080c0a; position: relative; }
+    .device-status { height: 44px; display: flex; align-items: center; justify-content: space-between; padding: 12px 27px 0; font-weight: 690; font-size: 13px; }
+    .status-icons { display: flex; gap: 3px; align-items: center; }
+    .status-icons svg { width: 16px; height: 16px; }
+    .viewport { height: 783px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
+    .viewport::-webkit-scrollbar { display: none; }
+    .screen-head { display: flex; align-items: center; justify-content: space-between; padding: 25px 20px 15px; }
+    .screen-head h1 { font-size: 24px; font-weight: 680; margin: 0; }
+    .screen-head .bell { border: 1px solid #2c352f; background: #171e19; color: #d5ded5; border-radius: 50%; width: 38px; height: 38px; display: grid; place-items: center; }
+    .screen-head .bell svg { width: 17px; height: 17px; }
+    .screen-head.centered { justify-content: center; }
+    .screen-head.centered h1 { font-size: 18px; }
+    .screen-head.centered .bell { display: none; }
+    .home-hero { padding: 0 20px 20px; }
+    .eyebrow { display: flex; align-items: center; gap: 8px; color: #a8b7ad; font-size: 11px; font-weight: 680; }
+    .eyebrow .line { flex: 1; background: #303c33; height: 1px; }
+    .face-row { display: flex; gap: 8px; align-items: center; margin-top: 15px; }
+    .face-row button { width: 47px; height: 47px; border: 1px solid #39433a; padding: 2px; border-radius: 50%; background: #151a16; }
+    .face-row button[aria-pressed="true"] { border-color: #59dfb5; }
+    .face-row img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+    .hero-person { margin-top: 14px; display: flex; gap: 10px; align-items: center; }
+    .hero-person strong { font-size: 16px; }
+    .hero-person span { color: #55dcb8; border: 1px solid #356f53; padding: 3px 7px; border-radius: 4px; font-size: 10px; font-weight: 690; }
+    .hero-person a { margin-left: auto; color: #8ea299; }
+    .hero-person svg { width: 15px; height: 15px; }
+    .hero-dashboard { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 15px; padding: 15px 16px; border: 1px solid #2b4639; border-radius: 7px; background: linear-gradient(125deg, #172e26 0%, #101c18 60%, #171a16 100%); }
+    .big-return small, .win-gauge small { color: #9db6a7; font-size: 10px; display: block; font-weight: 600; }
+    .big-return strong { display: block; color: #65e4ad; font-size: 34px; line-height: 1.08; font-weight: 760; font-variant-numeric: tabular-nums; margin: 7px 0; }
+    .big-return span { display: block; color: #93a99b; font-size: 10px; }
+    .win-gauge { text-align: center; min-width: 87px; }
+    .ring { --score: 50%; position: relative; width: 66px; height: 66px; display: grid; place-items: center; border-radius: 50%; background: conic-gradient(#cbef69 0 var(--score), #354738 var(--score) 100%); margin: 0 auto 6px; }
+    .ring:before { content: ''; position: absolute; inset: 6px; border-radius: 50%; background: #142019; }
+    .ring strong { z-index: 1; font-size: 16px; font-variant-numeric: tabular-nums; }
+    .win-gauge small { white-space: nowrap; }
+    .win-strip { display: flex; gap: 2px; height: 4px; margin-top: 11px; width: 100%; max-width: 180px; }
+    .win-strip i, .win-strip b { display: block; height: 100%; border-radius: 3px; }
+    .win-strip i { background: #cbef69; }
+    .win-strip b { background: #a65b51; }
+    .section-intro { padding: 4px 20px 12px; font-size: 13px; font-weight: 680; border-top: 1px solid #263028; }
+    .tabs { display: flex; gap: 27px; overflow-x: auto; border-bottom: 1px solid #2b342d; padding: 0 20px; scrollbar-width: none; }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tabs button { position: relative; flex: none; min-height: 49px; border: 0; background: none; color: #8b9a8e; font-size: 14px; font-weight: 630; padding: 0 0 10px; white-space: nowrap; }
+    .tabs button[aria-selected="true"] { color: #f3f7f3; }
+    .tabs button[aria-selected="true"]:after { content: ''; height: 3px; width: 39px; position: absolute; bottom: 0; left: 0; border-radius: 2px; background: #53d7b9; }
+    .section { padding: 24px 20px 0; }
+    .section + .section { margin-top: 11px; }
+    .section-title { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; gap: 8px; }
+    .section-title h2 { font-size: 17px; margin: 0; font-weight: 690; }
+    .section-title span { color: #6ee0c4; font-size: 11px; }
+    .section-sub { color: #86998a; font-size: 11px; margin: -4px 0 14px; line-height: 1.5; }
+    .holding-line { display: flex; gap: 10px; align-items: center; padding: 13px 0; border-top: 1px solid #26332a; }
+    .asset-icon { width: 32px; height: 32px; object-fit: contain; background: #202722; border-radius: 5px; flex: none; }
+    .holding-line strong { font-size: 14px; }
+    .holding-line span { color: #9aac9e; font-size: 11px; }
+    .holding-line > span:last-child { margin-left: auto; color: #bed1be; font-size: 12px; }
+    .activity { padding: 14px 0 17px; border-top: 1px solid #2b342c; }
+    .activity:first-of-type { border-top: 0; }
+    .actor { display: flex; align-items: center; gap: 8px; }
+    .actor img { width: 31px; height: 31px; border-radius: 50%; object-fit: cover; }
+    .actor-copy { min-width: 0; flex: 1; }
+    .actor-copy strong { display: block; font-size: 13px; font-weight: 670; line-height: 1.1; }
+    .actor-copy small { display: block; color: #92a295; font-size: 10px; margin-top: 4px; }
+    .actor-copy small b { color: #accc60; font-weight: 670; }
+    .actor-time { color: #899a8f; font-size: 10px; white-space: nowrap; }
+    .actor-stat { display: flex; align-items: center; gap: 9px; margin: 11px 0 0 39px; }
+    .actor-stat .mini-ring { --score: 50%; width: 29px; height: 29px; flex: none; border-radius: 50%; background: conic-gradient(#cbef69 0 var(--score), #354738 var(--score) 100%); display: grid; place-items: center; }
+    .actor-stat .mini-ring:after { content: ''; width: 21px; height: 21px; background: #0b130e; border-radius: 50%; }
+    .actor-stat .stat-pair { display: grid; gap: 1px; }
+    .actor-stat small { color: #8ba094; font-size: 10px; }
+    .actor-stat b { color: #f2f8f2; font-size: 15px; font-weight: 720; font-variant-numeric: tabular-nums; }
+    .actor-stat .positive { margin-left: auto; color: #62dda7; font-size: 17px; }
+    .actor-stat .risk { color: #f18470; font-size: 10px; white-space: nowrap; }
+    .activity-main { margin: 12px 0 0 39px; }
+    .ticker-row { display: flex; align-items: center; gap: 7px; font-size: 13px; }
+    .ticker-row img { width: 21px; height: 21px; object-fit: contain; }
+    .ticker-row strong { font-size: 13px; }
+    .ticker-row em { color: #1bca67; font-size: 11px; font-style: normal; font-weight: 640; }
+    .activity-main p { color: #cbd6cc; font-size: 12px; line-height: 1.45; margin: 7px 0 0; }
+    .mini-note { margin: 12px 0 0; color: #7e9281; font-size: 10px; line-height: 1.5; }
+    .market-card { display: block; border: 1px solid #2e3a31; border-radius: 6px; padding: 14px; background: #141d17; margin-bottom: 9px; }
+    .market-top { display: flex; align-items: center; gap: 9px; }
+    .market-top img { width: 35px; height: 35px; object-fit: contain; border-radius: 5px; }
+    .market-top strong { display: block; font-size: 17px; }
+    .market-top small { color: #90a094; font-size: 10px; }
+    .market-score { display: flex; align-items: center; gap: 7px; margin: 14px 0; }
+    .market-score strong { color: #66e0a9; font-size: 26px; line-height: 1; font-variant-numeric: tabular-nums; }
+    .market-score small { color: #91ad9c; font-size: 10px; margin-right: auto; }
+    .market-score .mini-ring { --score: 50%; width: 26px; height: 26px; border-radius: 50%; background: conic-gradient(#cbef69 0 var(--score), #354738 var(--score) 100%); display: grid; place-items: center; }
+    .market-score .mini-ring:after { content: ''; width: 19px; height: 19px; border-radius: 50%; background: #141d17; }
+    .market-score em { color: #e7f4e0; font-size: 12px; font-style: normal; }
+    .market-card p { font-size: 11px; line-height: 1.4; color: #a8b7a9; margin: 0 0 12px; }
+    .market-author { border-top: 1px solid #2c382f; padding-top: 11px; display: flex; align-items: center; gap: 8px; }
+    .market-author img { width: 25px; height: 25px; object-fit: cover; border-radius: 50%; }
+    .market-author span { font-size: 12px; color: #aebfb2; }
+    .market-author strong { margin-left: auto; font-size: 11px; color: #a9cc66; white-space: nowrap; }
+    .ranking-controls { display: flex; align-items: center; justify-content: space-between; padding: 15px 20px 0; }
+    .ranking-controls span { color: #c3d1c5; font-size: 12px; display: inline-flex; gap: 6px; align-items: center; min-height: 38px; }
+    .ranking-controls svg { width: 15px; height: 15px; }
+    .ranking-group { padding: 12px 20px 0; }
+    .ranking-group + .ranking-group { margin-top: 20px; }
+    .ranking-group h2 { margin: 0 0 10px; font-size: 18px; font-weight: 700; }
+    .rank-row { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 8px; border-top: 1px solid #26342b; padding: 13px 0 14px; }
+    .rank-number { font-size: 24px; font-weight: 730; line-height: 1.2; color: #7ddcc0; font-variant-numeric: tabular-nums; }
+    .rank-row:not(:first-of-type) .rank-number { color: #a2b1a3; }
+    .rank-content { min-width: 0; }
+    .rank-top { display: flex; align-items: flex-start; gap: 8px; }
+    .rank-author { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
+    .rank-author img { width: 34px; height: 34px; object-fit: cover; border-radius: 50%; flex: none; }
+    .rank-author strong { display: block; font-size: 13px; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .rank-author small { color: #75dabb; display: block; font-size: 10px; margin-top: 3px; }
+    .rank-volume { text-align: right; min-width: 74px; }
+    .rank-volume small { display: block; color: #899c8f; font-size: 10px; }
+    .rank-volume strong { display: block; color: #61ddae; font-size: 20px; line-height: 1.15; }
+    .rank-volume span { color: #809487; font-size: 10px; }
+    .rank-ticker { display: flex; align-items: center; gap: 7px; margin: 12px 0 5px; }
+    .rank-ticker img { width: 21px; height: 21px; object-fit: contain; }
+    .rank-ticker strong { font-size: 14px; }
+    .rank-ticker em { color: #17c969; font-style: normal; font-size: 11px; }
+    .rank-opinion { margin: 0; color: #aebfb3; font-size: 11px; line-height: 1.4; }
+    .rank-proof { display: flex; align-items: center; gap: 7px; margin-top: 10px; }
+    .rank-proof .mini-ring { --score: 50%; width: 22px; height: 22px; flex: none; display: grid; place-items: center; border-radius: 50%; background: conic-gradient(#c9ed68 0 var(--score), #364839 var(--score) 100%); }
+    .rank-proof .mini-ring:after { content: ''; width: 16px; height: 16px; border-radius: 50%; background: #0b130e; }
+    .rank-proof span { color: #dfe8df; font-size: 12px; font-weight: 640; }
+    .rank-proof small { color: #8ca18e; font-size: 10px; margin-left: auto; }
+    .rank-proof strong { color: #61dda9; font-size: 16px; font-variant-numeric: tabular-nums; }
+    .rank-more { display: flex; justify-content: center; align-items: center; gap: 3px; height: 43px; color: #5cddba; font-size: 13px; font-weight: 610; }
+    .rank-more svg { width: 14px; height: 14px; }
+    .feed-card { padding: 21px 20px 20px; border-bottom: 1px solid #2a352d; }
+    .feed-trader { display: flex; align-items: center; gap: 10px; }
+    .feed-trader .avatar-letter { width: 42px; height: 42px; border-radius: 50%; background: #244438; display: grid; place-items: center; color: #e5f9ec; font-size: 18px; font-weight: 700; flex: none; }
+    .feed-trader .actor-copy strong { font-size: 15px; }
+    .feed-trader time { color: #869b8b; font-size: 10px; margin-left: auto; }
+    .execution { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 17px; }
+    .execution .ticker-row { gap: 6px; }
+    .execution .ticker-row strong { font-size: 19px; }
+    .execution .ticker-row em { font-size: 12px; }
+    .execution > strong { font-size: 22px; color: #f1f6f0; font-variant-numeric: tabular-nums; }
+    .trade-thesis { margin: 13px 0 0; color: #e3ebe3; font-size: 12px; line-height: 1.5; }
+    .quoted-author { border-left: 2px solid #355442; padding-left: 12px; margin-top: 15px; }
+    .quoted-author .author-line { display: flex; align-items: center; gap: 8px; }
+    .quoted-author .author-line img, .quoted-author .avatar-letter { width: 29px; height: 29px; border-radius: 50%; object-fit: cover; flex: none; }
+    .quoted-author .avatar-letter { background: #283d30; display: grid; place-items: center; font-weight: 700; }
+    .quoted-author .author-line strong { font-size: 12px; }
+    .quoted-author .author-line small { display: block; color: #8d9f90; font-size: 10px; margin-top: 2px; }
+    .quoted-author time { color: #8d9f90; margin-left: auto; font-size: 10px; }
+    .quoted-author p { color: #aebfb1; font-size: 11px; line-height: 1.45; margin: 10px 0 0; }
+    .feed-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; }
+    .feed-actions span { display: inline-flex; align-items: center; gap: 5px; color: #64dcb8; font-size: 11px; }
+    .feed-actions svg { width: 14px; height: 14px; }
+    .feed-actions .trade-control { background: #58dabc; color: #062318; border-radius: 6px; height: 39px; min-width: 103px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; font-weight: 680; }
+    .page-foot { margin: 24px 20px 105px; padding-top: 11px; border-top: 1px solid #26332a; color: #819384; font-size: 10px; line-height: 1.45; }
+    .dock { position: absolute; bottom: 13px; left: 16px; right: 16px; height: 59px; display: flex; align-items: center; justify-content: space-around; border: 1px solid #414c43; border-radius: 31px; background: #1c211fef; backdrop-filter: blur(16px); box-shadow: 0 8px 30px #0009; z-index: 2; }
+    .dock button { border: 0; border-radius: 25px; background: transparent; color: #97a29b; width: 51px; height: 47px; display: grid; place-items: center; }
+    .dock button[aria-current="true"] { color: #eefaf3; background: #333b36; }
+    .dock svg { width: 22px; height: 22px; }
+    @media (max-width: 760px) {
+      body { background: #080c0a; }
+      .stage { display: block; padding: 0; }
+      .rail { display: none; }
+      .device { width: 100%; min-height: 100dvh; border: 0; border-radius: 0; box-shadow: none; }
+      .device-status { padding-top: max(12px, env(safe-area-inset-top)); height: calc(44px + env(safe-area-inset-top)); }
+      .viewport { height: calc(100dvh - 44px - env(safe-area-inset-top)); }
+      .dock { bottom: max(13px, env(safe-area-inset-bottom)); }
+    }
+    @media (max-width: 360px) { .tabs { gap: 18px; } .tabs button { font-size: 12px; } .rank-proof { gap: 5px; } .rank-proof strong { font-size: 14px; } }
+    @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <aside class="rail">
+      <div class="brand">b<span>Smart</span></div>
+      <div class="rail-label">Today · 首页</div>
+      <nav class="rail-nav" id="today-nav"></nav>
+      <div class="rail-label">Discover · 发现</div>
+      <nav class="rail-nav" id="discover-nav"></nav>
+      <div class="rail-note"><strong>数据口径</strong>从数据库最早收录的可执行观点起算，涵盖入选前记录。命中率包含快照日盯市交易，不是已平仓胜率，也不是作者实盘收益。发现页的交易人数与成交额留空，最近成交取自已有产品画面，均非实时数据。</div>
+    </aside>
+    <div class="preview-area">
+      <div class="device">
+        <div class="device-status"><span>9:41</span><span class="status-icons"><i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i></span></div>
+        <div class="viewport" id="viewport"></div>
+        <nav class="dock" aria-label="应用导航">
+          <button type="button" data-dock="today" aria-label="首页"><i data-lucide="house"></i></button>
+          <button type="button" aria-label="搜索"><i data-lucide="search"></i></button>
+          <button type="button" data-dock="discover" aria-label="发现"><i data-lucide="layers-3"></i></button>
+          <button type="button" aria-label="好友"><i data-lucide="users-round"></i></button>
+          <button type="button" aria-label="个人资料"><i data-lucide="circle-user-round"></i></button>
+        </nav>
+      </div>
+    </div>
+  </div>
+  <script src="../investor-discovery/data.js"></script>
+  <script src="../investor-discovery/lucide.min.js"></script>
+  <script>
+    const root = '../../../../ios/BSmart/Assets.xcassets/';
+    const logos = { MU: 'Ticker_MU.imageset/MU.svg', AAOI: 'Ticker_AAOI.imageset/AAOI.png', AXTI: 'Ticker_AXTI.imageset/AXTI.png', SNDK: 'Ticker_SNDK.imageset/SNDK.svg', GOOGL: 'Ticker_GOOGL.imageset/GOOGL.svg', GME: 'Ticker_GME.imageset/GME.svg' };
+    const people = {
+      serenity: { name: 'Serenity', handle: '@aleabitoreddit', rank: 'Top 2.3%', win: '56.9%', wins: 37, losses: 28, trades: 65, total: '+120.3%', drawdown: '-32.8%' },
+      wey: { name: 'Wey How', handle: '@wey_how12640', rank: 'Top 9.8%', win: '64.3%', wins: 27, losses: 15, trades: 42, total: '+115.9%', drawdown: '-40.8%' }
+    };
+    const screens = [
+      { id: 'holdings', group: 'today', label: '持仓与追踪', icon: 'bookmark' },
+      { id: 'market', group: 'today', label: '市场情况', icon: 'chart-no-axes-combined' },
+      { id: 'updates', group: 'today', label: '聪明动态', icon: 'activity' },
+      { id: 'trending', group: 'discover', label: '趋势', icon: 'trending-up' },
+      { id: 'latest', group: 'discover', label: '最近成交', icon: 'arrow-left-right' }
+    ];
+    const state = { screen: 'holdings', hero: 'serenity' };
+    const avatar = id => window.DISCOVERY_PEOPLE?.find(person => person.handle.toLowerCase() === people[id].handle.toLowerCase())?.avatar || '';
+    const namedAvatar = name => window.DISCOVERY_PEOPLE?.find(person => person.name.toLowerCase() === name.toLowerCase())?.avatar || '';
+    const asset = ticker => `${root}${logos[ticker]}`;
+    const icon = name => `<i data-lucide="${name}"></i>`;
+    function strip(id) {
+      const p = people[id];
+      return `<div class="win-strip" aria-label="${p.wins} 笔正收益，${p.losses} 笔非正收益"><i style="width:${p.win}"></i><b style="flex:1"></b></div>`;
+    }
+    function stat(id, showRisk = false) {
+      const p = people[id];
+      return `<div class="actor-stat"><span class="mini-ring" style="--score:${p.win}" aria-hidden="true"></span><span class="stat-pair"><b>${p.win}</b><small>回测命中率 · ${p.trades} 笔</small></span><span class="stat-pair" style="margin-left:auto;text-align:right"><b class="positive">${p.total}</b><small>全历史跟随收益${showRisk ? ` · <span class="risk">回撤 ${p.drawdown}</span>` : ''}</small></span></div>`;
+    }
+    function actor(id, time = '') {
+      const p = people[id];
+      return `<div class="actor"><img src="${avatar(id)}" alt="${p.name} 头像"><div class="actor-copy"><strong>${p.name}</strong><small>X · ${p.rank}</small></div><span class="actor-time">${time}</span></div>`;
+    }
+    function ticker(t, direction = '看多') { return `<span class="ticker-row"><img src="${asset(t)}" alt="${t} Logo"><strong>${t}</strong><em>${direction}</em></span>`; }
+    function title(text, action = '') { return `<div class="section-title"><h2>${text}</h2>${action ? `<span>${action}</span>` : ''}</div>`; }
+    function hero() {
+      const p = people[state.hero];
+      return `<div class="home-hero"><div class="eyebrow">聪明投资者 <span class="line"></span><span style="color:#60d9bb">${icon('arrow-up-right')}</span></div><div class="face-row">${Object.keys(people).map(id => `<button type="button" data-hero="${id}" aria-pressed="${state.hero === id}" aria-label="查看 ${people[id].name}"><img src="${avatar(id)}" alt=""></button>`).join('')}</div><div class="hero-person"><strong>${p.name}</strong><span>${p.rank}</span><a href="index.html?account=${state.hero}" aria-label="查看 ${p.name} 档案">${icon('chevron-right')}</a></div><div class="hero-dashboard"><div class="big-return"><small>全历史跟随收益</small><strong>${p.total}</strong><span>${p.trades} 笔回测交易 · 回撤 ${p.drawdown}</span>${strip(state.hero)}</div><div class="win-gauge"><div class="ring" style="--score:${p.win}"><strong>${Math.round(parseFloat(p.win))}%</strong></div><small>命中率 ${p.win}</small></div></div></div>`;
+    }
+    function activity(id, t, time, description, showRisk = false) {
+      return `<article class="activity">${actor(id, time)}<div class="activity-main">${ticker(t)}<p>${description}</p></div>${stat(id, showRisk)}</article>`;
+    }
+    function marketCard(t, id, headline) {
+      const p = people[id];
+      return `<article class="market-card"><div class="market-top"><img src="${asset(t)}" alt="${t} Logo"><span><strong>${t}</strong><small>看多观点</small></span></div><div class="market-score"><strong>${p.total}</strong><small>作者全历史跟随</small><span class="mini-ring" style="--score:${p.win}" aria-hidden="true"></span><em>${p.win}</em></div><p>${headline}</p><div class="market-author"><img src="${avatar(id)}" alt="${p.name} 头像"><span>${p.name}</span><strong>${p.rank}</strong></div></article>`;
+    }
+    function rankRow(position, id, tickerSymbol = '', headline = '') {
+      const p = people[id];
+      return `<a class="rank-row" href="index.html?account=${id}" aria-label="查看 ${p.name} 的${tickerSymbol ? tickerSymbol + '观点及' : ''}历史表现"><span class="rank-number">${String(position).padStart(2, '0')}</span><div class="rank-content"><div class="rank-top"><div class="rank-author"><img src="${avatar(id)}" alt="${p.name} 头像"><div><strong>${p.name}</strong><small>X · ${p.rank}</small></div></div><div class="rank-volume"><small>交易人数</small><strong>—</strong><span>成交额 —</span></div></div>${tickerSymbol ? `<div class="rank-ticker"><img src="${asset(tickerSymbol)}" alt="${tickerSymbol} Logo"><strong>${tickerSymbol}</strong><em>看多</em></div><p class="rank-opinion">${headline}</p>` : ''}<div class="rank-proof"><span class="mini-ring" style="--score:${p.win}" aria-hidden="true"></span><span>命中率 ${p.win}</span><small>全历史跟随</small><strong>${p.total}</strong></div></div></a>`;
+    }
+    function rankingGroup(title, rows) {
+      return `<section class="ranking-group"><h2>${title}</h2>${rows}<div class="rank-more">更多 ${icon('chevron-right')}</div></section>`;
+    }
+    function feedTrade({ tickerSymbol, amount, date, author, excerpt, thesis }) {
+      const photo = namedAvatar(author);
+      return `<article class="feed-card"><div class="feed-trader"><span class="avatar-letter">C</span><div class="actor-copy"><strong>Connor</strong><small>@imconnorzhang</small></div><time>${date}</time></div><div class="execution">${ticker(tickerSymbol, '↗ 做多')}<strong>${amount}</strong></div>${thesis ? `<p class="trade-thesis">${thesis}</p>` : ''}<div class="quoted-author"><div class="author-line">${photo ? `<img src="${photo}" alt="${author} 头像">` : `<span class="avatar-letter">${author.charAt(0)}</span>`}<div><strong>${author}</strong><small>通过这篇观点</small></div><time>${date}</time></div><p>${excerpt}</p></div><div class="feed-actions"><span>${icon('square-pen')} 写观点</span><span class="trade-control">${icon('arrow-left-right')} 交易</span></div></article>`;
+    }
+    const content = {
+      holdings: () => `<section class="section">${title('市场与追踪', '查看全部')}<div class="holding-line"><img class="asset-icon" src="${asset('MU')}" alt="MU Logo"><strong>MU</strong><span>Micron Technology</span><span>${icon('chevron-right')}</span></div>${activity('wey', 'MU', '公开观点', '10 日均线上方 · 继续持有')}</section><section class="section">${title('追踪动态', '查看全部')}${activity('serenity', 'AAOI', '公开观点', '光子学需求 · 营收增长预期')}</section>`,
+      market: () => `<section class="section">${title('热门标的', '查看全部')}${marketCard('MU', 'wey', '均线之上 · 董事增持 · 长期持有')}${marketCard('AAOI', 'serenity', '光子学需求 · 产能与营收增长')}</section><section class="section">${title('更多市场', '查看全部')}${marketCard('SNDK', 'wey', '部分获利了结，剩余仓位维持看多')}</section>`,
+      updates: () => `<section class="section">${title('聪明动态', '查看全部')}${activity('serenity', 'AAOI', '公开观点', '光子学需求增长，看多 AAOI。', true)}${activity('wey', 'MU', '公开观点', '10 日均线上方，维持长期持有。', true)}</section>`,
+      trending: () => `<div class="ranking-controls"><span>${icon('arrow-down-up')} 交易人数</span><span>近 7 天 ${icon('chevron-down')}</span></div>${rankingGroup('趋势观点', rankRow(1, 'wey', 'MU', '10 日均线上方 · 董事增持') + rankRow(2, 'serenity', 'AAOI', '光子学需求 · 营收增长预期'))}${rankingGroup('趋势投资者', rankRow(1, 'serenity') + rankRow(2, 'wey'))}`,
+      latest: () => `<div class="feed-list">${feedTrade({tickerSymbol: 'GOOGL', amount: '$300.93', date: '09/24', author: 'Etrading', excerpt: '$GOOGL shake everyone all day at 337s area and will be green tomorrow !!'})}${feedTrade({tickerSymbol: 'GME', amount: '$490.81', date: '09/22', author: 'Wiz888999', thesis: 'Dogfooding', excerpt: '$23 is still eating every swing.'})}</div>`
+    };
+    function nav() {
+      for (const group of ['today', 'discover']) {
+        document.querySelector(`#${group}-nav`).innerHTML = screens.filter(screen => screen.group === group).map(screen => `<button type="button" data-screen="${screen.id}" aria-current="${state.screen === screen.id}">${icon(screen.icon)} ${screen.label}</button>`).join('');
+      }
+    }
+    function render() {
+      const screen = screens.find(value => value.id === state.screen);
+      nav();
+      document.querySelectorAll('[data-dock]').forEach(button => button.setAttribute('aria-current', String(button.dataset.dock === screen.group)));
+      const home = screen.group === 'today';
+      const note = screen.id === 'latest' ? '成交内容取自现有产品画面，非实时交易列表' : '从最早收录的可执行观点起算，含入选前 · 命中率包含快照盯市 · 截至 2026.08.13 · 非实盘收益';
+      document.querySelector('#viewport').innerHTML = `<header class="screen-head ${home ? '' : 'centered'}"><h1>${home ? 'Today' : '发现'}</h1><button type="button" class="bell" aria-label="通知">${icon('bell')}</button></header>${home ? hero() + '<div class="section-intro">他们的市场观点</div>' : ''}<div class="tabs" role="tablist">${screens.filter(item => item.group === screen.group).map(item => `<button type="button" role="tab" data-screen="${item.id}" aria-selected="${state.screen === item.id}">${item.label}</button>`).join('')}</div>${content[screen.id]()}<p class="page-foot">${note}</p>`;
+      document.querySelectorAll('[data-screen]').forEach(button => button.addEventListener('click', () => { state.screen = button.dataset.screen; render(); }));
+      document.querySelectorAll('[data-dock]').forEach(button => button.addEventListener('click', () => { if (!button.dataset.dock) return; state.screen = button.dataset.dock === 'today' ? 'holdings' : 'trending'; render(); }));
+      document.querySelectorAll('[data-hero]').forEach(button => button.addEventListener('click', () => { state.hero = button.dataset.hero; render(); }));
+      document.querySelector('#viewport').scrollTop = 0;
+      window.lucide?.createIcons({ attrs: { 'stroke-width': 1.8 } });
+    }
+    render();
+  </script>
+</body>
+</html>

@@ -4,9 +4,6 @@ struct TodayInvestorDiscoveryModule: View {
     var compact = false
     @EnvironmentObject private var model: AppModel
     @Environment(\.scenePhase) private var scenePhase
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Namespace private var portraitTransition
-    @State private var portraitSourceID: String?
     @State private var selectedID: String?
     @State private var profileSession: TodayInvestorDiscoverySession?
     @State private var discovery = TodayInvestorDiscovery(accounts: [])
@@ -23,16 +20,13 @@ struct TodayInvestorDiscoveryModule: View {
             controls
             if let investor = activeSelection {
                 TodayInvestorDiscoveryPeople(
-                    investors: candidates, selectedID: investor.id, compact: compact,
-                    transition: portraitTransition
+                    investors: candidates, selectedID: investor.id, compact: compact
                 ) {
                     selectedID = $0.id
                 } onOpen: { tapped in
-                    portraitSourceID = tapped.id
                     profileSession = .init(investors: candidates, selectedID: tapped.id)
                 }
                 TodayInvestorDiscoveryFocus(investor: investor, loadsEvidence: true) {
-                    portraitSourceID = nil
                     profileSession = .init(investors: candidates, selectedID: investor.id)
                 }
             } else if model.isLoading {
@@ -49,10 +43,8 @@ struct TodayInvestorDiscoveryModule: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { rebuild() }
         }
-        .fullScreenCover(item: $profileSession) { session in
+        .navigationDestination(item: $profileSession) { session in
             TodayInvestorProfileBrowser(session: session)
-                .bSmartZoomNavigationTransition(sourceID: portraitSourceID ?? "",
-                    in: portraitTransition, enabled: portraitSourceID != nil && !reduceMotion)
         }
     }
 
@@ -73,7 +65,7 @@ struct TodayInvestorDiscoveryModule: View {
                 .frame(minHeight: 44, alignment: .leading)
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.bSmartPlain)
             .accessibilityIdentifier("discovery.open-directory")
             Spacer(minLength: 0)
             InvestorEducationEntry()

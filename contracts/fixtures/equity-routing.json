@@ -1,0 +1,41 @@
+{
+  "fixtureOnly": true,
+  "routes": [
+    {
+      "ticker": "AAPL",
+      "venue": "hyperliquid",
+      "product": "perpetual",
+      "status": "available",
+      "reason": "hl_listed",
+      "market": { "coin": "xyz:AAPL", "dex": "xyz", "collateralToken": 0, "maxLeverage": 20 },
+      "observedAt": "2026-10-01T00:00:00.000Z",
+      "executionEnabled": false
+    },
+    {
+      "ticker": "AEHR",
+      "venue": "xstocks",
+      "product": "spot",
+      "status": "available",
+      "reason": "xstocks_listed",
+      "market": {
+        "assetId": "12345678-1234-1234-1234-123456789abc",
+        "symbol": "AEHRx",
+        "network": "solana-mainnet",
+        "mint": "Xs8kHDEs5w8ERuTmefBXsJy66G5mh836VgDFfgpuRej",
+        "maxLeverage": 1
+      },
+      "observedAt": "2026-10-01T00:00:00.000Z",
+      "executionEnabled": false
+    },
+    {
+      "ticker": "UNKNOWN",
+      "venue": "none",
+      "product": "none",
+      "status": "unsupported",
+      "reason": "not_listed",
+      "market": null,
+      "observedAt": "2026-10-01T00:00:00.000Z",
+      "executionEnabled": false
+    }
+  ]
+}

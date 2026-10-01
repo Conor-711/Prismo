@@ -11,6 +11,21 @@ struct LiveMarketOrderDestination: View {
     var initialReduction = false
     var market: HyperliquidPerpMarket? = nil
     var opinionSource: OpinionTradeSource? = nil
+    var onReady: (() -> Void)? = nil
+
+    private var sourceIdentity: String {
+        if let id = opinionSource?.opinionID { return id.uuidString }
+        if let id = opinionSource?.subjectEventID { return id }
+        return opinionSource?.nativeUpdateID?.uuidString ?? ""
+    }
+
+    private func attribution(for wallet: DeviceWalletSummary) -> any OpinionOrderAttributing {
+        let client = NativeTradeFeedClient(account: account)
+        if let opinionSource {
+            return NativeOpinionOrderAttribution(source: opinionSource, accountID: wallet.accountID, client: client)
+        }
+        return NativeDirectOrderAttribution(accountID: wallet.accountID, client: client)
+    }
 
     var body: some View {
         Group {
@@ -19,12 +34,11 @@ struct LiveMarketOrderDestination: View {
                 LiveMarketOrderLoader(wallet: wallet, coin: coin, dex: dex, side: side,
                     initialAmount: initialAmount, initialReduction: initialReduction, market: market, service: account,
                     signer: deviceWallet.signing,
-                    attribution: opinionSource.map { NativeOpinionOrderAttribution(source: $0, accountID: wallet.accountID,
-                        client: NativeTradeFeedClient(account: account)) },
-                    supportsThesis: opinionSource?.supportsThesis == true) {
+                    attribution: attribution(for: wallet),
+                    supportsThesis: true, onReady: onReady) {
                     account.configuration.tradingEnabled && account.identity?.id == wallet.accountID
                         && deviceWallet.state == .verified(wallet)
-                }.id(wallet.accountID.uuidString + wallet.address + coin + (opinionSource?.opinionID.uuidString ?? ""))
+                }.id(wallet.accountID.uuidString + wallet.address + coin + sourceIdentity)
             } else if deviceWallet.isBusy {
                 LiveOrderLoadingPanel(reducing: initialReduction)
             } else {
@@ -34,22 +48,28 @@ struct LiveMarketOrderDestination: View {
                         Text(error).font(.callout).multilineTextAlignment(.center)
                         Button("Retry".bSmartLocalized) {
                             Task { await deviceWallet.prepare(allowCreation: false) }
-                        }.buttonStyle(.borderedProminent)
+                        }.buttonStyle(.bSmartPrimary)
                     }
                     NavigationLink { TradingWalletView() } label: {
                         Label("Trading wallet".bSmartLocalized, systemImage: "wallet.bifold")
-                    }.buttonStyle(.bordered).accessibilityIdentifier("trade.live.wallet")
+                    }.buttonStyle(.bSmartSecondary).accessibilityIdentifier("trade.live.wallet")
                 }.padding(24)
             }
         }
         .foregroundStyle(BSmartColor.primaryText)
         .background(BSmartColor.ink)
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("trade.live.screen")
         .task(id: "\(account.walletSessionRevision)-\(scenePhase == .active)") {
             guard scenePhase == .active else { return }
+            guard account.identity != nil else { onReady?(); return }
             await deviceWallet.prepare(allowCreation: false)
+            if case .verified(let wallet) = deviceWallet.state,
+               wallet.canAuthorizeTransactions, account.identity?.id == wallet.accountID {
+                return
+            }
+            onReady?()
         }
     }
 }
@@ -66,6 +86,7 @@ private struct LiveMarketOrderLoader: View {
     let signer: any TradingWalletSigning
     let attribution: (any OpinionOrderAttributing)?
     let supportsThesis: Bool
+    let onReady: (() -> Void)?
     let enabled: () -> Bool
     @State private var store: HyperliquidMarketOrderStore?
     @State private var balances: HyperCoreBalanceStore?
@@ -84,10 +105,16 @@ private struct LiveMarketOrderLoader: View {
             do {
                 let orderStore = try HyperliquidMarketOrderStore(service: service, journal: FundingTransactionJournal(),
                     signer: signer, attribution: attribution, leverageSigner: signer, enabled: enabled)
-                balances = HyperCoreBalanceStore(service: service)
+                let balanceStore = HyperCoreBalanceStore(service: service)
+                async let entry: Void = orderStore.loadEntry(wallet: wallet, dex: dex, coin: coin)
+                async let balance: Void = balanceStore.refresh(wallet: wallet)
+                _ = await (entry, balance)
+                guard !Task.isCancelled else { return }
+                balances = balanceStore
                 store = orderStore
+                onReady?()
             }
-            catch { failed = true }
+            catch { failed = true; onReady?() }
         }
     }
 }
@@ -107,7 +134,10 @@ struct LiveOrderRecordRow: View {
                 Text((record.order.side == .buy ? "Close short" : "Close long").bSmartLocalized)
                     .font(.caption).foregroundStyle(BSmartColor.secondaryText)
             }
-            if case .filled(let fill) = record.acknowledgement {
+            if record.state == .notSubmitted {
+                Text("Order was not submitted".bSmartLocalized)
+                    .font(.subheadline).foregroundStyle(BSmartColor.secondaryText)
+            } else if case .filled(let fill) = record.acknowledgement {
                 Text((fill.isComplete ? "Order filled" : "Partially filled").bSmartLocalized).foregroundStyle(BSmartColor.brand)
                 Text(fill.size.wire + " @ " + fill.averagePrice.wire + " USDC").font(.subheadline).monospacedDigit()
             } else if case .rejected(let reason) = record.acknowledgement {

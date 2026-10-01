@@ -9,7 +9,7 @@ final class TodayHomePagerTests: XCTestCase {
     @MainActor
     func testScrollTicksDoNotRebuildHeaderOrPageContent() async throws {
         let builds = PagerBuildCounts()
-        let pager = BSmartCollapsingPager(selection: .constant(TodayHomeSection.portfolio),
+        let pager = BSmartCollapsingPager(selection: .constant(TodayHomeSection.activity),
             sections: TodayHomeSection.allCases, pageIdentifier: { $0.rawValue },
             header: { _ in builds.header() }, tabs: { Text("Tabs").frame(height: 52) },
             content: { _ in builds.page() }, refresh: {})
@@ -22,7 +22,7 @@ final class TodayHomePagerTests: XCTestCase {
         try await Task.sleep(for: .milliseconds(300))
         func probe(in view: UIView) -> BSmartCollapsingScrollProbe<TodayHomeSection>.ProbeView? {
             if let match = view as? BSmartCollapsingScrollProbe<TodayHomeSection>.ProbeView,
-               match.section == .portfolio { return match }
+               match.section == .activity { return match }
             return view.subviews.lazy.compactMap { probe(in: $0) }.first
         }
         let state = try XCTUnwrap(probe(in: host.view)).state
@@ -36,7 +36,7 @@ final class TodayHomePagerTests: XCTestCase {
         XCTAssertEqual(builds.pages, initialPages, "Scrolling must not re-run page aggregation")
     }
     func testStableSceneOrder() {
-        XCTAssertEqual(TodayHomeSection.allCases, [.portfolio, .market, .investors])
+        XCTAssertEqual(TodayHomeSection.allCases, [.activity, .assets])
     }
 
     func testNewSceneKeepsCollapsedHeaderAndReadSceneKeepsItsDepth() {
@@ -47,45 +47,45 @@ final class TodayHomePagerTests: XCTestCase {
 
     @MainActor
     func testIndependentOffsetsAndSharedHeader() {
-        let state = TodayHomeScrollState(selection: .portfolio)
+        let state = TodayHomeScrollState(selection: .activity)
         state.headerHeight = 500
-        let portfolio = scrollView()
-        let market = scrollView()
-        state.register(portfolio, section: .portfolio)
-        portfolio.contentOffset.y = 780
-        state.observe(portfolio, section: .portfolio)
+        let activity = scrollView()
+        let assets = scrollView()
+        state.register(activity, section: .activity)
+        activity.contentOffset.y = 780
+        state.observe(activity, section: .activity)
         XCTAssertEqual(state.collapsedHeight, 500)
-        state.register(market, section: .market)
-        state.select(.market)
-        XCTAssertEqual(market.contentOffset.y, 500)
-        market.contentOffset.y = 960
-        state.observe(market, section: .market)
-        state.select(.portfolio)
-        XCTAssertEqual(portfolio.contentOffset.y, 780)
-        portfolio.contentOffset.y = 0
-        state.observe(portfolio, section: .portfolio)
+        state.register(assets, section: .assets)
+        state.select(.assets)
+        XCTAssertEqual(assets.contentOffset.y, 500)
+        assets.contentOffset.y = 960
+        state.observe(assets, section: .assets)
+        state.select(.activity)
+        XCTAssertEqual(activity.contentOffset.y, 780)
+        activity.contentOffset.y = 0
+        state.observe(activity, section: .activity)
         XCTAssertEqual(state.collapsedHeight, 0)
-        state.select(.market)
-        XCTAssertEqual(market.contentOffset.y, 960)
+        state.select(.assets)
+        XCTAssertEqual(assets.contentOffset.y, 960)
     }
 
     @MainActor
     func testInactivePageCannotMoveHeader() {
-        let state = TodayHomeScrollState(selection: .portfolio)
+        let state = TodayHomeScrollState(selection: .activity)
         state.headerHeight = 500
         let background = scrollView()
         background.contentOffset.y = 300
-        state.observe(background, section: .market)
+        state.observe(background, section: .assets)
         XCTAssertEqual(state.collapsedHeight, 0)
     }
 
     @MainActor
     func testHeaderResizeReconcilesCollapseWithoutResettingPageDepth() {
-        let state = TodayHomeScrollState(selection: .portfolio)
+        let state = TodayHomeScrollState(selection: .activity)
         state.headerHeight = 500
         let view = scrollView()
         view.contentOffset.y = 750
-        state.observe(view, section: .portfolio)
+        state.observe(view, section: .activity)
         state.headerHeight = 900
         XCTAssertEqual(state.collapsedHeight, 750)
         state.headerHeight = 400

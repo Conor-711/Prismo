@@ -4,11 +4,57 @@ struct TradeFeedView: View {
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var account: AccountAccessStore
     @EnvironmentObject private var router: AppRouter
-    @Environment(\.scenePhase) private var scenePhase
-    @StateObject private var store = TradeFeedStore()
-    @State private var syncMessage: String?
-    @State private var mode = DiscoverSection.popular
-    @State private var popularRefresh = 0
+    @Environment(\.bSmartFloatingNavigationFrame) private var floatingNavigationFrame
+    @Environment(\.bSmartPageIsActive) private var isPageActive
+    @StateObject private var cloudProfile = AccountProfileStore()
+    @StateObject private var localProfile = LocalUserProfileStore()
+    @State private var rankingRefresh = 0
+    @State private var cachedSnapshot: InvestorAbilityLeaderboard?
+    @State private var builtKey: RankingKey?
+
+    private struct RankingKey: Hashable {
+        let revision: Int
+        let refresh: Int
+        let accountID: UUID?
+        let name: String
+        let avatarURL: URL?
+    }
+
+    private struct RankingTaskKey: Hashable {
+        let ranking: RankingKey
+        let active: Bool
+    }
+
+    private var rankingKey: RankingKey {
+        .init(revision: model.directoryRevision, refresh: rankingRefresh,
+              accountID: account.identity?.id, name: ownName, avatarURL: profile?.avatarURL)
+    }
+
+    private var profile: AccountProfile? {
+        cloudProfile.accountID == account.identity?.id ? cloudProfile.profile : nil
+    }
+
+    private var ownActorID: String {
+        "bsmart:\(account.identity?.id.uuidString.lowercased() ?? "preview-guest")"
+    }
+
+    private var ownName: String {
+        if account.identity == nil { return localProfile.profile.displayName }
+        return profile?.username ?? "bSmart Investor".bSmartLocalized
+    }
+
+    nonisolated private static func makeSnapshot(accounts: [SmartAccountProfile], profiles: [TodaySubjectProfile],
+                                                 key: RankingKey) -> InvestorAbilityLeaderboard {
+        var subjects = Dictionary(uniqueKeysWithValues: TodaySubjectFeedSnapshot.bundled.subjects.map { ($0.id, $0) })
+        for subject in profiles { subjects[subject.id] = subject }
+        let source = InvestorAbilityLeaderboard.bundledResearch.map {
+            $0.replacingSubjectResearch(with: Array(subjects.values))
+        } ?? .mock(accounts: accounts, subjects: Array(subjects.values))
+        return source.includingMockUser(
+            id: key.accountID?.uuidString.lowercased() ?? "preview-guest",
+            name: key.name, avatarURL: key.avatarURL
+        ).balancedMock()
+    }
 
     var body: some View {
         #if DEBUG
@@ -21,76 +67,101 @@ struct TradeFeedView: View {
     }
 
     private var liveContent: some View {
-        NavigationStack {
-            DiscoverContent(selection: $mode, content: { section in
-                if account.identity == nil {
-                    VStack(spacing: 20) {
-                        Image(systemName: "person.crop.circle").font(.largeTitle)
-                        NavigationLink { TradingAccountView() } label: {
-                            Text("Sign in to view real trades".bSmartLocalized)
-                        }.buttonStyle(.borderedProminent)
-                    }.frame(maxWidth: .infinity).padding(.vertical, 60)
+        let snapshot = cachedSnapshot
+        return NavigationStack {
+            DiscoverContent(content: {
+                if let snapshot {
+                    AbilityLeaderboardView(refresh: rankingRefresh, snapshotOverride: snapshot)
                 } else {
-                    if section == .popular {
-                        PopularOpinionsView(demo: nil, refresh: popularRefresh, isActive: mode == .popular)
-                    } else {
-                        VStack(alignment: .leading, spacing: 12) {
-                            if let syncMessage {
-                                Text(syncMessage.bSmartLocalized)
-                                    .font(.footnote).foregroundStyle(BSmartColor.secondaryText)
-                            }
-                            TradeFeedContents(store: store, reload: { await load(reset: true) },
-                                              loadMore: { await load(reset: false) })
-                        }
-                        .padding(.top, 12)
-                    }
+                    BSmartSkeletonRows(style: .simple, count: 6)
                 }
             }, refresh: {
-                if mode == .popular { popularRefresh += 1 }
-                else { await load(reset: true) }
+                rankingRefresh += 1
             })
-            .navigationTitle("Discover".bSmartLocalized)
+            .overlay(alignment: .bottom) {
+                GeometryReader { viewport in
+                    VStack {
+                        Spacer().allowsHitTesting(false)
+                        if let item = snapshot?.items.first(where: { $0.actorId == ownActorID }) {
+                            ownPosition(item)
+                                .padding(.horizontal, 12)
+                                .padding(.bottom, BSmartFloatingNavigationLayout.bottomSpacing(
+                                    viewport: viewport.frame(in: .global), navigationFrame: floatingNavigationFrame
+                                ))
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Leaderboard".bSmartLocalized)
             .navigationBarTitleDisplayMode(.inline)
             .background(BSmartColor.ink)
             .accessibilityIdentifier("feed.screen")
-            .task(id: "\(router.selection == .feed)-\(mode)-\(account.identity?.id.uuidString ?? "signed-out")-\(account.feedRevision)") {
-                store.clear(); syncMessage = nil
-                if router.selection == .feed { await load(reset: true) }
-            }
-            .onChange(of: scenePhase) { _, phase in
-                if phase == .active && router.selection == .feed {
-                    Task { await load(reset: true) }
-                } else if phase == .background { store.clear() }
-            }
         }
         .bSmartPage()
+        .onAppear { localProfile.load(accountID: account.identity?.id) }
+        .onChange(of: account.identity?.id) { _, id in localProfile.load(accountID: id) }
+        .task(id: "\(account.identity?.id.uuidString ?? "guest"):\(account.feedRevision):\(isPageActive)") {
+            guard isPageActive else { return }
+            await cloudProfile.load(account: account)
+        }
+        .task(id: RankingTaskKey(ranking: rankingKey, active: isPageActive)) {
+            guard isPageActive, builtKey != rankingKey else { return }
+            let key = rankingKey
+            let accounts = model.smartAccounts
+            let subjects = model.subjectActivitySnapshot.subjects
+            let worker = Task.detached(priority: .userInitiated) {
+                Self.makeSnapshot(accounts: accounts, profiles: subjects, key: key)
+            }
+            let result = await withTaskCancellationHandler { await worker.value } onCancel: { worker.cancel() }
+            guard !Task.isCancelled, isPageActive, key == rankingKey else { return }
+            cachedSnapshot = result
+            builtKey = key
+        }
     }
 
-    private func load(reset: Bool) async {
-        guard router.selection == .feed, mode == .latest else { return }
-        guard let identity = account.identity?.id else { store.clear(); return }
-        if reset { syncMessage = nil }
-        await store.load(reset: reset) { offset in
-            return try await NativeTradeFeedClient(account: account).page(offset: offset)
-        }
-        guard !Task.isCancelled, account.identity?.id == identity,
-              router.selection == .feed, mode == .latest, !store.failed else { return }
-        if reset {
-            do {
-                let complete = try await NativeTradeFeedClient(account: account).synchronize(accountID: identity)
-                guard !Task.isCancelled, account.identity?.id == identity,
-                      router.selection == .feed, mode == .latest else { return }
-                syncMessage = complete ? nil : "Trade verification is pending. Pull to refresh."
-                if complete {
-                    await store.load(reset: true) { try await NativeTradeFeedClient(account: account).page(offset: $0) }
+    private func ownPosition(_ item: InvestorAbilityItem) -> some View {
+        Button { router.selection = .portfolio } label: {
+            HStack(spacing: 12) {
+                Text("#\(item.rank ?? 1)")
+                    .font(.subheadline.weight(.semibold).monospacedDigit())
+                    .foregroundStyle(BSmartColor.brand)
+                    .frame(width: 58, alignment: .leading)
+                if account.identity == nil {
+                    UserProfileAvatar(data: localProfile.profile.avatarData, size: 42)
+                } else {
+                    BSmartAvatar(url: profile?.avatarURL, name: ownName, size: 42)
                 }
-            } catch {
-                if !Task.isCancelled, account.identity?.id == identity,
-                   router.selection == .feed, mode == .latest {
-                    syncMessage = "Trade verification could not refresh. Try again later."
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(ownName)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(BSmartColor.primaryText)
+                        .lineLimit(1)
+                    Text("Your position".bSmartLocalized)
+                        .font(.caption)
+                        .foregroundStyle(BSmartColor.brand)
                 }
+                Spacer(minLength: 8)
+                VStack(alignment: .trailing, spacing: 3) {
+                    Text(item.scoreLabel)
+                        .font(.headline.weight(.semibold).monospacedDigit())
+                        .foregroundStyle(BSmartColor.brand)
+                    Text("Mock points".bSmartLocalized)
+                        .font(.caption2)
+                        .foregroundStyle(BSmartColor.tertiaryText)
+                }
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(BSmartColor.tertiaryText)
             }
+            .padding(.horizontal, BSmartSpacing.large)
+            .frame(height: 80)
+            .frame(maxWidth: .infinity)
+            .background(BSmartColor.elevated, in: RoundedRectangle(cornerRadius: 8))
+            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(BSmartColor.strongLine, lineWidth: 0.75))
+            .shadow(color: .black.opacity(0.16), radius: 10, y: 4)
         }
+        .buttonStyle(.bSmartPlain)
+        .accessibilityIdentifier("leaderboard.current-user")
     }
 }
 

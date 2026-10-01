@@ -47,7 +47,6 @@ struct BSmartRuntimeConfiguration: Equatable {
 
 struct BSmartClientComposition {
     let client: BSmartAPIClient
-    let directMrCollieClient: DirectMrCollieAnswering?
     let portfolioBootstrapStrategy: PortfolioBootstrapStrategy
     let syncCoordinator: BSmartSyncCoordinator?
     let isUsingDemoData: Bool
@@ -79,12 +78,6 @@ enum BSmartClientFactory {
             configuredDataEnvironment: bundle.object(forInfoDictionaryKey: "BSMART_DATA_ENVIRONMENT") as? String,
             isDebug: isDebug
         )
-        let directMrCollieClient = DirectDeepSeekConfiguration.resolve(
-            environment: environment,
-            configuredAPIKey: bundle.object(forInfoDictionaryKey: "BSMART_DEEPSEEK_API_KEY") as? String,
-            configuredBaseURL: bundle.object(forInfoDictionaryKey: "BSMART_DEEPSEEK_BASE_URL") as? String,
-            configuredModel: bundle.object(forInfoDictionaryKey: "BSMART_MR_COLLIE_MODEL") as? String
-        ).map { DirectDeepSeekMrCollieClient(configuration: $0, session: urlSession) }
         let accountClient = SupabaseAccountConfiguration.resolve(bundle: bundle).map {
             SupabaseAccountAuthClient(configuration: $0)
         }
@@ -96,7 +89,6 @@ enum BSmartClientFactory {
             #endif
             return BSmartClientComposition(
                 client: BundleBSmartAPIClient(bundle: bundle),
-                directMrCollieClient: directMrCollieClient,
                 portfolioBootstrapStrategy: .localOnly,
                 syncCoordinator: nil,
                 isUsingDemoData: true,
@@ -106,7 +98,6 @@ enum BSmartClientFactory {
             if contentBackend == "supabase" {
                 return BSmartClientComposition(
                     client: SupabaseContentClient(configuration: SupabaseAccountConfiguration.resolve(bundle: bundle)),
-                    directMrCollieClient: directMrCollieClient,
                     portfolioBootstrapStrategy: .localOnly,
                     syncCoordinator: nil,
                     isUsingDemoData: configuration.isUsingDemoData,
@@ -142,7 +133,6 @@ enum BSmartClientFactory {
             )
             return BSmartClientComposition(
                 client: client,
-                directMrCollieClient: directMrCollieClient,
                 portfolioBootstrapStrategy: .remoteFallback,
                 syncCoordinator: BSmartSyncCoordinator(client: client, defaults: defaults),
                 isUsingDemoData: configuration.isUsingDemoData,

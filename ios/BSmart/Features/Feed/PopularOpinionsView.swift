@@ -74,7 +74,7 @@ private struct DiscoveryRankingFilters: View {
                 }.frame(minHeight: 44)
             }.accessibilityIdentifier("discovery.rankings.window")
         }.font(.subheadline.weight(.medium)).foregroundStyle(BSmartColor.primaryText)
-        .buttonStyle(.plain)
+        .buttonStyle(.bSmartPlain)
         .sheet(item: $selection) { panel in
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
@@ -100,7 +100,7 @@ private struct DiscoveryRankingFilters: View {
                     }
                 }.padding(20)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.bSmartPlain)
             .foregroundStyle(BSmartColor.primaryText)
             .presentationBackground(BSmartColor.surface)
             .presentationDetents([.medium, .large])
@@ -181,7 +181,7 @@ private struct DiscoveryRankingList: View {
                     .frame(maxWidth: .infinity, minHeight: 48)
                     .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.bSmartPlain)
                 .accessibilityIdentifier("discovery.more.\(query.kind.rawValue)")
             }
         }
@@ -253,7 +253,7 @@ private struct DiscoveryRankingRow: View {
             .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
             .foregroundStyle(BSmartColor.primaryText)
             .contentShape(Rectangle())
-        }.buttonStyle(.plain)
+        }.buttonStyle(.bSmartPlain)
         .accessibilityIdentifier(kind == .opinions ? "feed.popular.opinion.\(item.opinion.id)" : "feed.popular.investor.\(item.id)")
     }
 

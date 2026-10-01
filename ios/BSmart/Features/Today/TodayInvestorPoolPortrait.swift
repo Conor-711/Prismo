@@ -7,6 +7,15 @@ struct TodayInvestorPoolPortrait: View {
     let cellWidth: CGFloat
     let onSelect: () -> Void
     private var prominent: Bool { distance == 0 }
+    private var rankLabel: String {
+        if investor.account.platform == "bsmart" {
+            guard investor.account.nativePerformance?.rank != nil else {
+                return "Verified trader".bSmartLocalized
+            }
+            return "bSmart Top \(TodayInvestorPool.topPercent(investor))%"
+        }
+        return "Top %d%%".bSmartLocalized(TodayInvestorPool.topPercent(investor))
+    }
     private var size: CGFloat {
         switch distance {
         case 0: min(compact ? 96 : 108, cellWidth - 14)
@@ -34,10 +43,12 @@ struct TodayInvestorPoolPortrait: View {
                     .frame(height: compact ? 112 : 124)
                 Group {
                     if prominent {
-                        Text("Top %d%%".bSmartLocalized(TodayInvestorPool.topPercent(investor)))
-                            .font(.system(size: 17, weight: .bold, design: .rounded))
+                        Text(rankLabel)
+                            .font(.system(size: investor.account.platform == "bsmart" && investor.account.nativePerformance?.rank == nil ? 11 : 17,
+                                          weight: .bold, design: .rounded))
                             .foregroundStyle(BSmartColor.brand)
-                            .fixedSize()
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                     } else {
                         Color.clear
                     }
@@ -47,9 +58,9 @@ struct TodayInvestorPoolPortrait: View {
             .frame(minWidth: 44)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.bSmartPlain)
         .accessibilityLabel("\(investor.account.name), \(investor.account.handle), \(investor.account.platform)")
-        .accessibilityValue("%@ · Top %d%%".bSmartLocalized(investor.account.platform, TodayInvestorPool.topPercent(investor)))
+        .accessibilityValue("\(investor.account.platform) · \(rankLabel)")
         .accessibilityAddTraits(prominent ? .isSelected : [])
         .accessibilityIdentifier("discovery.person.\(investor.id)")
     }

@@ -444,16 +444,18 @@ struct TickerPriceSmartActivityPanel: View {
                 Label("Price & Smart Activity".bSmartLocalized, systemImage: "chart.xyaxis.line")
                     .font(.headline)
                 Spacer()
-                Menu {
-                    Picker("Source".bSmartLocalized, selection: $source) {
-                        ForEach(TickerSmartActivitySource.allCases) { option in
-                            Label(option.label, systemImage: option.symbol).tag(option)
+                if BSmartProductVisibility.onchainSmartMoney {
+                    Menu {
+                        Picker("Source".bSmartLocalized, selection: $source) {
+                            ForEach(TickerSmartActivitySource.allCases) { option in
+                                Label(option.label, systemImage: option.symbol).tag(option)
+                            }
                         }
+                    } label: {
+                        Label(source.label, systemImage: source.symbol)
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(BSmartColor.brand)
                     }
-                } label: {
-                    Label(source.label, systemImage: source.symbol)
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(BSmartColor.brand)
                 }
             }
 
@@ -468,7 +470,7 @@ struct TickerPriceSmartActivityPanel: View {
                             .frame(maxWidth: .infinity, minHeight: 30)
                             .background(range == option ? BSmartColor.brand : BSmartColor.recessed)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.bSmartPlain)
                     .clipShape(RoundedRectangle(cornerRadius: BSmartRadius.control, style: .continuous))
                     .accessibilityAddTraits(range == option ? .isSelected : [])
                 }
@@ -687,7 +689,7 @@ struct TickerSmartActivityFeed: View {
                     .foregroundStyle(BSmartColor.tertiaryText)
             }
 
-            if showsFilter {
+            if showsFilter && BSmartProductVisibility.onchainSmartMoney {
                 HStack(spacing: BSmartSpacing.xSmall) {
                     ForEach(TickerSmartActivitySource.allCases) { option in
                         Button {
@@ -699,7 +701,7 @@ struct TickerSmartActivityFeed: View {
                                 .frame(maxWidth: .infinity, minHeight: 32)
                                 .background(source == option ? BSmartColor.brand : BSmartColor.recessed)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.bSmartPlain)
                         .clipShape(RoundedRectangle(cornerRadius: BSmartRadius.control, style: .continuous))
                         .accessibilityAddTraits(source == option ? .isSelected : [])
                     }
@@ -721,7 +723,7 @@ struct TickerSmartActivityFeed: View {
                             TickerSmartActivityRow(activity: activity)
                                 .padding(.vertical, BSmartSpacing.small)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.bSmartPlain)
                         if activity.id != displayedActivities.last?.id {
                             Divider().overlay(BSmartColor.line)
                         }

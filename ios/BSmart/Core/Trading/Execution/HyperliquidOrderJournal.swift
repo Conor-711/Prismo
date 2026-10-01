@@ -25,6 +25,7 @@ final class HyperliquidOrderSubmissionPermit: @unchecked Sendable {
     private let continuousClock: @Sendable () -> ContinuousClock.Instant
     private let lock = NSLock()
     private var consumed = false
+    private var started = false
 
     fileprivate init(id: UUID, preview: HyperliquidOrderPreview, body: Data, wallet: DeviceWalletSummary,
                      clock: @escaping @Sendable () -> Date, continuousClock: @escaping @Sendable () -> ContinuousClock.Instant) {
@@ -38,12 +39,37 @@ final class HyperliquidOrderSubmissionPermit: @unchecked Sendable {
         consumed = true
         return try lease.perform(wallet: wallet) {
             try preview.validate(wallet: wallet, now: clock(), continuousNow: continuousClock())
+            started = true
             return try operation(body)
         }
+    }
+
+    fileprivate func sealWithoutSubmission(wallet: DeviceWalletSummary) throws -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        guard wallet == self.wallet else { throw FundingJournalError.conflict }
+        guard !started else { return false }
+        // Sealing wins against a late/concurrent start; the old signed action can never be sent later.
+        consumed = true
+        return true
     }
 }
 
 extension FundingTransactionJournal {
+    func recordOrderNotSubmitted(_ permit: HyperliquidOrderSubmissionPermit,
+                                 wallet: DeviceWalletSummary) throws -> HyperliquidOrderRecord? {
+        try locked(recordingEvidence: true) { anchor, database, snapshot in
+            guard var record = snapshot.orders[permit.id], record.state == .submitting,
+                  try record.order.restored(wallet: wallet) == permit.order else {
+                throw FundingJournalError.invalidTransition
+            }
+            guard try permit.sealWithoutSubmission(wallet: wallet) else { return nil }
+            record.state = .notSubmitted
+            record.updatedAt = max(clock(), record.updatedAt)
+            try appendEvent(.order(record), anchor: &anchor, database: database, records: &snapshot)
+            return record
+        }
+    }
+
     func reconcileOrder(id: UUID, response: Data, wallet: DeviceWalletSummary) throws -> HyperliquidOrderRecord {
         try locked(recordingEvidence: true) { anchor, database, snapshot in
             guard var record = snapshot.orders[id], [.submitting, .uncertain].contains(record.state) else {

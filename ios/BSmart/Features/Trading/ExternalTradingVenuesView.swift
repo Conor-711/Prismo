@@ -53,7 +53,7 @@ struct ExternalTradingVenuesView: View {
                             .frame(minHeight: 52)
                             .contentShape(Rectangle())
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.bSmartPlain)
                         .accessibilityIdentifier("trade.external.\(destination.name.lowercased())")
                         if destination.id != destinations.last?.id {
                             Rectangle().fill(BSmartColor.softDivider).frame(height: 0.5)

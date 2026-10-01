@@ -164,7 +164,10 @@ actor HTTPHyperliquidMarketDataClient: HyperliquidMarketDataClient {
 final class HyperliquidTradingStore: ObservableObject {
     @Published private(set) var activeMarket: HyperliquidPerpMarket?
     @Published private(set) var candles: [HyperliquidCandle] = []
-    @Published private(set) var marketCatalog: [HyperliquidPerpMarket] = []
+    @Published private(set) var marketCatalog: [HyperliquidPerpMarket] = [] {
+        didSet { catalogRevision &+= 1 }
+    }
+    private(set) var catalogRevision = 0
     @Published private(set) var isLoadingMarket = false
     @Published private(set) var isLoadingCatalog = false
     @Published private(set) var errorMessage: String?
@@ -189,6 +192,9 @@ final class HyperliquidTradingStore: ObservableObject {
 
     func makeSession(candleWindow: HyperliquidCandleWindow? = nil) -> HyperliquidTradingStore {
         let session = HyperliquidTradingStore(client: client, candleWindow: candleWindow)
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--ui-trading-delayed-market") { return session }
+#endif
         session.marketCatalog = marketCatalog.filter { TradeAmountInput.quoteIsCurrent($0.updatedAt) }
         if let activeMarket, TradeAmountInput.quoteIsCurrent(activeMarket.updatedAt),
            !session.marketCatalog.contains(where: { $0.coin == activeMarket.coin }) {

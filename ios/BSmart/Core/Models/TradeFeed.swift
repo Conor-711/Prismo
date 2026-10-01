@@ -43,9 +43,17 @@ struct TradeFeedItem: Codable, Identifiable, Hashable {
               !marketCoin.isEmpty, marketCoin.count <= 64,
               !opinion.ticker.isEmpty, !opinion.authorId.isEmpty, !opinion.authorName.isEmpty,
               (0...1).contains(opinion.platformPercentile)
-                && (opinion.platformPercentile <= 0.25 || thesis != nil || canPublishThesis == true),
+                && (opinion.platformPercentile <= 0.25 || thesis != nil || canPublishThesis == true
+                    || opinion.sourceKind == "native_trade"),
               opinion.publishedAt <= executedAt, executedAt <= now.addingTimeInterval(60) else {
             throw BSmartAPIError.invalidResponse
+        }
+        if opinion.sourceKind == "native_trade" {
+            guard opinion.platform == "bsmart",
+                  opinion.authorId == "bsmart:" + trader.id.uuidString.lowercased(),
+                  marketCoin.components(separatedBy: ":").last == opinion.ticker else {
+                throw BSmartAPIError.invalidResponse
+            }
         }
         if let thesis {
             try thesis.validate(tradeID: id, executedAt: executedAt, now: now)

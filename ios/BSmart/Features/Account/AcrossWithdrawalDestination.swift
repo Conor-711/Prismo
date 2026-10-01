@@ -91,10 +91,10 @@ struct AcrossWithdrawalSheet: View {
         NavigationStack {
             AcrossWithdrawalDestination()
                 .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
+                    ToolbarItem(placement: .topBarTrailing) { Group {
                         Button("Done".bSmartLocalized) { dismiss() }
                             .accessibilityIdentifier("withdraw.dismiss")
-                    }
+                    }.buttonStyle(.bSmartToolbar) }.bSmartHideSystemBackground()
                 }
         }
         .presentationDetents([.large])

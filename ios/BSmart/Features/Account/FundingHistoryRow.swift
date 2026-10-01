@@ -46,7 +46,7 @@ struct FundingHistoryRow: View {
                         Button(action: checkSource) {
                             Label("Check source transaction".bSmartLocalized, systemImage: "arrow.clockwise")
                                 .font(.subheadline.weight(.semibold)).frame(minHeight: 44)
-                        }.buttonStyle(.plain).foregroundStyle(BSmartColor.brand)
+                        }.buttonStyle(.bSmartPlain).foregroundStyle(BSmartColor.brand)
                             .accessibilityIdentifier("deposit.check-source.\(entry.id.uuidString)")
                     }
                 }
@@ -54,7 +54,7 @@ struct FundingHistoryRow: View {
                     Button(action: cancel) {
                         Label("Cancel review".bSmartLocalized, systemImage: "xmark.circle")
                             .font(.subheadline.weight(.semibold)).frame(minHeight: 44)
-                    }.buttonStyle(.plain).foregroundStyle(BSmartColor.secondaryText)
+                    }.buttonStyle(.bSmartPlain).foregroundStyle(BSmartColor.secondaryText)
                 }
                 if [.authorizationRecorded, .authorizationStarted, .notSubmitted, .authorizationExpired].contains(entry.stage) {
                     NavigationLink { CCTPTransferDestination() } label: {
@@ -66,7 +66,7 @@ struct FundingHistoryRow: View {
                     Button(action: checkCrossChain) {
                         Label("Check cross-chain status".bSmartLocalized, systemImage: "arrow.triangle.2.circlepath")
                             .font(.subheadline.weight(.semibold)).frame(minHeight: 44)
-                    }.buttonStyle(.plain).foregroundStyle(BSmartColor.brand)
+                    }.buttonStyle(.bSmartPlain).foregroundStyle(BSmartColor.brand)
                         .accessibilityIdentifier("deposit.check-cross-chain.\(entry.id.uuidString)")
                 }
             }
@@ -113,7 +113,7 @@ struct FundingHistoryRow: View {
                 Button { UIPasteboard.general.string = value } label: {
                     Image(systemName: "doc.on.doc").frame(width: 44, height: 44)
                 }
-                .buttonStyle(.plain).foregroundStyle(BSmartColor.brand)
+                .buttonStyle(.bSmartPlain).foregroundStyle(BSmartColor.brand)
                 .accessibilityLabel(copyLabel.bSmartLocalized)
             }
         }

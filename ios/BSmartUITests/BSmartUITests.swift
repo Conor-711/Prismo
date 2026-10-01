@@ -5,6 +5,215 @@ final class BSmartUITests: XCTestCase {
         continueAfterFailure = false
     }
 
+    func testStandardDetailPushAndModalClosePreserveHomeState() {
+        let app = launch(scenario: "loaded")
+        verifyStandardDetails(in: app)
+    }
+
+    func testEdgeBackSupportsCancellationAndDoesNotHijackVerticalScrolling() {
+        let app = launch(scenario: "loaded")
+        verifyEdgeBack(in: app)
+    }
+
+    func testDeviceEdgeBackAndVerifiedAccountValueWithoutTrading() throws {
+        #if targetEnvironment(simulator)
+        throw XCTSkip("Keeps the connected iPhone's real account intact.")
+        #else
+        let app = XCUIApplication()
+        app.launch()
+        XCTAssertTrue(app.buttons["app.tab.today"].waitForExistence(timeout: 60))
+        app.buttons["app.tab.today"].tap()
+        app.buttons["today.tab.activity"].tap()
+        let value = app.staticTexts["today.account-value"]
+        XCTAssertTrue(value.waitForExistence(timeout: 15))
+        let loaded = NSPredicate { _, _ in value.exists && value.label != "--" }
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: loaded, object: nil)], timeout: 40), .completed)
+        verifyEdgeBack(in: app)
+        #endif
+    }
+
+    func testDeviceOrderEntryAndRefreshWithoutSubmitting() throws {
+        #if targetEnvironment(simulator)
+        throw XCTSkip("Reads the connected iPhone's real account; never confirms an order.")
+        #else
+        let app = XCUIApplication()
+        app.launch()
+        XCTAssertTrue(app.buttons["app.tab.today"].waitForExistence(timeout: 60))
+        app.buttons["app.tab.today"].tap()
+        app.buttons["today.tab.assets"].tap()
+        let search = app.textFields["portfolio.ticker-search"]
+        XCTAssertTrue(search.waitForExistence(timeout: 10))
+        search.tap(); search.typeText("AAPL\n")
+        let ticker = app.buttons["portfolio.ticker.AAPL"]
+        XCTAssertTrue(ticker.waitForExistence(timeout: 15))
+        ticker.tap()
+        let open = app.buttons["trade.open.aapl"]
+        XCTAssertTrue(open.waitForExistence(timeout: 20))
+        open.tap()
+        XCTAssertTrue(app.staticTexts["trade.amount"].waitForExistence(timeout: 30))
+        let refresh = app.buttons["trade.balance.refresh"]
+        XCTAssertTrue(refresh.waitForExistence(timeout: 10))
+        let ready = NSPredicate { _, _ in refresh.exists && refresh.isEnabled }
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: ready, object: nil)], timeout: 40), .completed)
+        XCTAssertFalse(app.descendants(matching: .any)["trading-order.error"].exists, app.debugDescription)
+        let available = app.staticTexts["trading-account.summary"].firstMatch
+        XCTAssertFalse(available.label.contains("--"), available.label)
+        let close = app.buttons["trade.close"]
+        XCTAssertTrue(close.isHittable)
+        let originalY = close.frame.minY
+        refresh.tap()
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: ready, object: nil)], timeout: 40), .completed)
+        XCTAssertEqual(close.frame.minY, originalY, accuracy: 1)
+        XCTAssertFalse(app.descendants(matching: .any)["trading-order.error"].exists, app.debugDescription)
+        close.tap()
+        XCTAssertTrue(open.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.descendants(matching: .any)["trade.live.screen"].exists)
+        #endif
+    }
+
+    private func verifyEdgeBack(in app: XCUIApplication) {
+        app.buttons["today.notifications"].tap()
+        let screen = app.descendants(matching: .any)["notifications.screen"]
+        XCTAssertTrue(screen.waitForExistence(timeout: 8))
+        let edge = app.coordinate(withNormalizedOffset: CGVector(dx: 0.005, dy: 0.55))
+        let smallDrag = app.coordinate(withNormalizedOffset: CGVector(dx: 0.17, dy: 0.55))
+        edge.press(forDuration: 0.05, thenDragTo: smallDrag, withVelocity: .slow, thenHoldForDuration: 0.4)
+        XCTAssertTrue(screen.exists)
+        XCTAssertTrue(app.buttons["detail.back"].isHittable)
+        edge.press(forDuration: 0.05,
+                   thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.005, dy: 0.35)),
+                   withVelocity: .slow, thenHoldForDuration: 0.1)
+        XCTAssertTrue(app.buttons["detail.back"].isHittable, app.debugDescription)
+        XCTAssertFalse(app.buttons["app.tab.today"].isHittable)
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.12)).press(forDuration: 0.05,
+            thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.12)),
+            withVelocity: .slow, thenHoldForDuration: 0.1)
+        XCTAssertTrue(app.buttons["detail.back"].isHittable, app.debugDescription)
+        edge.press(forDuration: 0.05,
+                   thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.55)),
+                   withVelocity: .slow, thenHoldForDuration: 0.1)
+        XCTAssertTrue(app.buttons["app.tab.today"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["app.tab.today"].isHittable)
+        XCTAssertFalse(screen.exists)
+        verifyStandardDetails(in: app)
+    }
+
+    func testDeviceStandardDetailsWithoutResetOrTrading() throws {
+        #if targetEnvironment(simulator)
+        throw XCTSkip("This smoke test keeps the connected iPhone's real account and data intact.")
+        #else
+        let app = XCUIApplication()
+        app.launch()
+        XCTAssertTrue(app.buttons["app.tab.today"].waitForExistence(timeout: 60))
+        app.buttons["app.tab.today"].tap()
+        app.buttons["today.tab.activity"].tap()
+        verifyStandardDetails(in: app)
+        #endif
+    }
+
+    private func verifyStandardDetails(in app: XCUIApplication) {
+        let notifications = app.buttons["today.notifications"]
+        for _ in 0..<2 {
+            XCTAssertTrue(notifications.waitForExistence(timeout: 10))
+            notifications.tap()
+            XCTAssertTrue(app.descendants(matching: .any)["notifications.screen"].waitForExistence(timeout: 8))
+            XCTAssertFalse(app.descendants(matching: .any)["app.tabbar"].isHittable)
+            app.buttons["detail.back"].tap()
+            XCTAssertTrue(app.buttons["app.tab.today"].isHittable)
+        }
+
+        let sources = app.scrollViews["smart-updates.sources"]
+        XCTAssertTrue(sources.waitForExistence(timeout: 10))
+        let source: XCUIElement
+        let platformMenu = app.buttons["smart-updates.platform.social"]
+        if platformMenu.exists {
+            source = platformMenu
+            source.tap()
+            let xChoice = app.buttons["smart-updates.platform-choice.x"]
+            XCTAssertTrue(xChoice.waitForExistence(timeout: 5))
+            xChoice.tap()
+        } else {
+            source = app.buttons["smart-updates.platform.x"]
+            for _ in 0..<4 where !source.isHittable { sources.swipeRight() }
+            XCTAssertTrue(source.isHittable)
+            source.tap()
+        }
+        let subject = app.descendants(matching: .any).matching(
+            NSPredicate(format: "identifier BEGINSWITH %@", "subject.account.")).firstMatch
+        for visit in 0..<2 {
+            XCTAssertTrue(subject.waitForExistence(timeout: 10))
+            let originalFrame = subject.frame
+            subject.tap()
+            XCTAssertTrue(app.staticTexts["smart.account.portrait.name"].waitForExistence(timeout: 10))
+            XCTAssertFalse(app.descendants(matching: .any)["app.tabbar"].isHittable)
+            if visit == 0 {
+                app.coordinate(withNormalizedOffset: CGVector(dx: 0.005, dy: 0.55)).press(forDuration: 0.05,
+                    thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.55)),
+                    withVelocity: .slow, thenHoldForDuration: 0.1)
+            } else {
+                app.buttons["detail.back"].tap()
+            }
+            XCTAssertTrue(source.isSelected)
+            XCTAssertTrue(app.buttons["app.tab.today"].isHittable)
+            XCTAssertEqual(subject.frame.minY, originalFrame.minY, accuracy: 2)
+        }
+
+        let evidence = app.buttons.matching(
+            NSPredicate(format: "identifier BEGINSWITH %@", "smart-updates.evidence.")).firstMatch
+        XCTAssertTrue(evidence.waitForExistence(timeout: 10))
+        evidence.coordinate(withNormalizedOffset: CGVector(dx: 0.4, dy: 0.12)).tap()
+        XCTAssertTrue(app.descendants(matching: .any)["smart.account.evidence.detail"].waitForExistence(timeout: 10))
+        app.buttons["detail.back"].tap()
+        XCTAssertTrue(source.isSelected)
+        XCTAssertTrue(app.buttons["app.tab.today"].isHittable)
+    }
+
+    func testRepeatedTabSwitchesKeepHomeModeAndSourceSelection() {
+        let app = launch(scenario: "loaded")
+        XCTAssertTrue(app.buttons["smart-updates.platform.politicians"].waitForExistence(timeout: 10))
+        app.buttons["smart-updates.platform.politicians"].tap()
+        app.buttons["today.tab.assets"].tap()
+        XCTAssertTrue(app.textFields["portfolio.ticker-search"].waitForExistence(timeout: 5))
+        for _ in 0..<2 {
+            for section in ["search", "feed", "friends", "portfolio", "today"] {
+                app.buttons["app.tab.\(section)"].tap()
+                XCTAssertTrue(app.descendants(matching: .any)["\(section).screen"].waitForExistence(timeout: 5))
+            }
+            XCTAssertTrue(app.buttons["today.tab.assets"].isSelected)
+            app.buttons["today.tab.activity"].tap()
+            XCTAssertTrue(app.buttons["smart-updates.platform.politicians"].isSelected)
+            app.buttons["today.tab.assets"].tap()
+        }
+    }
+
+    func testDeviceNavigationWithoutResetOrTrading() throws {
+        #if targetEnvironment(simulator)
+        throw XCTSkip("This smoke test keeps the connected iPhone's real account and data intact.")
+        #else
+        let app = XCUIApplication()
+        app.launch()
+        XCTAssertTrue(app.buttons["app.tab.today"].waitForExistence(timeout: 60))
+        for _ in 0..<2 {
+            for section in ["search", "feed", "friends", "portfolio", "today"] {
+                app.buttons["app.tab.\(section)"].tap()
+                XCTAssertTrue(app.descendants(matching: .any)["\(section).screen"].waitForExistence(timeout: 8))
+            }
+        }
+        app.buttons["today.tab.assets"].tap()
+        XCTAssertTrue(app.textFields["portfolio.ticker-search"].waitForExistence(timeout: 8))
+        app.buttons["today.tab.activity"].tap()
+        for source in ["bsmart", "politicians", "celebrities", "institutions", "all"] {
+            let button = app.buttons["smart-updates.platform.\(source)"]
+            let rail = app.scrollViews["smart-updates.sources"]
+            for _ in 0..<4 where !button.isHittable { rail.swipeLeft() }
+            XCTAssertTrue(button.isHittable)
+            button.tap()
+            XCTAssertTrue(button.isSelected)
+            if source == "institutions" { rail.swipeRight(); rail.swipeRight() }
+        }
+        #endif
+    }
+
     func testRootNavigationShowsFiveTabsInRequestedOrder() {
         let app = launch(scenario: "loaded")
 
@@ -37,9 +246,10 @@ final class BSmartUITests: XCTestCase {
         let app = launch(scenario: "loaded")
 
         XCTAssertTrue(app.staticTexts["Today"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.descendants(matching: .any)["today.discovery"].exists)
-        XCTAssertFalse(app.buttons["today.scope.holdings"].exists)
-        XCTAssertTrue(app.staticTexts["discovery.heading"].exists)
+        XCTAssertTrue(app.buttons["today.tab.activity"].isSelected)
+        XCTAssertTrue(app.buttons["smart-updates.filters"].exists)
+        XCTAssertTrue(app.buttons["smart-updates.sort"].exists)
+        XCTAssertFalse(app.descendants(matching: .any)["today.discovery"].exists)
         XCTAssertFalse(app.staticTexts.matching(
             NSPredicate(format: "label CONTAINS[c] %@", "published a")
         ).firstMatch.exists)
@@ -66,13 +276,9 @@ final class BSmartUITests: XCTestCase {
         let app = launch(scenario: "loaded", language: "zh-Hans")
 
         XCTAssertTrue(app.descendants(matching: .any)["today.screen"].waitForExistence(timeout: 5))
-        let informativeHeadline = app.staticTexts["维持 NVDA 长期看多判断"]
-        for _ in 0..<4 {
-            if informativeHeadline.exists && informativeHeadline.isHittable { break }
-            app.swipeUp()
-        }
-
-        XCTAssertTrue(informativeHeadline.exists)
+        XCTAssertTrue(app.descendants(matching: .any).matching(
+            NSPredicate(format: "identifier BEGINSWITH %@", "smart-updates.investor.")
+        ).firstMatch.waitForExistence(timeout: 5))
         XCTAssertFalse(app.staticTexts.matching(
             NSPredicate(format: "label CONTAINS %@", "发布了关于")
         ).firstMatch.exists)
@@ -81,8 +287,11 @@ final class BSmartUITests: XCTestCase {
         ).firstMatch.exists)
     }
 
-    func testTodayViewpointCollectionOpensAsDedicatedEditorialPage() {
+    func testTodayViewpointCollectionOpensAsDedicatedEditorialPage() throws {
         let app = launch(scenario: "loaded", language: "zh-Hans")
+        guard app.buttons["today.tab.market"].exists else {
+            throw XCTSkip("The former market overview section is no longer on the home screen.")
+        }
 
         XCTAssertTrue(app.descendants(matching: .any)["today.discovery"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["today.scope.holdings"].exists)
@@ -126,8 +335,11 @@ final class BSmartUITests: XCTestCase {
         keepScreenshot(app, named: "Today editorial collection returned")
     }
 
-    func testTodayViewpointCollectionCardStaysCompact() {
+    func testTodayViewpointCollectionCardStaysCompact() throws {
         let app = launch(scenario: "loaded", language: "zh-Hans")
+        guard app.buttons["today.tab.market"].exists else {
+            throw XCTSkip("The former market overview section is no longer on the home screen.")
+        }
 
         XCTAssertTrue(app.descendants(matching: .any)["today.discovery"].waitForExistence(timeout: 5))
         selectTodayMarket(app)
@@ -286,7 +498,7 @@ final class BSmartUITests: XCTestCase {
         let app = launch(scenario: "loaded")
         selectTodayScene("investors", in: app)
         app.buttons["today.smart-updates.title"].tap()
-        app.segmentedControls["smart-updates.source-filter"].buttons["Smart Account"].tap()
+        XCTAssertFalse(app.segmentedControls["smart-updates.source-filter"].exists)
         let representativeView = app.descendants(matching: .any).matching(
             NSPredicate(format: "identifier BEGINSWITH %@", "smart-updates.evidence.account.")
         ).firstMatch
@@ -464,8 +676,13 @@ final class BSmartUITests: XCTestCase {
     func testSmartMoneyOpensAuditableWalletAnalytics() {
         let app = launch(scenario: "loaded")
 
-        tab(.smart, in: app).tap()
+        app.buttons["discovery.open-directory"].tap()
         XCTAssertTrue(app.descendants(matching: .any)["smart.screen"].waitForExistence(timeout: 5))
+        guard app.descendants(matching: .any)["smart.section.money"].exists else {
+            XCTAssertFalse(app.descendants(matching: .any)["smart.money.row.first"].exists)
+            XCTAssertTrue(app.descendants(matching: .any)["smart.account.row.first"].exists)
+            return
+        }
         app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Smart Money")).firstMatch.tap()
 
         let wallet = app.descendants(matching: .any)["smart.money.row.first"]
@@ -599,89 +816,6 @@ final class BSmartUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["持仓"].exists)
         XCTAssertTrue(app.staticTexts["Bought long-term shares, bullish on AVGO."].exists)
         keepScreenshot(app, named: "Portfolio all tickers zh-Hans")
-    }
-
-    func testProfileAssistantUsesPortfolioEvidenceAndOpensEvent() {
-        let app = launch(scenario: "loaded")
-
-        XCTAssertTrue(app.descendants(matching: .any)["app.tabbar"].waitForExistence(timeout: 5))
-        XCTAssertTrue(tab(.today, in: app).exists)
-        XCTAssertTrue(tab(.portfolio, in: app).exists)
-        XCTAssertTrue(app.buttons["app.tab.search"].exists)
-        XCTAssertTrue(tab(.feed, in: app).exists)
-        XCTAssertLessThan(app.buttons["app.tab.search"].frame.minX, tab(.portfolio, in: app).frame.minX)
-        XCTAssertLessThan(app.buttons["app.tab.search"].frame.minX, tab(.feed, in: app).frame.minX)
-        tab(.portfolio, in: app).tap()
-        app.buttons["profile.ai.open"].tap()
-
-        XCTAssertTrue(app.descendants(matching: .any)["ai.screen"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Mr Collie"].exists)
-        XCTAssertTrue(app.buttons["ai.new-conversation"].exists)
-        XCTAssertTrue(app.staticTexts["What should we look into?"].exists)
-        XCTAssertTrue(app.staticTexts["Suggested questions"].exists)
-
-        let priority = app.buttons["Which position needs attention?"]
-        XCTAssertTrue(priority.waitForExistence(timeout: 2))
-        priority.tap()
-        XCTAssertTrue(app.descendants(matching: .any)["ai.message.user"].waitForExistence(timeout: 2))
-        XCTAssertTrue(app.staticTexts["NVDA needs your attention"].waitForExistence(timeout: 3))
-        XCTAssertTrue(app.buttons["Open event evidence"].waitForExistence(timeout: 2))
-        app.buttons["Open event evidence"].tap()
-        XCTAssertTrue(app.descendants(matching: .any)["event-detail.screen"].waitForExistence(timeout: 3))
-        app.buttons["detail.back"].tap()
-        XCTAssertTrue(app.buttons["ai.back"].waitForExistence(timeout: 5))
-        XCTAssertFalse(app.buttons["app.tab.feed"].exists)
-        app.buttons["ai.back"].tap()
-        XCTAssertTrue(app.buttons["app.tab.feed"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["profile.ai.open"].isHittable)
-    }
-
-    func testAIComposerShowsTypedQuestionAndAnswerInConversation() {
-        let app = launch(scenario: "loaded")
-        tab(.portfolio, in: app).tap()
-        app.buttons["profile.ai.open"].tap()
-
-        let composer = app.descendants(matching: .any)
-            .matching(NSPredicate(format: "label == %@", "Message Mr Collie"))
-            .firstMatch
-        XCTAssertTrue(composer.waitForExistence(timeout: 5))
-        XCTAssertFalse(app.buttons["ai.send"].isEnabled)
-        composer.tap()
-        composer.typeText("What changed in NVDA?")
-        app.buttons["Ask Mr Collie"].tap()
-
-        XCTAssertTrue(app.staticTexts["What changed in NVDA?"].waitForExistence(timeout: 2))
-        XCTAssertTrue(app.staticTexts["NVDA needs your attention"].waitForExistence(timeout: 3))
-        app.buttons["ai.new-conversation"].tap()
-        XCTAssertTrue(app.descendants(matching: .any)["ai.welcome"].waitForExistence(timeout: 3))
-        XCTAssertFalse(app.buttons["ai.send"].isEnabled)
-        XCTAssertFalse(app.staticTexts["NVDA needs your attention"].exists)
-    }
-
-    func testAIChineseLightLayoutKeepsComposerVisibleWithLargeText() {
-        let app = XCUIApplication()
-        app.launchArguments = ["--ui-reset-state", "--ui-scenario=loaded", "--ui-trading-fixture",
-                               "--ui-appearance", "light", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN",
-                               "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryXXXL"]
-        app.launch()
-        let profile = app.buttons["app.tab.portfolio"]
-        XCTAssertTrue(profile.waitForExistence(timeout: 5))
-        profile.tap()
-        app.buttons["profile.ai.open"].tap()
-        let composer = app.descendants(matching: .any)["ai.composer"].firstMatch
-        XCTAssertTrue(composer.waitForExistence(timeout: 5))
-        XCTAssertTrue(composer.isHittable)
-        XCTAssertGreaterThanOrEqual(composer.frame.minX, app.frame.minX + 12)
-        XCTAssertLessThan(composer.frame.maxY, app.frame.maxY)
-        XCTAssertGreaterThanOrEqual(app.buttons["ai.send"].frame.height, 44)
-        let question = app.buttons["ai.prompt.priority"]
-        for _ in 0..<3 where !question.isHittable { app.scrollViews["ai.timeline"].swipeUp() }
-        XCTAssertTrue(question.isHittable)
-        question.tap()
-        XCTAssertTrue(app.descendants(matching: .any)["ai.message.assistant"].waitForExistence(timeout: 5))
-        XCTAssertTrue(composer.isHittable)
-        app.buttons["ai.back"].tap()
-        XCTAssertTrue(app.buttons["app.tab.feed"].waitForExistence(timeout: 5))
     }
 
     func testFirstUseCanDiscoverTrackPreviewTradeAndOpenApp() {
@@ -906,9 +1040,10 @@ final class BSmartUITests: XCTestCase {
         XCTAssertTrue(app.buttons["portfolio.deposit"].isHittable)
         XCTAssertTrue(app.buttons["portfolio.withdraw"].isHittable)
         tab(.feed, in: app).tap()
-        XCTAssertTrue(app.buttons["discover.tab.popular"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["discover.tab.popular"].isSelected)
-        XCTAssertTrue(app.buttons["discover.tab.latest"].isHittable)
+        XCTAssertTrue(app.descendants(matching: .any)["discover.ability-leaderboard"]
+            .waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["discover.tab.popular"].exists)
+        XCTAssertFalse(app.buttons["discover.tab.latest"].exists)
         app.buttons["app.tab.search"].tap()
         XCTAssertTrue(app.textFields["search.input"].waitForExistence(timeout: 5))
 

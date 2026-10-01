@@ -20,6 +20,23 @@ export async function handleContent(req: Request, client: SupabaseClient): Promi
     }
     const url = new URL(req.url);
     if (req.method !== "GET") return reply({ error: "method_not_allowed" }, 405);
+    if (url.pathname.endsWith("/bsmart-content/subject-activity")) {
+      const subjectID = url.searchParams.get("subjectID");
+      if (subjectID !== null && !/^(politician|celebrity|institution):[A-Za-z0-9_-]{1,80}$/.test(subjectID)) {
+        return reply({ error: "invalid_query" }, 422);
+      }
+      const { data, error } = await client.rpc("bsmart_subject_activity_read", { p_subject_id: subjectID });
+      if (error) return reply({ error: "content_unavailable" }, 503);
+      if (!data) return reply({ error: "not_found" }, 404);
+      const payload = data as { schemaVersion: number; snapshotAt?: string;
+        subjects: Array<{ id: string }>; events: Array<{ subjectID: string; displayDay: string }> };
+      if (subjectID !== null) {
+        return payload.subjects.length === 1 && payload.subjects[0].id === subjectID
+          && payload.events.every(item => item.subjectID === subjectID)
+          ? reply(payload) : reply({ error: "not_found" }, 404);
+      }
+      return reply(payload);
+    }
     if (url.pathname.endsWith("/bsmart-content/manifest")) {
       const { data: pointer, error: pointerError } = await client.from("bsmart_content_active")
         .select("revision").eq("channel", "production").maybeSingle();
@@ -36,14 +53,16 @@ export async function handleContent(req: Request, client: SupabaseClient): Promi
       || !owner || owner.length > 160 || /[\x00-\x1f\x7f]/.test(owner)
       || (!collection.endsWith("-evidence") && owner !== "_")) return reply({ error: "invalid_query" }, 422);
     const page = Number(rawPage);
-    const { data: release, error: releaseError } = await client.from("bsmart_content_releases")
-      .select("revision").eq("revision", revision).maybeSingle();
-    if (releaseError) return reply({ error: "content_unavailable" }, 503);
-    if (!release) return reply({ error: "unknown_revision" }, 404);
     const { data, error: pageError } = await client.from("bsmart_content_pages").select("payload")
       .eq("revision", revision).eq("collection", collection).eq("owner", owner).eq("page", page).maybeSingle();
     if (pageError) return reply({ error: "content_unavailable" }, 503);
     if (data) return reply(data.payload);
+    // Pages and their release are committed atomically. Only missing pages need
+    // a release lookup to distinguish an empty evidence set from an unknown revision.
+    const { data: release, error: releaseError } = await client.from("bsmart_content_releases")
+      .select("revision").eq("revision", revision).maybeSingle();
+    if (releaseError) return reply({ error: "content_unavailable" }, 503);
+    if (!release) return reply({ error: "unknown_revision" }, 404);
     if (collection.endsWith("-evidence") && page === 0) return reply({ revision, page: 0, pages: 1, total: 0, items: [] });
     return reply({ error: "unknown_page" }, 404);
   } catch {

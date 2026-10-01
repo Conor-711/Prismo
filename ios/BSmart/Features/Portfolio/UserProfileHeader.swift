@@ -33,7 +33,7 @@ struct UserProfileHeader: View {
                             .background(BSmartColor.elevated, in: Circle())
                             .overlay(Circle().strokeBorder(BSmartColor.ink, lineWidth: 2))
                     }
-                    .buttonStyle(.plain).foregroundStyle(BSmartColor.primaryText)
+                    .buttonStyle(.bSmartPlain).foregroundStyle(BSmartColor.primaryText)
                     .accessibilityLabel("Edit profile".bSmartLocalized)
                     .accessibilityIdentifier("profile.edit")
                 }
@@ -49,7 +49,6 @@ struct UserProfileHeader: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                ProfileAssistantLauncher()
             }
             if !bio.isEmpty {
                 Text(bio).font(.subheadline)

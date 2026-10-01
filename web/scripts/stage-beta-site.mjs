@@ -7,8 +7,9 @@ const destination = "/tmp/bsmart-beta-out-cf";
 const assets = [
   "index.html", "index.txt", "zh/index.html", "zh/index.txt", "en/index.html", "en/index.txt",
   "404.html", "_next", "_routes.json", "sw.js", "icon.png", "icon-192.png", "icon-512.png",
-  "brand/bsmart-wordmark-beta.png", "brand/bsmart-wordmark.png", "favicon.ico", "apple-touch-icon.png",
+  "brand/bsmart-wordmark-beta.png", "brand/bsmart-wordmark.svg", "favicon.ico", "apple-touch-icon.png",
   "brand/market-editorial-annie-spratt.jpg",
+  "brand/product-investor.jpg", "brand/product-market.jpg", "brand/product-updates.jpg",
 ];
 
 // Only clear this script's dedicated staging directory, never the complete static export.

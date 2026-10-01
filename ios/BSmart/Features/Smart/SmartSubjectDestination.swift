@@ -3,8 +3,6 @@ import SwiftUI
 private struct SmartSubjectDestination: ViewModifier {
     @EnvironmentObject private var model: AppModel
     let payload: TickerSmartActivityPayload
-    @State private var isPresented = false
-    @Namespace private var transition
 
     private var identity: String {
         switch payload {
@@ -13,37 +11,26 @@ private struct SmartSubjectDestination: ViewModifier {
         }
     }
 
-    private var usesZoomTransition: Bool {
-        if case .account = payload { return false }
-        return true
-    }
-
     func body(content: Content) -> some View {
-        content
-            .contentShape(Rectangle())
-            .highPriorityGesture(TapGesture().onEnded { isPresented = true })
-            .accessibilityAddTraits(.isButton)
-            .accessibilityIdentifier("subject.\(identity)")
-            .accessibilityAction { isPresented = true }
-            .bSmartMatchedTransitionSource(id: identity, in: transition)
-            .fullScreenCover(isPresented: $isPresented) {
-                NavigationStack {
-                    switch payload {
-                    case .account(let update):
-                        SmartAccountDetailView(account: model.smartAccountProfile(for: update))
-                    case .money(let movement):
-                        if let signal = model.smartMoney.first(where: {
-                            $0.id.caseInsensitiveCompare(movement.accountId) == .orderedSame
-                                || $0.resolvedAddress.caseInsensitiveCompare(movement.accountId) == .orderedSame
-                        }) {
-                            SmartMoneyDetailView(signal: signal)
-                        } else {
-                            SmartMoneyObservedProfile(movement: movement)
-                        }
-                    }
+        NavigationLink {
+            switch payload {
+            case .account(let update):
+                SmartAccountDetailView(account: model.smartAccountProfile(for: update))
+            case .money(let movement):
+                if let signal = model.smartMoney.first(where: {
+                    $0.id.caseInsensitiveCompare(movement.accountId) == .orderedSame
+                        || $0.resolvedAddress.caseInsensitiveCompare(movement.accountId) == .orderedSame
+                }) {
+                    SmartMoneyDetailView(signal: signal)
+                } else {
+                    SmartMoneyObservedProfile(movement: movement)
                 }
-                .bSmartZoomNavigationTransition(sourceID: identity, in: transition, enabled: usesZoomTransition)
             }
+        } label: {
+            content.contentShape(Rectangle())
+        }
+        .buttonStyle(.bSmartPlain)
+        .accessibilityIdentifier("subject.\(identity)")
     }
 }
 

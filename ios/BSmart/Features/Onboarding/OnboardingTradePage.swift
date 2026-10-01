@@ -65,7 +65,7 @@ struct OnboardingTradePage: View {
                 .frame(maxWidth: .infinity, minHeight: 46)
                 .bSmartActionSurface(cornerRadius: BSmartRadius.control)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.bSmartPlain)
             .accessibilityIdentifier("onboarding.trade-preview")
 
             Text("Preview only. Leveraged trading can be liquidated.".bSmartLocalized)

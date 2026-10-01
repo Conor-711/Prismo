@@ -1,8 +1,10 @@
 """Read back a committed revision; never substitute this for real-user API acceptance."""
 import argparse
 import json
+import time
 from pathlib import Path
-from sqlalchemy import create_engine, text, select, func
+from sqlalchemy import create_engine, select, func
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 from .__main__ import publication_database_url
 from ..config import normalize_database_url
@@ -12,42 +14,58 @@ from . import cache
 from .publisher import read_collections
 
 
+def _read_with_retry(engine, operation, *, attempts=3):
+    for attempt in range(attempts):
+        try:
+            with Session(engine) as session:
+                return operation(session)
+        except OperationalError:
+            engine.dispose()
+            if attempt == attempts - 1:
+                raise
+            time.sleep(attempt + 1)
+
+
 def verify(engine, revision):
-    with Session(engine) as session:
+    def load_release(session):
         active = session.get(Active, 'production')
         release = session.get(Release, revision)
         if not active or active.revision != revision or not release:
             raise ValueError('Active revision differs')
-        collections = cache.load(revision, release.manifest) if engine.dialect.name == 'postgresql' else None
-        if collections is not None:
-            expected = [dict(collection=name, owner=owner, page=page, payload=payload)
-                        for name, items in collections.items() for owner, page, payload in pages(revision,name,items)]
-            for offset in range(0,len(expected),5):
-                batch=expected[offset:offset+5]
-                matched=session.scalar(text("""
-                    with expected as (
-                      select * from jsonb_to_recordset(cast(:batch as jsonb))
-                      as x(collection text, owner text, page integer, payload jsonb)
-                    ) select count(*) from expected e join public.bsmart_content_pages p
-                      on p.revision=:revision and p.collection=e.collection and p.owner=e.owner and p.page=e.page
-                    where p.payload=e.payload
-                """), {'batch':json.dumps(batch), 'revision':revision})
-                if matched != len(batch):
-                    raise ValueError('Stored page mismatch')
-            if session.scalar(select(func.count()).select_from(Page).where(Page.revision==revision)) != len(expected):
-                raise ValueError('Stored page count mismatch')
-        else:
-            collections = read_collections(session, revision, use_cache=False)
-        for name in SCHEMAS:
-            items = sorted(collections[name], key=lambda row: row.get('id', row.get('ticker', '')))
-            expected = release.manifest['collections'][name]
-            if len(items) != expected['count'] or digest(items) != expected['sha256']:
-                raise ValueError('Content readback mismatch: ' + name)
-        session.expire(active)
-        if active.revision != revision:
-            raise ValueError('Active revision changed during verification')
-        return {'revision': revision, 'databaseVerified': True, 'publicAPIVerified': False,
-                'counts': {name: len(items) for name, items in collections.items()}}
+        return release.manifest
+
+    manifest = _read_with_retry(engine, load_release)
+    collections = cache.load(revision, manifest) if engine.dialect.name == 'postgresql' else None
+    if collections is not None:
+        expected_pages = {(name, owner, page): payload
+                          for name, items in collections.items() for owner, page, payload in pages(revision, name, items)}
+        count = _read_with_retry(engine, lambda session: session.scalar(
+            select(func.count()).select_from(Page).where(Page.revision == revision)))
+        if count != len(expected_pages):
+            raise ValueError('Stored page count mismatch')
+        for offset in range(0, count, 50):
+            stored_pages = _read_with_retry(engine, lambda session: session.execute(
+                select(Page.collection, Page.owner, Page.page, Page.payload)
+                .where(Page.revision == revision)
+                .order_by(Page.collection, Page.owner, Page.page)
+                .limit(50).offset(offset)).all())
+            if len(stored_pages) != min(50, count - offset) or any(
+                expected_pages.get((name, owner, page)) != payload
+                for name, owner, page, payload in stored_pages
+            ):
+                raise ValueError('Stored page mismatch')
+    else:
+        collections = _read_with_retry(engine, lambda session: read_collections(session, revision, use_cache=False))
+    for name in SCHEMAS:
+        items = sorted(collections[name], key=lambda row: row.get('id', row.get('ticker', '')))
+        expected = manifest['collections'][name]
+        if len(items) != expected['count'] or digest(items) != expected['sha256']:
+            raise ValueError('Content readback mismatch: ' + name)
+    active_revision = _read_with_retry(engine, lambda session: session.get(Active, 'production').revision)
+    if active_revision != revision:
+        raise ValueError('Active revision changed during verification')
+    return {'revision': revision, 'databaseVerified': True, 'publicAPIVerified': False,
+            'counts': {name: len(items) for name, items in collections.items()}}
 
 
 def main():
@@ -56,7 +74,7 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     engine = create_engine(normalize_database_url(publication_database_url()), pool_pre_ping=True,
-                           connect_args={'connect_timeout': 10, 'prepare_threshold': None, 'tcp_user_timeout': 20000, 'keepalives_idle': 10, 'keepalives_interval': 5, 'keepalives_count': 3, 'options': '-c statement_timeout=30000 -c lock_timeout=10000'})
+                           connect_args={'connect_timeout': 10, 'prepare_threshold': None, 'tcp_user_timeout': 600000, 'keepalives_idle': 10, 'keepalives_interval': 5, 'keepalives_count': 3, 'options': '-c statement_timeout=600000 -c lock_timeout=10000'})
     try:
         result = verify(engine, args.revision)
         args.output.parent.mkdir(parents=True, exist_ok=True)

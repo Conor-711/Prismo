@@ -150,7 +150,7 @@ struct HyperCoreBalanceContent: View {
                                 .background(selectedPeriod == period ? BSmartColor.elevated : .clear,
                                             in: RoundedRectangle(cornerRadius: 6))
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.bSmartPlain)
                         .accessibilityAddTraits(selectedPeriod == period ? .isSelected : [])
                         .accessibilityIdentifier("portfolio.account.period.\(period.rawValue)")
                     }
@@ -195,7 +195,7 @@ struct HyperCoreBalanceContent: View {
             if isLoading { ProgressView().frame(width: 44, height: 44) }
             else { Image(systemName: "arrow.clockwise").frame(width: 44, height: 44) }
         }
-        .buttonStyle(.plain).foregroundStyle(BSmartColor.brand).disabled(isLoading)
+        .buttonStyle(.bSmartPlain).foregroundStyle(BSmartColor.brand).disabled(isLoading)
         .accessibilityLabel(compact ? "Refresh".bSmartLocalized : "Check Hyperliquid balances".bSmartLocalized)
         .accessibilityIdentifier("wallet.check-hypercore-balances")
     }

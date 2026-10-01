@@ -1,0 +1,117 @@
+{
+  "synthetic": true,
+  "signaturesIncluded": false,
+  "networkCalls": false,
+  "examples": {
+    "buyPreparation": {
+      "schema": "cow_order_v1",
+      "intentId": "12345678-1234-1234-1234-123456789abc",
+      "intentVersion": 1,
+      "account": "12345678-1234-1234-1234-123456789abc",
+      "fingerprint": "318ae1697aea7bb8d06f676306dd88d4b64c267dd7e2c2efff25e586409b1ee7",
+      "owner": "0x7e5f4552091a69125d5dfcb7b8c2659029395bdf",
+      "instrument": {
+        "assetId": "12345678-1234-1234-1234-123456789abc",
+        "symbol": "ASTSx",
+        "network": "Ethereum",
+        "chainId": 1,
+        "token": "0x1111111111111111111111111111111111111111",
+        "usdc": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "tokenVariant": "raw",
+        "maxLeverage": 1
+      },
+      "side": "buy",
+      "order": {
+        "sellToken": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "buyToken": "0x1111111111111111111111111111111111111111",
+        "receiver": "0x7e5f4552091a69125d5dfcb7b8c2659029395bdf",
+        "sellAmount": "100000000",
+        "buyAmount": "1990000000000000000",
+        "feeAmount": "0",
+        "kind": "sell",
+        "validTo": 1790813100,
+        "appData": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "partiallyFillable": false,
+        "sellTokenBalance": "erc20",
+        "buyTokenBalance": "erc20"
+      },
+      "domain": {
+        "name": "Gnosis Protocol",
+        "version": "v2",
+        "chainId": 1,
+        "verifyingContract": "0x9008D19f58AAbD9eD0D60971565AA8510560ab41"
+      },
+      "orderUid": "0x34c499f59980f0df0122707cd945ecf62faf2fb4df30cf1647ef49938e597de07e5f4552091a69125d5dfcb7b8c2659029395bdf6abda3ac",
+      "orderDigest": "0x34c499f59980f0df0122707cd945ecf62faf2fb4df30cf1647ef49938e597de0",
+      "expiresAt": "2026-10-01T00:01:00.000Z"
+    },
+    "sellPreparation": {
+      "schema": "cow_order_v1",
+      "intentId": "12345678-1234-1234-1234-123456789abc",
+      "intentVersion": 1,
+      "account": "12345678-1234-1234-1234-123456789abc",
+      "fingerprint": "01ed80c4764dfd1c45406771930b1a9d6bdd4b60ede4bc703e3922cbbc37e162",
+      "owner": "0x7e5f4552091a69125d5dfcb7b8c2659029395bdf",
+      "instrument": {
+        "assetId": "12345678-1234-1234-1234-123456789abc",
+        "symbol": "ASTSx",
+        "network": "Ethereum",
+        "chainId": 1,
+        "token": "0x1111111111111111111111111111111111111111",
+        "usdc": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "tokenVariant": "raw",
+        "maxLeverage": 1
+      },
+      "side": "sell",
+      "order": {
+        "sellToken": "0x1111111111111111111111111111111111111111",
+        "buyToken": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "receiver": "0x7e5f4552091a69125d5dfcb7b8c2659029395bdf",
+        "sellAmount": "1000000000000000000",
+        "buyAmount": "99500000",
+        "feeAmount": "0",
+        "kind": "sell",
+        "validTo": 1790813100,
+        "appData": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "partiallyFillable": false,
+        "sellTokenBalance": "erc20",
+        "buyTokenBalance": "erc20"
+      },
+      "domain": {
+        "name": "Gnosis Protocol",
+        "version": "v2",
+        "chainId": 1,
+        "verifyingContract": "0x9008D19f58AAbD9eD0D60971565AA8510560ab41"
+      },
+      "orderUid": "0x70a3bcae22e44b66d359f5f2bc2dcbf9c4f8ad47c5d515c99a6dfc448da7fad87e5f4552091a69125d5dfcb7b8c2659029395bdf6abda3ac",
+      "orderDigest": "0x70a3bcae22e44b66d359f5f2bc2dcbf9c4f8ad47c5d515c99a6dfc448da7fad8",
+      "expiresAt": "2026-10-01T00:01:00.000Z"
+    },
+    "buyConfirmed": {
+      "orderUid": "0x34c499f59980f0df0122707cd945ecf62faf2fb4df30cf1647ef49938e597de07e5f4552091a69125d5dfcb7b8c2659029395bdf6abda3ac",
+      "state": "confirmed",
+      "providerStatus": "fulfilled",
+      "executedInputAmountRaw": "100000000",
+      "receivedOutputAmountRaw": "1990000000000000000",
+      "saleProceedsUsdcRaw": null,
+      "transactionHash": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "checkedAt": "2026-10-01T00:00:00.000Z",
+      "error": null,
+      "resubmitAllowed": false,
+      "returnReady": false
+    },
+    "sellConfirmed": {
+      "orderUid": "0x70a3bcae22e44b66d359f5f2bc2dcbf9c4f8ad47c5d515c99a6dfc448da7fad87e5f4552091a69125d5dfcb7b8c2659029395bdf6abda3ac",
+      "state": "confirmed",
+      "providerStatus": "fulfilled",
+      "executedInputAmountRaw": "1000000000000000000",
+      "receivedOutputAmountRaw": "99500000",
+      "saleProceedsUsdcRaw": "99500000",
+      "transactionHash": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "checkedAt": "2026-10-01T00:00:00.000Z",
+      "error": null,
+      "resubmitAllowed": false,
+      "returnReady": false
+    }
+  }
+}

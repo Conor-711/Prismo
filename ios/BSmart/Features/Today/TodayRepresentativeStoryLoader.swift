@@ -50,7 +50,7 @@ struct TodayRepresentativeStoryLoader: View {
                         Button { retry += 1 } label: {
                             Label("Reload price history".bSmartLocalized, systemImage: "arrow.clockwise")
                                 .font(.caption).frame(minHeight: 44)
-                        }.buttonStyle(.plain)
+                        }.buttonStyle(.bSmartPlain)
                     }
                 }.padding(.vertical, 10).foregroundStyle(BSmartColor.secondaryText)
             }

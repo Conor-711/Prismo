@@ -8,8 +8,9 @@ from sqlalchemy import text
 SHANGHAI = ZoneInfo("Asia/Shanghai")
 SLOT_HOURS = (8, 18, 22)
 SLOT_GRACE = timedelta(minutes=30)
+ONCHAIN_SMART_MONEY_VISIBLE = False
 
-MATCHES = """(
+MATCHES = f"""({'true' if ONCHAIN_SMART_MONEY_VISIBLE else "q.event_kind='opinion'"}) and (
     (d.notify_authors and ((q.event_kind='opinion' and lower(q.actor_id)=any(d.followed_author_ids))
         or (q.event_kind='movement' and lower(q.actor_id)=any(d.followed_money_ids))))
     or (d.notify_tickers and q.ticker=any(d.followed_tickers))
@@ -37,17 +38,18 @@ def enqueue(session, revision, events):
             select distinct d.user_id,e.event_kind,e.event_id,e.actor_id,e.ticker,e.actor_name
             from events e join bsmart_push_devices d on d.enabled
                 and d.updated_at > now() - interval '30 days'
-            where (d.notify_authors and (
+            where (cast(:onchain_visible as boolean) or e.event_kind='opinion') and (
+                (d.notify_authors and (
                     (e.event_kind='opinion' and lower(e.actor_id)=any(d.followed_author_ids)) or
                     (e.event_kind='movement' and lower(e.actor_id)=any(d.followed_money_ids))))
-               or (d.notify_tickers and e.ticker=any(d.followed_tickers))
-               or (d.notify_holdings and e.ticker=any(d.held_tickers))
+                or (d.notify_tickers and e.ticker=any(d.followed_tickers))
+                or (d.notify_holdings and e.ticker=any(d.held_tickers)))
         )
         insert into bsmart_interest_push_events
             (user_id,event_kind,event_id,actor_id,ticker,actor_name)
         select user_id,event_kind,event_id,actor_id,ticker,actor_name from matched
         on conflict (user_id,event_kind,event_id) do nothing
-    """), {"events": json.dumps(events, ensure_ascii=False)})
+    """), {"events": json.dumps(events, ensure_ascii=False), "onchain_visible": ONCHAIN_SMART_MONEY_VISIBLE})
     return result.rowcount
 
 

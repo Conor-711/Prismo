@@ -83,7 +83,7 @@ struct SmartAccountTrustPreviewView: View {
 
     private var profileActions: some View {
         HStack(spacing: BSmartSpacing.small) {
-            BSmartDetailNavigationLink(id: "trust-profile-\(account.id)", usesZoomTransition: false) {
+            BSmartDetailNavigationLink(id: "trust-profile-\(account.id)") {
                 SmartAccountDetailView(account: account)
             } label: {
                 Text("View full profile".bSmartLocalized)
@@ -93,7 +93,7 @@ struct SmartAccountTrustPreviewView: View {
                     .background(BSmartColor.brand)
                     .clipShape(RoundedRectangle(cornerRadius: BSmartRadius.control, style: .continuous))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.bSmartPlain)
             .accessibilityIdentifier("smart.account.trust-preview.full-profile")
 
             Button {
@@ -118,7 +118,7 @@ struct SmartAccountTrustPreviewView: View {
                         .stroke(BSmartColor.pulse.opacity(0.55), lineWidth: 0.75)
                 }
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.bSmartPlain)
             .accessibilityIdentifier("smart.account.trust-preview.rank")
         }
     }
@@ -288,7 +288,7 @@ struct SmartAccountTrustPreviewView: View {
                 .padding(.vertical, BSmartSpacing.medium)
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.bSmartPlain)
             .accessibilityIdentifier("smart.account.trust-preview.evidence.\(update.ticker.lowercased())")
 
             if expandedEvidenceID == update.id {

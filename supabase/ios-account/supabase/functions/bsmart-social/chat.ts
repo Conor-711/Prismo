@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2.116.0";
-import { resolveAvatars } from "../bsmart-profile/avatars.ts";
+import { resolveAvatars, signedMediaURLs } from "../bsmart-profile/avatars.ts";
 
 const bucket = "bsmart-chat-images";
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
@@ -82,22 +82,21 @@ export function sharedContent(value: unknown): Record<string, unknown> | null {
   return item;
 }
 
-async function resolveChat(client: SupabaseClient, payload: any) {
+export async function resolveChat(client: SupabaseClient, payload: any) {
   const items = payload.items ?? [payload];
   const images = items.map((item: any) => item.image).filter(Boolean);
-  if (images.length) {
+  await Promise.all([resolveAvatars(client, payload), (async () => {
+    if (!images.length) return;
     const paths = images.map((image: any) => image.path);
-    const { data, error } = await client.storage.from(bucket).createSignedUrls(paths, 3600);
-    if (error) throw Error("storage_unavailable");
-    const signed = new Map((data ?? []).map(item => [item.path, item.signedUrl]));
+    const signed = await signedMediaURLs.resolve(client, bucket, paths, 3600);
     for (const image of images) {
       const url = signed.get(image.path);
       if (!url) throw Error("storage_unavailable");
       image.url = url;
       delete image.path;
     }
-  }
-  return await resolveAvatars(client, payload);
+  })()]);
+  return payload;
 }
 
 export async function handleChat(req: Request, client: SupabaseClient, actor: string, room: string): Promise<Response> {

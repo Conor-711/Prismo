@@ -57,7 +57,9 @@ struct DailyDigestView: View {
     @EnvironmentObject private var model: AppModel
     @State private var didTrackOpen = false
 
-    private var signals: [PersonalizedPortfolioSignal] { model.personalizedDailyDigestSignals }
+    private var signals: [PersonalizedPortfolioSignal] {
+        model.personalizedDailyDigestSignals.filter { $0.signal.isVisibleInProduct }
+    }
     private var attentionSignals: [PersonalizedPortfolioSignal] {
         signals.filter {
             $0.personalization.attention == .priority || $0.signal.kind == .divergence
@@ -121,7 +123,9 @@ struct DailyDigestView: View {
                     )
                     signalSection(
                         title: "Still developing",
-                        detail: "One side moved first or coverage is incomplete",
+                        detail: BSmartProductVisibility.onchainSmartMoney
+                            ? "One side moved first or coverage is incomplete"
+                            : "Recent public views to review",
                         symbol: "waveform.path.ecg",
                         color: BSmartColor.gold,
                         signals: developingSignals
@@ -160,7 +164,9 @@ struct DailyDigestView: View {
                 .textCase(.uppercase)
             Text("What changed for you")
                 .font(.system(.title2, design: .rounded, weight: .bold))
-            Text("A concise read of Smart Account views, public onchain capital and where they disagree.")
+            Text(BSmartProductVisibility.onchainSmartMoney
+                ? "A concise read of Smart Account views, public onchain capital and where they disagree."
+                : "A concise read of recent Smart Account views for the stocks you track.")
                 .font(.subheadline)
                 .foregroundStyle(BSmartColor.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
@@ -172,10 +178,12 @@ struct DailyDigestView: View {
             digestMetric(value: "\(signals.count)", label: "Changes", color: BSmartColor.primaryText)
             Divider().overlay(BSmartColor.line)
             digestMetric(value: "\(attentionSignals.count)", label: "Attention", color: BSmartColor.bear)
-            Divider().overlay(BSmartColor.line)
-            digestMetric(value: "\(confirmationSignals.count)", label: "Confirmed", color: BSmartColor.brand)
-            Divider().overlay(BSmartColor.line)
-            digestMetric(value: "\(noCapitalCoverageCount)", label: "No capital", color: BSmartColor.gold)
+            if BSmartProductVisibility.onchainSmartMoney {
+                Divider().overlay(BSmartColor.line)
+                digestMetric(value: "\(confirmationSignals.count)", label: "Confirmed", color: BSmartColor.brand)
+                Divider().overlay(BSmartColor.line)
+                digestMetric(value: "\(noCapitalCoverageCount)", label: "No capital", color: BSmartColor.gold)
+            }
         }
         .frame(maxWidth: .infinity)
         .bSmartSurface(padding: 0)
@@ -250,7 +258,7 @@ struct DailyDigestView: View {
                                 .foregroundStyle(BSmartColor.tertiaryText)
                         }
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.bSmartPlain)
                 }
             }
             .bSmartSurface()

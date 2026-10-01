@@ -73,7 +73,7 @@ struct CCTPTransferContent: View {
                           systemImage: display.phase == .networkFee ? "arrow.up.right" : "arrow.right")
                         .font(.subheadline.weight(.semibold)).padding(14)
                         .frame(maxWidth: .infinity, minHeight: 48).bSmartActionSurface()
-                }.buttonStyle(.plain)
+                }.buttonStyle(.bSmartPlain)
                     .disabled(display.phase == .amount ? amount.isEmpty
                               : [.authorization, .signed].contains(display.phase) && !display.canConfirm(at: now))
                     .accessibilityIdentifier("deposit.transfer-primary")
@@ -82,7 +82,7 @@ struct CCTPTransferContent: View {
                 Button(action: cancel) {
                     Label("Cancel review".bSmartLocalized, systemImage: "xmark.circle")
                         .font(.subheadline.weight(.semibold)).frame(maxWidth: .infinity, minHeight: 44)
-                }.buttonStyle(.plain).foregroundStyle(BSmartColor.secondaryText)
+                }.buttonStyle(.bSmartPlain).foregroundStyle(BSmartColor.secondaryText)
                     .accessibilityIdentifier("deposit.transfer-cancel")
             }
         }.fixedSize(horizontal: false, vertical: true)

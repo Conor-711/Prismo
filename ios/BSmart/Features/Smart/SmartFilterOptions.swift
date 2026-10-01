@@ -43,7 +43,7 @@ struct SmartFilterOptions<Value: Hashable>: View {
                         }
                         .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.bSmartPlain)
                     .accessibilityLabel(name.bSmartLocalized)
                     .accessibilityIdentifier("smart.filter.\(identifier).\(name)")
                     .accessibilityAddTraits(selected ? .isSelected : [])

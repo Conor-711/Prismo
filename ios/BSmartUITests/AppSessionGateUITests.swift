@@ -23,32 +23,6 @@ final class AppSessionGateUITests: XCTestCase {
         }
     }
 
-    func testTestLoginEntersContentAndExitReturnsToRootLogin() {
-        continueAfterFailure = false
-        let app = XCUIApplication()
-        app.launchArguments = ["--ui-reset-state", "--ui-scenario=loaded", "--ui-auth-gate",
-            "--ui-trading-fixture", "-AppleLanguages", "(zh-Hans)"]
-        app.launch()
-        let testLogin = app.buttons["account.signin.test"]
-        XCTAssertTrue(testLogin.waitForExistence(timeout: 10))
-        testLogin.tap()
-        XCTAssertTrue(app.buttons["app.tab.today"].waitForExistence(timeout: 10))
-        app.buttons["app.tab.portfolio"].tap()
-        let settings = app.buttons["portfolio.settings"]
-        XCTAssertTrue(settings.waitForExistence(timeout: 5))
-        settings.tap()
-        let exit = app.buttons["settings.test-signout"]
-        XCTAssertTrue(exit.waitForExistence(timeout: 5))
-        exit.tap()
-        assertLocked(app)
-        XCTAssertTrue(testLogin.exists)
-        testLogin.tap()
-        XCTAssertTrue(app.buttons["app.tab.today"].waitForExistence(timeout: 10))
-        app.terminate()
-        app.launch()
-        assertLocked(app)
-    }
-
     func testSignedOutLaunchCannotReachContentOrDismissLogin() {
         continueAfterFailure = false
         for language in ["en", "zh-Hans"] {
@@ -68,6 +42,7 @@ final class AppSessionGateUITests: XCTestCase {
 
     private func assertLocked(_ app: XCUIApplication) {
         XCTAssertTrue(app.buttons["account.signin.google"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["account.signin.test"].exists)
         XCTAssertFalse(app.buttons["app.tab.today"].exists)
         XCTAssertFalse(app.buttons["app.tab.portfolio"].exists)
         XCTAssertFalse(app.otherElements["onboarding.screen"].exists)

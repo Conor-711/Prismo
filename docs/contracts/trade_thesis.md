@@ -58,9 +58,22 @@ of quoted social author's percentile (0–1); Smart Money source snapshots remai
 outside this feed. Own history includes all social sources for later writing.
 Recent feed/profile lists remain ordered by executedAt desc, event ID tie-breaker.
 
-Drafts remain in the composer on request failure; retry cannot duplicate a thesis.
-Account switching clears the composer. Published theories cannot be edited in v1.
+Drafts remain on request failure; retry cannot duplicate a thesis. As of 2026-10-01,
+the device persists original draft text by account ID and verified trade ID, with
+protected atomic files and serialized off-main I/O. Reopening restores it; publishing
+success removes only that draft. Account switching clears/dismisses the visible
+composer, not other accounts' isolated drafts; account deletion tombstones and erases
+its drafts. Storage failures are visible and never erase in-memory input.
+Published theories cannot be edited in v1.
 Other users can like/unlike; authors cannot like their own thesis.
+
+Pending activity lookup retries only the same registered order with bounded waits
+and read-only reconciliation. An ended failed verifier releases its fenced claim
+with bounded backoff. No client acknowledgement substitutes for verified exchange
+evidence, and retry never submits an exchange order. Missing schema and account
+changes are not retried. Quote previews collapse blank lines and may reuse a current
+avatar only for the exact same author ID/platform; original body and detail text
+remain unchanged. Existing API shapes and publication eligibility are unchanged.
 
 ## Reference and rollout
 

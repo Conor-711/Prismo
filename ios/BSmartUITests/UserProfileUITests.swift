@@ -5,7 +5,7 @@ final class UserProfileUITests: XCTestCase {
 
     func testProfileDefaultsToAppHoldingsAndDepositWithAddressOnlyInSettings() {
         let app = launch()
-        let ids = ["today", "feed", "search", "portfolio"]
+        let ids = ["today", "search", "feed", "friends", "portfolio"]
         let tabs = ids.map { app.buttons["app.tab." + $0] }
         for tab in tabs { XCTAssertTrue(tab.waitForExistence(timeout: 8)) }
         for index in 1..<tabs.count { XCTAssertLessThan(tabs[index - 1].frame.midX, tabs[index].frame.midX) }
@@ -17,13 +17,19 @@ final class UserProfileUITests: XCTestCase {
         let name = app.staticTexts["profile.nickname"]
         XCTAssertGreaterThanOrEqual(name.frame.minX, avatar.frame.maxX)
         XCTAssertLessThanOrEqual(app.buttons["profile.edit"].frame.midX, avatar.frame.maxX + 16)
-        XCTAssertLessThanOrEqual(name.frame.maxX, app.buttons["profile.ai.open"].frame.minX)
+        XCTAssertFalse(app.buttons["profile.ai.open"].exists)
         XCTAssertLessThan(abs(name.frame.midY - avatar.frame.midY), 44)
         XCTAssertFalse(app.buttons["profile.address"].exists)
         let accountSwitch = app.buttons["portfolio.account.switch"]
         XCTAssertEqual(accountSwitch.value as? String, "Internal account")
         let accountBalance = app.staticTexts["portfolio.account.balance-value"]
-        XCTAssertLessThan(abs(accountBalance.frame.midY - accountSwitch.frame.midY), 12)
+        let period = app.buttons["portfolio.period.1D"]
+        if period.exists {
+            XCTAssertGreaterThan(accountSwitch.frame.minY, period.frame.maxY)
+            XCTAssertGreaterThanOrEqual(accountSwitch.frame.minX, period.frame.minX - 8)
+        } else {
+            XCTAssertLessThan(abs(accountBalance.frame.midY - accountSwitch.frame.midY), 12)
+        }
         XCTAssertFalse(app.descendants(matching: .any)["wallet.hypercore-balances"].exists)
         let deposit = app.buttons["portfolio.deposit"]
         XCTAssertTrue(deposit.waitForExistence(timeout: 3), app.debugDescription)

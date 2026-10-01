@@ -4,8 +4,8 @@ protocol BSmartContentRefreshing {
     func prepareContentRefresh() async throws
 }
 
-struct SupabaseContentManifest: Decodable, Equatable {
-    struct Collection: Decodable, Equatable {
+struct SupabaseContentManifest: Codable, Equatable {
+    struct Collection: Codable, Equatable {
         let count: Int
         let sha256: String
         let checkedAt: Date

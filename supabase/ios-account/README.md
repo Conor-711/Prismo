@@ -6,6 +6,27 @@
 此目录只对应 bSmart 账号项目 `dzyitinagewdfkzjkuiz`。
 不要在仓库根目录运行 `supabase db push`：根目录指向另一套历史内容项目。
 
+## 头像和聊天缓存（2026-10-01 已部署）
+
+`bsmart-profile/avatars.ts` 的 `SignedMediaURLCache` 在各函数的 isolate 内
+按服务 client、桶、不可变文件路径和签名 TTL 复用链接，并合并同时发生的
+签名请求。最多保留 512 项，在真实过期前 60 秒更新；失败不写入缓存。
+头像仍使用 300 秒私有签名，聊天图片仍为 3600 秒，两个桶均保持 private。
+用户身份和数据库权限先验证，不缓存私人消息响应或绕过认证。
+`bsmart-social/chat.ts` 并行解析头像与聊天图片，不再逐轮询重复串行签名。
+
+本次从下载的线上源码打包，只修改这两个文件；profile v18、feed v44、
+search v19、social v21 均 ACTIVE，发布后回下载一致，未认证请求仍返回
+401/no-store。没有执行迁移或更改计算、磁盘及计费配置。
+
+iOS 用不可变头像文件路径作为图片缓存标识，不把轮换 token 当成新图片；
+其他桶、头像新版本和图片变换参数仍隔离。社交客户端复用 URLSession，
+最近聊天室按账号缓存 8 个最新页、4 分钟有效，仅保存在内存，随后刷新
+服务器；这不是跨重启消息持久化或离线消息队列。好友列表在聊天/查找页
+显示时停止轮询，后台刷新不反复切换骨架，相同快照不提交 UI。
+聊天室空闲 15 秒轮询、活跃 5 秒，失败逐级退避到最多 30 秒。
+服务端 50 项与 iOS 30 项相关回归通过；新客户端仍需新构建和真机验收。
+
 ## 固定 Relay 充值地址（2026-09-23 已部署）
 
 `bsmart-funding/address` 首次获取 Relay 开放式地址后，按账号、绑定钱包及
@@ -30,6 +51,16 @@ USDC 来源网络写入 `bsmart_funding_addresses`；刷新页面只读回已经
 发布成功不等于真实资金路径已验证。
 
 ## 热门观点与热门投资者榜单
+
+### 跨主体绝对 Score 榜单接口（2026-09-29）
+
+用户确认已执行 `202609290002_investor_ability_leaderboard.sql`。从线上版本 27
+下载 `bsmart-feed` 源码后，仅加入 `/ability-leaderboard` 与快照校验模块，再部署到
+账号项目；管理 API 确认版本 28、ACTIVE、`verify_jwt=false`，回读源码与发布包一致。
+函数内仍验证 Apple/Google 登录用户；未对本地工作树中尚未发布的直接下单、
+投资者快照等改动做整包部署。本机直连 Functions 域名被连接重置，尚未完成登录态
+HTTP 验收。无审计通过的评分快照时接口返回 `unpublished`，不得回退旧百分位分数。
+
 
 2026-09-22：用户已确认执行统计迁移；`bsmart-feed` 已部署，管理 API 确认
 版本 14、状态 ACTIVE（09:48:35 UTC）。部署后的无登录 HTTP 探测因本地连接
@@ -320,3 +351,58 @@ The runtime is entirely Supabase, without changes to signing or exchange submiss
 
 Rollback Edge and App together if needed; retain thesis tables and content.
 Contract and known scope: `docs/contracts/trade_thesis.md`.
+
+### Direct trade recording dependency
+
+2026-09-30: The user confirmed applying `202609280001_native_investors.sql`.
+`bsmart-feed` v29 was deployed from the downloaded v28 bundle with only
+`/orders/direct` and its direct-order verification additions. The deployed
+source was downloaded again and matched byte-for-byte; status is ACTIVE.
+The schema was not independently queried, and no real-wallet order was placed.
+The native-investor snapshot route in the local working tree was not included.
+
+2026-09-30: `bsmart-feed` v30 is ACTIVE. It was built from the downloaded v29
+bundle with only `GET /investors/snapshot` added; the downloaded v30 source
+matched the deployed bundle byte-for-byte. JWT verification remains disabled as
+before. The local `ability_leaderboard.ts` change was not deployed. The project
+type API confirms `bsmart_native_investor_snapshot()` exists, and the route has
+a passing handler test.
+
+2026-09-30: The live RPC returned the newly published ORCL thesis, but older
+opinion-linked trades returned `reducing: null` because their intent did not
+store `reduceOnly`. The iOS snapshot decoder requires a Boolean, so one older
+entry rejected the entire activity snapshot. `bsmart-feed` v32 normalizes the
+field to `false` at the endpoint; the downloaded deployment matches the source,
+and the user confirmed the ORCL card appears after refreshing the bSmart feed.
+The iOS decoder also accepts legacy null values for defense in depth.
+
+2026-09-30: `bsmart-feed` v35 is ACTIVE. The investor snapshot now projects
+verified fill prices, live position metrics when a position exists, realized
+P&L for verified closes, and the original activity reference. Direct orders
+created from politician, celebrity, institution, or bSmart activity carry only
+source IDs from iOS; registration resolves them against the published server
+snapshot and stores the canonical reference in `intent.baseActivity`. Orders
+started from an asset page omit that field. This change needs no additional
+SQL migration. The existing Connor AAPL order was linked to the uniquely
+matching Kevin Hern filing after confirming its account, ticker, and dates;
+its original order intent and execution remained unchanged.
+
+For a fresh environment, before releasing the in-app trader flow, apply
+`supabase/migrations/202609280001_native_investors.sql` to the iOS account project
+after `202609220004_trade_theses.sql`, then deploy the matching `bsmart-feed` function.
+The `/orders/direct` pre-submit check reads `bsmart_feed_orders.source_kind` and
+inserts direct orders with nullable `opinion_id` / `opinion`. If the migration is
+missing, the server returns `feed_unavailable` and intentionally does not submit
+the exchange order. Check the actual schema in SQL Editor; manually applied SQL
+may not appear in the CLI migration history:
+
+```sql
+select column_name, is_nullable
+from information_schema.columns
+where table_schema = 'public' and table_name = 'bsmart_feed_orders'
+  and column_name in ('source_kind', 'opinion_id', 'opinion')
+order by column_name;
+```
+
+`source_kind` must exist and the two opinion columns must be nullable. Do not
+test this path by placing a real order merely to check migration status.

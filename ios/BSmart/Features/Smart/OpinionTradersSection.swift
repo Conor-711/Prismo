@@ -46,9 +46,9 @@ struct OpinionTradersSection: View {
                 }
                 .navigationTitle("Demo data".bSmartLocalized)
                 .toolbar {
-                    ToolbarItem(placement: .confirmationAction) {
+                    ToolbarItem(placement: .confirmationAction) { Group {
                         Button("Done".bSmartLocalized) { showDemo = false }
-                    }
+                    }.buttonStyle(.bSmartToolbar) }.bSmartHideSystemBackground()
                 }
             }
         }
@@ -87,7 +87,7 @@ struct OpinionTradersSection: View {
                 .foregroundStyle(BSmartColor.primaryText)
                 .frame(minHeight: 44)
                 .contentShape(Rectangle())
-            }.buttonStyle(.plain).accessibilityIdentifier("opinion.traders.expand")
+            }.buttonStyle(.bSmartPlain).accessibilityIdentifier("opinion.traders.expand")
             if failed {
                 HStack {
                     Text("Trade statistics unavailable".bSmartLocalized)

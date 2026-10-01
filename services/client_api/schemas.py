@@ -172,52 +172,6 @@ class DailyDigestSnapshot(APIModel):
     signals: list[dict[str, Any]]
 
 
-class MrCollieConversationTurn(APIModel):
-    role: Literal["user", "assistant"]
-    content: str = Field(min_length=1, max_length=2_400)
-
-    @field_validator("content")
-    @classmethod
-    def normalize_content(cls, value: str) -> str:
-        return value.strip()
-
-
-class MrCollieQuery(APIModel):
-    question: str = Field(min_length=1, max_length=1_500)
-    locale: str = Field(default="en", min_length=2, max_length=32)
-    conversation: list[MrCollieConversationTurn] = Field(default_factory=list, max_length=8)
-
-    @field_validator("question")
-    @classmethod
-    def normalize_question(cls, value: str) -> str:
-        return value.strip()
-
-
-class MrCollieEvidence(APIModel):
-    id: str
-    source: Literal["Smart Account", "Smart Money"]
-    source_type: Literal["smart_account", "smart_money"] = Field(alias="sourceType")
-    title: str
-    detail: str
-    metric: str | None = None
-    observed_at: datetime | None = Field(default=None, alias="observedAt")
-
-
-class MrCollieResponse(APIModel):
-    question: str
-    title: str
-    summary: str
-    context: str | None = None
-    next_step: str = Field(alias="nextStep")
-    ticker: str | None = None
-    signal_id: UUID | None = Field(default=None, alias="signalId")
-    evidence: list[MrCollieEvidence]
-    generated_at: datetime = Field(alias="generatedAt")
-    data_as_of: datetime = Field(alias="dataAsOf")
-    context_version: str = Field(alias="contextVersion")
-    model: str
-
-
 class HealthResponse(APIModel):
     status: Literal["ok"]
     environment: str

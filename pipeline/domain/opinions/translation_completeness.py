@@ -24,6 +24,8 @@ _MONTH_ALIASES = {"1": "Jan(?:uary)?", "2": "Feb(?:ruary)?", "3": "Mar(?:ch)?",
 
 def numeric_tokens(value: str) -> set[str]:
     value = re.sub(r"https?://\S+", "", value)
+    # Reddit may italicize part of a number: 09/2*9* still means 09/29.
+    value = re.sub(r"(?<=\d)(\*{1,2}|_{1,2})(\d+)\1(?!\d)", r"\2", value)
     tokens = re.findall(r"(?<![\d.])(?:\d+(?:,\d{3})*(?:\.\d+)?|\.\d+)", value)
     return {(f"0{token}" if token.startswith(".") else token).replace(",", "") for token in tokens}
 
@@ -52,6 +54,10 @@ def missing_numeric_tokens(original: str, translated: str) -> set[str]:
                 missing.remove(token)
                 continue
         numeral = _SMALL_ZH.get(token)
+        if token == "2" and re.search(r"\b2\s+names?\b", original, re.I):
+            if re.search(r"(?:两|二)(?:只|个)(?:股票|标的|名称|名字|公司|股)", translated):
+                missing.remove(token)
+                continue
         if numeral and re.search(rf"\bphase\s+{token}\b", original, re.I):
             if re.search(rf"(?:第?{numeral}(?:期|阶段))", translated):
                 missing.remove(token)

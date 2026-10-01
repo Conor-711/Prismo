@@ -1,3 +1,4 @@
+import Combine
 import XCTest
 @testable import BSmart
 
@@ -43,7 +44,7 @@ final class ActivityNotificationTests: XCTestCase {
     }
 
     func testLegacyHandleMatchRequiresSamePlatform() {
-        let profile = SmartAccountProfile(id: "legacy", name: "Investor", handle: "@author", platform: "Twitter",
+        let profile = SmartAccountProfile(id: "legacy", name: "Investor", handle: "@AUTHOR", platform: "Twitter",
             score: 100, scoreChange: 0, specialty: "Tech", horizon: "20D", recentTicker: "NVDA")
         let result = ActivityNotification.build(updates: [update(), update(platform: "YouTube")], movements: [],
             followedAccounts: ["legacy"], followedMoney: [], heldTickers: [], profiles: [profile], now: now)
@@ -85,6 +86,27 @@ final class ActivityNotificationTests: XCTestCase {
         XCTAssertEqual(store.unreadCount, 2)
         store.replace([])
         XCTAssertEqual(store.unreadCount, 0)
+    }
+
+    func testRepeatedReadAndUnchangedSnapshotDoNotRepublish() throws {
+        let suite = "notification-publishing-tests-\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = ActivityNotificationStore(defaults: defaults)
+        let items = build([update(), update(age: 20)], [], held: ["NVDA"])
+        store.activate(scope: "A")
+        store.replace(items)
+        store.markAllRead()
+        var publications = 0
+        let observer = store.objectWillChange.sink { publications += 1 }
+        store.replace(items)
+        store.markRead(items[0])
+        store.markAllRead()
+        XCTAssertEqual(publications, 0)
+        XCTAssertEqual(store.unreadCount, 0)
+        withExtendedLifetime(observer) {}
+        store.replace(items + build([update(age: 1)], [], held: ["NVDA"]))
+        XCTAssertEqual(store.unreadCount, 1)
     }
 
     func testFollowersJoinAllNotificationsWithoutBecomingTrackedOrHeldActivity() {

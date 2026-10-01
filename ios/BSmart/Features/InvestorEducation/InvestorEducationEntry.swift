@@ -25,7 +25,7 @@ struct InvestorEducationEntry: View {
             .frame(minHeight: 44)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.bSmartPlain)
         .accessibilityLabel("Questions about the rankings?".bSmartLocalized)
         .accessibilityIdentifier("discovery.education")
     }

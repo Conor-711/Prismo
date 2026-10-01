@@ -53,3 +53,50 @@ def test_telegram_uses_frozen_snapshot_without_recomputing_rank(tmp_path, monkey
     assert receipt['selectedRows'] == 1
     assert receipt['rankingAt'] == '2026-09-23T00:00:00Z'
     assert json.loads(selected.read_text())['author_id'] == 'top'
+
+
+def test_expanded_roster_selects_each_new_top_quartile_and_keeps_legacy_snapshot(tmp_path, monkeypatch):
+    monkeypatch.setattr(telegram, 'ROOT', tmp_path)
+    snapshot = tmp_path / 'data/inbox/x/ranking-snapshot.json'
+    snapshot.parent.mkdir(parents=True)
+    snapshot.write_text(json.dumps({'rankingAt': '2026-09-23T00:00:00Z',
+                                    'rankedAuthorIds': ['legacy']}))
+    package = tmp_path / 'expanded.zip'
+    authors = ['legacy', 'stock1', 'stock2', 'stock3', 'stock4',
+               'crypto1', 'crypto2', 'crypto3', 'crypto4']
+    roster = 'user_id,selection_group,rank,language\n' + ''.join(
+        f'{group}{rank},{group},{rank},{"zh" if group == "stock" else "en"}\n'
+        for group in ('stock', 'crypto') for rank in range(1, 5))
+    with zipfile.ZipFile(package, 'w') as archive:
+        archive.writestr('roster.csv', roster)
+        archive.writestr('tweets.jsonl', '\n'.join(
+            json.dumps(post(str(index), author)) for index, author in enumerate(authors, 1)) + '\n')
+
+    selected = tmp_path / 'selected.jsonl'
+    receipt = _filter_ranked_posts(package, selected, tmp_path)
+    assert receipt['selectedRowsByCohort'] == {
+        'english_stock': 1, 'chinese_stock': 1, 'crypto': 1}
+    assert receipt['rankedAuthorsByCohort'] == {
+        'english_stock': 1, 'chinese_stock': 1, 'crypto': 1}
+    assert {json.loads(line)['author_id'] for line in selected.read_text().splitlines()} == {
+        'legacy', 'stock1', 'crypto1'}
+
+    manual = prepare(package, snapshot, tmp_path / 'prepared', chunk_rows=2)
+    assert manual['selectedRows'] == 3
+    assert manual['selectedRowsByCohort'] == receipt['selectedRowsByCohort']
+    assert [part['rows'] for part in manual['parts']] == [2, 1]
+
+
+def test_expanded_roster_rejects_duplicate_ranks(tmp_path):
+    from pipeline.domain.smart_voice.x_delivery_scope import ranked_expanded_cohorts
+
+    with pytest.raises(ValueError, match='Invalid stock cohort roster'):
+        ranked_expanded_cohorts([{'user_id': 'one', 'selection_group': 'stock', 'rank': '1'},
+                                 {'user_id': 'two', 'selection_group': 'stock', 'rank': '1'}])
+
+    from pipeline.platforms.x.expanded_roster import read_expanded_roster
+    package = tmp_path / 'incomplete.zip'
+    with zipfile.ZipFile(package, 'w') as archive:
+        archive.writestr('roster.csv', 'user_id,selection_group\none,stock\n')
+    with pytest.raises(ValueError, match='Incomplete X cohort roster columns'):
+        read_expanded_roster(package)

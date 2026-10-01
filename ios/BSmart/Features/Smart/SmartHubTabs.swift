@@ -39,7 +39,7 @@ struct SmartHubTabs: View {
                                 }
                             }
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.bSmartPlain)
                         .id(section)
                         .accessibilityLabel(section.rawValue)
                         .accessibilityIdentifier("smart.section.\(section.key)")

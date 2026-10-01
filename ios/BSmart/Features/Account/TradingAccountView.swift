@@ -18,7 +18,7 @@ struct TradingAccountView: View {
                         AccountBrandHeader()
                         NavigationLink { AccountDeletionView() } label: {
                             AccountActionRow(title: "Account deletion", symbol: "person.crop.circle.badge.minus")
-                        }.buttonStyle(.plain)
+                        }.buttonStyle(.bSmartPlain)
                         if account.identity != nil {
                             Button("Sign out".bSmartLocalized) { Task { await account.signOut() } }
                                 .disabled(account.isBusy)
@@ -59,12 +59,13 @@ struct TradingAccountView: View {
         .onDisappear {
             if !showsSetup { signInTask?.cancel(); signInTask = nil }
         }
-        .alert("Account".bSmartLocalized, isPresented: Binding(
+        .bSmartAlert("Account".bSmartLocalized, isPresented: Binding(
             get: { account.errorMessage != nil }, set: { if !$0 { account.errorMessage = nil } }
         )) {
             Button("OK".bSmartLocalized) { account.errorMessage = nil }
         } message: { Text(account.errorMessage ?? "") }
         .accessibilityIdentifier("account.screen")
+        .bSmartDetailPage(enabled: !isAppEntry, allowsBack: !account.isBusy)
         .bSmartPage()
     }
 
@@ -83,19 +84,6 @@ struct TradingAccountView: View {
                     AccountAppleButton(isEnabled: !account.isBusy && account.configuration.providers.contains(.apple)) {
                         signIn(.apple)
                     }
-                }
-                if account.isTestSession {
-                    Button("Exit test login".bSmartLocalized) { Task { await account.signOut() } }
-                        .frame(maxWidth: .infinity, minHeight: 48)
-                        .accessibilityIdentifier("account.test-signout")
-                } else if isAppEntry && account.identity == nil {
-                    Button("Test login".bSmartLocalized) { account.startTestSession() }
-                        .font(.body.weight(.medium))
-                        .foregroundStyle(BSmartColor.brand)
-                        .frame(maxWidth: .infinity, minHeight: 48)
-                        .background(BSmartColor.brand.opacity(0.08), in: Capsule())
-                        .disabled(account.isBusy || !account.didLoad)
-                        .accessibilityIdentifier("account.signin.test")
                 }
                 if !account.isBusy && account.didLoad && account.configuration.providers.isEmpty {
                     Label("Account sign-in is not available yet.".bSmartLocalized, systemImage: "exclamationmark.circle")
@@ -160,7 +148,7 @@ struct TradingAccountView: View {
                     }.padding(16)
                 }
                 .background(BSmartColor.surface, in: RoundedRectangle(cornerRadius: 20))
-                .buttonStyle(.plain)
+                .buttonStyle(.bSmartPlain)
 
                 if !profile.needsSetup {
                     NavigationLink { TradingWalletView() } label: {
@@ -179,7 +167,7 @@ struct TradingAccountView: View {
                     Text("Profile is unavailable. Please try again.".bSmartLocalized)
                         .multilineTextAlignment(.center)
                     Button("Retry".bSmartLocalized) { Task { await loadProfile() } }
-                        .buttonStyle(.bordered).tint(BSmartColor.brand)
+                        .buttonStyle(.bSmartSecondary).tint(BSmartColor.brand)
                 }
                 .foregroundStyle(BSmartColor.secondaryText)
                 .frame(maxWidth: .infinity).padding(.vertical, 32)
@@ -199,7 +187,7 @@ struct TradingAccountView: View {
                 }
             }
             .background(BSmartColor.surface, in: RoundedRectangle(cornerRadius: 20))
-            .buttonStyle(.plain)
+            .buttonStyle(.bSmartPlain)
         }
     }
 

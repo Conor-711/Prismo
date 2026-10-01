@@ -6,6 +6,7 @@ struct AppRootView: View {
     @EnvironmentObject private var account: AccountAccessStore
     @Environment(\.scenePhase) private var phase
     @State private var floatingNavigationFrame = CGRect.null
+    @State private var visitedSections: Set<AppSection> = [.today]
     @StateObject private var globalChatUnread = GlobalChatUnreadStore()
 
     private var globalChatPollKey: String {
@@ -75,6 +76,12 @@ struct AppRootView: View {
                     }
                 }
                 .environmentObject(globalChatUnread)
+                .onChange(of: router.selection, initial: true) { _, section in
+                    visitedSections.insert(section)
+                }
+                .onChange(of: account.identity?.id) { _, _ in
+                    visitedSections = [.today, router.selection]
+                }
                 .task(id: globalChatPollKey) {
                     let accountID = account.identity?.id
                     globalChatUnread.activate(accountID: accountID)
@@ -110,15 +117,30 @@ struct AppRootView: View {
     ) -> some View {
         let isSelected = router.selection == section
 
-        return content()
-            .ignoresSafeArea(.keyboard, edges: isSelected ? [] : .bottom)
-            .opacity(isSelected ? 1 : 0)
-            .allowsHitTesting(isSelected)
-            .accessibilityHidden(!isSelected)
-            .zIndex(isSelected ? 1 : 0)
-            .transaction { transaction in
-                transaction.animation = nil
+        return Group {
+            // Mount on first visit, then retain navigation, filters and scroll state.
+            if isSelected || visitedSections.contains(section) {
+                content()
+                    .environment(\.bSmartPageIsActive, isSelected)
+                    .ignoresSafeArea(.keyboard, edges: isSelected ? [] : .bottom)
+                    .opacity(isSelected ? 1 : 0)
+                    .allowsHitTesting(isSelected)
+                    .accessibilityHidden(!isSelected)
+                    .zIndex(isSelected ? 1 : 0)
+                    .transaction { transaction in transaction.animation = nil }
             }
+        }
+    }
+}
+
+private struct BSmartPageActivityKey: EnvironmentKey {
+    static let defaultValue = true
+}
+
+extension EnvironmentValues {
+    var bSmartPageIsActive: Bool {
+        get { self[BSmartPageActivityKey.self] }
+        set { self[BSmartPageActivityKey.self] = newValue }
     }
 }
 
@@ -146,9 +168,9 @@ private struct BSmartTabBar: View {
             ),
             BSmartTabItem(
                 section: .feed,
-                label: language.localized("Discover"),
-                symbol: "rectangle.stack",
-                selectedSymbol: "rectangle.stack.fill"
+                label: language.localized("Leaderboard"),
+                symbol: "chart.bar.xaxis",
+                selectedSymbol: "chart.bar.xaxis"
             ),
             BSmartTabItem(
                 section: .friends,
@@ -240,16 +262,22 @@ private struct BSmartTabBar: View {
             selection = item.section
         } label: {
             ZStack {
-                Image(systemName: isSelected ? item.selectedSymbol : item.symbol)
-                    .font(.system(size: 25, weight: isSelected ? .bold : .medium))
-                    .symbolRenderingMode(.monochrome)
-                    .frame(width: 31, height: 31)
-                    .overlay(alignment: .topTrailing) {
-                        if item.section == .friends && globalChatUnread.hasUnread {
-                            Circle().fill(BSmartColor.bear)
-                                .frame(width: 7, height: 7)
-                                .offset(x: 3, y: -2)
-                                .accessibilityHidden(true)
+                if item.section == .feed {
+                    LeaderboardStepsMark()
+                        .fill(isSelected ? BSmartColor.tabSelectedForeground : BSmartColor.tabInactiveForeground)
+                        .frame(width: 29, height: 29)
+                } else {
+                    Image(systemName: isSelected ? item.selectedSymbol : item.symbol)
+                        .font(.system(size: 25, weight: isSelected ? .bold : .medium))
+                        .symbolRenderingMode(.monochrome)
+                        .frame(width: 31, height: 31)
+                        .overlay(alignment: .topTrailing) {
+                            if item.section == .friends && globalChatUnread.hasUnread {
+                                Circle().fill(BSmartColor.bear)
+                                    .frame(width: 7, height: 7)
+                                    .offset(x: 3, y: -2)
+                                    .accessibilityHidden(true)
+                            }
                         }
                     }
             }
@@ -258,7 +286,7 @@ private struct BSmartTabBar: View {
             .frame(height: 52)
             .contentShape(Capsule())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.bSmartPlain)
         .accessibilityLabel(item.label)
         .accessibilityValue(item.section == .friends && globalChatUnread.hasUnread
                             ? "Unread messages".bSmartLocalized : "")
@@ -294,6 +322,23 @@ private struct BSmartTabBar: View {
                     )
             }
             .shadow(color: BSmartColor.compactShadow, radius: 4, x: 0, y: 2)
+    }
+}
+
+private struct LeaderboardStepsMark: Shape {
+    func path(in rect: CGRect) -> Path {
+        let w = rect.width, h = rect.height
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX + 0.06 * w, y: rect.minY + 0.9 * h))
+        path.addLine(to: CGPoint(x: rect.minX + 0.06 * w, y: rect.minY + 0.67 * h))
+        path.addLine(to: CGPoint(x: rect.minX + 0.34 * w, y: rect.minY + 0.67 * h))
+        path.addLine(to: CGPoint(x: rect.minX + 0.34 * w, y: rect.minY + 0.44 * h))
+        path.addLine(to: CGPoint(x: rect.minX + 0.62 * w, y: rect.minY + 0.44 * h))
+        path.addLine(to: CGPoint(x: rect.minX + 0.62 * w, y: rect.minY + 0.2 * h))
+        path.addLine(to: CGPoint(x: rect.minX + 0.94 * w, y: rect.minY + 0.2 * h))
+        path.addLine(to: CGPoint(x: rect.minX + 0.94 * w, y: rect.minY + 0.9 * h))
+        path.closeSubpath()
+        return path
     }
 }
 

@@ -1,5 +1,7 @@
 import Foundation
 
+enum HyperliquidOrderStatusError: Error { case notFound }
+
 struct HyperliquidOrderStatus: Sendable {
     let orderID: UInt64
     let status: String
@@ -7,6 +9,7 @@ struct HyperliquidOrderStatus: Sendable {
     static func decode(_ data: Data, order: HyperliquidOrderIntent) throws -> Self {
         guard data.count <= 8192 else { throw HyperliquidExecutionError.invalidAcknowledgement }
         let value = try JSONDecoder().decode(Response.self, from: data)
+        if value.status == "unknownOid", value.order == nil { throw HyperliquidOrderStatusError.notFound }
         guard value.status == "order", let result = value.order else { throw HyperliquidLiveOrderError.recoveryRequired }
         let row = result.order
         guard HyperliquidOrderIdentifier.matches(row.cloid, order.cloid), row.coin == order.market.coin, row.side == (order.side == .buy ? "B" : "A"),

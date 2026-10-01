@@ -98,7 +98,7 @@ struct SmartAccountAboutSection: View {
                                         .foregroundStyle(update.settlement?.actualHit == false ? BSmartColor.bear : update.direction.color)
                                     Image(systemName: "chevron.right").font(.caption)
                                 }.padding(.vertical, 12).contentShape(Rectangle())
-                            }.buttonStyle(.plain)
+                            }.buttonStyle(.bSmartPlain)
                                 .accessibilityIdentifier("smart.account.history.item.\(update.id)")
                             Divider().overlay(BSmartColor.line)
                         }

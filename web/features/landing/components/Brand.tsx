@@ -2,7 +2,7 @@ import { BASE_PATH } from "@/lib/site";
 import styles from "../landing.module.css";
 
 export function Brand() {
-  return <span className={styles.brand}><img src={`${BASE_PATH}/brand/bsmart-wordmark.png`} alt="bSmart" width="991" height="228" /></span>;
+  return <span className={styles.brand}><img src={`${BASE_PATH}/brand/bsmart-wordmark.svg`} alt="bSmart" width="991" height="228" /></span>;
 }
 
 export function Arrow({ diagonal = false }: { diagonal?: boolean }) {

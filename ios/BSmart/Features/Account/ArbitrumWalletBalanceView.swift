@@ -18,7 +18,7 @@ struct ArbitrumWalletBalanceView: View {
                     if balances.isLoading { ProgressView().frame(width: 44, height: 44) }
                     else { Image(systemName: "arrow.clockwise").frame(width: 44, height: 44) }
                 }
-                .buttonStyle(.plain).foregroundStyle(BSmartColor.brand)
+                .buttonStyle(.bSmartPlain).foregroundStyle(BSmartColor.brand)
                 .disabled(balances.isLoading)
                 .accessibilityLabel("Check wallet balances".bSmartLocalized)
                 .accessibilityIdentifier("wallet.check-balances")

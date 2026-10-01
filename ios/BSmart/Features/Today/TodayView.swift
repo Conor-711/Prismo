@@ -3,115 +3,45 @@ import SwiftUI
 struct TodayView: View {
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var router: AppRouter
-    @State private var holdingsRefreshID = UUID()
-
-    private var portfolioPositions: [PortfolioPosition] {
-        let heldTickers = Set(model.heldPositions.map { $0.ticker.uppercased() })
-        return model.heldPositions + model.watchlist.filter {
-            !heldTickers.contains($0.ticker.uppercased())
-        }
-    }
-
-    private var trackedActivities: [TodayActivity] {
-        var updatesByID = Dictionary(uniqueKeysWithValues: model.smartAccountUpdates.map { ($0.id, $0) })
-        for (accountID, updates) in model.smartAccountEvidenceByAuthor where
-            model.followedSmartAccountIDs.contains(where: {
-                $0.caseInsensitiveCompare(accountID) == .orderedSame
-            }) {
-            for update in updates {
-                updatesByID[update.id] = update
-            }
-        }
-
-        return TodayActivity.latestTrackedActivities(
-            accountUpdates: Array(updatesByID.values),
-            moneyMovements: model.smartMoneyMovements,
-            smartAccounts: model.smartAccounts,
-            followedAccountIDs: model.followedSmartAccountIDs,
-            followedMoneyIDs: model.followedSmartMoneyIDs
-        )
-        .filter(\.isSmartAccount)
-    }
-
-    private var trackedAccountRecommendations: [SmartAccountProfile] {
-        model.smartAccounts
-            .filter { account in
-                !model.followedSmartAccountIDs.contains(where: {
-                    $0.caseInsensitiveCompare(account.id) == .orderedSame
-                })
-            }
-            .sorted { lhs, rhs in
-                let lhsRank = lhs.resolvedRank > 0 ? lhs.resolvedRank : .max
-                let rhsRank = rhs.resolvedRank > 0 ? rhs.resolvedRank : .max
-                if lhsRank != rhsRank { return lhsRank < rhsRank }
-                return lhs.score > rhs.score
-            }
-            .prefix(4)
-            .map { $0 }
-    }
-
-    private var followedAccountSyncKey: String {
-        model.followedSmartAccountIDs.map { $0.lowercased() }.sorted().joined(separator: "|")
-    }
-
-    private var viewpointPackages: [TodayViewpointPackage] {
-        return TodayViewpointPackage.packages(
-            from: model.smartAccountUpdates,
-            maximumPackages: 10
-        )
-    }
-
-    private var alphaOpportunities: [TodayAlphaOpportunity] {
-        TodayAlphaOpportunity.opportunities(
-            accountUpdates: model.smartAccountUpdates,
-            moneyMovements: model.smartMoneyMovements,
-            excluding: Set(portfolioPositions.map { $0.ticker.uppercased() })
-        )
-    }
-
+    @EnvironmentObject private var account: AccountAccessStore
+    @EnvironmentObject private var trading: HyperliquidTradingStore
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.bSmartPageIsActive) private var isPageActive
+    @StateObject private var ownerPortfolio = OwnerPortfolioStore()
+    @State private var section: TodayHomeSection = .activity
+    @State private var isShowingDeposit = false
 
     var body: some View {
         NavigationStack(path: $router.todayPath) {
             TodayHomeContent(
-                header: { viewport in
-                    VStack(alignment: .leading, spacing: viewport.height < 700 ? BSmartSpacing.small : BSmartSpacing.medium) {
+                selection: $section,
+                header: { _ in
+                    VStack(alignment: .leading, spacing: 12) {
                         pageHeader
-                        TodayInvestorDiscoveryModule(compact: viewport.height < 700)
+                        accountOverview
+                        TodayHomeTrends(section: section)
                     }
-                    .padding(.horizontal, BSmartSpacing.large)
-                    .padding(.vertical, viewport.height < 700 ? BSmartSpacing.small : BSmartSpacing.large)
+                        .padding(.horizontal, BSmartSpacing.large)
+                        .padding(.top, BSmartSpacing.small)
+                        .padding(.bottom, BSmartSpacing.small)
                 },
                 content: { section in
                     switch section {
-                    case .portfolio:
-                        VStack(alignment: .leading, spacing: BSmartSpacing.large) {
-                            TodayHoldingsActivityModule(refreshID: holdingsRefreshID)
-                            TodayTrackedActivityModule(
-                                activities: trackedActivities,
-                                recommendations: trackedAccountRecommendations
-                            )
-                        }
-                    case .market:
-                        TodayMarketActivityView(packages: viewpointPackages, opportunities: alphaOpportunities)
-                    case .investors:
+                    case .activity:
                         TodayInvestorActivityModule()
+                    case .assets:
+                        AllTickersView()
                     }
                 },
                 refresh: {
                     await model.refreshLiveIntelligence()
-                    holdingsRefreshID = UUID()
+                    await ownerPortfolio.load(account: account, force: true)
+                    if section == .assets { await trading.loadFullCatalog() }
                 }
             )
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier("today.screen")
             .background(BSmartColor.ink)
-            .task(id: followedAccountSyncKey) {
-                for account in model.smartAccounts where model.followedSmartAccountIDs.contains(where: {
-                    $0.caseInsensitiveCompare(account.id) == .orderedSame
-                }) {
-                    await model.loadSmartAccountEvidence(for: account)
-                }
-            }
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: TodayRoute.self) { route in
                 switch route {
@@ -120,11 +50,36 @@ struct TodayView: View {
                 }
             }
             .task(id: router.pendingSignalID) {
-                router.resolvePendingSignal(from: model.signals)
+                router.resolvePendingSignal(from: model.signals.filter(\.isVisibleInProduct))
             }
             .onChange(of: model.signals) { _, signals in
-                router.resolvePendingSignal(from: signals)
+                router.resolvePendingSignal(from: signals.filter(\.isVisibleInProduct))
             }
+        }
+        .sheet(isPresented: $isShowingDeposit) {
+            NavigationStack {
+                PortfolioAppAccountView()
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) { Group {
+                            Button("Done".bSmartLocalized) { isShowingDeposit = false }
+                        }.buttonStyle(.bSmartToolbar) }.bSmartHideSystemBackground()
+                    }
+            }
+            .presentationDetents([.large])
+        }
+        .task(id: "\(account.identity?.id.uuidString ?? "signed-out")-\(account.isBusy)-\(account.feedRevision)-\(isPageActive)") {
+            guard isPageActive, !account.isBusy else { return }
+            await ownerPortfolio.load(account: account)
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active, isPageActive { Task { await ownerPortfolio.load(account: account, force: true) } }
+        }
+        .onChange(of: isShowingDeposit) { _, isShowing in
+            if !isShowing { Task { await ownerPortfolio.load(account: account, force: true) } }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .bSmartTradeFilled)) { _ in
+            if isPageActive { Task { await ownerPortfolio.load(account: account, force: true) } }
+            else { ownerPortfolio.clear() }
         }
         .dynamicTypeSize(...DynamicTypeSize.accessibility2)
         .bSmartPage()
@@ -132,11 +87,8 @@ struct TodayView: View {
 
     private var pageHeader: some View {
         HStack(alignment: .center, spacing: BSmartSpacing.medium) {
-            BSmartPageTitle(
-                eyebrow: "",
-                title: "Today",
-                subtitle: "Recent Smart Account views for stocks you track"
-            )
+            BSmartWordmark(fontSize: 26)
+                .accessibilityIdentifier("today.wordmark")
 
             Spacer()
 
@@ -145,6 +97,339 @@ struct TodayView: View {
         .frame(minHeight: 44)
     }
 
+    private var accountOverview: some View {
+        HStack(alignment: .center, spacing: 16) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Account value".bSmartLocalized)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(BSmartColor.secondaryText)
+                Text(accountValue)
+                    .font(.system(size: 31, weight: .semibold, design: .rounded))
+                    .foregroundStyle(BSmartColor.primaryText)
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.65)
+                    .contentTransition(.numericText())
+                    .accessibilityIdentifier("today.account-value")
+                Group {
+                    if ownerPortfolio.failed || ownerPortfolio.hasUnavailableAccountValue {
+                        Button {
+                            Task { await ownerPortfolio.load(account: account, force: true) }
+                        } label: {
+                            Label("Retry".bSmartLocalized, systemImage: "arrow.clockwise")
+                                .frame(minHeight: 28, alignment: .leading)
+                        }
+                        .buttonStyle(.bSmartPlain)
+                        .disabled(ownerPortfolio.isLoading)
+                        .accessibilityIdentifier("today.account-value.retry")
+                    } else {
+                        Text(accountDayChange)
+                            .foregroundStyle(accountDayChangeColor)
+                            .monospacedDigit()
+                            .accessibilityIdentifier("today.account-day-change")
+                    }
+                }
+                .font(.system(size: 11, weight: .medium))
+                .lineLimit(1)
+                .frame(height: 28, alignment: .leading)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Button { isShowingDeposit = true } label: {
+                Label("Deposit".bSmartLocalized, systemImage: "plus.circle.fill")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(BSmartColor.onAccent)
+                    .frame(minWidth: 132, minHeight: 48)
+                    .background(BSmartColor.brand, in: RoundedRectangle(cornerRadius: 8))
+            }
+            .buttonStyle(.bSmartPlain)
+            .accessibilityIdentifier("today.deposit")
+        }
+        .frame(minHeight: 68)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("today.account-overview")
+    }
+
+    private var accountValue: String {
+        guard ownerPortfolio.accountID == account.identity?.id,
+              let portfolio = ownerPortfolio.portfolio, portfolio.status == .ready,
+              let raw = portfolio.accountValueUSD,
+              let value = Double(raw), value.isFinite else { return "--" }
+        return value.formatted(.bSmartDollars.precision(.fractionLength(2)))
+    }
+
+    private var accountDayChange: String {
+        guard ownerPortfolio.accountID == account.identity?.id,
+              let portfolio = ownerPortfolio.portfolio, portfolio.status == .ready,
+              let raw = portfolio.dayChangeUSD,
+              let change = Double(raw), change.isFinite else { return "-- · " + "24 hours".bSmartLocalized }
+        return change.formatted(.bSmartDollars.sign(strategy: .always()).precision(.fractionLength(2)))
+            + " · " + "24 hours".bSmartLocalized
+    }
+
+    private var accountDayChangeColor: Color {
+        guard ownerPortfolio.accountID == account.identity?.id,
+              let raw = ownerPortfolio.portfolio?.dayChangeUSD,
+              let change = Double(raw), change.isFinite else { return BSmartColor.secondaryText }
+        return change < 0 ? BSmartColor.bear : BSmartColor.bull
+    }
+}
+
+private struct TodayHomeTrends: View {
+    @EnvironmentObject private var model: AppModel
+    @EnvironmentObject private var trading: HyperliquidTradingStore
+    @Environment(\.bSmartPageIsActive) private var isPageActive
+    @State private var assets: [AppTickerCatalogEntry] = []
+    @State private var activities: [TodayHomeFeedItem] = []
+    @State private var builtTrendsKey: TrendsKey?
+    let section: TodayHomeSection
+
+    private struct TrendsKey: Hashable {
+        let section: TodayHomeSection
+        let active: Bool
+        let feed, catalog: Int
+        let refreshed: Date?
+    }
+
+    private var trendsKey: TrendsKey {
+        .init(section: section, active: isPageActive, feed: model.todayFeedRevision,
+              catalog: trading.catalogRevision, refreshed: model.lastDataRefreshAt)
+    }
+
+    nonisolated private static func trendingAssets(_ catalog: [AppTickerCatalogEntry]) -> [AppTickerCatalogEntry] {
+        catalog
+            .filter { ($0.price ?? 0) > 0 && $0.dayChange != nil && ($0.volume24h ?? 0) >= 1_000_000 }
+            .sorted { lhs, rhs in
+                let left = trendScore(lhs), right = trendScore(rhs)
+                return left == right ? lhs.symbol < rhs.symbol : left > right
+            }
+            .prefix(8)
+            .map { $0 }
+    }
+
+    nonisolated private static func trendScore(_ entry: AppTickerCatalogEntry) -> Double {
+        min(abs(entry.dayChange ?? 0), 0.3) * log10(max(entry.volume24h ?? 1, 1))
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text((section == .activity ? "Trending activity" : "Trending assets").bSmartLocalized)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(BSmartColor.primaryText)
+            if section == .activity {
+                if activities.isEmpty { emptyState }
+                else {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        LazyHStack(spacing: 10) {
+                            ForEach(activities) { item in activityDestination(for: item) }
+                        }
+                    }
+                    .frame(height: 84)
+                }
+            } else {
+                if assets.isEmpty { emptyState }
+                else {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        LazyHStack(spacing: 10) {
+                            ForEach(assets) { entry in
+                                BSmartDetailNavigationLink(id: "today-trend-asset-\(entry.symbol)") {
+                                    TickerDestinationView(symbol: entry.symbol)
+                                } label: {
+                                    assetCard(entry)
+                                }
+                                .buttonStyle(.bSmartPlain)
+                            }
+                        }
+                    }
+                    .frame(height: 84)
+                }
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("today.trending.\(section.rawValue)")
+        .task(id: trendsKey) {
+            let key = trendsKey
+            guard key.active, builtTrendsKey != key else { return }
+            if section == .assets {
+                let catalog = model.tickerCatalog(markets: trading.marketCatalog)
+                let worker = Task.detached(priority: .userInitiated) { Self.trendingAssets(catalog) }
+                let result = await withTaskCancellationHandler { await worker.value } onCancel: { worker.cancel() }
+                guard !Task.isCancelled, key == trendsKey else { return }
+                assets = result
+            } else {
+                let updates = model.smartAccountUpdates
+                let movements = BSmartProductVisibility.onchainSmartMoney ? model.smartMoneyMovements : []
+                let snapshot = model.subjectActivitySnapshot
+                let worker = Task.detached(priority: .userInitiated) {
+                    TodayHomeTrendOrder.activities(updates: updates, movements: movements, snapshot: snapshot)
+                }
+                let result = await withTaskCancellationHandler { await worker.value } onCancel: { worker.cancel() }
+                guard !Task.isCancelled, key == trendsKey else { return }
+                activities = result
+            }
+            builtTrendsKey = key
+        }
+    }
+
+    private var emptyState: some View {
+        Text((section == .activity ? "No trending activity" : "No trending assets").bSmartLocalized)
+            .font(.subheadline)
+            .foregroundStyle(BSmartColor.secondaryText)
+            .frame(maxWidth: .infinity, minHeight: 84, alignment: .leading)
+    }
+
+    private func assetCard(_ entry: AppTickerCatalogEntry) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 7) {
+                BSmartAssetMark(ticker: entry.symbol, size: 26, isCrypto: entry.isCrypto)
+                    .clipShape(Circle())
+                Text(entry.symbol)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(BSmartColor.primaryText)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 0)
+            HStack(alignment: .firstTextBaseline) {
+                Text(entry.price?.bSmartMarketPrice ?? "--")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(BSmartColor.primaryText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                Spacer(minLength: 4)
+                if let change = entry.dayChange {
+                    Text(change.formatted(.percent.precision(.fractionLength(1)).sign(strategy: .always())))
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(change >= 0 ? BSmartColor.bull : BSmartColor.bear)
+                        .lineLimit(1)
+                }
+            }
+            .monospacedDigit()
+        }
+        .padding(10)
+        .frame(width: 176, height: 84)
+        .background(BSmartColor.surface, in: RoundedRectangle(cornerRadius: 8))
+        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(BSmartColor.line, lineWidth: 0.7))
+        .accessibilityIdentifier("today.trend-asset.\(entry.symbol)")
+    }
+
+    @ViewBuilder
+    private func activityDestination(for item: TodayHomeFeedItem) -> some View {
+        switch item {
+        case let .investor(investor):
+            BSmartDetailNavigationLink(id: "today-trend-investor-\(item.id)") {
+                TodayInvestorActivityTimelineView(investorID: investor.id)
+            } label: { activityCard(item) }
+            .buttonStyle(.bSmartPlain)
+        case let .subject(_, parent):
+            BSmartDetailNavigationLink(id: "today-trend-subject-\(item.id)") {
+                TodaySubjectProfileView(subjectID: parent.id, initialActivity: parent)
+            } label: { activityCard(item) }
+            .buttonStyle(.bSmartPlain)
+        }
+    }
+
+    private func activityCard(_ item: TodayHomeFeedItem) -> some View {
+        VStack(alignment: .leading, spacing: 9) {
+            HStack(spacing: 7) {
+                activityAvatar(for: item)
+                Text(item.actorName)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(BSmartColor.primaryText)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+            }
+            HStack(spacing: 6) {
+                Text(actionLabel(for: item))
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(actionColor(for: item))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Spacer(minLength: 4)
+                let asset = assetLabel(for: item)
+                if !asset.isEmpty {
+                    BSmartAssetMark(ticker: asset, size: 16)
+                    Text(asset)
+                        .font(.system(size: 12, weight: .semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+            }
+            .foregroundStyle(BSmartColor.tertiaryText)
+        }
+        .padding(10)
+        .frame(width: 200, height: 84)
+        .background(BSmartColor.surface, in: RoundedRectangle(cornerRadius: 8))
+        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(BSmartColor.line, lineWidth: 0.7))
+        .accessibilityIdentifier("today.trend-activity.\(item.id)")
+    }
+
+    @ViewBuilder
+    private func activityAvatar(for item: TodayHomeFeedItem) -> some View {
+        switch item {
+        case let .investor(value):
+            switch value.latest {
+            case let .account(account):
+                BSmartAvatar(url: account.latest.authorAvatarURL, name: item.actorName, size: 28)
+            case let .money(money):
+                BSmartSmartMoneyAvatar(identity: money.publicIdentity, size: 28)
+            }
+        case let .subject(value, _):
+            BSmartAvatar(url: value.subject.avatarURL, name: item.actorName, size: 28,
+                         bundledAssetName: value.subject.bundledAvatarAssetName,
+                         isOrganization: value.subject.kind == .institution)
+        }
+    }
+
+    private func assetLabel(for item: TodayHomeFeedItem) -> String {
+        switch item {
+        case let .investor(value): return value.latest.ticker
+        case let .subject(value, _): return value.latest.displayAsset
+        }
+    }
+
+    private func actionLabel(for item: TodayHomeFeedItem) -> String {
+        switch item {
+        case let .investor(value):
+            switch value.latest {
+            case let .account(account):
+                return [.closed, .invalidated].contains(account.latest.lifecycle)
+                    ? account.latest.lifecycle.label : account.latest.direction.label
+            case let .money(money): return money.action.label
+            }
+        case let .subject(value, _):
+            let event = value.latest
+            switch event.type {
+            case .trade: return (event.isBuy ? "Buy" : "Sell").bSmartLocalized
+            case .opinion: return event.directionTitle.bSmartLocalized
+            case .holding: return event.holdingTitle.bSmartLocalized
+            }
+        }
+    }
+
+    private func actionColor(for item: TodayHomeFeedItem) -> Color {
+        switch item {
+        case let .investor(value):
+            if case let .account(account) = value.latest,
+               [.closed, .invalidated].contains(account.latest.lifecycle) { return BSmartColor.secondaryText }
+            switch value.latest.direction {
+            case .bullish: return BSmartColor.bull
+            case .bearish: return BSmartColor.bear
+            case .neutral, .mixed: return BSmartColor.secondaryText
+            }
+        case let .subject(value, _):
+            let event = value.latest
+            switch event.type {
+            case .trade: return event.isBuy ? BSmartColor.bull : BSmartColor.bear
+            case .opinion:
+                if event.direction == "bullish" { return BSmartColor.bull }
+                if event.direction == "bearish" { return BSmartColor.bear }
+                return BSmartColor.secondaryText
+            case .holding:
+                return ["reduced", "no_longer_reported"].contains(event.action ?? "")
+                    ? BSmartColor.bear : BSmartColor.bull
+            }
+        }
+    }
 }
 
 private struct TodayTrackedActivityModule: View {
@@ -241,7 +526,7 @@ private struct TodayTrackedActivityModule: View {
                             .background(BSmartColor.brand)
                             .clipShape(RoundedRectangle(cornerRadius: BSmartRadius.control, style: .continuous))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.bSmartPlain)
                     .accessibilityIdentifier("today.tracked-activity.recommendation.\(account.id)")
                 }
                 .padding(.horizontal, BSmartSpacing.medium)
@@ -268,14 +553,14 @@ private struct TodayTrackedActivityModule: View {
             } label: {
                 label()
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.bSmartPlain)
         case let .money(moneyActivity):
             BSmartDetailNavigationLink(id: "tracked-money-\(activity.id)") {
                 SmartMoneyMovementDetailView(movement: moneyActivity.latest)
             } label: {
                 label()
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.bSmartPlain)
         }
     }
 
@@ -450,7 +735,7 @@ private struct TodayLeadActivityCard: View {
                 }
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.bSmartPlain)
             .accessibilityIdentifier("today.lead-activity")
 
             if isExpanded {
@@ -506,7 +791,7 @@ private struct TodayLeadActivityCard: View {
                         .foregroundStyle(BSmartColor.brand)
                 }
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.bSmartPlain)
             .accessibilityLabel("Open Smart Account preview".bSmartLocalized)
             .accessibilityIdentifier("today.smart-account-preview")
 
@@ -576,7 +861,7 @@ private struct TodayActivityRow: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.bSmartPlain)
                 }
 
                 Button(action: onOpen) {
@@ -590,7 +875,7 @@ private struct TodayActivityRow: View {
                     .foregroundStyle(BSmartColor.tertiaryText)
                     .frame(width: 25, height: 34)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.bSmartPlain)
             }
             .padding(BSmartSpacing.large)
 
@@ -695,12 +980,12 @@ private struct TodayActivityRow: View {
         @ViewBuilder label: @escaping () -> Label
     ) -> some View {
         let account = model.smartAccountProfile(for: update)
-        BSmartDetailNavigationLink(id: "activity-account-\(update.id)-\(source)", usesZoomTransition: false) {
+        BSmartDetailNavigationLink(id: "activity-account-\(update.id)-\(source)") {
             SmartAccountDetailView(account: account)
         } label: {
             label()
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.bSmartPlain)
         .accessibilityLabel("Open Smart Account preview".bSmartLocalized)
         .accessibilityIdentifier("today.smart-account-preview")
     }
@@ -837,7 +1122,7 @@ private struct TodayActivityEvidence: View {
                     }
                     .font(.caption.weight(.bold))
                     .foregroundStyle(BSmartColor.brand)
-                    .buttonStyle(.plain)
+                    .buttonStyle(.bSmartPlain)
                 }
             }
 
@@ -1184,7 +1469,7 @@ struct EventCard: View {
 
                 Spacer(minLength: BSmartSpacing.small)
 
-                if signal.smartMoneyCoverage == .unavailable {
+                if BSmartProductVisibility.onchainSmartMoney && signal.smartMoneyCoverage == .unavailable {
                     Text(signal.smartMoneyCoverage.label)
                         .font(.caption2)
                         .foregroundStyle(BSmartColor.gold)
@@ -1249,7 +1534,7 @@ struct EventCard: View {
                         .foregroundStyle(relationshipColor)
                     Text("·")
                     relationshipContext
-                    if signal.smartMoneyCoverage == .unavailable {
+                    if BSmartProductVisibility.onchainSmartMoney && signal.smartMoneyCoverage == .unavailable {
                         Text("·")
                         Text(signal.smartMoneyCoverage.label)
                             .foregroundStyle(BSmartColor.gold)

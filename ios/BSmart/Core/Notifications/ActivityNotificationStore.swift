@@ -3,13 +3,17 @@ import Foundation
 
 @MainActor
 final class ActivityNotificationStore: ObservableObject {
-    @Published private(set) var items: [ActivityNotification] = []
-    @Published private(set) var readVersions: [String: Date] = [:]
+    @Published private(set) var items: [ActivityNotification] = [] {
+        didSet { updateUnreadCount() }
+    }
+    @Published private(set) var readVersions: [String: Date] = [:] {
+        didSet { updateUnreadCount() }
+    }
+    @Published private(set) var unreadCount = 0
     private let defaults: UserDefaults
     private var scope: String?
 
     init(defaults: UserDefaults = .standard) { self.defaults = defaults }
-    var unreadCount: Int { items.filter { !isRead($0) }.count }
 
     func activate(scope: String) {
         guard self.scope != scope else { return }
@@ -25,13 +29,20 @@ final class ActivityNotificationStore: ObservableObject {
         readVersions[item.id].map { $0 >= item.occurredAt } ?? false
     }
     func markRead(_ item: ActivityNotification) {
-        guard items.contains(where: { $0.id == item.id }) else { return }
+        guard items.contains(where: { $0.id == item.id }), !isRead(item) else { return }
         readVersions[item.id] = max(readVersions[item.id] ?? .distantPast, item.occurredAt)
         persist()
     }
     func markAllRead() {
-        for item in items { readVersions[item.id] = max(readVersions[item.id] ?? .distantPast, item.occurredAt) }
+        var next = readVersions
+        for item in items { next[item.id] = max(next[item.id] ?? .distantPast, item.occurredAt) }
+        guard next != readVersions else { return }
+        readVersions = next
         persist()
+    }
+    private func updateUnreadCount() {
+        let count = items.reduce(0) { $0 + (isRead($1) ? 0 : 1) }
+        if unreadCount != count { unreadCount = count }
     }
     private var storageKey: String { "bsmart.activity-inbox.v1.\(scope ?? "guest")" }
     private func persist() {

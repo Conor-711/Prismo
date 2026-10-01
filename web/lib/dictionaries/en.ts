@@ -4,8 +4,8 @@ import type { Dictionary } from "./zh";
 export const en: Dictionary = {
   betaLanding: {
     survey: {
-      title: "Get early access to bSmart", required: "All fields required",
-      channels: "Where do you follow investment information?", multiple: "Select all that apply",
+      title: "Get early access to bSmart", required: "Email required",
+      channels: "Where do you follow investment information?", multiple: "Optional · select any", optional: "Optional",
       channelsRequired: "Please select at least one information source.", contactRequired: "Please enter your contact details.",
       accounts: "Investment accounts", accountsDetail: "Twitter/X, YouTube, Reddit & more",
       politicians: "Politicians", politiciansDetail: "Pelosi, Trump & others", institutions: "Institutions",
@@ -14,7 +14,22 @@ export const en: Dictionary = {
       platform: "Contact platform", handle: "Contact details", handlePlaceholder: "Your handle or profile link", wechat: "WeChat",
       invalid: "Please check your answers and describe any other sources selected.",
     },
-    tagline: "The best way to follow the smartest investors",
+    tagline: "Discover investors. Track their views. Trade with context.",
+    site: {
+      productNav: "Product", accessNav: "Request access", beta: "iOS beta is open",
+      heroTitle: "Find smart investors. Trade with context.",
+      heroDescription: "Track their public views and market moves, then make your own call.",
+      heroCTA: "Request iOS beta access", heroHint: "Leave your email to request an invite",
+      productEyebrow: "THE APP", productTitle: "Inside bSmart",
+      productDescription: "Investor profiles, price charts, and a feed of public market views.",
+      investorTitle: "Start with the investor", investorDescription: "See public views, the assets they cover, and their track record before you follow.",
+      marketTitle: "Put the view on the chart", marketDescription: "See when investors shared a view and what the market did around it.",
+      updatesTitle: "Keep up with what changes", updatesDescription: "New public views from the people and assets you follow, in one feed.",
+      formIntro: "Investor track records, market context, and new views in one place. Leave your email and we'll reach out when a beta spot opens.",
+      formPanelTitle: "Beta request", formOptional: "Add your preferences", formSubmit: "Request an invite",
+      formPrivacy: "Your email is only for beta invitations. No marketing emails.",
+      footerContact: "Contact bSmart", footerEmail: "Email", footerX: "X",
+    },
     apply: "Request access", applied: "Requested",
     screenTitle: "See their track record.\nDecide who to follow.", screenFeatures: ["Past calls", "Asset updates", "Smart money"], screenFeaturesLabel: "What bSmart brings together",
     title: "bSmart · Find the voices worth following",
@@ -36,7 +51,7 @@ export const en: Dictionary = {
     proofKicker: "04 / KEEP THE SOURCE IN SIGHT", proofTitle: "Their perspective.\nYour own judgment.",
     proofStory: "bSmart brings public opinions together, with the author, date and source attached. Explore the reasoning before you act. The decision stays yours.",
     proofSteps: ["Find a perspective", "Read the source", "Make your own call"], proofQuote: "Their opinions.\nYour decisions.", proofTag: "Every perspective starts somewhere.",
-    ctaKicker: "A BETTER START TO YOUR NEXT DECISION", ctaTitle: "Less noise.\nMore perspective.", ctaStory: "bSmart is in private beta. Leave your email to join the waitlist.", email: "Email address", emailPlaceholder: "Your email address", submitting: "Submitting…", successTitle: "You're on the waitlist.", successBody: "We'll email you when a beta spot is available.", another: "Use a different email", consent: "I agree to receive bSmart beta invitations and have read the", privacy: "Privacy notice", consentRequired: "Please read the privacy notice and agree to beta invitations.", invalidEmail: "Please enter a valid email address.", unavailable: "The waitlist is temporarily unavailable. Please try again later.", networkError: "We couldn't submit your email. Check your connection and try again.", tooMany: "Too many attempts. Please try again later.", retry: "Try again", privacyTitle: "Your email. Only for beta invitations.", privacyBody: "We collect your email, request date and page language to manage the beta waitlist and send invitations. The list is stored with Cloudflare. It is never displayed publicly or used for advertising. A hashed network identifier is stored briefly to prevent abuse. Joining does not guarantee a beta spot.", privacyDelete: "To delete your request or stop contact, email zfy3712z@gmail.com.", close: "Close", disclaimer: "Public opinions are for information only, not investment advice. Past performance does not indicate future results.", footer: "Stay curious. Think for yourself.", contact: "Contact us", backTop: "Back to top",
+    ctaKicker: "A BETTER START TO YOUR NEXT DECISION", ctaTitle: "Less noise.\nMore perspective.", ctaStory: "bSmart is in private beta. Leave your email to join the waitlist.", email: "Email address", emailPlaceholder: "Your email address", submitting: "Submitting…", successTitle: "You're on the waitlist.", successBody: "We'll email you when a beta spot is available.", another: "Use a different email", consent: "I agree to receive bSmart beta invitations and have read the", privacy: "Privacy notice", consentRequired: "Please read the privacy notice and agree to beta invitations.", invalidEmail: "Please enter a valid email address.", unavailable: "The waitlist is temporarily unavailable. Please try again later.", networkError: "We couldn't submit your email. Check your connection and try again.", tooMany: "Too many attempts. Please try again later.", retry: "Try again", privacyTitle: "Your details. Only for beta invitations.", privacyBody: "We collect your email, request date, page language and any optional information sources or contact details you provide to manage the beta waitlist and send invitations. The list is stored with Cloudflare. It is never displayed publicly or used for advertising. A hashed network identifier is stored briefly to prevent abuse. Joining does not guarantee a beta spot.", privacyDelete: "To delete your request or stop contact, email zfy3712z@gmail.com.", close: "Close", disclaimer: "Public opinions are for information only, not investment advice. Past performance does not indicate future results.", footer: "Stay curious. Think for yourself.", contact: "Contact us", backTop: "Back to top",
   },
   meta: {
     title: "bSmart · Reddit US-stock sentiment intelligence",

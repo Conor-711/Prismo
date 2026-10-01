@@ -61,13 +61,6 @@ Normal Debug launches use the bundled contract fixtures, so Simulator and
 physical iPhone previews work without a development server. The `bSmart Local`
 scheme is reserved for an explicitly configured local API.
 
-Internal testing may call DeepSeek directly while the rest of the app continues
-to use bundled data. Create `ios/Config/Secrets.xcconfig` from the example and
-set `BSMART_DEEPSEEK_API_KEY`. The file is ignored by Git, but the key is still
-embedded in the built app and must be treated as temporary and rotated. Remove
-the local key to restore the server AI boundary or deterministic on-device
-fallback.
-
 `bSmart Internal Alpha` is a separate release-optimized scheme. It excludes all
 fixture JSON and connects through `HTTPBSmartAPIClient` to the live Vultr API.
 Validate it with `make ios-alpha-check`; override `IOS_ALPHA_API_BASE_URL` only

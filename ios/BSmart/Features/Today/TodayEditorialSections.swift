@@ -138,7 +138,6 @@ struct TodayEvidenceTimeline: View {
     @State private var chartStyle: TodayPriceChartStyle = .candles
     @State private var selectedMarker: TodayPriceEventMarker?
     @State private var focusedMarkerID: String?
-    @Namespace private var transition
 
     private let fill = BSmartColor.chartSurface
     private let grid = BSmartColor.chartGrid
@@ -182,7 +181,8 @@ struct TodayEvidenceTimeline: View {
         }
 
         let uniqueAccounts = uniqueAccountMarkers(accountCandidates)
-        let rankedMoney = uniqueMoneyMovements(moneyMovements)
+        let rankedMoney = BSmartProductVisibility.onchainSmartMoney
+            ? uniqueMoneyMovements(moneyMovements) : []
         let maximumNotional = rankedMoney.map { abs($0.notionalChange) }.max() ?? 1
         let moneyCandidates = rankedMoney.enumerated().compactMap { index, movement -> TodayPriceEventMarker? in
             guard let candle = nearestCandle(to: movement.observedAt), visibleDays.contains(candle.day) else { return nil }
@@ -224,7 +224,7 @@ struct TodayEvidenceTimeline: View {
 
             HStack(spacing: BSmartSpacing.large) {
                 Label("Smart Account", systemImage: "person.crop.circle.fill")
-                if !moneyMovements.isEmpty {
+                if BSmartProductVisibility.onchainSmartMoney && !moneyMovements.isEmpty {
                     Label("Smart Money", systemImage: "wallet.pass.fill")
                 }
                 Spacer()
@@ -243,7 +243,6 @@ struct TodayEvidenceTimeline: View {
         .animation(BSmartMotion.quick, value: chartStyle)
         .navigationDestination(item: $selectedMarker) { marker in
             TodayPriceEventDetail(marker: marker)
-                .bSmartZoomNavigationTransition(sourceID: marker.id, in: transition)
         }
     }
 
@@ -276,7 +275,7 @@ struct TodayEvidenceTimeline: View {
                             .background(chartStyle == style ? BSmartColor.brand : Color.clear)
                             .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.bSmartPlain)
                     .accessibilityLabel(style.label)
                 }
             }
@@ -302,9 +301,8 @@ struct TodayEvidenceTimeline: View {
                                (0...plot.width).contains(x), (0...plot.height).contains(y) {
                                 Button { openMarker(marker) } label: {
                                     markerBubble(marker)
-                                        .bSmartMatchedTransitionSource(id: marker.id, in: transition)
                                 }
-                                .buttonStyle(.plain)
+                                .buttonStyle(.bSmartPlain)
                                 .accessibilityIdentifier("today.detail-price-marker.\(marker.id)")
                                 .position(x: plot.minX + x,
                                           y: plot.minY + min(max(y - 28, 28), plot.height - 28))
@@ -530,7 +528,7 @@ struct TodayInlineAccountOpinion: View {
                     }
                     .font(.caption2.weight(.bold))
                     .foregroundStyle(BSmartColor.brand)
-                    .buttonStyle(.plain)
+                    .buttonStyle(.bSmartPlain)
                 }
             }
 

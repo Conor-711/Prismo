@@ -11,6 +11,7 @@ from .models import Active, Page, Release
 from ..publish_daily_x import is_x, load_release
 from .push import should_enqueue, new_events
 from .push_queue import enqueue
+from .push_returns import sync_if_enabled
 from . import cache
 from .partition import load_partition, merge_partition
 from .ranking_freeze import apply as apply_frozen_rankings, snapshot as ranking_snapshot
@@ -140,6 +141,12 @@ def publish(engine, directory, *, baseline=False, apply=False, allow_drop=False,
         else:
             if not previous:
                 raise ValueError("A complete multi-platform baseline must be published first")
+            if partition:
+                prior = previous.provenance.get('partitions', {}).get(source['platform'], {})
+                if package_hash == prior.get('packageHash'):
+                    return {"status": "already-published", "revision": active.revision, "publicAPIVerified": False}
+            elif package_hash in previous.provenance.get("xPackages", []):
+                return {"status": "already-published", "revision": active.revision, "publicAPIVerified": False}
             prior_collections = read_collections(session, active.revision)
             provenance = dict(previous.provenance)
             if partition:
@@ -201,11 +208,13 @@ def publish(engine, directory, *, baseline=False, apply=False, allow_drop=False,
                 batch = []
                 for owner, page, payload in pages(revision, name, items):
                     batch.append({"revision": revision, "collection": name, "owner": owner, "page": page, "payload": payload})
-                    if len(batch) == 100:
+                    # Bound each upload to two 256 KiB pages on the session pooler.
+                    if len(batch) == 2:
                         session.execute(Page.__table__.insert(), batch)
                         batch = []
                 if batch:
                     session.execute(Page.__table__.insert(), batch)
+        result["pushReturnsSynced"] = sync_if_enabled(session)
         now = datetime.now(timezone.utc)
         if active:
             active.revision, active.activated_at = revision, now
@@ -221,6 +230,68 @@ def publish(engine, directory, *, baseline=False, apply=False, allow_drop=False,
     if engine.dialect.name == "postgresql":
         cache.save(revision, collections)
     return {**result, "status": "published", "publishedAt": now.isoformat()}
+
+
+def publish_price_enrichment(engine, exported_updates, *, apply=False):
+    """Publish only matched price observations, preserving every active content field."""
+    candidates = {row["id"]: row for row in exported_updates if row.get("priceOutcome")}
+    if not candidates or len(candidates) != sum(bool(row.get("priceOutcome")) for row in exported_updates):
+        raise ValueError("Price enrichment must contain unique priced updates")
+    with Session(engine) as session, session.begin():
+        if engine.dialect.name == "postgresql":
+            session.execute(text("select pg_advisory_xact_lock(721534915)"))
+        active = session.get(Active, "production")
+        if not active:
+            raise ValueError("A published release is required before price enrichment")
+        previous = session.get(Release, active.revision)
+        collections = read_collections(session, active.revision)
+        matched = changed = 0
+        updates = []
+        for row in collections["smart-account-updates"]:
+            source = candidates.get(row["id"])
+            if source and row["ticker"] == source["ticker"] and row["publishedAt"] == source["publishedAt"]:
+                matched += 1
+                if row.get("priceOutcome") != source["priceOutcome"]:
+                    row = {**row, "priceOutcome": source["priceOutcome"]}
+                    changed += 1
+            updates.append(row)
+        if not matched:
+            raise ValueError("No active updates match the price enrichment")
+        if not changed:
+            return {"status": "already-published", "revision": active.revision,
+                    "matched": matched, "changed": 0, "publicAPIVerified": False}
+        collections["smart-account-updates"] = updates
+        metadata = previous.manifest["collections"]
+        validate(collections, metadata)
+        entries = {name: {"count": len(items), "sha256": digest(items),
+                          "checkedAt": metadata[name]["checkedAt"],
+                          "latestContentAt": metadata[name].get("latestContentAt")}
+                   for name, items in collections.items()}
+        provenance = {**previous.provenance, "kind": "price-refresh",
+                      "priceRefreshSourceRevision": active.revision}
+        revision = digest({"schemaVersion": 1, "collections": entries, "provenance": provenance})
+        result = {"status": "validated", "revision": revision,
+                  "previousRevision": active.revision, "matched": matched,
+                  "changed": changed, "publicAPIVerified": False}
+        if not apply:
+            return result
+        if not session.get(Release, revision):
+            session.add(Release(revision=revision,
+                                manifest={"schemaVersion": 1, "revision": revision,
+                                          "collections": entries}, provenance=provenance))
+            session.flush()
+            for name, items in collections.items():
+                for owner, page, payload in pages(revision, name, items):
+                    session.add(Page(revision=revision, collection=name, owner=owner,
+                                     page=page, payload=payload))
+        active.revision = revision
+        active.activated_at = datetime.now(timezone.utc)
+    with Session(engine) as session:
+        if session.get(Active, "production").revision != revision:
+            raise RuntimeError("A concurrent publication superseded the price refresh")
+    if engine.dialect.name == "postgresql":
+        cache.save(revision, collections)
+    return {**result, "status": "published"}
 
 
 def rollback(engine, revision, *, apply=False):

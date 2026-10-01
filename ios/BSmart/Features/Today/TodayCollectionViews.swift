@@ -104,7 +104,7 @@ struct TodayConsensusCollectionView: View {
                             } label: {
                                 TodayViewpointPackageCard(package: package, style: index % 2, width: nil)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.bSmartPlain)
                             .accessibilityIdentifier("today.consensus-library.\(package.ticker.lowercased())")
 
                         }
@@ -219,6 +219,7 @@ struct TodayAlphaCollectionView: View {
                     || (source == .smartAccount && opportunity.kind == .smartAccount)
                     || (source == .smartMoney && opportunity.kind == .smartMoney)
                 return tickerMatches && sourceMatches
+                    && (BSmartProductVisibility.onchainSmartMoney || opportunity.kind == .smartAccount)
             }
             .sorted { lhs, rhs in
                 switch sort {
@@ -252,7 +253,7 @@ struct TodayAlphaCollectionView: View {
                             } label: {
                                 TodayAlphaCollectionCard(opportunity: opportunity)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.bSmartPlain)
 
                         }
                         .clipShape(RoundedRectangle(cornerRadius: BSmartRadius.card, style: .continuous))
@@ -279,9 +280,11 @@ struct TodayAlphaCollectionView: View {
                         Button(ticker) { selectedTicker = ticker }
                     }
                 }
-                TodayCollectionFilterMenu(title: source.label, symbol: "person.2") {
-                    ForEach(TodayAlphaSourceFilter.allCases) { item in
-                        Button(item.label) { source = item }
+                if BSmartProductVisibility.onchainSmartMoney {
+                    TodayCollectionFilterMenu(title: source.label, symbol: "person.2") {
+                        ForEach(TodayAlphaSourceFilter.allCases) { item in
+                            Button(item.label) { source = item }
+                        }
                     }
                 }
                 TodayCollectionFilterMenu(title: sort.label, symbol: "arrow.up.arrow.down") {
@@ -415,7 +418,7 @@ struct TodaySmartMoneyCollectionView: View {
                             } label: {
                                 TodayMoneyCollectionCard(movement: movement)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.bSmartPlain)
                         } else {
                             TodayMoneyCollectionCard(movement: movement)
                         }

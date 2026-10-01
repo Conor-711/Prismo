@@ -1,6 +1,7 @@
 {
+  "nodeModulesDir": "auto",
   "tasks": {
     "test": "deno test --allow-read tests/",
-    "check": "deno check supabase/functions/bsmart-wallet/index.ts supabase/functions/bsmart-feed/index.ts supabase/functions/bsmart-profile/index.ts"
+    "check": "deno check supabase/functions/bsmart-wallet/index.ts supabase/functions/bsmart-feed/index.ts supabase/functions/bsmart-profile/index.ts supabase/functions/bsmart-markets/index.ts supabase/functions/bsmart-equities/index.ts supabase/functions/bsmart-push/index.ts"
   }
 }

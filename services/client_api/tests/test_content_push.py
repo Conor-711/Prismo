@@ -101,6 +101,20 @@ def test_only_three_shanghai_digest_slots():
     assert push_queue.due_slot(datetime(2026, 9, 23, 8, tzinfo=timezone.utc)) is None
 
 
+def test_onchain_events_remain_ingestable_but_not_push_eligible():
+    class RecordingSession:
+        def execute(self, statement, parameters):
+            assert "e.event_kind='opinion'" in str(statement)
+            assert parameters["onchain_visible"] is False
+            return SimpleNamespace(rowcount=0)
+
+    assert push_queue.ONCHAIN_SMART_MONEY_VISIBLE is False
+    assert "q.event_kind='opinion'" in push_queue.MATCHES
+    assert push_queue.enqueue(RecordingSession(), "revision", [
+        {"event_kind": "movement", "event_id": str(uuid4()), "actor_id": "wallet",
+         "ticker": "NVDA", "actor_name": "Wallet"}]) == 0
+
+
 def test_apns_headers_payload_and_receipt(monkeypatch):
     monkeypatch.setenv("BSMART_UPDATE_PUSH_ENABLED", "true")
     delivery = {"user_id": uuid4(), "slot_at": datetime.now(timezone.utc), "item_count": 4,
@@ -131,3 +145,12 @@ def test_apns_headers_payload_and_receipt(monkeypatch):
 def test_disabled_worker_does_not_access_credentials_or_database(monkeypatch):
     monkeypatch.setenv("BSMART_UPDATE_PUSH_ENABLED", "false")
     assert push.drain(None) == {"status": "disabled", "attempted": 0}
+
+
+def test_cloud_mode_enqueues_but_never_runs_local_sender(monkeypatch):
+    monkeypatch.setenv("BSMART_UPDATE_PUSH_ENABLED", "true")
+    monkeypatch.setenv("BSMART_CONTENT_PUSH_DISPATCH_MODE", "cloud")
+    monkeypatch.setattr(push.push_queue, "due_slot", lambda: pytest.fail("local worker must not prepare slots"))
+    assert push.drain(None) == {"status": "cloud_scheduled", "attempted": 0}
+    old = SimpleNamespace(manifest={"collections": {"a": {"sha256": "one"}}})
+    assert push.should_enqueue(False, old, {"a": {"sha256": "two"}})

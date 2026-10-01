@@ -462,7 +462,8 @@ final class HyperliquidMarketOrderStoreTests: XCTestCase {
         await store.confirm(wallet: F.wallet)
         let sends = await sender.count
         XCTAssertEqual(sends, 0)
-        XCTAssertFalse(FileManager.default.fileExists(atPath: context.directory.appendingPathComponent("transactions.sqlite").path))
+        let records = try await context.journal().orderRecords(wallet: F.wallet)
+        XCTAssertTrue(records.isEmpty, "Reading recovery history must not reserve or authorize an order")
         store.clearEntry()
         XCTAssertNil(store.entryAccount); XCTAssertNil(store.entryFeeRate)
     }
@@ -533,7 +534,7 @@ final class HyperliquidMarketOrderStoreTests: XCTestCase {
         await store.confirm(wallet: F.wallet)
         let id = try XCTUnwrap(store.result?.id)
         XCTAssertNil(store.errorMessage)
-        XCTAssertNil(store.fills[id])
+        XCTAssertTrue(store.fills[id]?.fills.isEmpty ?? true)
         let before = try await context.journal().orderFillSummaries(wallet: F.wallet)
         XCTAssertEqual(before[id]?.fills.count, 0)
         let automaticFillReads = await reader.fillReads
@@ -559,6 +560,111 @@ final class HyperliquidMarketOrderStoreTests: XCTestCase {
         XCTAssertNil(store.result?.acknowledgement)
         await store.review(notional: "100", side: .buy, slippageBPS: 50, wallet: F.wallet, dex: "xyz", coin: F.coin)
         await store.confirm(wallet: F.wallet)
+        let sends = await sender.count
+        XCTAssertEqual(sends, 1)
+    }
+
+    func testUnstartedBroadcastDoesNotLeavePermanentPendingOrder() async throws {
+        let context = OrderLifecycleContext(); defer { context.cleanup() }
+        let reader = OrderStoreReader(), signer = OrderStoreSigner(clock: context.clock)
+        let sender = OrderStoreSender(neverStart: true)
+        let store = try make(context, reader: reader, signer: signer, sender: sender)
+        await store.executeMargin("1.1", leverage: 10, side: .buy, wallet: F.wallet, dex: "xyz", coin: F.coin)
+        XCTAssertEqual(store.result?.state, .notSubmitted)
+        XCTAssertNil(store.result?.acknowledgement)
+        XCTAssertFalse(store.requiresOrderRecovery)
+        let reopened = try make(context, reader: reader, signer: signer, sender: sender)
+        await reopened.loadEntry(wallet: F.wallet, dex: "xyz", coin: F.coin)
+        XCTAssertNotNil(reopened.entryAccount)
+        XCTAssertFalse(reopened.requiresOrderRecovery)
+        let sends = await sender.count
+        XCTAssertEqual(sends, 0)
+        XCTAssertEqual(signer.count, 1)
+    }
+
+    func testReopeningComposerResolvesLostResponseWithoutResendingOrShowingOldCompletion() async throws {
+        let context = OrderLifecycleContext(); defer { context.cleanup() }
+        let reader = OrderStoreReader(), signer = OrderStoreSigner(clock: context.clock)
+        let sender = OrderStoreSender(uncertain: true)
+        let first = try make(context, reader: reader, signer: signer, sender: sender)
+        await first.executeMargin("1.1", leverage: 10, side: .buy, wallet: F.wallet, dex: "xyz", coin: F.coin)
+        let pending = try XCTUnwrap(first.result)
+        XCTAssertEqual(pending.state, .uncertain)
+        await reader.setOrderStatus(try context.status(pending.order.restored(wallet: F.wallet)))
+
+        let reopened = try make(context, reader: reader, signer: signer, sender: sender)
+        await reopened.loadEntry(wallet: F.wallet, dex: "xyz", coin: F.coin)
+        XCTAssertNotNil(reopened.entryAccount)
+        XCTAssertNil(reopened.entryError)
+        XCTAssertNil(reopened.result, "Resolving an old order must not replace the new market's composer")
+        XCTAssertNil(reopened.pendingOrder)
+        XCTAssertFalse(reopened.requiresOrderRecovery)
+        let persisted = try await context.journal().orderRecords(wallet: F.wallet)
+        XCTAssertEqual(persisted.first?.state, .reconciled)
+        XCTAssertEqual(signer.count, 1)
+        let sends = await sender.count, fillReads = await reader.fillReads
+        XCTAssertEqual(sends, 1)
+        XCTAssertEqual(fillReads, 0, "Optional fill history must not delay unlocking a proven terminal order")
+    }
+
+    func testUnknownOrderRemainsBlockedAndProvidesRecoverableContext() async throws {
+        let context = OrderLifecycleContext(); defer { context.cleanup() }
+        let reader = OrderStoreReader(), signer = OrderStoreSigner(clock: context.clock)
+        let sender = OrderStoreSender(uncertain: true)
+        let first = try make(context, reader: reader, signer: signer, sender: sender)
+        await first.executeMargin("1.1", leverage: 10, side: .buy, wallet: F.wallet, dex: "xyz", coin: F.coin)
+        let id = try XCTUnwrap(first.result?.id)
+
+        let reopened = try make(context, reader: reader, signer: signer, sender: sender)
+        await reopened.loadEntry(wallet: F.wallet, dex: "xyz", coin: F.coin)
+        XCTAssertNotNil(reopened.entryAccount)
+        XCTAssertEqual(reopened.pendingOrder?.id, id)
+        XCTAssertTrue(reopened.requiresOrderRecovery)
+        XCTAssertEqual(reopened.recoveryError,
+            "The exchange has not found this order. Its status is still unverified; it will not be resent.".bSmartLocalized)
+        XCTAssertNil(reopened.result)
+        await reopened.executeMargin("1.1", leverage: 5, side: .buy, wallet: F.wallet, dex: "xyz", coin: F.coin)
+        XCTAssertEqual(reopened.errorMessage, FundingJournalError.conflict.orderMessage)
+        XCTAssertNil(reopened.preview)
+        XCTAssertEqual(signer.count, 1)
+        let sends = await sender.count
+        XCTAssertEqual(sends, 1)
+    }
+
+    func testManualRecoveryRejectsMismatchedIntentAndKeepsOriginalEvidence() async throws {
+        let context = OrderLifecycleContext(); defer { context.cleanup() }
+        let reader = OrderStoreReader(), signer = OrderStoreSigner(clock: context.clock)
+        let sender = OrderStoreSender(uncertain: true)
+        let store = try make(context, reader: reader, signer: signer, sender: sender)
+        await store.executeMargin("1.1", leverage: 10, side: .buy, wallet: F.wallet, dex: "xyz", coin: F.coin)
+        let record = try XCTUnwrap(store.result)
+        await reader.setOrderStatus(try context.status(record.order.restored(wallet: F.wallet),
+            overrides: ["cloid": "0x" + String(repeating: "1", count: 32)]))
+        await store.reconcile(record, wallet: F.wallet)
+        XCTAssertEqual(store.result?.state, .uncertain)
+        XCTAssertEqual(store.pendingOrder?.id, record.id)
+        XCTAssertNotNil(store.recoveryError)
+        let persisted = try await context.journal().orderRecords(wallet: F.wallet)
+        XCTAssertEqual(persisted.first?.signature, record.signature)
+        XCTAssertNil(persisted.first?.reconciliation)
+        let sends = await sender.count
+        XCTAssertEqual(sends, 1)
+    }
+
+    func testFillHistoryFailureDoesNotReblockAnAuthoritativelyResolvedOrder() async throws {
+        let context = OrderLifecycleContext(); defer { context.cleanup() }
+        let reader = OrderStoreReader(), signer = OrderStoreSigner(clock: context.clock)
+        let sender = OrderStoreSender(uncertain: true)
+        let store = try make(context, reader: reader, signer: signer, sender: sender)
+        await store.executeMargin("1.1", leverage: 10, side: .buy, wallet: F.wallet, dex: "xyz", coin: F.coin)
+        let record = try XCTUnwrap(store.result)
+        await reader.setOrderStatus(try context.status(record.order.restored(wallet: F.wallet)))
+        await reader.setFills(Data("invalid".utf8))
+        await store.reconcile(record, wallet: F.wallet)
+        XCTAssertEqual(store.result?.state, .reconciled)
+        XCTAssertFalse(store.requiresOrderRecovery)
+        XCTAssertNotNil(store.recoveryError)
+        XCTAssertNil(store.fills[record.id]?.averagePrice)
         let sends = await sender.count
         XCTAssertEqual(sends, 1)
     }
@@ -750,6 +856,7 @@ actor OrderStoreReader: HyperliquidExecutionReading {
     private var stalePositionOnce = false
     private var failDexOnce = false
     private var fillData = Data("[]".utf8)
+    private var statusData = Data(#"{"status":"unknownOid"}"#.utf8)
     private let clock: TradingCheckClock?
     init(clock: TradingCheckClock? = nil) { self.clock = clock }
     func setPosition(_ size: String?) { position = size }
@@ -759,9 +866,11 @@ actor OrderStoreReader: HyperliquidExecutionReading {
     func staleNextPosition() { stalePositionOnce = true }
     func failNextDexRead() { failDexOnce = true }
     func setFills(_ data: Data) { fillData = data }
+    func setOrderStatus(_ data: Data) { statusData = data }
     func read(_ query: HyperliquidExecutionQuery) throws -> Data {
         reads += 1
         switch query {
+        case .orderStatus: return statusData
         case .fills: fillReads += 1; return fillData
         case .dexs:
             if failDexOnce { failDexOnce = false; throw HyperliquidTradingCheckError.unavailable }
@@ -808,8 +917,12 @@ private actor OrderStoreSender: HyperliquidOrderBroadcasting {
     private(set) var count = 0
     let uncertain: Bool
     let filledSize: String?
-    init(uncertain: Bool = false, filledSize: String? = nil) { self.uncertain = uncertain; self.filledSize = filledSize }
+    let neverStart: Bool
+    init(uncertain: Bool = false, filledSize: String? = nil, neverStart: Bool = false) {
+        self.uncertain = uncertain; self.filledSize = filledSize; self.neverStart = neverStart
+    }
     func submit(_ permit: HyperliquidOrderSubmissionPermit, lease: FundingSigningLease) throws -> Data? {
+        if neverStart { return nil }
         _ = try permit.start(lease: lease) { $0 }
         count += 1
         if uncertain { return nil }

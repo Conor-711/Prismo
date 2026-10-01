@@ -1,0 +1,6 @@
+{
+  "request": { "ticker": "ASTS", "side": "buy", "amount": "100", "slippageBps": 50, "maxNetworkFeeBps": 100 },
+  "policy": { "executionEnabled": false, "gasCoverage": "unverified", "defaultSaleProceedsDestination": "hyperliquid_perps", "returnTransferImplemented": false },
+  "sdkAmountsExample": { "quoteSellAmount": "99500000", "quoteFeeAmount": "500000", "quoteBuyAmount": "2000000000000000000", "inputAmountRaw": "100000000", "minimumOutputAmountRaw": "1990000000000000000", "orderSellAmount": "100000000", "orderFeeAmount": "0" },
+  "executionMutations": "absent"
+}

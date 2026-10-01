@@ -21,7 +21,7 @@ struct AccountProfileEditorPage: View {
                         } else { ProgressView() }
                     }
                     .navigationTitle("Edit profile".bSmartLocalized)
-                    .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel".bSmartLocalized) { dismiss() } } }
+                    .toolbar { ToolbarItem(placement: .cancellationAction) { Group { Button("Cancel".bSmartLocalized) { dismiss() } }.buttonStyle(.bSmartToolbar) }.bSmartHideSystemBackground() }
                 }.bSmartPage()
             }
         }
@@ -147,11 +147,11 @@ struct AccountProfileEditor: View {
             .navigationTitle((onboarding ? "Set up your profile" : "Edit profile").bSmartLocalized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
+                ToolbarItem(placement: .cancellationAction) { Group {
                     Button((onboarding ? "Sign out" : "Cancel").bSmartLocalized) {
                         if onboarding { Task { await account.signOut() } } else { dismiss() }
                     }.disabled(busy)
-                }
+                }.buttonStyle(.bSmartToolbar) }.bSmartHideSystemBackground()
             }
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 Button { Task { await save() } } label: {
@@ -205,7 +205,7 @@ struct AccountProfileEditor: View {
                 }
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.bSmartPlain)
             .accessibilityIdentifier("profile.photo.change")
             Spacer(minLength: 0)
             if photoData != nil || (draft.avatarURL != nil && avatar.action != "remove") {

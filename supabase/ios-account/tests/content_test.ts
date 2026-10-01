@@ -12,6 +12,16 @@ function mock() {
   };
   const client: any = {
     auth: { getUser: async () => ({ data: { user: { identities: [{ provider: "google" }] } } }) },
+    rpc(name: string, args: { p_subject_id: string | null }) {
+      calls.push(["rpc", name, args.p_subject_id]);
+      const payload = (rows.bsmart_subject_activity_snapshots as { payload?: any } | undefined)?.payload;
+      if (!payload) return Promise.resolve({ data: null });
+      const cutoff = new Date(Date.now() - 400 * 86_400_000).toISOString().slice(0, 10);
+      return Promise.resolve({ data: { ...payload,
+        subjects: args.p_subject_id ? payload.subjects.filter((item: any) => item.id === args.p_subject_id) : payload.subjects,
+        events: payload.events.filter((item: any) => args.p_subject_id
+          ? item.subjectID === args.p_subject_id : item.displayDay >= cutoff) } });
+    },
     from(table: string) {
       calls.push(["from", table]);
       const q: any = {};
@@ -46,6 +56,31 @@ Deno.test("reads immutable revision and never discloses provenance", async () =>
   assert(JSON.stringify(await response.json()) === JSON.stringify({ revision }));
   assert((await handleContent(req("page", `revision=${revision}&collection=smart-accounts`), client)).status === 200);
   assert(calls.some(c => c.join() === `eq,revision,${revision}`));
+  assert(calls.filter(c => c.join() === "from,bsmart_content_releases").length === 1);
+});
+Deno.test("subject activity requires authentication and returns the current snapshot", async () => {
+  const { client, calls, rows } = mock();
+  const payload = { schemaVersion: 1, subjects: [{ id: "celebrity:sample" }], events: [] };
+  rows.bsmart_subject_activity_snapshots = { payload };
+  assert((await handleContent(new Request("https://test.invalid/bsmart-content/subject-activity"), client)).status === 401);
+  const response = await handleContent(req("subject-activity"), client);
+  assert(response.status === 200 && JSON.stringify(await response.json()) === JSON.stringify(payload));
+  assert(calls.some(c => c.join() === "rpc,bsmart_subject_activity_read,"));
+  delete rows.bsmart_subject_activity_snapshots;
+  assert((await handleContent(req("subject-activity"), client)).status === 404);
+});
+Deno.test("subject activity keeps the home payload recent and serves full history by subject", async () => {
+  const { client, rows } = mock();
+  const today = new Date().toISOString().slice(0, 10);
+  const payload = { schemaVersion: 1, subjects: [{ id: "celebrity:sample" }, { id: "institution:other" }],
+    events: [{ id: "old", subjectID: "celebrity:sample", displayDay: "2023-10-01" },
+      { id: "new", subjectID: "celebrity:sample", displayDay: today }] };
+  rows.bsmart_subject_activity_snapshots = { payload };
+  const recent = await (await handleContent(req("subject-activity"), client)).json();
+  assert(recent.events.length === 1 && recent.events[0].id === "new");
+  const history = await (await handleContent(req("subject-activity", "subjectID=celebrity%3Asample"), client)).json();
+  assert(history.subjects.length === 1 && history.events.length === 2);
+  assert((await handleContent(req("subject-activity", "subjectID=../invalid"), client)).status === 422);
 });
 Deno.test("rejects unbounded queries and private collection names", async () => {
   const { client, calls } = mock();

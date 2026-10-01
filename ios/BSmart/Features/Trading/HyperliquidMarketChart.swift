@@ -121,7 +121,7 @@ struct HyperliquidMarketChart: View {
                     .accessibilityIdentifier("trade.range.\(range.rawValue)")
                 }
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.bSmartPlain)
             if !compact, activities != nil {
                 HStack(spacing: 16) {
                     HStack(spacing: 8) {

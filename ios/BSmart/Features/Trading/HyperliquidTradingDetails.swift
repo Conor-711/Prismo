@@ -44,7 +44,7 @@ struct HyperliquidTradingDetails: View {
                     Text(errorMessage).font(.caption).foregroundStyle(BSmartColor.bear)
                 }
             }
-            .confirmationDialog("Close position".bSmartLocalized, isPresented: Binding(
+            .bSmartConfirmationDialog("Close position".bSmartLocalized, isPresented: Binding(
                 get: { pendingClose != nil },
                 set: { if !$0 { pendingClose = nil } }
             ), titleVisibility: .visible) {

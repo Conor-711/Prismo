@@ -10,6 +10,17 @@ struct ActivityNotification: Identifiable, Hashable {
     let tracked: Bool
     let held: Bool
 
+    private struct AccountHandle: Hashable {
+        let platform: String
+        let handle: String
+
+        init(platform: String, handle: String) {
+            self.platform = ActivityNotification.platform(platform)
+            self.handle = handle.trimmingCharacters(in: CharacterSet(charactersIn: "@"))
+                .folding(options: .caseInsensitive, locale: nil)
+        }
+    }
+
     var id: String {
         switch payload {
         case .account(let update): "account:\(update.id)"
@@ -45,7 +56,8 @@ struct ActivityNotification: Identifiable, Hashable {
         let accounts = Set(followedAccounts.map { $0.lowercased() })
         let money = Set(followedMoney.map { $0.lowercased() })
         let held = Set(heldTickers.map(symbol))
-        let followedProfiles = profiles.filter { accounts.contains($0.id.lowercased()) }
+        let followedHandles = Set(profiles.filter { accounts.contains($0.id.lowercased()) }
+            .map { AccountHandle(platform: $0.platform, handle: $0.handle) })
         let earliest = now.addingTimeInterval(-30 * 86_400)
         var events: [String: Self] = [:]
         func retain(_ event: Self) {
@@ -55,11 +67,8 @@ struct ActivityNotification: Identifiable, Hashable {
             events[event.id] = event
         }
         for update in updates {
-            let isTracked = accounts.contains(update.authorId.lowercased()) || followedProfiles.contains {
-                platform($0.platform) == platform(update.platform) &&
-                    $0.handle.trimmingCharacters(in: CharacterSet(charactersIn: "@"))
-                        .caseInsensitiveCompare(update.authorName.trimmingCharacters(in: CharacterSet(charactersIn: "@"))) == .orderedSame
-            }
+            let isTracked = accounts.contains(update.authorId.lowercased()) || followedHandles.contains(
+                AccountHandle(platform: update.platform, handle: update.authorName))
             retain(.init(payload: .account(update), tracked: isTracked, held: held.contains(symbol(update.ticker))))
         }
         for movement in movements {

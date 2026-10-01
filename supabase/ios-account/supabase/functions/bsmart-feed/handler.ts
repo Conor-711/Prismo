@@ -1,12 +1,15 @@
 import type { SupabaseClient, User } from "npm:@supabase/supabase-js@2.116.0";
-import { type InfoReader, type Intent, uuid, validateIntent, verifyHip3Market } from "./verification.ts";
+import { type InfoReader, type Intent, uuid, validateDirectIntent, validateIntent, verifyDirectMarket, verifyHip3Market } from "./verification.ts";
 import { reconcile } from "./reconcile.ts";
 import { resolveAvatars } from "../bsmart-profile/avatars.ts";
 import { subjectScope, validCatalogSource } from "./subject.ts";
 import { mutateThesis } from "./theses.ts";
 import { rankingScope } from "./rankings.ts";
-import { publicPortfolio } from "./public_portfolio.ts";
+import { abilityLeaderboard } from "./ability_leaderboard.ts";
+import { accountPortfolio, publicPortfolio } from "./public_portfolio.ts";
 import { finishAccountOnboarding, followInput, readAccountState, setAccountFollow } from "./account_state.ts";
+import { enrichNativeInvestors } from "./native_investors.ts";
+import { activityReference, sameActivityReference, verifiedActivity } from "./activity_source.ts";
 
 export type Dependencies = {
   info: InfoReader;
@@ -78,6 +81,46 @@ async function register(req: Request, client: SupabaseClient, user: User, deps: 
   return error ? failure() : reply({ id: data.id, cloid: i.cloid });
 }
 
+async function registerDirect(req: Request, client: SupabaseClient, user: User, deps: Dependencies, now: number) {
+  const input = await body(req);
+  if (!input || typeof input !== "object" || Array.isArray(input)) throw Error("invalid_input");
+  const { source: rawSource, ...orderInput } = input;
+  const source = activityReference(rawSource);
+  const intent = validateDirectIntent(orderInput, now);
+  const [walletResult, oldResult] = await Promise.all([
+    client.from("bsmart_wallets").select("address").eq("account_id", user.id).maybeSingle(),
+    client.from("bsmart_feed_orders").select("id,account_id,intent,source_kind")
+      .eq("cloid", intent.cloid).maybeSingle(),
+  ]);
+  if (walletResult.error || oldResult.error) return failure();
+  if (!walletResult.data?.address) return reply({ error: "wallet_required" }, 409);
+  const old = oldResult.data;
+  if (old) {
+    if (old.account_id !== user.id || old.source_kind !== "direct" ||
+        !sameActivityReference(old.intent.baseActivity, source) ||
+        !Object.keys(intent).every(k => intent[k as keyof typeof intent] === old.intent[k])) {
+      return reply({ error: "attribution_conflict" }, 409);
+    }
+    return reply({ id: old.id, cloid: intent.cloid });
+  }
+  const { count, error: countError } = await client.from("bsmart_feed_orders")
+    .select("id", { count: "exact", head: true }).eq("account_id", user.id)
+    .gte("registered_at", new Date(now - 60000).toISOString());
+  if (countError) return failure();
+  if ((count ?? 0) >= 20) return reply({ error: "rate_limit" }, 429);
+  const status = await deps.info({ type: "orderStatus", user: walletResult.data.address, oid: intent.cloid });
+  if (status?.status !== "unknownOid") return reply({ error: "existing_order" }, 409);
+  await verifyDirectMarket(intent, deps.info);
+  const baseActivity = source ? await verifiedActivity(client, source, intent.ticker) : null;
+  validateDirectIntent(intent, deps.now?.() ?? Date.now());
+  const { data, error } = await client.from("bsmart_feed_orders").insert({
+    account_id: user.id, wallet: walletResult.data.address, cloid: intent.cloid,
+    source_kind: "direct", intent: baseActivity ? { ...intent, baseActivity } : intent,
+    opinion_id: null, opinion: null,
+  }).select("id").single();
+  return error ? failure() : reply({ id: data.id, cloid: intent.cloid });
+}
+
 async function sync(req: Request, client: SupabaseClient, user: User, deps: Dependencies, now: number) {
   const input = await body(req);
   if (!input || typeof input !== "object" || Array.isArray(input) ||
@@ -108,6 +151,7 @@ export async function handleFeed(req: Request, client: SupabaseClient, deps: Dep
       return reply(await finishAccountOnboarding(client, user.id));
     }
     if (path === "/orders" && req.method === "POST") return await register(req, client, user, deps, now);
+    if (path === "/orders/direct" && req.method === "POST") return await registerDirect(req, client, user, deps, now);
     if (path === "/sync" && req.method === "POST") return await sync(req, client, user, deps, now);
     if (path === "/sharing" && ["GET", "PUT"].includes(req.method)) {
       const { error: ensureError } = await client.rpc("bsmart_profile_ensure", { p_account: user.id });
@@ -137,9 +181,23 @@ export async function handleFeed(req: Request, client: SupabaseClient, deps: Dep
       return data.items?.[0] ? reply(await resolveAvatars(client, data.items[0])) : reply({ error: "trade_pending" }, 409);
     }
     if (req.method !== "GET") return reply({ error: "not_found" }, 404);
+    if (path === "/investors/snapshot") {
+      const { data, error } = await client.rpc("bsmart_native_investor_snapshot");
+      if (error || !data || !Array.isArray(data.updates)) return failure();
+      const fallback = { ...data, updates: data.updates.map((update: any) => ({
+        ...update, reducing: update.reducing === true,
+      })) };
+      const snapshot = await enrichNativeInvestors(client, deps.info, data).catch(() => fallback);
+      return reply(await resolveAvatars(client, snapshot));
+    }
     if (path === "/subject-stats") {
       const { data, error } = await client.rpc("bsmart_subject_trade_stats", subjectScope(url));
       return error || !data ? failure() : reply(data);
+    }
+    if (path === "/ability-leaderboard") {
+      const { data, error } = await client.from("bsmart_investor_ability_snapshot")
+        .select("revision,scoring_version,as_of,items").eq("id", 1).maybeSingle();
+      return error ? failure() : reply(abilityLeaderboard(data));
     }
     const offset = Number(url.searchParams.get("offset") ?? "0"), limit = Number(url.searchParams.get("limit") ?? "10");
     if (!Number.isSafeInteger(offset) || offset < 0 || offset > 10000 || !Number.isInteger(limit) || limit < 1 || limit > 30) {
@@ -147,6 +205,9 @@ export async function handleFeed(req: Request, client: SupabaseClient, deps: Dep
     }
     const profileMatch = path.match(/^\/profiles\/([^/]+)$/);
     const portfolioMatch = path.match(/^\/profiles\/([^/]+)\/portfolio$/);
+    if (path === "/profiles/me/portfolio") {
+      return reply(await accountPortfolio(client, deps.info, user.id));
+    }
     if (portfolioMatch && uuid(portfolioMatch[1])) {
       const value = await publicPortfolio(client, deps.info, portfolioMatch[1]);
       return value ? reply(value) : reply({ error: "not_found" }, 404);
@@ -201,6 +262,7 @@ export async function handleFeed(req: Request, client: SupabaseClient, deps: Dep
     return reply({ error: "not_found" }, 404);
   } catch (error) {
     if (error instanceof Error && error.message === "opinion_unavailable") return reply({ error: "opinion_unavailable" }, 422);
+    if (error instanceof Error && error.message === "source_unavailable") return reply({ error: "source_unavailable" }, 422);
     if (error instanceof Error && error.message === "market_unavailable") return reply({ error: "market_unavailable" }, 422);
     if (error instanceof Error && error.message === "state_conflict") return reply({ error: "state_conflict" }, 409);
     if (error instanceof Error && error.message === "follow_limit") return reply({ error: "follow_limit" }, 422);

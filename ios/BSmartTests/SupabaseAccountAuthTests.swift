@@ -11,16 +11,22 @@ final class SupabaseAccountAuthTests: XCTestCase {
         config.protocolClasses = [SupabaseTestURLProtocol.self]
         let transport = SupabaseAccountTransport(configuration:
             SupabaseAccountConfiguration(url: "https://test.supabase.co", publishableKey: publicKey)!, sessionConfiguration: config)
-        for (status, code, expected): (Int, String, OpinionLinkError) in [
-            (422, "opinion_unavailable", .sourceUnavailable), (409, "attribution_conflict", .conflict),
-            (422, "invalid_input", .invalidIntent), (429, "rate_limit", .rateLimit),
-            (503, "feed_unavailable", .unavailable), (503, "unknown", .unavailable)] {
-            SupabaseTestURLProtocol.configure { _ in (status, Data("{\"error\":\"\(code)\"}".utf8)) }
-            do { _ = try await transport.request("functions/v1/bsmart-feed/orders", method: "POST", token: jwt)
-                XCTFail("Failure accepted")
-            } catch { XCTAssertEqual(error as? OpinionLinkError, expected) }
-            XCTAssertEqual(SupabaseTestURLProtocol.requests.count, 1)
+        for path in ["functions/v1/bsmart-feed/orders", "functions/v1/bsmart-feed/orders/direct"] {
+            for (status, code, expected): (Int, String, OpinionLinkError) in [
+                (422, "opinion_unavailable", .sourceUnavailable), (409, "attribution_conflict", .conflict),
+                (422, "invalid_input", .invalidIntent), (429, "rate_limit", .rateLimit),
+                (503, "feed_unavailable", .unavailable), (503, "unknown", .unavailable)] {
+                SupabaseTestURLProtocol.configure { _ in (status, Data("{\"error\":\"\(code)\"}".utf8)) }
+                do { _ = try await transport.request(path, method: "POST", token: jwt)
+                    XCTFail("Failure accepted")
+                } catch { XCTAssertEqual(error as? OpinionLinkError, expected) }
+                XCTAssertEqual(SupabaseTestURLProtocol.requests.count, 1)
+            }
         }
+        SupabaseTestURLProtocol.configure { _ in (404, Data("{\"error\":\"not_found\"}".utf8)) }
+        do { _ = try await transport.request("functions/v1/bsmart-feed/orders/direct", method: "POST", token: jwt)
+            XCTFail("Missing direct-order endpoint accepted")
+        } catch { XCTAssertEqual(error as? OpinionLinkError, .endpointUnavailable) }
         SupabaseTestURLProtocol.configure { _ in (401, Data("{}".utf8)) }
         do { _ = try await transport.request("functions/v1/bsmart-feed/orders", token: jwt); XCTFail("Expired auth accepted") }
         catch { XCTAssertEqual(error as? AccountAccessError, .expired) }

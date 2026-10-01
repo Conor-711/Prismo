@@ -124,6 +124,11 @@ struct SocialChatRefreshState {
         consecutiveFailures += 1
         return consecutiveFailures >= (hasMessages ? 3 : 2)
     }
+
+    func pollDelay(idlePolls: Int) -> Double {
+        if consecutiveFailures > 0 { return min(30, 5 * pow(2, Double(min(consecutiveFailures, 3)))) }
+        return idlePolls >= 2 ? 15 : 5
+    }
 }
 
 enum SocialChatError: Error {

@@ -8,6 +8,7 @@ import { ViewportWorkspace } from "@/shared/layout/ViewportWorkspace";
 import type { SmartVoiceLiveCall, SmartVoiceMarketData, SmartVoiceOverviewStats } from "@/server/queries/smartVoiceQueries";
 import type { HyperliquidSmartMoneyData } from "../hyperliquidData";
 import { HyperliquidSmartMoneyView } from "./HyperliquidSmartMoneyView";
+import { showOnchainSmartMoney } from "../productVisibility";
 import { SmartVoiceLiveView } from "./SmartVoiceLiveView";
 import { SmartVoiceMarketView } from "./SmartVoiceMarketView";
 
@@ -34,7 +35,7 @@ export function SmartVoiceWorkspace({
   liveCalls: SmartVoiceLiveCall[];
   stats: SmartVoiceOverviewStats;
   profileIds: string[];
-  hyperliquidData: HyperliquidSmartMoneyData;
+  hyperliquidData: HyperliquidSmartMoneyData | null;
 }) {
   const { lang } = useLocale();
   const zh = lang === "zh";
@@ -49,7 +50,9 @@ export function SmartVoiceWorkspace({
   ]).size;
   const tabs: { key: WorkspaceView; zh: string; en: string; count: string }[] = [
     { key: "market", zh: "标的发现", en: "Top tickers", count: String(tickerCount) },
-    { key: "onchain", zh: "链上聪明钱", en: "Onchain smart money", count: String(hyperliquidData.summary.instrumentCount) },
+    ...(showOnchainSmartMoney && hyperliquidData
+      ? [{ key: "onchain" as const, zh: "链上聪明钱", en: "Onchain smart money", count: String(hyperliquidData.summary.instrumentCount) }]
+      : []),
     { key: "live", zh: "实时观点", en: "Live calls", count: fmtCompact(liveCalls.length) },
   ];
 
@@ -117,7 +120,8 @@ export function SmartVoiceWorkspace({
 
       <main className="mt-3 min-h-0 flex-1 overflow-hidden rounded-lg bg-card/55 ring-1 ring-inset ring-line">
         {view === "market" ? <SmartVoiceMarketView marketData={marketData} zh={zh} /> : null}
-        {view === "onchain" ? <HyperliquidSmartMoneyView data={hyperliquidData} zh={zh} /> : null}
+        {view === "onchain" && showOnchainSmartMoney && hyperliquidData
+          ? <HyperliquidSmartMoneyView data={hyperliquidData} zh={zh} /> : null}
         {view === "live" ? <SmartVoiceLiveView calls={liveCalls} profileIds={profileIds} zh={zh} /> : null}
       </main>
     </ViewportWorkspace>

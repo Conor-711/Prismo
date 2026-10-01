@@ -29,18 +29,32 @@ def process_candidates(con, source, ids, database, max_calls):
                     if row['source'] == 'youtube' and row['platform_percentile'] <= .25}
         rows = [row for row in rows if str(row['author_id']).lower() in eligible]
     pending = [r for r in rows if not con.execute('SELECT 1 FROM sv_call WHERE candidate_id=?', (r['candidate_id'],)).fetchone()]
+    skipped_no_transcript = 0
     if len(pending) > max_calls:
         raise RuntimeError('analysis_budget_exceeded')
     if source == 'youtube' and pending:
         from ...common.config import settings
         from ...domain.opinions.youtube import generate_fulltext
         videos = score.materialize_youtube_transcript_videos(con, pending)
-        generate_fulltext(only=None, per_ticker=0, workers=2, force=False, low_res=True, frames=False,
-            limit=30, max_native_min=179, fail_after=3, max_rate_waits=3, video_ids=videos,
+        generate_fulltext(only=None, per_ticker=0, workers=1, force=False, low_res=True, frames=False,
+            limit=30, max_native_min=179, fail_after=3, max_rate_waits=6, video_ids=videos,
             db_path=database, max_total_minutes=settings.yt_daily_video_minutes,
             prefer_transcript=True, initialize_schema=False)
-        if any(not con.execute('SELECT 1 FROM yt_fulltext WHERE video_id=?', (r['tweet_id'],)).fetchone() for r in pending):
+        missing = [r for r in pending if not con.execute(
+            'SELECT 1 FROM yt_fulltext WHERE video_id=?', (r['tweet_id'],)).fetchone()]
+        unavailable = {r['candidate_id'] for r in missing if con.execute(
+            "SELECT 1 FROM yt_fulltext_fail WHERE video_id=? AND reason='no_segments'",
+            (r['tweet_id'],)).fetchone()}
+        unresolved = [r for r in missing if r['candidate_id'] not in unavailable]
+        reasons = [con.execute('SELECT reason FROM yt_fulltext_fail WHERE video_id=?',
+            (r['tweet_id'],)).fetchone() for r in unresolved]
+        if unresolved and all(reason and 'HTTP 429' in reason[0] for reason in reasons):
+            raise RuntimeError('youtube_rate_limited')
+        if unresolved:
             raise RuntimeError('transcripts_incomplete')
+        skipped_no_transcript = len(unavailable)
+        pending = [r for r in pending if r['candidate_id'] not in unavailable]
+        rows = [r for r in rows if r['candidate_id'] not in unavailable]
     if pending:
         score.extract_calls(con, 0, 2, False, 'rank', 0, 0, sources={source},
             candidate_ids={r['candidate_id'] for r in pending}, initialize_schema=False)
@@ -61,4 +75,7 @@ def process_candidates(con, source, ids, database, max_calls):
         missing = missing_summaries()
     if missing:
         raise RuntimeError('bilingual_thesis_missing')
-    return {'candidates': len(rows), 'processed': len(pending) + reprocessed}
+    result = {'candidates': len(rows), 'processed': len(pending) + reprocessed}
+    if skipped_no_transcript:
+        result['skippedNoTranscript'] = skipped_no_transcript
+    return result

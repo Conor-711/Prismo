@@ -36,7 +36,17 @@ export async function reconcile(client: SupabaseClient, info: InfoReader,
         .eq("account_id", order.account_id).eq("checked_at", order.checked_at).is("execution", null);
       if (saved.error) throw new Error("database_unavailable");
       if (execution) verified += 1;
-    } catch { failed += 1; }
+    } catch {
+      failed += 1;
+      // The attempt has ended: retain bounded backoff, not its two-minute in-flight lease.
+      // The original claim fences this update against a later verifier or verified execution.
+      try {
+        await client.from("bsmart_feed_orders").update({
+          next_check_at: new Date(now + Math.min(300000, 5000 * 2 ** Math.min(order.verification_attempts, 6))).toISOString(),
+        }).eq("id", order.id).eq("account_id", order.account_id)
+          .eq("checked_at", order.checked_at).is("execution", null);
+      } catch { /* A failed release must not fabricate verification or retry an exchange write. */ }
+    }
   }
   return { checked: orders.length, verified, failed };
 }

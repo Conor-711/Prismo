@@ -122,6 +122,6 @@ struct DeviceWalletPanel: View {
                 .foregroundStyle(BSmartColor.brand)
                 .background(BSmartColor.brand.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
                 .overlay(RoundedRectangle(cornerRadius: 8).stroke(BSmartColor.brand.opacity(0.4), lineWidth: 1))
-        }.buttonStyle(.plain)
+        }.buttonStyle(.bSmartPlain)
     }
 }

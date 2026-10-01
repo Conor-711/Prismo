@@ -32,6 +32,8 @@ struct FeedPublicPortfolio: Decodable {
     let perpsEquityUSD: String?
     let equityAsOf: TimeInterval?
     let spotUSDC: String?
+    let accountValueUSD: String?
+    let dayChangeUSD: String?
     let positions: [Position]
     let history: History
 
@@ -41,11 +43,13 @@ struct FeedPublicPortfolio: Decodable {
                   && Self.valid($0.size) && Self.valid($0.unrealizedPnLUSD) && Self.valid($0.returnOnEquity)
                   && ($0.entryPriceUSD == nil || Self.valid($0.entryPriceUSD!)) }),
               Self.valid(perpsEquityUSD), Self.valid(spotUSDC),
+              Self.valid(accountValueUSD), Self.valid(dayChangeUSD),
               [history.day, history.week, history.month].allSatisfy({ points in
                   points.count <= 121 && points.allSatisfy({ Self.valid($0.valueUSD) && $0.at > 0 })
                       && zip(points, points.dropFirst()).allSatisfy({ $0.at < $1.at })
               }) else { throw BSmartAPIError.invalidResponse }
-        if status == .notConnected && (!positions.isEmpty || perpsEquityUSD != nil || spotUSDC != nil) {
+        if status == .notConnected && (!positions.isEmpty || perpsEquityUSD != nil || spotUSDC != nil
+                                       || accountValueUSD != nil || dayChangeUSD != nil) {
             throw BSmartAPIError.invalidResponse
         }
     }

@@ -30,7 +30,7 @@ struct OpinionSupportingSourcesSection: View {
                         .foregroundStyle(BSmartColor.brand)
                         .padding(.vertical, BSmartSpacing.small)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.bSmartPlain)
                     .accessibilityIdentifier("opinion.sources.all")
                 }
             }
@@ -80,7 +80,7 @@ private struct OpinionSourceLink: View {
             }
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.bSmartPlain)
         .accessibilityIdentifier("opinion.source.open.\(source.id)")
     }
 }

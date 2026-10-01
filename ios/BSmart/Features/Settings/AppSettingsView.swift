@@ -26,22 +26,12 @@ struct AppSettingsView: View {
                                 if account.identity != nil {
                                     Text("Signed in".bSmartLocalized)
                                         .font(.subheadline).foregroundStyle(BSmartColor.brand)
-                                } else if account.isTestSession {
-                                    Text("Test login".bSmartLocalized)
-                                        .font(.subheadline).foregroundStyle(BSmartColor.brand)
                                 }
                                 Image(systemName: "chevron.right").font(.caption)
                                     .foregroundStyle(BSmartColor.tertiaryText)
                             }.foregroundStyle(BSmartColor.primaryText).frame(minHeight: 44)
                         }
                         .accessibilityIdentifier("settings.account")
-                        if account.isTestSession {
-                            Button { Task { await account.signOut() } } label: {
-                                AccountActionRow(title: "Exit test login",
-                                    symbol: "rectangle.portrait.and.arrow.right", showsChevron: false)
-                            }.buttonStyle(.plain)
-                                .accessibilityIdentifier("settings.test-signout")
-                        }
                         NavigationLink { TradingWalletView() } label: {
                             HStack(spacing: BSmartSpacing.medium) {
                                 Image(systemName: "wallet.bifold")
@@ -159,7 +149,7 @@ struct AppSettingsView: View {
                                 symbol: "bubble.left.and.text.bubble.right"
                             )
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.bSmartPlain)
                         .accessibilityIdentifier("settings.send-feedback")
                     }
 
@@ -173,7 +163,7 @@ struct AppSettingsView: View {
                                 showsChevron: true
                             )
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.bSmartPlain)
                         .accessibilityIdentifier("settings.onboarding-preview")
                     }
 
@@ -201,12 +191,12 @@ struct AppSettingsView: View {
             .navigationBarTitleDisplayMode(.inline)
             .accessibilityIdentifier("settings.screen")
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
+                ToolbarItem(placement: .confirmationAction) { Group {
                     Button("Done".bSmartLocalized) { dismiss() }
-                }
+                }.buttonStyle(.bSmartToolbar) }.bSmartHideSystemBackground()
             }
             .task { await notifications.refreshAuthorizationStatus() }
-            .confirmationDialog("Turn off wallet Face ID?".bSmartLocalized,
+            .bSmartConfirmationDialog("Turn off wallet Face ID?".bSmartLocalized,
                 isPresented: $confirmsDisableWalletAuthentication, titleVisibility: .visible) {
                 Button("Turn off".bSmartLocalized, role: .destructive) {
                     Task { await deviceWallet.setUserPresenceRequired(false) }
@@ -264,7 +254,7 @@ struct AppSettingsView: View {
             .padding(.vertical, BSmartSpacing.xSmall)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.bSmartPlain)
         .accessibilityLabel(option.displayName)
         .accessibilityValue(option == language.selection ? "Selected".bSmartLocalized : "")
         .accessibilityAddTraits(option == language.selection ? .isSelected : [])
@@ -301,7 +291,7 @@ struct AppSettingsView: View {
             .padding(.vertical, BSmartSpacing.xSmall)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.bSmartPlain)
         .accessibilityAddTraits(option == appearance.selection ? .isSelected : [])
         .accessibilityIdentifier("settings.appearance.\(option.rawValue)")
     }

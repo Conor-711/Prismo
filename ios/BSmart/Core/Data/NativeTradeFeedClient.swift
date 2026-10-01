@@ -56,20 +56,24 @@ struct NativeAccountPreferencesClient: AccountPreferencesProviding {
 
 enum OpinionLinkError: String, Error {
     case sourceUnavailable = "opinion_unavailable"
+    case activityUnavailable = "source_unavailable"
     case marketUnavailable = "market_unavailable"
     case invalidIntent = "invalid_input"
     case conflict = "attribution_conflict"
     case existingOrder = "existing_order"
     case rateLimit = "rate_limit"
     case walletRequired = "wallet_required"
+    case endpointUnavailable = "endpoint_unavailable"
     case unavailable = "feed_unavailable"
 
     var message: String {
         switch self {
         case .sourceUnavailable:
             return "This opinion is not yet available for trade linking. No order was submitted.".bSmartLocalized
+        case .activityUnavailable:
+            return "This activity could not be verified. No order was submitted.".bSmartLocalized
         case .marketUnavailable:
-            return "This market is not currently available for opinion trading. No order was submitted.".bSmartLocalized
+            return "This market is not currently available for verified trading. No order was submitted.".bSmartLocalized
         case .invalidIntent:
             return "The order details have expired or changed. Please confirm again. No order was submitted.".bSmartLocalized
         case .conflict, .existingOrder:
@@ -78,14 +82,21 @@ enum OpinionLinkError: String, Error {
             return "Too many order requests. Please wait a moment. No order was submitted.".bSmartLocalized
         case .walletRequired:
             return "Your trading wallet needs to reconnect. No order was submitted.".bSmartLocalized
+        case .endpointUnavailable:
+            return "Trade recording is not enabled on the server yet. No order was submitted.".bSmartLocalized
         case .unavailable:
-            return "Opinion verification is temporarily unavailable. No order was submitted.".bSmartLocalized
+            return "Trade recording is temporarily unavailable. No order was submitted.".bSmartLocalized
         }
     }
 }
 
 @MainActor
-struct NativeTradeFeedClient {
+protocol NativeInvestorProviding {
+    func nativeInvestors(accountID: UUID) async throws -> NativeInvestorSnapshot
+}
+
+@MainActor
+struct NativeTradeFeedClient: NativeInvestorProviding {
     let account: AccountAccessStore
     var transport: SupabaseAccountTransport?
 
@@ -100,7 +111,7 @@ struct NativeTradeFeedClient {
         return try await account.withFeedSession(expectedAccountID: expectedAccountID) { token in
             let data = try await transport.request("functions/v1/bsmart-feed" + path, method: method,
                                                     query: query, body: body, token: token)
-            return try BSmartJSONCoding.makeDecoder().decode(T.self, from: data)
+            return try await BSmartContentIO.shared.decode(T.self, from: data, iso8601Dates: true)
         }
     }
 
@@ -135,6 +146,11 @@ struct NativeTradeFeedClient {
         return page
     }
 
+    func abilityLeaderboard() async throws -> InvestorAbilityLeaderboard {
+        let snapshot: InvestorAbilityLeaderboard = try await request("/ability-leaderboard")
+        return try snapshot.validate()
+    }
+
     func subjectStats(_ subject: TradeSubject) async throws -> SubjectTradeStats {
         let result: SubjectTradeStats = try await request("/subject-stats", query: [
             .init(name: "kind", value: subject.kind.rawValue), .init(name: "id", value: subject.id),
@@ -155,6 +171,18 @@ struct NativeTradeFeedClient {
         return result
     }
 
+    func ownPortfolio(accountID: UUID) async throws -> FeedPublicPortfolio {
+        let result: FeedPublicPortfolio = try await request("/profiles/me/portfolio", expectedAccountID: accountID)
+        try result.validate()
+        return result
+    }
+
+    func nativeInvestors(accountID: UUID) async throws -> NativeInvestorSnapshot {
+        let snapshot: NativeInvestorSnapshot = try await request("/investors/snapshot", expectedAccountID: accountID)
+        try snapshot.validate()
+        return snapshot
+    }
+
     func traders(opinionID: UUID, offset: Int) async throws -> OpinionTradersPage {
         let result: OpinionTradersPage = try await request("/opinions/\(opinionID.uuidString)/traders",
             query: [.init(name: "offset", value: String(offset)), .init(name: "limit", value: "30")])
@@ -173,10 +201,155 @@ struct NativeTradeFeedClient {
     }
 }
 
+struct NativeInvestorPerformance: Codable, Hashable {
+    let closedTrades: Int
+    let wins: Int
+    let realizedReturn: Double?
+    let netPnlUSD: Double
+    let rank: Int?
+    let percentile: Double?
+    let asOf: Date?
+
+    var losses: Int { closedTrades - wins }
+}
+
+struct NativeInvestorSnapshot: Decodable {
+    struct Profile: Decodable {
+        let publicID: UUID
+        let nickname: String
+        let handle: String
+        let avatarURL: URL?
+        let bio: String
+        let recentTicker: String?
+        let closedTrades: Int
+        let wins: Int
+        let realizedReturn: Double?
+        let netPnlUSD: Double
+        let rank: Int?
+        let percentile: Double?
+        let asOf: Date?
+
+        var investorID: String { "bsmart:" + publicID.uuidString.lowercased() }
+        var performance: NativeInvestorPerformance {
+            .init(closedTrades: closedTrades, wins: wins, realizedReturn: realizedReturn,
+                  netPnlUSD: netPnlUSD, rank: rank, percentile: percentile, asOf: asOf)
+        }
+        var smartAccount: SmartAccountProfile {
+            SmartAccountProfile(id: investorID, name: nickname, handle: "@" + handle,
+                platform: "bsmart", score: 0, scoreChange: 0,
+                specialty: "On-platform trader", horizon: "Verified trades",
+                recentTicker: recentTicker, rank: rank, platformRank: rank,
+                platformPercentile: percentile, confidence: "observing",
+                avatarURL: avatarURL, description: bio, nativePerformance: performance)
+        }
+    }
+
+    struct Update: Decodable {
+        let id: UUID
+        let publicID: UUID
+        let nickname: String
+        let avatarURL: URL?
+        let ticker: String
+        let reducing: Bool
+        let side: String
+        let body: String
+        let publishedAt: Date
+        let rank: Int?
+        let percentile: Double?
+        let trade: NativeTradeContext?
+
+        enum CodingKeys: String, CodingKey {
+            case id, publicID, nickname, avatarURL, ticker, reducing, side, body, publishedAt, rank, percentile, trade
+        }
+
+        init(from decoder: Decoder) throws {
+            let values = try decoder.container(keyedBy: CodingKeys.self)
+            id = try values.decode(UUID.self, forKey: .id)
+            publicID = try values.decode(UUID.self, forKey: .publicID)
+            nickname = try values.decode(String.self, forKey: .nickname)
+            avatarURL = try values.decodeIfPresent(URL.self, forKey: .avatarURL)
+            ticker = try values.decode(String.self, forKey: .ticker)
+            reducing = try values.decodeIfPresent(Bool.self, forKey: .reducing) ?? false
+            side = try values.decode(String.self, forKey: .side)
+            body = try values.decode(String.self, forKey: .body)
+            publishedAt = try values.decode(Date.self, forKey: .publishedAt)
+            rank = try values.decodeIfPresent(Int.self, forKey: .rank)
+            percentile = try values.decodeIfPresent(Double.self, forKey: .percentile)
+            trade = try values.decodeIfPresent(NativeTradeContext.self, forKey: .trade)
+        }
+
+        var smartAccountUpdate: SmartAccountUpdate {
+            var update = SmartAccountUpdate(id: id, ticker: ticker, companyName: ticker,
+                authorId: "bsmart:" + publicID.uuidString.lowercased(), authorName: nickname,
+                platform: "bsmart", score: 0, platformPercentile: percentile ?? 1,
+                direction: reducing ? .neutral : side == "long" ? .bullish : .bearish,
+                lifecycle: reducing ? .closed : .new,
+                horizon: "Live trade", targetPrice: nil, thesis: body, invalidation: nil,
+                publishedAt: publishedAt, evidenceURL: nil, authorAvatarURL: avatarURL,
+                originalText: body, sourceKind: "native_opinion")
+            update.nativeTrade = trade
+            return update
+        }
+    }
+
+    let profiles: [Profile]
+    let updates: [Update]
+
+    func validate() throws {
+        let ids = Set(profiles.map(\.publicID))
+        guard profiles.count <= 10_000, updates.count <= 1_000,
+              ids.count == profiles.count,
+              profiles.allSatisfy({ profile in
+                  !profile.nickname.isEmpty && profile.nickname.count <= 28 &&
+                  AccountProfile.validHandle(profile.handle) && profile.closedTrades >= 0 &&
+                  (0...profile.closedTrades).contains(profile.wins) &&
+                  profile.netPnlUSD.isFinite && profile.realizedReturn.map(\.isFinite) != false &&
+                  (profile.rank == nil || profile.rank! > 0) &&
+                  (profile.percentile == nil || (0...1).contains(profile.percentile!)) &&
+                  (profile.avatarURL == nil || profile.avatarURL?.scheme == "https")
+              }),
+              Set(updates.map(\.id)).count == updates.count else { throw BSmartAPIError.invalidResponse }
+        for update in updates {
+            guard ids.contains(update.publicID), !update.ticker.isEmpty,
+                  update.ticker.count <= 64, ["long", "short"].contains(update.side),
+                  TradeThesis.validBody(update.body), update.publishedAt <= Date().addingTimeInterval(60),
+                  update.avatarURL == nil || update.avatarURL?.scheme == "https" else {
+                throw BSmartAPIError.invalidResponse
+            }
+        }
+    }
+}
+
 @MainActor
 protocol OpinionOrderAttributing {
+    var tracksReductions: Bool { get }
     func register(order: HyperliquidOrderIntent) async throws
     func synchronize(order: HyperliquidOrderIntent) async
+}
+
+struct NativeActivityReference: Encodable, Equatable {
+    let kind: String
+    let subjectID: String?
+    let eventID: String?
+    let updateID: UUID?
+
+    init?(source: OpinionTradeSource) {
+        if let subjectID = source.subjectID, let eventID = source.subjectEventID {
+            kind = "subject"
+            self.subjectID = subjectID
+            self.eventID = eventID
+            updateID = nil
+        } else if let updateID = source.nativeUpdateID {
+            kind = "native"
+            subjectID = nil
+            eventID = nil
+            self.updateID = updateID
+        } else { return nil }
+    }
+}
+
+extension OpinionOrderAttributing {
+    var tracksReductions: Bool { false }
 }
 
 @MainActor
@@ -185,6 +358,8 @@ struct NativeOpinionOrderAttribution: OpinionOrderAttributing {
     let accountID: UUID
     let client: NativeTradeFeedClient
 
+    var tracksReductions: Bool { true }
+
     struct Registration: Encodable {
         let opinionId: UUID
         let authorId, ticker, cloid, coin, side, size, limitPrice: String
@@ -192,13 +367,21 @@ struct NativeOpinionOrderAttribution: OpinionOrderAttributing {
     }
 
     static func registration(source: OpinionTradeSource, order: HyperliquidOrderIntent) throws -> Registration {
-        guard let author = source.authorID, !author.isEmpty, !order.reduceOnly else { throw BSmartAPIError.invalidResponse }
-        return Registration(opinionId: source.opinionID, authorId: author, ticker: source.ticker,
+        guard let opinionID = source.opinionID, let author = source.authorID,
+              !author.isEmpty, !order.reduceOnly else { throw BSmartAPIError.invalidResponse }
+        return Registration(opinionId: opinionID, authorId: author, ticker: source.ticker,
             cloid: order.cloid, coin: order.market.coin, side: order.side.rawValue,
             size: order.size.wire, limitPrice: order.limitPrice.wire, nonce: order.nonce, expiresAfter: order.expiresAfter)
     }
 
     func register(order: HyperliquidOrderIntent) async throws {
+        if order.reduceOnly {
+            return try await NativeDirectOrderAttribution(accountID: accountID, client: client).register(order: order)
+        }
+        if let reference = NativeActivityReference(source: source) {
+            return try await NativeDirectOrderAttribution(accountID: accountID, client: client,
+                                                          source: reference).register(order: order)
+        }
         guard order.accountID == accountID else { throw DeviceWalletError.accountChanged }
         struct Receipt: Decodable { let id: UUID; let cloid: String }
         let body = try JSONEncoder().encode(Self.registration(source: source, order: order))
@@ -209,6 +392,46 @@ struct NativeOpinionOrderAttribution: OpinionOrderAttributing {
     func synchronize(order: HyperliquidOrderIntent) async {
         if (try? await client.synchronize(accountID: accountID, cloid: order.cloid)) == true {
             client.account.feedSharingDidChange(accountID: accountID)
+            NotificationCenter.default.post(name: .bSmartNativeInvestorChanged, object: nil)
+        }
+    }
+}
+
+@MainActor
+struct NativeDirectOrderAttribution: OpinionOrderAttributing {
+    let accountID: UUID
+    let client: NativeTradeFeedClient
+    var source: NativeActivityReference? = nil
+
+    var tracksReductions: Bool { true }
+
+    struct Registration: Encodable {
+        let ticker, cloid, coin, side, size, limitPrice: String
+        let nonce, expiresAfter: UInt64
+        let reduceOnly: Bool
+        let source: NativeActivityReference?
+    }
+
+    static func registration(order: HyperliquidOrderIntent, source: NativeActivityReference? = nil) -> Registration {
+        Registration(ticker: String(order.market.coin.split(separator: ":").last ?? ""), cloid: order.cloid, coin: order.market.coin,
+                     side: order.side.rawValue, size: order.size.wire, limitPrice: order.limitPrice.wire,
+                     nonce: order.nonce, expiresAfter: order.expiresAfter, reduceOnly: order.reduceOnly,
+                     source: source)
+    }
+
+    func register(order: HyperliquidOrderIntent) async throws {
+        guard order.accountID == accountID else { throw DeviceWalletError.accountChanged }
+        struct Receipt: Decodable { let id: UUID; let cloid: String }
+        let body = try JSONEncoder().encode(Self.registration(order: order, source: source))
+        let receipt: Receipt = try await client.request("/orders/direct", method: "POST", body: body,
+                                                        expectedAccountID: accountID)
+        guard receipt.cloid == order.cloid else { throw BSmartAPIError.invalidResponse }
+    }
+
+    func synchronize(order: HyperliquidOrderIntent) async {
+        if (try? await client.synchronize(accountID: accountID, cloid: order.cloid)) == true {
+            client.account.feedSharingDidChange(accountID: accountID)
+            NotificationCenter.default.post(name: .bSmartNativeInvestorChanged, object: nil)
         }
     }
 }

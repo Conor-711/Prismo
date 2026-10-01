@@ -57,11 +57,14 @@ struct OpinionTradersPage: Codable {
 }
 
 struct OpinionTradeSource: Equatable {
-    let opinionID: UUID
+    let opinionID: UUID?
     let ticker: String
     var feedEventID: UUID? = nil
     var authorID: String? = nil
     var supportsThesis = true
+    var subjectID: String? = nil
+    var subjectEventID: String? = nil
+    var nativeUpdateID: UUID? = nil
 
     func matches(symbol: String) -> Bool {
         ticker.caseInsensitiveCompare(symbol) == .orderedSame

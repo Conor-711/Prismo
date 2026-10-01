@@ -43,7 +43,7 @@ struct AccountProviderButton: View {
             .contentShape(Capsule())
             .opacity(isEnabled ? 1 : 0.5)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.bSmartPlain)
         .accessibilityLabel(AccountProviderButtonContent.title(for: provider))
         .accessibilityIdentifier("account.signin.\(provider.rawValue)")
     }

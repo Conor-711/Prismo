@@ -22,7 +22,7 @@ struct TradingWalletView: View {
                                 .font(.headline).frame(maxWidth: .infinity, minHeight: 48)
                                 .foregroundStyle(BSmartColor.onAccent)
                                 .background(BSmartColor.brand, in: RoundedRectangle(cornerRadius: 8))
-                        }.buttonStyle(.plain).accessibilityIdentifier("wallet.trade")
+                        }.buttonStyle(.bSmartPlain).accessibilityIdentifier("wallet.trade")
                         TradingPositionsView(wallet: local)
                     }
                 }
@@ -43,6 +43,7 @@ struct TradingWalletView: View {
             await wallet.prepare()
         }
         .accessibilityIdentifier("wallet.screen")
+        .bSmartDetailPage()
         .bSmartPage()
     }
 }

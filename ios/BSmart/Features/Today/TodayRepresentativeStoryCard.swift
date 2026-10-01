@@ -41,13 +41,13 @@ struct TodayRepresentativeStoryCard: View {
                     Rectangle().fill(BSmartColor.brand).frame(width: 3)
                 }
                 .contentShape(Rectangle())
-            }.buttonStyle(.plain).accessibilityIdentifier("discovery.story.open")
+            }.buttonStyle(.bSmartPlain).accessibilityIdentifier("discovery.story.open")
             VStack(spacing: 0) {
                 TodayRepresentativeStoryChart(story: story) { call, index in
                     BSmartDetailNavigationLink(id: "story-node-\(call.id)") {
                         TodayRepresentativeOpinionDestination(story: story, call: call)
                     } label: { TodayRepresentativeStoryNode(index: index) }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.bSmartPlain)
                     .accessibilityLabel("Bullish view %d · %@ · %@".bSmartLocalized(index,
                         TodayRepresentativeStoryCopy.day(call.day), TodayRepresentativeStoryCopy.chartPrice(call.price)))
                     .accessibilityIdentifier("discovery.story.node.\(index)")

@@ -16,7 +16,7 @@ struct CCTPDepositEstimateView: View {
                 Button { requestID = UUID() } label: {
                     Image(systemName: "arrow.clockwise").frame(width: 44, height: 44)
                 }
-                .buttonStyle(.plain).foregroundStyle(BSmartColor.brand)
+                .buttonStyle(.bSmartPlain).foregroundStyle(BSmartColor.brand)
                 .accessibilityLabel("Refresh fees".bSmartLocalized)
                 .accessibilityIdentifier("deposit.refresh-fees")
                 .disabled(fees.isLoading)

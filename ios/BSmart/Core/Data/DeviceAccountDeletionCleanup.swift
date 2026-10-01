@@ -13,6 +13,7 @@ final class DeviceAccountDeletionCleanup: AccountDeletionLocalCleanup {
     func removeAccountData(_ identity: TradingAccountIdentity) async throws {
         try account.suspendForAccountDeletion(identity)
         try profiles.erase(accountID: identity.id)
+        try await TradeThesisDraftStore.shared.erase(accountID: identity.id)
         // Guest research preferences and all wallet/funding records are separate ownership domains.
     }
 }

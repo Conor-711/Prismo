@@ -10,11 +10,14 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from ...domain.smart_voice.x_delivery_scope import frozen_x_authors, top_quartile_x_authors
+from ...domain.smart_voice.x_delivery_scope import (
+    frozen_x_authors, ranked_expanded_cohorts, top_quartile_x_authors,
+)
 from ...jobs.x_daily import write_json
 from ...jobs.x_delivery import enqueue
 from ...platforms.telegram.x_packages import TelegramBot, TelegramTransportError
 from ...platforms.x.daily_package import stage_package
+from ...platforms.x.expanded_roster import read_expanded_roster
 
 ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_CHANNEL_ID = -1004310606552
@@ -71,6 +74,9 @@ def _filter_ranked_posts(raw: Path, selected: Path, inbox: Path) -> dict:
     else:
         ids, handles = top_quartile_x_authors(str(ROOT / 'data/dev.db'))
         ranking_at = datetime.now(timezone.utc).isoformat()
+    cohorts = ranked_expanded_cohorts(read_expanded_roster(raw))
+    cohort_by_id = {author_id: group for group, authors in cohorts.items() for author_id in authors}
+    counts = {'english_stock': 0, 'chinese_stock': 0, 'crypto': 0}
     kept = 0
     selected.parent.mkdir(parents=True, exist_ok=True)
     temporary = selected.with_suffix('.part')
@@ -85,15 +91,21 @@ def _filter_ranked_posts(raw: Path, selected: Path, inbox: Path) -> dict:
                         post = json.loads(line)
                         author_id = str(post.get('author_id') or '')
                         handle = str(post.get('author_handle') or '').casefold().lstrip('@')
-                        if author_id in ids or (not author_id and handle in handles):
+                        cohort = ('english_stock' if author_id in ids or (not author_id and handle in handles)
+                                  else {'stock': 'chinese_stock', 'crypto': 'crypto'}.get(cohort_by_id.get(author_id)))
+                        if cohort:
                             output.write(line if line.endswith(b'\n') else line + b'\n')
                             kept += 1
+                            counts[cohort] += 1
     if kept:
         temporary.replace(selected)
     else:
         temporary.unlink()
     return {'sourceHash': info['packageHash'], 'sourceRows': info['rows'],
             'selectedRows': kept, 'rankedAuthors': len(ids),
+            'selectedRowsByCohort': counts,
+            'rankedAuthorsByCohort': {'english_stock': len(ids),
+                                      'chinese_stock': len(cohorts['stock']), 'crypto': len(cohorts['crypto'])},
             'rankingAt': ranking_at,
             'rankedAuthorIds': sorted(ids)}
 

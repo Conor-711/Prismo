@@ -61,3 +61,21 @@ def test_applied_content_syncs_trade_catalog_and_reports_failures(tmp_path, monk
     assert seen == [True]
     assert receipt['tradeCatalog']['status'] == ('failed' if catalog_error else 'published')
     assert receipt['status'] == 'published'
+
+
+def test_content_only_writes_receipt_without_post_publish_work(tmp_path, monkeypatch):
+    class Engine:
+        def dispose(self):
+            pass
+
+    monkeypatch.setattr(sys, 'argv', ['content-release', '--input-dir', str(tmp_path), '--apply', '--content-only'])
+    monkeypatch.setattr(cli, 'publication_database_url', lambda: 'postgresql://configured')
+    monkeypatch.setattr(cli, 'create_engine', lambda *args, **kwargs: Engine())
+    monkeypatch.setattr(cli, 'publish', lambda *args, **kwargs: {'status': 'published', 'revision': 'current'})
+    monkeypatch.setattr(cli, 'enabled', lambda: True)
+    monkeypatch.setattr('services.client_api.opinion_trades.publish_catalog.sync_active_content',
+                        lambda *args, **kwargs: pytest.fail('catalog should run separately'))
+    monkeypatch.setattr(cli, 'drain', lambda *args, **kwargs: pytest.fail('push should run separately'))
+    cli.main()
+    receipt = json.loads((tmp_path / 'supabase-publication.json').read_text())
+    assert receipt == {'status': 'published', 'revision': 'current'}

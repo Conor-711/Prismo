@@ -20,7 +20,7 @@ struct TradeThesisActions: View {
                         if busy { ProgressView().controlSize(.small) }
                     }.font(.subheadline).frame(minHeight: 44)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.bSmartPlain)
                 .foregroundStyle(thesis.likedByMe ? BSmartColor.bear : BSmartColor.secondaryText)
                 .disabled(busy || account.identity == nil || item.canLikeThesis != true)
                 .accessibilityLabel((thesis.likedByMe ? "Unlike thesis" : "Like thesis").bSmartLocalized)
@@ -30,7 +30,7 @@ struct TradeThesisActions: View {
                 Button { composing = true } label: {
                     Label("Write thesis".bSmartLocalized, systemImage: "square.and.pencil")
                         .font(.subheadline).frame(minHeight: 44)
-                }.buttonStyle(.plain).foregroundStyle(BSmartColor.brand)
+                }.buttonStyle(.bSmartPlain).foregroundStyle(BSmartColor.brand)
                     .accessibilityIdentifier("thesis.write.\(item.id.uuidString)")
             }
             if let error { Text(error).font(.callout).foregroundStyle(BSmartColor.bear) }

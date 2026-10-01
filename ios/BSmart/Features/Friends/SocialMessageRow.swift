@@ -22,7 +22,7 @@ struct SocialMessageRow: View {
                                  size: room == .global ? 42 : 30)
                         .frame(width: 48, height: 48)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.bSmartPlain)
                 .accessibilityLabel("View profile".bSmartLocalized + ": " + author.nickname)
                 .accessibilityIdentifier("friends.message.profile.\(author.id.uuidString)")
             }
@@ -73,13 +73,13 @@ struct SocialMessageRow: View {
                 Button { onOpenProfile(author) } label: {
                     Text(author.nickname).font(.subheadline.weight(.semibold))
                         .foregroundStyle(BSmartColor.brand).lineLimit(1)
-                }.buttonStyle(.plain)
+                }.buttonStyle(.bSmartPlain)
             }
             if let reply = message.reply {
                 Button { onQuote(reply.id) } label: {
                     SocialReplyPreview(name: reply.senderName, text: reply.preview)
                         .padding(8).background(BSmartColor.recessed, in: RoundedRectangle(cornerRadius: 6))
-                }.buttonStyle(.plain)
+                }.buttonStyle(.bSmartPlain)
             }
             if let image = message.image {
                 Button { onImage(image) } label: {
@@ -91,13 +91,13 @@ struct SocialMessageRow: View {
                     .frame(width: maxWidth - 24, height: min(280, max(100, (maxWidth - 24) * CGFloat(image.height) / CGFloat(image.width))))
                     .clipped().background(BSmartColor.recessed)
                     .clipShape(RoundedRectangle(cornerRadius: 6))
-                }.buttonStyle(.plain).accessibilityLabel("View photo".bSmartLocalized)
+                }.buttonStyle(.bSmartPlain).accessibilityLabel("View photo".bSmartLocalized)
             }
             if let share = message.share {
                 Button { onOpenShare(share) } label: {
                     SocialSharedContentCard(content: share)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.bSmartPlain)
                 .accessibilityIdentifier("friends.message.share.\(message.id.uuidString)")
                 timestamp.frame(maxWidth: .infinity, alignment: .trailing)
             } else { ViewThatFits(in: .horizontal) {
@@ -215,7 +215,7 @@ struct SocialChatPhotoView: View {
                 else { ProgressView() }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity).background(BSmartColor.ink)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done".bSmartLocalized) { dismiss() } } }
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Group { Button("Done".bSmartLocalized) { dismiss() } }.buttonStyle(.bSmartToolbar) }.bSmartHideSystemBackground() }
         }.bSmartPage()
     }
 }

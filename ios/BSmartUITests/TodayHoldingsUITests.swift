@@ -13,12 +13,16 @@ final class TodayHoldingsUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["holdings.collection"].waitForExistence(timeout: 5))
         screenshot(app, "Holdings collection - dark Chinese")
         let source = app.segmentedControls["holdings.source-filter"]
-        source.buttons["Smart Account"].tap()
+        if source.exists { source.buttons["Smart Account"].tap() }
         let account = activity("account", in: app)
         XCTAssertTrue(account.waitForExistence(timeout: 5))
         account.tap()
         XCTAssertTrue(app.descendants(matching: .any)["smart.account.evidence.detail"].waitForExistence(timeout: 5))
         app.navigationBars.buttons.firstMatch.tap()
+        guard source.exists else {
+            XCTAssertFalse(activity("money", in: app).exists)
+            return
+        }
         source.buttons["Smart Money"].tap()
         let money = activity("money", in: app)
         XCTAssertTrue(money.waitForExistence(timeout: 5))

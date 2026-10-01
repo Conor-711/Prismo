@@ -39,7 +39,7 @@ struct PortfolioSetupView: View {
                 .padding(.bottom, 96)
             }
             .background(BSmartColor.ink)
-            .searchable(text: $searchText, prompt: "Ticker or company".bSmartLocalized)
+            .bSmartSearchable(text: $searchText, prompt: "Ticker or company".bSmartLocalized)
             .safeAreaInset(edge: .bottom) {
                 continueBar
             }
@@ -130,14 +130,16 @@ struct PortfolioSetupView: View {
                 title: "Smart Account",
                 detail: "Latest qualified views"
             )
-            Divider()
-                .overlay(BSmartColor.line)
-                .padding(.vertical, BSmartSpacing.medium)
-            setupValue(
-                symbol: "wallet.bifold.fill",
-                title: "Smart Money",
-                detail: "Public capital moves"
-            )
+            if BSmartProductVisibility.onchainSmartMoney {
+                Divider()
+                    .overlay(BSmartColor.line)
+                    .padding(.vertical, BSmartSpacing.medium)
+                setupValue(
+                    symbol: "wallet.bifold.fill",
+                    title: "Smart Money",
+                    detail: "Public capital moves"
+                )
+            }
         }
         .frame(maxWidth: .infinity)
         .background(BSmartColor.elevated)
@@ -178,7 +180,7 @@ struct PortfolioSetupView: View {
             }
             .bSmartSurface(padding: BSmartSpacing.medium)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.bSmartPlain)
         .accessibilityIdentifier("portfolio-setup.link-brokerage")
     }
 
@@ -229,7 +231,7 @@ struct PortfolioSetupView: View {
                         .font(.caption.weight(.bold))
                         .frame(minWidth: 48, minHeight: 34)
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.bSmartSecondary)
                 .accessibilityLabel("Add %@ position".bSmartLocalized(item.ticker))
 
                 Button {
@@ -247,7 +249,7 @@ struct PortfolioSetupView: View {
                         .font(.caption.weight(.bold))
                         .frame(minWidth: 48, minHeight: 34)
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.bSmartSecondary)
                 .accessibilityLabel("Watch %@".bSmartLocalized(item.ticker))
                 .accessibilityIdentifier("portfolio-setup.watch.\(item.ticker)")
             }

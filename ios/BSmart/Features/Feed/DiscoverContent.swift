@@ -1,65 +1,27 @@
 import SwiftUI
 
-enum DiscoverSection: String, CaseIterable {
-    case popular, latest
-
-    var title: String {
-        switch self {
-        case .popular: "Trending"
-        case .latest: "Latest trades"
-        }
-    }
-}
-
 struct DiscoverContent<Content: View>: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Binding var selection: DiscoverSection
-    @ScaledMetric(relativeTo: .headline) private var tabSize = 17.0
-    @ScaledMetric(relativeTo: .headline) private var tabHeight = 48.0
-    @ViewBuilder let content: (DiscoverSection) -> Content
+    @Environment(\.bSmartFloatingNavigationFrame) private var floatingNavigationFrame
+    @ViewBuilder let content: () -> Content
     let refresh: () async -> Void
 
     var body: some View {
-        BSmartCollapsingPager(
-            selection: $selection, sections: DiscoverSection.allCases,
-            pageIdentifier: { "discover.page.\($0.rawValue)" },
-            header: { _ in EmptyView() }, tabs: { tabs }, content: content, refresh: refresh
-        )
-        .ignoresSafeArea(.container, edges: .bottom)
-    }
-
-    private var tabs: some View {
-        HStack(spacing: 32) {
-            ForEach(DiscoverSection.allCases, id: \.self) { section in
-                Button {
-                    withAnimation(reduceMotion ? nil : BSmartMotion.quick) { selection = section }
-                } label: {
-                    Text(section.title.bSmartLocalized)
-                        .font(.system(size: tabSize, weight: .semibold))
-                        .foregroundStyle(selection == section ? BSmartColor.primaryText : BSmartColor.tertiaryText)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(minWidth: 44, minHeight: tabHeight, alignment: .leading)
-                        .contentShape(Rectangle())
-                        .overlay(alignment: .bottomLeading) {
-                            if selection == section {
-                                Capsule().fill(BSmartColor.brand).frame(width: 46, height: 3)
-                            }
-                        }
+        GeometryReader { viewport in
+            ScrollView {
+                VStack(spacing: 0) {
+                    content()
+                        .padding(BSmartSpacing.large)
+                        .frame(maxWidth: .infinity, minHeight: viewport.size.height, alignment: .topLeading)
+                    Color.clear.frame(height: BSmartFloatingNavigationLayout.bottomSpacing(
+                        viewport: viewport.frame(in: .global), navigationFrame: floatingNavigationFrame
+                    ))
                 }
-                .buttonStyle(.plain)
-                .accessibilityAddTraits(selection == section ? .isSelected : [])
-                .accessibilityIdentifier("discover.tab.\(section.rawValue)")
             }
-            Spacer(minLength: 0)
+            .refreshable { await refresh() }
+            .scrollIndicators(.hidden)
+            .scrollDismissesKeyboard(.interactively)
+            .accessibilityIdentifier("discover.ranking.page")
         }
-        .padding(.horizontal, BSmartSpacing.large)
-        .background(BSmartColor.ink)
-        .overlay(alignment: .bottom) {
-            Rectangle().fill(BSmartColor.line).frame(height: 0.5)
-        }
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("feed.mode")
+        .ignoresSafeArea(.container, edges: .bottom)
     }
 }

@@ -148,7 +148,6 @@ private enum TodayViewpointCardMetrics {
 
 struct TodayViewpointPackageRail: View {
     let packages: [TodayViewpointPackage]
-    @Namespace private var consensusTransition
     @State private var visiblePageID: String?
     @ScaledMetric(relativeTo: .body) private var cardHeight = TodayViewpointCardMetrics.stackedHeight
 
@@ -173,12 +172,10 @@ struct TodayViewpointPackageRail: View {
                             ForEach(Array(page.packages.enumerated()), id: \.element.id) { row, package in
                                 NavigationLink {
                                     TodayViewpointPackageDetailView(package: package, style: row % 2)
-                                        .bSmartZoomNavigationTransition(sourceID: package.id, in: consensusTransition)
                                 } label: {
                                     TodayViewpointPackageCard(package: package, style: row % 2, width: nil, isStacked: true)
-                                        .bSmartMatchedTransitionSource(id: package.id, in: consensusTransition)
                                 }
-                                .buttonStyle(.plain)
+                                .buttonStyle(.bSmartPlain)
                                 .accessibilityIdentifier("today.viewpoint-package.\(package.ticker.lowercased())")
                             }
                         }
@@ -494,7 +491,7 @@ struct TodayViewpointPackageDetailView: View {
                     }
                     .contentShape(Circle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.bSmartPlain)
             .accessibilityLabel("Back".bSmartLocalized)
             .accessibilityIdentifier("today.viewpoint-package.back")
 
@@ -572,7 +569,7 @@ struct TodayViewpointPackageDetailView: View {
                             isExpanded: expandedUpdateIDs.contains(update.id)
                         )
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.bSmartPlain)
                     .accessibilityIdentifier("today.consensus-leading-account.\(index)")
 
                     if expandedUpdateIDs.contains(update.id) {
@@ -636,7 +633,7 @@ struct TodayViewpointPackageDetailView: View {
                             isExpanded: expandedUpdateIDs.contains(update.id)
                         )
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.bSmartPlain)
                     .accessibilityIdentifier("today.viewpoint-package-account.\(index)")
 
                     if expandedUpdateIDs.contains(update.id) {

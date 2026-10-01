@@ -11,7 +11,6 @@ Current development scope:
 - notification preferences and APNs device registration;
 - versioned materialized read models for production-shaped reads;
 - instant and daily-digest notification planning, immutable digest snapshots, and APNs delivery;
-- authenticated Mr Collie questions grounded in portfolio, Smart Account, and Smart Money evidence;
 - privacy-minimized, installation-scoped product telemetry with bounded retention.
 
 Fixture mode is development-only. `BSMART_ENV=production` refuses to start with
@@ -36,33 +35,6 @@ BSMART_ENV=development BSMART_READ_MODEL_MODE=database make client-api-dev
 `client-api-seed-mock` is idempotent and intended only for development. The
 production publisher will materialize validated Smart Account, Smart Money,
 relationship, and ticker intelligence objects into the same collection model.
-
-## Mr Collie
-
-Mr Collie is an authenticated Client API capability, not a direct iOS-to-model
-integration. The server builds a bounded context from the installation's
-portfolio and the active versioned read models, calls DeepSeek, and only returns
-citations whose IDs exist in that context. The DeepSeek key therefore belongs
-only in the Client API environment:
-
-```bash
-DEEPSEEK_API_KEY=...
-DEEPSEEK_BASE_URL=https://api.deepseek.com
-BSMART_MR_COLLIE_MODEL=deepseek-v4-flash
-BSMART_MR_COLLIE_TIMEOUT_SECONDS=45
-BSMART_MR_COLLIE_REQUESTS_PER_MINUTE=8
-```
-
-Local development automatically reads the uncommitted repository `.env`
-without replacing variables already exported by the shell. Production must
-provide these values through the hosting secret manager. When DeepSeek is not
-configured or cannot return valid grounded JSON, the API fails closed and iOS
-clearly falls back to its deterministic on-device evidence view.
-
-Mr Collie defaults to `deepseek-v4-flash`: its bounded evidence explanation is
-a short structured-output task and does not require the Pro model by default.
-Other pipeline workloads may keep their own Pro setting; changing Mr Collie
-does not change those jobs.
 
 For the isolated Mock Internal Alpha, use dedicated state and read-model
 databases instead of the normal development files:

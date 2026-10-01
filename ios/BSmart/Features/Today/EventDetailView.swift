@@ -20,8 +20,12 @@ struct EventDetailView: View {
                 changeHeader
                 positionContext
                 evidencePulseSummary
-                evidenceRelationshipSection
-                auditSection
+                if BSmartProductVisibility.onchainSmartMoney {
+                    evidenceRelationshipSection
+                    auditSection
+                } else {
+                    accountOnlyEvidenceSection
+                }
                 feedbackSection
             }
             .padding(BSmartSpacing.large)
@@ -100,7 +104,7 @@ struct EventDetailView: View {
                         .font(.subheadline.weight(.semibold))
                         .frame(maxWidth: .infinity, minHeight: 40)
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.bSmartPrimary)
                 .accessibilityIdentifier("event.watch.\(signal.ticker)")
             }
 
@@ -113,10 +117,12 @@ struct EventDetailView: View {
                     .foregroundStyle(signal.resolvedDataStatus.color)
             }
 
-            Text(signal.title.bSmartLocalized)
+            Text((BSmartProductVisibility.onchainSmartMoney
+                ? signal.title : (accountEvidence.first?.title ?? signal.ticker)).bSmartLocalized)
                 .font(.system(size: 25, weight: .bold, design: .rounded))
                 .fixedSize(horizontal: false, vertical: true)
-            Text(signal.summary.bSmartLocalized)
+            Text((BSmartProductVisibility.onchainSmartMoney
+                ? signal.summary : (accountEvidence.first?.detail ?? "No qualified view")).bSmartLocalized)
                 .font(.body)
                 .foregroundStyle(BSmartColor.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
@@ -126,7 +132,8 @@ struct EventDetailView: View {
                     .font(.caption.weight(.bold))
                     .foregroundStyle(BSmartColor.pulse)
                     .textCase(.uppercase)
-                Text(signal.conclusion.bSmartLocalized)
+                Text((BSmartProductVisibility.onchainSmartMoney
+                    ? signal.conclusion : (accountEvidence.first?.detail ?? "Review the original view")).bSmartLocalized)
                     .font(.headline.weight(.semibold))
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -162,17 +169,19 @@ struct EventDetailView: View {
                     color: accountEvidence.isEmpty ? BSmartColor.tertiaryText : BSmartColor.sky
                 )
 
-                BSmartEvidenceStateCell(
-                    title: "Smart Money",
-                    symbol: SignalEvidenceSource.smartMoney.symbol,
-                    value: signal.smartMoneyCoverage == .unavailable
-                        ? "No capital verification"
-                        : "%d capital moves".bSmartLocalized(moneyEvidence.count),
-                    detail: signal.smartMoneyCoverage == .unavailable
-                        ? "Coverage is absent, not neutral"
-                        : (moneyEvidence.first?.actorName ?? "Public account activity"),
-                    color: signal.smartMoneyCoverage == .unavailable ? BSmartColor.gold : BSmartColor.brand
-                )
+                if BSmartProductVisibility.onchainSmartMoney {
+                    BSmartEvidenceStateCell(
+                        title: "Smart Money",
+                        symbol: SignalEvidenceSource.smartMoney.symbol,
+                        value: signal.smartMoneyCoverage == .unavailable
+                            ? "No capital verification"
+                            : "%d capital moves".bSmartLocalized(moneyEvidence.count),
+                        detail: signal.smartMoneyCoverage == .unavailable
+                            ? "Coverage is absent, not neutral"
+                            : (moneyEvidence.first?.actorName ?? "Public account activity"),
+                        color: signal.smartMoneyCoverage == .unavailable ? BSmartColor.gold : BSmartColor.brand
+                    )
+                }
             }
         }
     }
@@ -200,7 +209,11 @@ struct EventDetailView: View {
                 }
             }
 
-            Text(personalization.localizedImpactText(for: signal))
+            Text(BSmartProductVisibility.onchainSmartMoney
+                ? personalization.localizedImpactText(for: signal)
+                : (BSmartLocalization.isSimplifiedChinese
+                    ? "这条公开观点涉及你关注的标的，请结合自己的持仓判断。"
+                    : "This public view concerns a stock you track; consider it alongside your position."))
                 .font(.subheadline)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -213,7 +226,10 @@ struct EventDetailView: View {
                         .font(.caption.weight(.bold))
                         .foregroundStyle(BSmartColor.brand)
                         .textCase(.uppercase)
-                    Text(signal.nextStep.bSmartLocalized)
+                    Text(BSmartProductVisibility.onchainSmartMoney
+                        ? signal.nextStep.bSmartLocalized
+                        : (BSmartLocalization.isSimplifiedChinese
+                            ? "查看作者原文及发布时间。" : "Read the author's original view and publication date."))
                         .font(.subheadline)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -260,6 +276,22 @@ struct EventDetailView: View {
             )
         }
         .bSmartPanel(border: relationshipColor.opacity(0.34))
+    }
+
+    private var accountOnlyEvidenceSection: some View {
+        VStack(alignment: .leading, spacing: BSmartSpacing.medium) {
+            Label("Smart Account", systemImage: SignalEvidenceSource.smartAccount.symbol)
+                .font(.headline.weight(.bold))
+            evidenceSourceBlock(
+                title: "Smart Account",
+                symbol: SignalEvidenceSource.smartAccount.symbol,
+                evidence: accountEvidence,
+                emptyTitle: "No qualifying Smart Account update",
+                emptyDetail: "No qualifying public view is available for this signal.",
+                color: BSmartColor.sky
+            )
+        }
+        .bSmartPanel()
     }
 
     @ViewBuilder
@@ -440,7 +472,7 @@ struct EventDetailView: View {
                     } label: {
                         originalEvidenceRow(evidence, isAvailable: true)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.bSmartPlain)
                 } else {
                     originalEvidenceRow(evidence, isAvailable: false)
                 }
@@ -475,7 +507,7 @@ struct EventDetailView: View {
                                     .stroke(isSelected ? BSmartColor.brand : BSmartColor.line, lineWidth: 0.75)
                             }
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.bSmartPlain)
                 }
             }
         }

@@ -4,7 +4,6 @@ struct TodayInvestorDiscoveryPeople: View {
     let investors: [TodayInvestorDiscovery.Investor]
     let selectedID: String
     var compact = false
-    let transition: Namespace.ID
     let onSelect: (TodayInvestorDiscovery.Investor) -> Void
     let onOpen: (TodayInvestorDiscovery.Investor) -> Void
     @State private var centeredID: String?
@@ -22,7 +21,6 @@ struct TodayInvestorDiscoveryPeople: View {
                                                       cellWidth: stride) {
                                 onOpen(investor)
                             }
-                            .bSmartMatchedTransitionSource(id: investor.id, in: transition)
                             .frame(width: stride)
                             .id(investor.id)
                             .allowsHitTesting(abs(offset - index) <= 1)
@@ -78,7 +76,7 @@ struct TodayInvestorDiscoveryFocus: View {
                     }
                     .frame(minHeight: 44).contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.bSmartPlain)
                 .accessibilityLabel("View %@ profile".bSmartLocalized(account.name))
                 .accessibilityIdentifier(profileIdentifier)
                 TodayInvestorDiscoveryFollow(account: account)
@@ -128,7 +126,7 @@ struct TodayInvestorDiscoveryFollow: View {
                 .background(followed ? BSmartColor.brand.opacity(0.1) : BSmartColor.brand)
                 .clipShape(Circle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.bSmartPlain)
         .accessibilityLabel((followed ? "Untrack %@" : "Track %@").bSmartLocalized(account.name))
         .accessibilityValue((followed ? "Tracking" : "Not tracking").bSmartLocalized)
         .accessibilityIdentifier("discovery.follow.\(account.id)")

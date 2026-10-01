@@ -48,29 +48,3 @@ def test_docker_service_postgres_disables_ssl_by_default():
     )
 
     assert value.endswith("sslmode=disable")
-
-
-def test_mr_collie_uses_explicit_deepseek_environment(monkeypatch):
-    monkeypatch.setenv("DEEPSEEK_API_KEY", "test-deepseek-key")
-    monkeypatch.setenv("DEEPSEEK_BASE_URL", "https://deepseek.example.invalid")
-    monkeypatch.setenv("BSMART_MR_COLLIE_MODEL", "deepseek-test")
-    monkeypatch.setenv("BSMART_MR_COLLIE_TIMEOUT_SECONDS", "12")
-    monkeypatch.setenv("BSMART_MR_COLLIE_REQUESTS_PER_MINUTE", "5")
-
-    settings = ClientAPISettings.from_environment()
-
-    assert settings.deepseek_api_key == "test-deepseek-key"
-    assert settings.deepseek_base_url == "https://deepseek.example.invalid"
-    assert settings.mr_collie_model == "deepseek-test"
-    assert settings.mr_collie_timeout_seconds == 12
-    assert settings.mr_collie_requests_per_minute == 5
-
-
-def test_mr_collie_defaults_to_flash_independently_of_mid_model(monkeypatch):
-    monkeypatch.delenv("BSMART_MR_COLLIE_MODEL", raising=False)
-    monkeypatch.setenv("DEEPSEEK_MODEL_LOW", "deepseek-v4-flash")
-    monkeypatch.setenv("DEEPSEEK_MODEL_MID", "deepseek-v4-pro")
-
-    settings = ClientAPISettings.from_environment()
-
-    assert settings.mr_collie_model == "deepseek-v4-flash"

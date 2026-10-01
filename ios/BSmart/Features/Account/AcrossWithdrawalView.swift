@@ -159,7 +159,7 @@ struct AcrossWithdrawalView: View {
                         else { Image(systemName: store.quote == nil ? "arrow.up.right" : "lock.shield") }
                         Text((store.quote == nil ? "Get withdrawal quote" : "Confirm withdrawal").bSmartLocalized)
                     }.font(.headline).frame(maxWidth: .infinity, minHeight: 48).bSmartActionSurface()
-                }.buttonStyle(.plain)
+                }.buttonStyle(.bSmartPlain)
                     .disabled(!enabled || !walletReady || store.isBusy || store.pending != nil && store.quote == nil ||
                               store.quote != nil && !acknowledged || scenePhase != .active ||
                               store.quote == nil && (!TradingWalletChallenge.validAddress(recipient) ||

@@ -8,6 +8,10 @@ enum SmartAccountRankPresentation {
     }
 
     static func label(_ account: SmartAccountProfile) -> String? {
+        if account.platform == "bsmart" {
+            guard let percent = topPercent(account), account.nativePerformance?.rank != nil else { return nil }
+            return "bSmart TOP \(percent)%"
+        }
         if let percent = topPercent(account) { return "TOP \(percent)%" }
         guard account.resolvedPlatformRank > 0 else { return nil }
         return "#\(account.resolvedPlatformRank)"

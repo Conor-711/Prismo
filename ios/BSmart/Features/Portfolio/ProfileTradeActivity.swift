@@ -3,8 +3,10 @@ import SwiftUI
 struct ProfileTradeActivity: View {
     @EnvironmentObject private var account: AccountAccessStore
     @Environment(\.scenePhase) private var phase
+    @Environment(\.bSmartPageIsActive) private var isPageActive
     var refresh: Int = 0
     var isActive = true
+    private var active: Bool { isActive && isPageActive }
     @StateObject private var store = TradeFeedStore()
 
     var body: some View {
@@ -19,18 +21,20 @@ struct ProfileTradeActivity: View {
             }
         }
         .accessibilityIdentifier("profile.trade-activity")
-        .task(id: "\(account.identity?.id.uuidString ?? "guest")-\(account.feedRevision)-\(refresh)-\(isActive)") {
-            store.clear(); await load(reset: true)
+        .onChange(of: account.identity?.id) { _, _ in store.clear() }
+        .task(id: "\(account.identity?.id.uuidString ?? "guest")-\(account.feedRevision)-\(refresh)-\(active)") {
+            guard active else { return }
+            await load(reset: true)
         }
         .onChange(of: phase) { _, phase in
-            if phase == .active && isActive { Task { await load(reset: true) } }
+            if phase == .active && active { Task { await load(reset: true) } }
             else if phase == .background { store.clear() }
         }
         .onDisappear { store.clear() }
     }
 
     private func load(reset: Bool) async {
-        guard isActive, account.identity != nil else { store.clear(); return }
+        guard active, account.identity != nil else { store.clear(); return }
         await store.load(reset: reset) { offset in
             try await NativeTradeFeedClient(account: account).page(offset: offset, mine: true)
         }

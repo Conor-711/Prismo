@@ -57,7 +57,7 @@ struct ManagedDepositView: View {
                         Label((copied ? "Copied" : "Copy address").bSmartLocalized,
                               systemImage: copied ? "checkmark" : "doc.on.doc")
                             .frame(maxWidth: .infinity, minHeight: 48)
-                    }.buttonStyle(.borderedProminent).tint(BSmartColor.brand).foregroundStyle(BSmartColor.onAccent)
+                    }.buttonStyle(.bSmartPrimary).tint(BSmartColor.brand).foregroundStyle(BSmartColor.onAccent)
                     Text("Send only %@ on %@ to this deposit address. Refunds return to your account wallet on the same network."
                         .bSmartLocalized(network.depositAsset.bSmartLocalized, network.title))
                         .font(.footnote).foregroundStyle(BSmartColor.secondaryText)
@@ -174,7 +174,7 @@ struct ManagedDepositView: View {
                                     }
                                 }
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.bSmartPlain)
                             .id(value)
                             .accessibilityAddTraits(network == value ? .isSelected : [])
                             .accessibilityIdentifier("funding.network.\(value.rawValue)")

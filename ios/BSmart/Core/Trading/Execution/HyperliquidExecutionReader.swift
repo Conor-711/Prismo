@@ -127,8 +127,10 @@ final class HyperliquidExecutionReader: HyperliquidExecutionReading, @unchecked 
                 transport = "http_fallback"
             }
             catch HyperliquidInfoSocketError.rejected {
-                outcome = "socket_rejected"
-                throw HyperliquidTradingCheckError.unavailable
+                // Socket errors are transport-specific. Only /info may fall back;
+                // the original query must still pass HTTP status/origin/schema checks.
+                try Task.checkCancellation()
+                transport = "http_fallback_rejected"
             }
             catch HyperliquidInfoSocketError.invalidResponse {
                 // A malformed socket frame does not authorize an order. Retry the
@@ -144,39 +146,61 @@ final class HyperliquidExecutionReader: HyperliquidExecutionReading, @unchecked 
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("no-store", forHTTPHeaderField: "Cache-Control")
-        do {
-            let (bytes, response) = try await session.bytes(for: request)
-            defer { bytes.task.cancel() }
-            guard let http = response as? HTTPURLResponse else {
-                outcome = "http_invalid"
-                throw HyperliquidTradingCheckError.unavailable
-            }
-            guard http.statusCode == 200 else {
-                outcome = "http_\(http.statusCode)"
-                throw HyperliquidTradingCheckError.unavailable
-            }
-            guard http.url == Self.endpoint, http.mimeType == "application/json",
-                  http.expectedContentLength <= responseLimit else {
-                outcome = "http_invalid"
-                throw HyperliquidTradingCheckError.unavailable
-            }
-            var data = Data()
-            for try await byte in bytes {
-                guard data.count < responseLimit else {
-                    outcome = "http_oversize"
-                    throw HyperliquidTradingCheckError.invalidResponse
+        for attempt in 0..<2 {
+            do {
+                let (bytes, response) = try await session.bytes(for: request)
+                defer { bytes.task.cancel() }
+                guard let http = response as? HTTPURLResponse, http.url == Self.endpoint else {
+                    outcome = "http_invalid"
+                    throw HyperliquidTradingCheckError.unavailable
                 }
-                data.append(byte)
+                guard http.statusCode == 200 else {
+                    outcome = "http_\(http.statusCode)"
+                    if attempt == 0, [429, 500, 502, 503, 504].contains(http.statusCode),
+                       started.duration(to: .now) < .seconds(4) {
+                        let retryAfter = http.value(forHTTPHeaderField: "Retry-After")
+                        let delay = retryAfter == nil ? 0.25 : retryAfter.flatMap(Double.init)
+                        if let delay, delay.isFinite, delay >= 0, delay <= 1 {
+                            bytes.task.cancel()
+                            try await Task.sleep(for: .seconds(max(0.25, delay)))
+                            transport = "http_retry"
+                            continue
+                        }
+                    }
+                    throw HyperliquidTradingCheckError.unavailable
+                }
+                guard http.url == Self.endpoint, http.mimeType == "application/json",
+                      http.expectedContentLength <= responseLimit else {
+                    outcome = "http_invalid"
+                    throw HyperliquidTradingCheckError.unavailable
+                }
+                var data = Data()
+                for try await byte in bytes {
+                    guard data.count < responseLimit else {
+                        outcome = "http_oversize"
+                        throw HyperliquidTradingCheckError.invalidResponse
+                    }
+                    data.append(byte)
+                }
+                try Task.checkCancellation()
+                outcome = "ok"
+                return data
+            } catch is CancellationError { throw CancellationError() }
+            catch let error as HyperliquidTradingCheckError { throw error }
+            catch {
+                if Task.isCancelled { throw CancellationError() }
+                outcome = "http_transport"
+                if attempt == 0, let failure = error as? URLError,
+                   [.networkConnectionLost, .timedOut, .cannotConnectToHost, .notConnectedToInternet].contains(failure.code),
+                   started.duration(to: .now) < .seconds(4) {
+                    try await Task.sleep(for: .milliseconds(250))
+                    transport = "http_retry"
+                    continue
+                }
+                throw HyperliquidTradingCheckError.unavailable
             }
-            try Task.checkCancellation()
-            return data
-        } catch is CancellationError { throw CancellationError() }
-        catch let error as HyperliquidTradingCheckError { throw error }
-        catch {
-            if Task.isCancelled { throw CancellationError() }
-            outcome = "http_transport"
-            throw HyperliquidTradingCheckError.unavailable
         }
+        throw HyperliquidTradingCheckError.unavailable
     }
 }
 

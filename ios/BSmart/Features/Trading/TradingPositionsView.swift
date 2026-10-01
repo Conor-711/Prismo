@@ -65,7 +65,7 @@ private struct TradingPositionsContent: View {
                                 companyName: companyName(for: position.symbol),
                                 isCrypto: !position.coin.contains(":"))
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.bSmartPlain)
                         .accessibilityIdentifier("portfolio.position.ticker.\(position.symbol)")
                     } else {
                         positionSummary(position)

@@ -3,12 +3,16 @@ import SwiftUI
 struct OpportunityRadarView: View {
     @EnvironmentObject private var model: AppModel
 
+    private var visibleSignals: [PortfolioSignal] {
+        model.opportunitySignals.filter(\.isVisibleInProduct)
+    }
+
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: BSmartSpacing.xLarge) {
                 intro
 
-                if model.opportunitySignals.isEmpty {
+                if visibleSignals.isEmpty {
                     ContentUnavailableView {
                         Label("No qualified opportunities", systemImage: "scope")
                     } description: {
@@ -18,10 +22,10 @@ struct OpportunityRadarView: View {
                 } else {
                     BSmartSectionHeader(
                         title: "Outside your portfolio",
-                        detail: "\(model.opportunitySignals.count) to investigate"
+                        detail: "\(visibleSignals.count) to investigate"
                     )
 
-                    ForEach(Array(model.opportunitySignals.enumerated()), id: \.element.id) { index, signal in
+                    ForEach(Array(visibleSignals.enumerated()), id: \.element.id) { index, signal in
                         BSmartDetailNavigationLink(id: "opportunity-\(signal.id)") {
                             EventDetailView(signal: signal)
                         } label: {
@@ -32,7 +36,7 @@ struct OpportunityRadarView: View {
                                 isPriority: index == 0
                             )
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.bSmartPlain)
                         .accessibilityIdentifier("opportunity-radar.signal.\(signal.ticker)")
                         .simultaneousGesture(TapGesture().onEnded {
                             model.markSignalRead(signal.id)
@@ -47,6 +51,7 @@ struct OpportunityRadarView: View {
         .navigationTitle("Opportunities")
         .navigationBarTitleDisplayMode(.inline)
         .accessibilityIdentifier("opportunity-radar.screen")
+        .bSmartDetailPage()
         .bSmartPage()
     }
 
@@ -55,7 +60,9 @@ struct OpportunityRadarView: View {
             Label("Qualified changes, not market noise", systemImage: "sparkles")
                 .font(.headline)
                 .foregroundStyle(BSmartColor.gold)
-            Text("Only important Smart Account or Smart Money changes from bSmart's covered stock universe appear here. Add a stock to your watchlist to make future changes personal.")
+            Text(BSmartProductVisibility.onchainSmartMoney
+                ? "Only important Smart Account or Smart Money changes from bSmart's covered stock universe appear here. Add a stock to your watchlist to make future changes personal."
+                : "Recent Smart Account views outside your portfolio appear here. Add a stock to your watchlist to personalize updates.")
                 .font(.subheadline)
                 .foregroundStyle(BSmartColor.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)

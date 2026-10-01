@@ -18,6 +18,7 @@ struct FundingHistoryDestination: View {
         .background(BSmartColor.ink)
         .foregroundStyle(BSmartColor.primaryText)
         .accessibilityIdentifier("deposit.history-screen")
+        .bSmartDetailPage()
         .bSmartPage()
     }
 }
@@ -36,7 +37,7 @@ private struct FundingHistoryLoader: View {
                 VStack(spacing: 20) {
                     Label(FundingJournalError.unavailable.localizedDescription, systemImage: "exclamationmark.lock")
                     Button("Try again".bSmartLocalized) { retryID = UUID() }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(.bSmartSecondary)
                 }.padding(24)
             } else { ProgressView() }
         }
@@ -67,7 +68,7 @@ struct FundingHistoryView: View {
                     Button { refresh() } label: {
                         Image(systemName: "arrow.clockwise").frame(width: 44, height: 44)
                     }
-                    .buttonStyle(.plain).foregroundStyle(BSmartColor.brand)
+                    .buttonStyle(.bSmartPlain).foregroundStyle(BSmartColor.brand)
                     .disabled(store.isLoading)
                     .accessibilityLabel("Refresh deposit history".bSmartLocalized)
                 }
@@ -105,7 +106,7 @@ struct FundingHistoryView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { refresh() } else { clear() }
         }
-        .confirmationDialog("Cancel this unsigned review?".bSmartLocalized,
+        .bSmartConfirmationDialog("Cancel this unsigned review?".bSmartLocalized,
                             isPresented: Binding(get: { pendingCancellation != nil },
                                                  set: { if !$0 { pendingCancellation = nil } })) {
             if let id = pendingCancellation {

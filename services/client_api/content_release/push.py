@@ -18,7 +18,8 @@ def load_push_environment():
     path = REPO_ROOT / "services/client_api/.env.push.local"
     if path.is_file():
         for key, value in dotenv_values(path, interpolate=False).items():
-            if value and (key.startswith("BSMART_APNS_") or key == "BSMART_UPDATE_PUSH_ENABLED"):
+            if value and (key.startswith("BSMART_APNS_") or key in {
+                "BSMART_UPDATE_PUSH_ENABLED", "BSMART_CONTENT_PUSH_DISPATCH_MODE", "BSMART_ACTIVITY_PUSH_ENABLED"}):
                 os.environ.setdefault(key, value)
 
 
@@ -81,6 +82,8 @@ def outcome(status, reason, attempts):
 def drain(engine, limit=200, *, client=None, settings=None, token=None):
     if not enabled():
         return {"status": "disabled", "attempted": 0}
+    if os.environ.get("BSMART_CONTENT_PUSH_DISPATCH_MODE", "local").lower() == "cloud":
+        return {"status": "cloud_scheduled", "attempted": 0}
     slot = push_queue.due_slot()
     if slot is None:
         return {"status": "waiting_for_slot", "attempted": 0}

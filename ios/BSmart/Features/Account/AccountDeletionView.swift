@@ -66,7 +66,7 @@ struct AccountDeletionView: View {
         }
         .background(BSmartColor.ink).foregroundStyle(BSmartColor.primaryText)
         .navigationTitle("Delete account".bSmartLocalized).navigationBarTitleDisplayMode(.inline)
-        .confirmationDialog("Delete your bSmart account?".bSmartLocalized, isPresented: $showsConfirmation, titleVisibility: .visible) {
+        .bSmartConfirmationDialog("Delete your bSmart account?".bSmartLocalized, isPresented: $showsConfirmation, titleVisibility: .visible) {
             Button("Delete account".bSmartLocalized, role: .destructive) { startDeletion() }
         } message: {
             Text("Sign in again to confirm. Your wallet keys and on-chain funds will not be deleted.".bSmartLocalized)
@@ -83,6 +83,7 @@ struct AccountDeletionView: View {
             if phase == .background { operation?.cancel(); recoveryConfirmed = false }
         }
         .accessibilityIdentifier("account.deletion-screen")
+        .bSmartDetailPage(allowsBack: !busy)
         .bSmartPage()
     }
 
@@ -188,7 +189,7 @@ struct AccountDeletionView: View {
                 .foregroundStyle(destructive ? Color.red : BSmartColor.brand)
                 .background(BSmartColor.secondaryText.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
                 .overlay(RoundedRectangle(cornerRadius: 8).stroke(BSmartColor.line, lineWidth: 1))
-        }.buttonStyle(.plain).disabled(busy)
+        }.buttonStyle(.bSmartPlain).disabled(busy)
     }
 
     private func title(_ record: AccountDeletionRecord) -> String {

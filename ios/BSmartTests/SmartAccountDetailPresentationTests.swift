@@ -1,3 +1,4 @@
+import UIKit
 import XCTest
 @testable import BSmart
 
@@ -41,6 +42,36 @@ final class SmartAccountDetailPresentationTests: XCTestCase {
         XCTAssertEqual(scrolled.titleOpacity, 1)
         XCTAssertEqual(scrolled.imageHeight, scrolled.baseHeight)
         XCTAssertEqual(SmartAccountPortraitLayout(width: 390, offset: .nan).pull, 0)
+    }
+
+    func testMissingSubjectAssetStillLoadsPublishedRemotePortrait() {
+        let url = URL(string: "https://example.com/new-subject.jpg")!
+        XCTAssertEqual(InvestorPortraitSource(imageURL: url,
+            bundledAssetName: "SubjectAvatar_missing_fixture"), .remote(url))
+        XCTAssertEqual(InvestorPortraitSource(imageURL: url, bundledAssetName: nil), .remote(url))
+    }
+
+    func testMissingPortraitWithoutURLUsesPlaceholder() {
+        XCTAssertEqual(InvestorPortraitSource(imageURL: nil,
+            bundledAssetName: "SubjectAvatar_missing_fixture"), .placeholder)
+        XCTAssertEqual(InvestorPortraitSource(imageURL: nil, bundledAssetName: nil), .placeholder)
+    }
+
+    func testNewCelebrityPortraitsAreDecodableAndWorkOffline() throws {
+        for name in ["SubjectAvatar_celebrity_duan_yongping",
+                     "SubjectAvatar_institution_citadel",
+                     "SubjectAvatar_politician_P000197",
+                     "SubjectAvatar_celebrity_ken_griffin",
+                     "SubjectAvatar_celebrity_bill_ackman",
+                     "SubjectAvatar_celebrity_warren_buffett",
+                     "SubjectAvatar_celebrity_leopold_aschenbrenner"] {
+            let image = try XCTUnwrap(UIImage(named: name), "Missing portrait: \(name)")
+            XCTAssertGreaterThan(image.size.width, 100)
+            XCTAssertGreaterThan(image.size.height, 100)
+            XCTAssertEqual(InvestorPortraitSource(imageURL: nil, bundledAssetName: name), .bundled(name))
+            XCTAssertEqual(InvestorPortraitSource(imageURL: URL(string: "https://example.com/photo.jpg"),
+                                                  bundledAssetName: name), .bundled(name))
+        }
     }
 
     func testUsesSettledWindowInsteadOfLaterPeak() {

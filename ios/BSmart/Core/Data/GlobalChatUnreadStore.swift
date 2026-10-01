@@ -63,7 +63,7 @@ final class GlobalChatUnreadStore: ObservableObject {
         } else if messages.contains(where: { message in
             !message.isMine && (readState.cursor.map { GlobalChatMessageCursor(message) > $0 } ?? true)
         }) {
-            hasUnread = true
+            if !hasUnread { hasUnread = true }
         }
     }
 
@@ -78,7 +78,7 @@ final class GlobalChatUnreadStore: ObservableObject {
 
     func markRead(_ messages: [SocialMessage]) {
         guard accountID != nil else {
-            hasUnread = false
+            if hasUnread { hasUnread = false }
             return
         }
         updateLatestMessage(messages)
@@ -87,7 +87,7 @@ final class GlobalChatUnreadStore: ObservableObject {
         latestObserved = [latestObserved, newest].compactMap { $0 }.max()
         readState.seeded = true
         readState.cursor = [readState.cursor, latestObserved].compactMap { $0 }.max()
-        hasUnread = false
+        if hasUnread { hasUnread = false }
         if readState != previous { persist() }
     }
 

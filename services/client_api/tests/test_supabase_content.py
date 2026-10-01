@@ -4,11 +4,14 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 from sqlalchemy import create_engine, inspect, select
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 from services.client_api.content_release.contract import SCHEMAS, PAGE_BYTES, encoded, pages, load_baseline
 from services.client_api.content_release.models import Base, Active, Page, Release
-from services.client_api.content_release.publisher import publish, rollback, read_collections, merge_x
+from services.client_api.content_release.publisher import (
+    publish, publish_price_enrichment, rollback, read_collections, merge_x,
+)
 from services.client_api.content_release.ranking_freeze import apply as apply_frozen_rankings, snapshot as ranking_snapshot
 from services.client_api.content_release.prepare import prepare
 from services.client_api.tests.test_daily_x_publisher import make_release
@@ -67,6 +70,34 @@ def test_dry_run_has_no_pointer_and_baseline_is_explicit(engine, tmp_path):
         assert session.scalars(select(Release)).all() == []
     with pytest.raises(ValueError, match="baseline"):
         publish(engine, make_release(tmp_path / "daily"), apply=True)
+
+
+def test_price_enrichment_changes_only_matched_update_and_keeps_prior_release(engine, tmp_path):
+    initial = publish(engine, baseline(tmp_path), baseline=True, apply=True)
+    with Session(engine) as session:
+        before = read_collections(session, initial["revision"])
+    original = before["smart-account-updates"][0]
+    source = [{**original, "priceOutcome": {
+        "startDay": "2026-09-24", "startPrice": 100.0,
+        "latestDay": "2026-09-25", "latestPrice": 110.0,
+        "priceBasis": "adjusted",
+    }}]
+
+    preview = publish_price_enrichment(engine, source)
+    assert preview["status"] == "validated"
+    assert preview["matched"] == preview["changed"] == 1
+    with Session(engine) as session:
+        assert session.get(Active, "production").revision == initial["revision"]
+
+    applied = publish_price_enrichment(engine, source, apply=True)
+    assert applied["status"] == "published"
+    with Session(engine) as session:
+        after = read_collections(session, applied["revision"])
+        assert session.get(Active, "production").revision == applied["revision"]
+        assert read_collections(session, initial["revision"]) == before
+    assert after["smart-account-updates"][0] == source[0]
+    assert all(after[name] == before[name] for name in SCHEMAS if name != "smart-account-updates")
+    assert publish_price_enrichment(engine, source, apply=True)["status"] == "already-published"
 
 
 def test_daily_atomic_merge_dedupe_and_rollback(engine, tmp_path, monkeypatch):
@@ -359,6 +390,25 @@ def test_database_verification_rejects_corrupted_page(engine,tmp_path):
     from services.client_api.content_release.verify_database import verify
     with pytest.raises(ValueError,match='mismatch'):
         verify(engine,result['revision'])
+
+
+def test_database_verification_retries_only_the_failed_read(monkeypatch):
+    from services.client_api.content_release import verify_database
+
+    engine = create_engine('sqlite://')
+    monkeypatch.setattr(verify_database.time, 'sleep', lambda _: None)
+    calls = 0
+
+    def read(_session):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise OperationalError('select 1', {}, Exception('connection lost'))
+        return 'verified'
+
+    assert verify_database._read_with_retry(engine, read) == 'verified'
+    assert calls == 2
+    engine.dispose()
 
 
 def test_daily_window_keeps_prior_evidence_for_retained_authors():

@@ -19,7 +19,10 @@ struct PortfolioView: View {
     @EnvironmentObject private var trading: HyperliquidTradingStore
     @EnvironmentObject private var account: AccountAccessStore
     @EnvironmentObject private var wallet: DeviceWalletStore
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.bSmartPageIsActive) private var isPageActive
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @StateObject private var ownerPortfolio = OwnerPortfolioStore()
     @State private var accountScope: PortfolioAccountScope = .inApp
     @State private var isAddingEntry = false
     @State private var isShowingSettings = false
@@ -57,6 +60,9 @@ struct PortfolioView: View {
                 },
                 refresh: {
                     if section == .activity { activityRefresh += 1 }
+                    else if section == .holdings && accountScope == .inApp {
+                        await ownerPortfolio.load(account: account, force: true)
+                    }
                     else { await trading.loadFullCatalog() }
                 }
             )
@@ -84,7 +90,22 @@ struct PortfolioView: View {
         }
         .bSmartPage()
         .sheet(isPresented: $isShowingWithdrawal) { AcrossWithdrawalSheet() }
-        .task { if trading.marketCatalog.isEmpty { await trading.loadFullCatalog() } }
+        .task(id: "\(account.identity?.id.uuidString ?? "signed-out")-\(account.isBusy)-\(account.feedRevision)-\(isPageActive)") {
+            guard isPageActive, !account.isBusy else { return }
+            await ownerPortfolio.load(account: account)
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active, isPageActive { Task { await ownerPortfolio.load(account: account, force: true) } }
+        }
+        .onChange(of: wallet.state) { _, state in
+            if case .verified = state, ownerPortfolio.portfolio?.status == .notConnected {
+                Task { await ownerPortfolio.load(account: account, force: true) }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .bSmartTradeFilled)) { _ in
+            if isPageActive { Task { await ownerPortfolio.load(account: account, force: true) } }
+            else { ownerPortfolio.clear() }
+        }
     }
 
     private var sectionPicker: some View {
@@ -106,7 +127,7 @@ struct PortfolioView: View {
                             }
                         }
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.bSmartPlain)
                 .accessibilityAddTraits(section == item ? .isSelected : [])
                 .accessibilityIdentifier("portfolio.tab.\(item.rawValue)")
             }
@@ -121,14 +142,21 @@ struct PortfolioView: View {
     private var portfolioSummary: some View {
         VStack(alignment: .leading, spacing: 10) {
             if accountScope == .inApp {
-                if case .verified(let local) = wallet.state, local.accountID == account.identity?.id {
-                    HyperCoreBalanceView(wallet: local, service: account, compact: true,
-                                         accountTitle: accountScope.rawValue,
-                                         switchDestinationTitle: PortfolioAccountScope.external.rawValue,
-                                         switchAccount: toggleAccountScope)
-                        .id(local.accountID.uuidString + local.address)
+                if ownerPortfolio.accountID == account.identity?.id,
+                   let portfolio = ownerPortfolio.portfolio, portfolio.status == .ready {
+                    FeedPublicPortfolioView(portfolio: portfolio,
+                                            valueAccessibilityIdentifier: "portfolio.account.balance-value") {
+                        accountSwitch
+                    }
+                        .accessibilityIdentifier("portfolio.account.balance")
+                } else if ownerPortfolio.isLoading {
+                    HStack {
+                        Spacer(minLength: 0)
+                        accountSwitch
+                    }
+                    BSmartSkeletonRows(style: .simple, count: 2)
                 } else {
-                    HStack(spacing: 8) {
+                    HStack {
                         balanceText("--").accessibilityIdentifier("portfolio.account.balance-value")
                         Spacer(minLength: 0)
                         accountSwitch
@@ -196,7 +224,7 @@ struct PortfolioView: View {
     }
 
     private var appHoldings: some View {
-        PortfolioTradingHoldingsView(isShowingWithdrawal: $isShowingWithdrawal)
+        PortfolioTradingHoldingsView(isShowingWithdrawal: $isShowingWithdrawal, portfolioStore: ownerPortfolio)
     }
 
     private func entriesPanel(entries: [PortfolioPosition], emptyTitle: String, symbol: String) -> some View {
@@ -215,7 +243,7 @@ struct PortfolioView: View {
                                                      price: entry.currentPrice > 0 ? entry.currentPrice : nil))
                     }
                 }
-                .buttonStyle(.plain).accessibilityIdentifier("portfolio.entry.\(entry.ticker)")
+                .buttonStyle(.bSmartPlain).accessibilityIdentifier("portfolio.entry.\(entry.ticker)")
                 Divider().overlay(BSmartColor.line).padding(.leading, 58)
             }
         }
@@ -243,7 +271,7 @@ struct PortfolioView: View {
             }
             .foregroundStyle(BSmartColor.secondaryText).frame(minHeight: 44).contentShape(Rectangle())
         }
-        .buttonStyle(.plain).accessibilityIdentifier("portfolio.link-brokerage-row")
+        .buttonStyle(.bSmartPlain).accessibilityIdentifier("portfolio.link-brokerage-row")
     }
 }
 
@@ -268,7 +296,7 @@ struct PortfolioAccountSwitchButton: View {
             .overlay(RoundedRectangle(cornerRadius: 8)
                 .strokeBorder(BSmartColor.softDivider, lineWidth: 0.75))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.bSmartPlain)
         .accessibilityLabel("Switch account".bSmartLocalized)
         .accessibilityValue(displayTitle(currentTitle))
         .accessibilityHint(displayTitle(nextTitle))

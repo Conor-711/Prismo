@@ -28,7 +28,7 @@ function history(value: unknown): { at: number; valueUSD: string }[] {
   return points.filter((_, index) => index % stride === 0 || index === points.length - 1);
 }
 
-export function parsePublicPortfolio(dexs: unknown, states: unknown[], spot: unknown, portfolio: unknown) {
+export function parsePublicPortfolio(dexs: unknown, states: unknown[], spot: unknown, portfolio: unknown, mode: unknown) {
   if (!Array.isArray(dexs) || dexs.length < 1 || dexs.length > 100 || dexs[0] !== null ||
       dexs.some((row, index) => index > 0 && (typeof row?.name !== "string" || !/^[a-zA-Z0-9_-]+$/.test(row.name))) ||
       new Set(dexs.slice(1).map(row => row.name)).size !== dexs.length - 1 || states.length !== dexs.length) {
@@ -74,11 +74,20 @@ export function parsePublicPortfolio(dexs: unknown, states: unknown[], spot: unk
   }
   const day = periods.get("perpDay") ?? [];
   const latest = day.at(-1);
+  const livePerps = states.map((state: any) => state.marginSummary?.accountValue == null
+    ? null : amount(state.marginSummary.accountValue));
+  const perpsEquityUSD = livePerps.every((value) => value !== null)
+    ? String(livePerps.reduce((sum, value) => sum + Number(value), 0))
+    : latest?.valueUSD ?? null;
+  const knownMode = ["default", "disabled", "dexAbstraction", "unifiedAccount", "portfolioMargin"].includes(mode as string);
+  const sharedBalance = mode === "unifiedAccount" || mode === "portfolioMargin";
+  const accountValueUSD = !knownMode ? null : sharedBalance ? spotUSDC
+    : perpsEquityUSD == null ? null : String(Number(perpsEquityUSD) + Number(spotUSDC));
+  const dayChangeUSD = !knownMode || sharedBalance || day.length < 2 ? null
+    : String(Number(day.at(-1)!.valueUSD) - Number(day[0].valueUSD));
   positions.sort((a, b) => Number(b.valueUSD) - Number(a.valueUSD));
-  // Portfolio history is venue-reported; never add spot cash to it because unified
-  // account mode can use that same collateral for perps.
-  return { status: "ready", perpsEquityUSD: latest?.valueUSD ?? null,
-    equityAsOf: latest?.at ?? null, spotUSDC, positions,
+  return { status: "ready", perpsEquityUSD,
+    equityAsOf: latest?.at ?? null, spotUSDC, accountValueUSD, dayChangeUSD, positions,
     history: { day, week: periods.get("perpWeek") ?? [], month: periods.get("perpMonth") ?? [] } };
 }
 
@@ -87,19 +96,26 @@ export async function publicPortfolio(client: SupabaseClient, info: InfoReader, 
     .select("account_id").eq("public_id", publicID).eq("visible", true).maybeSingle();
   if (profileError) throw new Error("profile_unavailable");
   if (!profile) return null;
+  return await accountPortfolio(client, info, profile.account_id);
+}
+
+export async function accountPortfolio(client: SupabaseClient, info: InfoReader, accountID: string) {
   const { data: wallet, error: walletError } = await client.from("bsmart_wallets")
-    .select("address").eq("account_id", profile.account_id).maybeSingle();
+    .select("address").eq("account_id", accountID).maybeSingle();
   if (walletError) throw new Error("wallet_unavailable");
   if (!wallet) return { status: "not_connected", perpsEquityUSD: null, equityAsOf: null,
-    spotUSDC: null, positions: [], history: { day: [], week: [], month: [] } };
+    spotUSDC: null, accountValueUSD: null, dayChangeUSD: null,
+    positions: [], history: { day: [], week: [], month: [] } };
   if (typeof wallet.address !== "string" || !addressPattern.test(wallet.address)) throw new Error("invalid_wallet");
   const dexs = await info({ type: "perpDexs" });
   if (!Array.isArray(dexs) || dexs.length < 1 || dexs.length > 100) throw new Error("invalid_portfolio");
-  const [states, spot, portfolio] = await Promise.all([
+  const [states, spot, portfolio, mode] = await Promise.all([
     Promise.all(dexs.map((row: any, index: number) => info({ type: "clearinghouseState", user: wallet.address,
       dex: index === 0 ? "" : row?.name }))),
     info({ type: "spotClearinghouseState", user: wallet.address }),
-    info({ type: "portfolio", user: wallet.address }),
+    // A historical-chart outage must not hide verified current balances.
+    info({ type: "portfolio", user: wallet.address }).catch(() => []),
+    info({ type: "userAbstraction", user: wallet.address }).catch(() => null),
   ]);
-  return parsePublicPortfolio(dexs, states, spot, portfolio);
+  return parsePublicPortfolio(dexs, states, spot, portfolio, mode);
 }

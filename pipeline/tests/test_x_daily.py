@@ -147,6 +147,10 @@ def test_translation_accepts_exact_localized_numeric_equivalents_only():
         "zh": "9月17日每兆瓦约1500万至1800万美元", "en": "At $16-18M per MW on Sept 17"})
     assert not validate_translation("At $16-18M per MW on 9.17", {
         "zh": "9月18日每兆瓦约1600万至1800万美元", "en": "At $16-18M per MW on Sept 17"})
+    assert validate_translation("Buy dips in those 2 names", {
+        "zh": "逢低买入这两只股票", "en": "Buy dips in those 2 names"})
+    assert not validate_translation("Buy dips in those 2 names", {
+        "zh": "逢低买入这一只股票", "en": "Buy dips in those 2 names"})
 
 
 def test_daily_translation_repairs_missing_numeric_tokens(monkeypatch):

@@ -26,6 +26,7 @@ struct HyperliquidTradeLoadingView: View {
                     }
                     .padding(.trailing, 44)
                 }
+                .frame(height: 52)
                 LiveOrderLoadingPanel(reducing: reducing)
             } else {
                 HyperliquidChartLoadingView(selectedRange: chartRange)
@@ -54,14 +55,17 @@ struct LiveOrderLoadingPanel: View {
                         TradeLoadingBlock(width: 190, height: 64, radius: 8)
                             .frame(maxWidth: .infinity, minHeight: 76)
                     }
-                    HStack(spacing: 26) {
-                        TradeLoadingBlock(width: 52, height: 28)
-                        TradeLoadingBlock(width: 62, height: 32)
-                        TradeLoadingBlock(width: 52, height: 28)
+                    VStack(spacing: 4) {
+                        HStack(spacing: 26) {
+                            TradeLoadingBlock(width: 52, height: 28)
+                            TradeLoadingBlock(width: 62, height: 32)
+                            TradeLoadingBlock(width: 52, height: 28)
+                        }
+                        .frame(height: 58)
+                        Text("Leverage".bSmartLocalized)
+                            .font(.caption).foregroundStyle(BSmartColor.secondaryText)
                     }
-                    .frame(height: 58)
-                    Text("Leverage".bSmartLocalized)
-                        .font(.caption).foregroundStyle(BSmartColor.secondaryText)
+                    .frame(maxWidth: 290)
                     HStack(alignment: .top, spacing: 8) {
                         figure(reducing ? "Quantity" : "Est. liq.")
                         figure("Exposure")

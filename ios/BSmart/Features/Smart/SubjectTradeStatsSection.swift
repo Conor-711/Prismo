@@ -6,6 +6,7 @@ struct SubjectTradeStatsSection: View {
     let subject: TradeSubject
     @StateObject private var store = SubjectTradeStatsStore()
     @State private var showsDefinition = false
+    @State private var showsEmptySplit = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -13,16 +14,33 @@ struct SubjectTradeStatsSection: View {
                 Text("Trades inspired".bSmartLocalized).font(.subheadline.weight(.semibold))
                 Button { showsDefinition = true } label: {
                     Image(systemName: "info.circle").frame(width: 44, height: 44)
-                }.buttonStyle(.plain).foregroundStyle(BSmartColor.secondaryText)
+                }.buttonStyle(.bSmartPlain).foregroundStyle(BSmartColor.secondaryText)
                     .accessibilityLabel("Counting method".bSmartLocalized)
                 Spacer()
                 if store.loading { BSmartSkeletonBar(width: 44, height: 23) }
                 else if let stats = store.stats {
-                    Text(stats.totalTrades.formatted()).font(.title2.weight(.bold)).monospacedDigit()
-                        .accessibilityIdentifier("subject.trades.count")
+                    if stats.totalTrades == 0 {
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) { showsEmptySplit.toggle() }
+                        } label: {
+                            HStack(spacing: 8) {
+                                tradeCount(stats.totalTrades)
+                                Image(systemName: showsEmptySplit ? "chevron.up" : "chevron.down")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(BSmartColor.secondaryText)
+                            }
+                            .frame(minHeight: 44)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.bSmartPlain)
+                        .accessibilityLabel((showsEmptySplit ? "Hide trade breakdown" : "Show trade breakdown").bSmartLocalized)
+                        .accessibilityIdentifier("subject.trades.zero-toggle")
+                    } else {
+                        tradeCount(stats.totalTrades)
+                    }
                 }
             }
-            if account.identity == nil {
+            if account.identity == nil && !usesTestFixture {
                 NavigationLink(destination: TradingAccountView()) {
                     Label("Sign in to view real traders".bSmartLocalized, systemImage: "person.crop.circle")
                         .font(.subheadline).frame(minHeight: 44)
@@ -36,12 +54,14 @@ struct SubjectTradeStatsSection: View {
                     }.accessibilityLabel("Retry".bSmartLocalized)
                 }.foregroundStyle(BSmartColor.secondaryText)
             } else if let stats = store.stats {
-                OpinionTradeSplitBar(longTraders: stats.longTrades, shortTraders: stats.shortTrades)
+                if stats.totalTrades > 0 || showsEmptySplit {
+                    OpinionTradeSplitBar(longTraders: stats.longTrades, shortTraders: stats.shortTrades)
+                }
             }
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("subject.trades")
-        .alert("Counting method".bSmartLocalized, isPresented: $showsDefinition) {
+        .bSmartAlert("Counting method".bSmartLocalized, isPresented: $showsDefinition) {
             Button("Done".bSmartLocalized, role: .cancel) {}
         } message: {
             Text((subject.kind == .account
@@ -49,6 +69,7 @@ struct SubjectTradeStatsSection: View {
                   : "One user trading ten different activity sources counts as ten. Repeated trades through one source count once. The tracked account's own trades are not included.").bSmartLocalized)
         }
         .task(id: "\(subject.kind)-\(subject.id)-\(subject.platform)-\(account.identity?.id.uuidString ?? "")-\(account.feedRevision)") {
+            showsEmptySplit = false
             store.clear(); await load()
         }
         .onChange(of: scenePhase) { _, phase in
@@ -59,7 +80,27 @@ struct SubjectTradeStatsSection: View {
     }
 
     @MainActor private func load() async {
+        if usesTestFixture {
+            await store.load(subject: subject) {
+                SubjectTradeStats(kind: subject.kind, subjectId: subject.id, platform: subject.platform,
+                                  totalTrades: 0, longTrades: 0, shortTrades: 0, sourceCount: 0)
+            }
+            return
+        }
         guard account.identity != nil else { store.clear(); return }
         await store.load(subject: subject) { try await NativeTradeFeedClient(account: account).subjectStats(subject) }
+    }
+
+    private func tradeCount(_ value: Int) -> some View {
+        Text(value.formatted()).font(.title2.weight(.bold)).monospacedDigit()
+            .accessibilityIdentifier("subject.trades.count")
+    }
+
+    private var usesTestFixture: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.arguments.contains("--ui-subject-zero-trades-fixture")
+        #else
+        false
+        #endif
     }
 }

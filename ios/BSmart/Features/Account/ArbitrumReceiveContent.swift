@@ -83,6 +83,6 @@ struct ArbitrumReceiveContent: View {
             .frame(maxWidth: .infinity, minHeight: 48)
             .foregroundStyle(BSmartColor.onAccent)
             .background(BSmartColor.brand, in: RoundedRectangle(cornerRadius: 8))
-        }.buttonStyle(.plain)
+        }.buttonStyle(.bSmartPlain)
     }
 }

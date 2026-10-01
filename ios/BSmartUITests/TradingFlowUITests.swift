@@ -25,8 +25,11 @@ final class TradingFlowUITests: XCTestCase {
 
     func testTradeSheetShowsStableLoadingLayoutBeforeMarketArrives() {
         let app = XCUIApplication()
-        app.launchArguments = ["--ui-reset-state", "--ui-scenario=loaded", "--ui-trading-fixture",
+        app.launchArguments = ["--ui-scenario=loaded", "--ui-trading-fixture",
                                "--ui-trading-delayed-market", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        #if targetEnvironment(simulator)
+        app.launchArguments.insert("--ui-reset-state", at: 0)
+        #endif
         app.launch()
         let portfolio = app.descendants(matching: .any)["app.tab.portfolio"]
         XCTAssertTrue(portfolio.waitForExistence(timeout: 8))
@@ -45,11 +48,17 @@ final class TradingFlowUITests: XCTestCase {
         let loading = app.descendants(matching: .any)["trade.market.loading"]
         XCTAssertTrue(loading.waitForExistence(timeout: 3))
         XCTAssertTrue(app.descendants(matching: .any)["trade.order.loading"].exists)
-        XCTAssertTrue(app.buttons["trade.close"].isHittable)
+        let close = app.buttons["trade.close"]
+        let closeReady = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hittable == true"), object: close)
+        XCTAssertEqual(XCTWaiter.wait(for: [closeReady], timeout: 4), .completed)
+        XCTAssertEqual(app.buttons.matching(identifier: "trade.close").count, 1)
+        let loadingCloseY = close.frame.minY
         XCTAssertFalse(app.descendants(matching: .any)["trading-order.submit"].exists)
         XCTAssertTrue(app.buttons["trade.live.wallet"].waitForExistence(timeout: 10))
         XCTAssertTrue(loading.waitForNonExistence(timeout: 4))
-        app.buttons["trade.close"].tap()
+        XCTAssertEqual(app.buttons.matching(identifier: "trade.close").count, 1)
+        XCTAssertEqual(close.frame.minY, loadingCloseY, accuracy: 2)
+        close.tap()
     }
 
     func testLiveOrderEntryAndReturnPreserveMarketRange() {

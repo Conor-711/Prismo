@@ -24,6 +24,7 @@ struct SocialChatView: View {
     @State private var viewedAccount: UUID?
     @State private var viewedRoom: String?
     @State private var mediaRefreshedAt = Date.distantPast
+    @State private var idlePolls = 0
 
     private var refreshKey: String { "\(room.id)-\(account.identity?.id.uuidString ?? "guest")-\(phase == .active)" }
 
@@ -117,12 +118,17 @@ struct SocialChatView: View {
                 failed = false; olderFailed = false; refreshState = .init()
                 loading = account.identity != nil
                 viewedAccount = account.identity?.id; viewedRoom = room.id
+                idlePolls = 0
             }
-            guard account.identity != nil else { loading = false; return }
+            SocialChatRecentPages.shared.activate(accountID: account.identity?.id)
+            guard let accountID = account.identity?.id else { loading = false; return }
             guard phase == .active else { return }
+            if messages.isEmpty, let cached = NativeSocialClient(account: account).cachedChat(room, accountID: accountID) {
+                messages = cached.items; olderCursor = cached; loading = false
+            }
             while !Task.isCancelled {
                 await refresh()
-                do { try await Task.sleep(for: .seconds(5)) } catch { return }
+                do { try await Task.sleep(for: .seconds(refreshState.pollDelay(idlePolls: idlePolls))) } catch { return }
             }
         }
         .onDisappear { onActivity() }
@@ -138,7 +144,9 @@ struct SocialChatView: View {
             let page = try await NativeSocialClient(account: account).chat(room, accountID: id)
             guard !Task.isCancelled, account.identity?.id == id, viewedRoom == requestedRoom else { return }
             if messages.isEmpty { olderCursor = page }
+            let previousID = messages.last?.id
             merge(page.items)
+            idlePolls = previousID == messages.last?.id ? min(idlePolls + 1, 2) : 0
             onMessages(page.items)
             refreshState.succeeded(); failed = false
         } catch {
@@ -196,6 +204,7 @@ struct SocialChatView: View {
         let message = try await NativeSocialClient(account: account).send(draft, room: room, accountID: id)
         guard account.identity?.id == id else { throw AccountAccessError.expired }
         merge([message]); sentID = message.id
+        idlePolls = 0
         onMessages([message])
         refreshState.succeeded(); failed = false
     }
@@ -290,9 +299,9 @@ struct ShareToChatSheet: View {
             .navigationTitle("Share to chat".bSmartLocalized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) { Group {
                     Button("Done".bSmartLocalized) { dismiss() }
-                }
+                }.buttonStyle(.bSmartToolbar) }.bSmartHideSystemBackground()
             }
         }
         .presentationDetents([.large])
@@ -332,7 +341,7 @@ struct ShareToChatSheet: View {
                 else { Image(systemName: "arrow.up.right").foregroundStyle(BSmartColor.secondaryText) }
             }.frame(minHeight: 54).contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.bSmartPlain)
         .disabled(sendingRoom != nil)
         .accessibilityIdentifier("chat.share.destination.\(room.id)")
     }

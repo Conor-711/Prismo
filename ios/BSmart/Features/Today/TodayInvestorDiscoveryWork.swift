@@ -41,7 +41,7 @@ struct TodayInvestorDiscoveryWork: View {
                 .foregroundStyle(BSmartColor.primaryText)
                 .frame(height: 30).contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.bSmartPlain)
             .accessibilityIdentifier("discovery.highlight")
             .sheet(isPresented: $showsReceipt) {
                 NavigationStack {
@@ -79,9 +79,9 @@ struct TodayInvestorDiscoveryWork: View {
                     .accessibilityIdentifier("discovery.receipt")
                     .navigationTitle("Representative work".bSmartLocalized)
                     .navigationBarTitleDisplayMode(.inline)
-                    .toolbar { ToolbarItem(placement: .confirmationAction) {
+                    .toolbar { ToolbarItem(placement: .confirmationAction) { Group {
                         Button("Done".bSmartLocalized) { showsReceipt = false }
-                    } }
+                    }.buttonStyle(.bSmartToolbar) }.bSmartHideSystemBackground() }
                 }
                 .presentationDetents([.large])
             }

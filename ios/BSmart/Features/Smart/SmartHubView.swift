@@ -69,7 +69,7 @@ struct SmartHubView: View {
         model.smartAccounts.filter { account in
             (!followingOnly || model.isFollowingSmartAccount(account.id))
                 && (accountPlatform == "All platforms" || account.platform == accountPlatform)
-                && accountRankBand.contains(account.resolvedPlatformPercentile)
+                && (accountRankBand == .all || account.platformPercentile.map(accountRankBand.contains) == true)
                 && (accountHorizon == .all || account.horizon == accountHorizon.rawValue)
                 && (accountSpecialty == "All sectors" || account.specialty == accountSpecialty)
                 && (accountStyle == "All styles" || account.resolvedStyle == accountStyle)
@@ -81,9 +81,11 @@ struct SmartHubView: View {
         }
         .sorted { lhs, rhs in
             if accountPlatform == "All platforms" {
-                return lhs.resolvedRank < rhs.resolvedRank
+                return (lhs.resolvedRank > 0 ? lhs.resolvedRank : .max)
+                    < (rhs.resolvedRank > 0 ? rhs.resolvedRank : .max)
             }
-            return lhs.resolvedPlatformRank < rhs.resolvedPlatformRank
+            return (lhs.resolvedPlatformRank > 0 ? lhs.resolvedPlatformRank : .max)
+                < (rhs.resolvedPlatformRank > 0 ? rhs.resolvedPlatformRank : .max)
         }
     }
 
@@ -125,7 +127,8 @@ struct SmartHubView: View {
 
     var body: some View {
         BSmartCollapsingPager(
-            selection: $selection, sections: SmartSection.allCases,
+            selection: $selection,
+            sections: BSmartProductVisibility.onchainSmartMoney ? SmartSection.allCases : [.accounts],
             pageIdentifier: { "smart.page.\($0.key)" },
             header: { _ in searchHeader }, tabs: { hubControls },
             content: { section in
@@ -139,17 +142,17 @@ struct SmartHubView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.visible, for: .navigationBar)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItem(placement: .topBarTrailing) { Group {
                 Button { followingOnly.toggle() } label: {
                     Image(systemName: followingOnly ? "star.fill" : "star")
                         .foregroundStyle(followingOnly ? BSmartColor.brand : BSmartColor.primaryText)
                         .frame(minWidth: 44, minHeight: 44)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.bSmartPlain)
                 .accessibilityLabel((followingOnly ? "Show all intelligence" : "Show followed intelligence only").bSmartLocalized)
                 .accessibilityIdentifier("smart.following")
                 .accessibilityAddTraits(followingOnly ? .isSelected : [])
-            }
+            }.buttonStyle(.bSmartToolbar) }.bSmartHideSystemBackground()
         }
         .onChange(of: selection) { _, _ in searchText = "" }
         .accessibilityElement(children: .contain)
@@ -173,7 +176,9 @@ struct SmartHubView: View {
 
     private var hubControls: some View {
         VStack(alignment: .leading, spacing: 0) {
-            SmartHubTabs(selection: $selection, accountCount: model.smartAccounts.count, moneyCount: model.smartMoney.count)
+            if BSmartProductVisibility.onchainSmartMoney {
+                SmartHubTabs(selection: $selection, accountCount: model.smartAccounts.count, moneyCount: model.smartMoney.count)
+            }
             HStack(spacing: 12) {
                 Text(summaryLabel).font(.caption).foregroundStyle(BSmartColor.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
@@ -191,7 +196,7 @@ struct SmartHubView: View {
                     .foregroundStyle(activeFilters.isEmpty ? BSmartColor.primaryText : BSmartColor.brand)
                     .frame(minHeight: 44)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.bSmartPlain)
                 .accessibilityIdentifier(selection == .accounts ? "smart.account.filters" : "smart.money.filters")
             }
             .padding(.horizontal, BSmartSpacing.large)
@@ -204,7 +209,7 @@ struct SmartHubView: View {
                     Button { resetSelectedFilters() } label: {
                         Image(systemName: "xmark.circle.fill").frame(width: 44, height: 44)
                     }
-                    .buttonStyle(.plain).foregroundStyle(BSmartColor.secondaryText)
+                    .buttonStyle(.bSmartPlain).foregroundStyle(BSmartColor.secondaryText)
                     .accessibilityLabel("Reset".bSmartLocalized)
                     .accessibilityIdentifier("smart.filters.clear")
                 }
@@ -263,7 +268,7 @@ struct SmartHubView: View {
                         .font(.headline)
                         .frame(maxWidth: .infinity, minHeight: 52)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.bSmartPlain)
                 .foregroundStyle(BSmartColor.ink)
                 .background(BSmartColor.brand)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
@@ -275,13 +280,13 @@ struct SmartHubView: View {
             .navigationTitle("Filters".bSmartLocalized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
+                ToolbarItem(placement: .cancellationAction) { Group {
                     Button("Reset".bSmartLocalized) { resetSelectedFilters() }
                         .accessibilityIdentifier("smart.filters.reset")
-                }
-                ToolbarItem(placement: .confirmationAction) {
+                }.buttonStyle(.bSmartToolbar) }.bSmartHideSystemBackground()
+                ToolbarItem(placement: .confirmationAction) { Group {
                     Button("Done".bSmartLocalized) { isShowingFilters = false }
-                }
+                }.buttonStyle(.bSmartToolbar) }.bSmartHideSystemBackground()
             }
             .bSmartPage()
         }
@@ -316,7 +321,7 @@ struct SmartHubView: View {
             smartEmptyState
         } else {
             ForEach(Array(filteredAccounts.enumerated()), id: \.element.id) { index, account in
-                BSmartDetailNavigationLink(id: "smart-account-\(account.id)", usesZoomTransition: false) {
+                BSmartDetailNavigationLink(id: "smart-account-\(account.id)") {
                     SmartAccountDetailView(account: account)
                 } label: {
                     SmartAccountRow(
@@ -392,6 +397,7 @@ struct SmartHubView: View {
     }
 
     private func displayedRank(for account: SmartAccountProfile, fallback: Int) -> Int {
+        if account.platform == "bsmart" && account.nativePerformance?.rank == nil { return 0 }
         let rank = accountPlatform == "All platforms"
             ? account.resolvedRank
             : account.resolvedPlatformRank
@@ -439,10 +445,12 @@ struct SmartAccountEvidenceDetailView: View {
 
     var body: some View {
         OpinionDetailLayout(update: update) {
+            if update.sourceKind != "native_opinion" {
             OpinionTradersSection(opinionID: update.id, ticker: update.ticker,
                                  referencePrice: update.priceEvidence?.latestPrice, refresh: traderRefresh)
                 .id(update.id)
                 .accessibilityIdentifier("opinion.traders.section")
+            }
             OpinionReaderView(update: update)
             if !update.displayableSupportingSources.isEmpty {
                 OpinionSupportingSourcesSection(sources: update.displayableSupportingSources)
@@ -462,7 +470,9 @@ struct SmartAccountEvidenceDetailView: View {
         }
         .accessibilityIdentifier("smart.account.evidence.detail")
         .bSmartDetailPage()
-        .bSmartTradeDock(symbol: update.ticker, opinionSource: .init(opinionID: update.id, ticker: update.ticker, authorID: update.authorId),
+        .bSmartTradeDock(symbol: update.ticker, opinionSource: update.sourceKind == "native_opinion"
+            ? .init(opinionID: nil, ticker: update.ticker, nativeUpdateID: update.id)
+            : .init(opinionID: update.id, ticker: update.ticker, authorID: update.authorId),
                         onTradeDismiss: { traderRefresh += 1 })
         .bSmartPage()
         .onChange(of: update.id) { _, _ in priceTimelineExpanded = false }
@@ -527,7 +537,7 @@ struct SmartAccountEvidenceDetailView: View {
                     .frame(minHeight: 44)
                     .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.bSmartPlain)
                 .accessibilityIdentifier("opinion.price-timeline.toggle")
                 BSmartHelpButton { showsPriceTimelineHelp = true }
             }
@@ -1182,7 +1192,7 @@ struct SmartMoneyDetailView: View {
                         selected: model.isFollowingSmartMoney(signal.id)
                     )
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.bSmartPlain)
                 .accessibilityIdentifier("smart.money.follow.\(signal.id)")
 
                 if let explorerURL = signal.sourceURL
@@ -1191,7 +1201,7 @@ struct SmartMoneyDetailView: View {
                         Label("Public record", systemImage: "arrow.up.right")
                             .smartProfileCommand(accented: false, selected: false)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.bSmartPlain)
                     .accessibilityLabel("View original record")
                 }
             }

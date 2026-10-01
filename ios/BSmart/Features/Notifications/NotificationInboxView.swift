@@ -49,7 +49,7 @@ struct NotificationInboxView: View {
                                 NotificationActivityRow(item: item, unread: !inbox.isRead(item))
                             }
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.bSmartPlain)
                         .accessibilityIdentifier("notification.row.\(item.id)")
                         Divider().overlay(BSmartColor.line)
                     }
@@ -64,12 +64,12 @@ struct NotificationInboxView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.visible, for: .navigationBar)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItem(placement: .topBarTrailing) { Group {
                 Button { inbox.markAllRead() } label: { Image(systemName: "checkmark.circle") }
                     .disabled(inbox.unreadCount == 0)
                     .accessibilityLabel("Mark all as read".bSmartLocalized)
                     .accessibilityIdentifier("notifications.read-all")
-            }
+            }.buttonStyle(.bSmartToolbar) }.bSmartHideSystemBackground()
         }
         .refreshable { await refresh() }
         .navigationDestination(item: $selectedNotification) { item in destination(item) }
@@ -94,7 +94,7 @@ struct NotificationInboxView: View {
                                 .overlay(alignment: .bottomLeading) {
                                     if filter == value { Rectangle().fill(BSmartColor.brand).frame(height: 2) }
                                 }
-                        }.buttonStyle(.plain)
+                        }.buttonStyle(.bSmartPlain)
                             .accessibilityAddTraits(filter == value ? .isSelected : [])
                             .accessibilityIdentifier("notifications.filter.\(value)")
                     }
@@ -105,7 +105,7 @@ struct NotificationInboxView: View {
                 Image(systemName: unreadOnly ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
                     .foregroundStyle(unreadOnly ? BSmartColor.brand : BSmartColor.secondaryText)
                     .frame(width: 44, height: 44)
-            }.buttonStyle(.plain)
+            }.buttonStyle(.bSmartPlain)
                 .accessibilityLabel("Unread only".bSmartLocalized)
                 .accessibilityValue((unreadOnly ? "On" : "Off").bSmartLocalized)
                 .accessibilityIdentifier("notifications.unread-only")
@@ -131,7 +131,7 @@ struct NotificationInboxView: View {
                 }
             }
         }
-        .buttonStyle(.plain).tint(BSmartColor.brand)
+        .buttonStyle(.bSmartPlain).tint(BSmartColor.brand)
         .padding(.vertical, 40).frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityIdentifier("notifications.empty")
     }

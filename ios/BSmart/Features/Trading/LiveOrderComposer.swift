@@ -45,6 +45,7 @@ struct LiveOrderComposer: View {
         return .init(account: account, feeRate: fee, side: side, selectedLeverage: leverage)
     }
     private var validAmount: Bool {
+        guard !store.requiresOrderRecovery else { return false }
         if isReducing {
             guard let percent = Int(amount.text), let size = summary?.reductionQuantity(percent: percent),
                   let quantity = try? HyperliquidOrderDecimal(size) else { return false }
@@ -56,7 +57,13 @@ struct LiveOrderComposer: View {
         if isReducing { return summary?.account.position.map { $0.quantity.magnitude.wire + " " + symbol } ?? "--" }
         return summary.map { "$" + $0.balance } ?? "--"
     }
+    private var verifiedFilledOrderID: UUID? {
+        guard let record = store.result else { return nil }
+        if case .filled = record.acknowledgement { return record.id }
+        return record.reconciledStatus?.status == "filled" ? record.id : nil
+    }
     private var submitTitle: String {
+        if store.pendingOrder != nil { return "Check order status".bSmartLocalized }
         if needsSharedBalance { return "Preparing trading balance".bSmartLocalized }
         if let inputIssue { return inputIssue }
         if isReducing, summary?.account.position == nil { return "No open positions".bSmartLocalized }
@@ -70,6 +77,11 @@ struct LiveOrderComposer: View {
             if let result = store.result {
                 completion(result).frame(maxHeight: .infinity)
             } else {
+                if let pending = store.pendingOrder {
+                    pendingOrderNotice(pending)
+                } else if store.historyUnavailable {
+                    retryNotice(store.recoveryError ?? FundingJournalError.unavailable.orderMessage)
+                }
                 if store.entryAccount?.position != nil || isReducing {
                     Picker("Order action".bSmartLocalized, selection: Binding(
                         get: { isReducing }, set: selectReduction)) {
@@ -99,7 +111,7 @@ struct LiveOrderComposer: View {
                     Spacer()
                     Button(action: refreshEntry) {
                         Image(systemName: "arrow.clockwise").frame(width: 36, height: 36)
-                    }.buttonStyle(.plain).foregroundStyle(accent)
+                    }.buttonStyle(.bSmartPlain).foregroundStyle(accent)
                         .accessibilityLabel("Refresh".bSmartLocalized)
                         .accessibilityIdentifier("trade.balance.refresh")
                         .disabled(busy || store.isLoadingEntry)
@@ -111,8 +123,7 @@ struct LiveOrderComposer: View {
                         .accessibilityIdentifier("trade.amount.max")
                 }
                 if let error = store.errorMessage ?? store.entryError {
-                    Text(error).font(.caption).foregroundStyle(BSmartColor.bear)
-                        .frame(maxWidth: .infinity, alignment: .leading).accessibilityIdentifier("trading-order.error")
+                    retryNotice(error).accessibilityIdentifier("trading-order.error")
                 }
                 if !isReducing, !shouldOfferDeposit, summary?.capacity.availableToTrade.isPositive == false,
                    let balanceError = balances.errorMessage {
@@ -146,7 +157,7 @@ struct LiveOrderComposer: View {
                             .frame(maxWidth: .infinity, minHeight: 60)
                             .background(BSmartColor.electric, in: RoundedRectangle(cornerRadius: 8))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.bSmartPlain)
                     .disabled(!enabled || scenePhase != .active)
                     .accessibilityIdentifier("trade.deposit")
                 } else {
@@ -156,13 +167,9 @@ struct LiveOrderComposer: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .accessibilityElement(children: .contain).accessibilityIdentifier(store.result == nil ? "trade.composer" : "trade.order.filled")
-        .task {
-            async let entry: Void = store.loadEntry(wallet: wallet, dex: dex, coin: coin)
-            async let balance: Void = balances.refresh(wallet: wallet)
-            _ = await (entry, balance)
-            initializeAmount()
-        }
+        .task { initializeAmount() }
         .task(id: coin) {
             if market == nil { resolvedMarket = try? await trading.freshMarket(coin: coin, symbol: symbol) }
         }
@@ -179,8 +186,8 @@ struct LiveOrderComposer: View {
             }
         }
         .onChange(of: enabled) { _, value in if !value { clear() } }
-        .onChange(of: store.result?.id) { _, _ in
-            if let result = store.result, case .filled = result.acknowledgement {
+        .onChange(of: verifiedFilledOrderID) { _, value in
+            if value != nil {
                 NotificationCenter.default.post(name: .bSmartTradeFilled, object: nil)
             }
         }
@@ -190,9 +197,9 @@ struct LiveOrderComposer: View {
             NavigationStack {
                 PortfolioAppAccountView()
                     .toolbar {
-                        ToolbarItem(placement: .topBarTrailing) {
+                        ToolbarItem(placement: .topBarTrailing) { Group {
                             Button("Done".bSmartLocalized) { isShowingDeposit = false }
-                        }
+                        }.buttonStyle(.bSmartToolbar) }.bSmartHideSystemBackground()
                     }
             }
             .presentationDetents([.large])
@@ -229,6 +236,49 @@ struct LiveOrderComposer: View {
         }
     }
 
+    private func retryNotice(_ message: String) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            Text(message).font(.caption).foregroundStyle(BSmartColor.bear)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Button(action: refreshEntry) {
+                Label("Retry".bSmartLocalized, systemImage: "arrow.clockwise")
+            }
+            .buttonStyle(.bSmartSecondary)
+            .disabled(busy || store.isLoadingEntry)
+            .accessibilityIdentifier("trade.entry.retry")
+        }
+    }
+
+    private func pendingOrderNotice(_ record: HyperliquidOrderRecord) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(record.order.market.coin).font(.subheadline.weight(.semibold))
+                    Text("Order status requires verification".bSmartLocalized)
+                        .font(.caption).foregroundStyle(BSmartColor.gold)
+                }
+                Spacer(minLength: 0)
+                Button {
+                    Task { await store.reconcile(record, wallet: wallet, readFillDetails: false, presentResult: false) }
+                } label: {
+                    Label("Check order status".bSmartLocalized, systemImage: "arrow.clockwise")
+                }
+                .buttonStyle(.bSmartSecondary)
+                .disabled(busy || store.isLoadingEntry)
+                .accessibilityIdentifier("trade.pending.check")
+            }
+            if let error = store.recoveryError {
+                Text(error).font(.caption).foregroundStyle(BSmartColor.secondaryText)
+            }
+            Text(record.order.cloid).font(.caption2.monospaced())
+                .foregroundStyle(BSmartColor.secondaryText).textSelection(.enabled)
+                .accessibilityIdentifier("trade.pending.cloid")
+        }
+        .padding(12)
+        .background(BSmartColor.surface, in: RoundedRectangle(cornerRadius: 8))
+        .accessibilityIdentifier("trade.pending.order")
+    }
+
     private func placeOrder() {
         guard enabled, !busy, scenePhase == .active, validAmount else { return }
         let value = amount.text.hasSuffix(".") ? String(amount.text.dropLast()) : amount.text
@@ -253,7 +303,21 @@ struct LiveOrderComposer: View {
             Image(systemName: completionSymbol(record))
                 .font(.system(size: 56)).foregroundStyle(accent)
             LiveOrderRecordRow(record: record, fills: store.fills[record.id])
-            if hasOpinionSource, !record.order.reduceOnly, case .filled = record.acknowledgement {
+            if [.submitting, .uncertain].contains(record.state) {
+                Button { Task { await store.reconcile(record, wallet: wallet) } } label: {
+                    Label("Check order status".bSmartLocalized, systemImage: "arrow.clockwise")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bSmartSecondary)
+                .disabled(busy)
+                .accessibilityIdentifier("trade.order.check-status")
+                Text(record.order.cloid).font(.caption2.monospaced())
+                    .foregroundStyle(BSmartColor.secondaryText).textSelection(.enabled)
+            }
+            if let error = store.recoveryError {
+                Text(error).font(.caption).foregroundStyle(BSmartColor.secondaryText)
+            }
+            if hasOpinionSource, verifiedFilledOrderID == record.id {
                 TradeThesisAfterFill(record: record, accent: accent)
             }
             Button("Done".bSmartLocalized) { dismiss() }
@@ -261,10 +325,18 @@ struct LiveOrderComposer: View {
                 .background(accent, in: RoundedRectangle(cornerRadius: 8))
                 .accessibilityIdentifier("trade.order.done")
         }.padding(.vertical, 48)
+        .task(id: record.id) {
+            guard [.submitting, .uncertain].contains(record.state) else { return }
+            await store.reconcile(record, wallet: wallet)
+        }
     }
 
     private func completionSymbol(_ record: HyperliquidOrderRecord) -> String {
-        switch record.acknowledgement {
+        if record.state == .notSubmitted { return "xmark.circle" }
+        if let status = record.reconciledStatus {
+            return status.status == "filled" ? "checkmark.circle.fill" : "xmark.circle"
+        }
+        return switch record.acknowledgement {
         case .filled: "checkmark.circle.fill"
         case .rejected: "xmark.circle"
         default: "clock.badge.exclamationmark"

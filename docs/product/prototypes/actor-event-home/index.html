@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>bSmart · 主体事件首页方案</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --page: #101512;
+      --ink: #080b0a;
+      --surface: #131918;
+      --surface-2: #1b2320;
+      --line: #27322e;
+      --text: #f3f7f3;
+      --muted: #a7b3ac;
+      --quiet: #75837b;
+      --mint: #54ddbd;
+      --lime: #d2fa61;
+      --blue: #73b8ed;
+      --amber: #e9bc68;
+      --red: #f28a7d;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Helvetica Neue", sans-serif;
+      letter-spacing: 0;
+    }
+    * { box-sizing: border-box; }
+    html { background: var(--page); }
+    body { margin: 0; min-width: 320px; color: var(--text); }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
+    .preview-bar { min-height: 58px; padding: 10px clamp(16px, 4vw, 52px); display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid #29332e; }
+    .preview-brand { display: flex; align-items: center; gap: 10px; min-width: 0; font-weight: 700; font-size: 14px; }
+    .preview-brand b { width: 29px; height: 29px; display: grid; place-items: center; border-radius: 7px; background: var(--mint); color: #07120d; font-size: 19px; }
+    .preview-brand span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .preview-note { color: var(--muted); font-size: 12px; white-space: nowrap; }
+    .stage { max-width: 1030px; margin: 0 auto; padding: 32px 24px 52px; display: grid; grid-template-columns: minmax(0, 430px) minmax(0, 1fr); gap: clamp(30px, 7vw, 96px); align-items: start; }
+    .phone { min-width: 0; height: min(880px, calc(100vh - 124px)); min-height: 690px; overflow: hidden; display: flex; flex-direction: column; border: 1px solid #39433e; border-radius: 38px; background: var(--ink); box-shadow: 0 28px 80px #0007; }
+    .status { height: 40px; padding: 12px 26px 0; display: flex; justify-content: space-between; align-items: start; color: var(--text); font-size: 12px; font-weight: 700; flex: 0 0 auto; }
+    .status-right { display: flex; align-items: center; gap: 6px; }
+    .status-right svg { width: 14px; height: 14px; stroke-width: 2.4; }
+    .app-main { min-height: 0; overflow-y: auto; scrollbar-width: none; overscroll-behavior: contain; }
+    .app-main::-webkit-scrollbar { display: none; }
+    .app-content { min-height: 100%; padding: 8px 22px 34px; }
+    .app-header { min-height: 56px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .app-header h1 { margin: 0; font-size: 27px; line-height: 1.1; font-weight: 760; }
+    .app-header .back-title { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .app-header .back-title h1 { font-size: 21px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .icon-button { flex: 0 0 auto; width: 37px; height: 37px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--text); }
+    .icon-button svg { width: 18px; height: 18px; }
+    .mode-switch { margin: 16px 0 24px; display: grid; grid-template-columns: 1fr 1fr; padding: 4px; border: 1px solid var(--line); border-radius: 8px; background: #0f1412; }
+    .mode-switch button { height: 40px; border: 0; border-radius: 5px; background: transparent; color: var(--muted); font-size: 15px; font-weight: 700; }
+    .mode-switch button.active { background: var(--surface-2); color: var(--text); box-shadow: inset 0 -3px var(--mint); }
+    .section-head { margin: 0 0 13px; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+    .section-head h2 { margin: 0; font-size: 21px; line-height: 1.2; }
+    .section-head span { color: var(--quiet); font-size: 12px; white-space: nowrap; }
+    .section-head.small { margin-top: 24px; }
+    .section-head.small h2 { font-size: 18px; }
+    .scope-row { margin-bottom: 14px; display: flex; align-items: center; gap: 7px; }
+    .scope-row button, .filter-row button, .asset-tabs button { flex: 0 0 auto; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--muted); font-weight: 680; }
+    .scope-row button { min-height: 35px; padding: 0 15px; font-size: 13px; }
+    .scope-row button.active { background: var(--mint); border-color: var(--mint); color: #07110c; }
+    .filter-row { display: flex; gap: 7px; padding-bottom: 12px; overflow-x: auto; scrollbar-width: none; }
+    .filter-row::-webkit-scrollbar { display: none; }
+    .filter-row button { height: 31px; padding: 0 11px; font-size: 12px; }
+    .filter-row button.active { color: var(--lime); border-color: #7f9852; background: #202a19; }
+    .overview { padding-bottom: 22px; border-bottom: 1px solid var(--line); }
+    .overview-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .overview-top h2 { margin: 0; font-size: 19px; }
+    .window-switch { display: flex; padding: 3px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+    .window-switch button { min-width: 39px; height: 27px; border: 0; border-radius: 4px; background: transparent; color: var(--muted); font-size: 11px; font-weight: 750; }
+    .window-switch button.active { background: #334039; color: var(--text); }
+    .overview-caption { margin: 5px 0 16px; color: var(--quiet); font-size: 11px; }
+    .visual-label { margin: 0 0 10px; color: var(--muted); font-size: 11px; font-weight: 680; }
+    .heatmap { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+    .heat-tile { height: 61px; min-width: 0; padding: 8px 10px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid #32483c; border-radius: 5px; background: #17251e; color: var(--text); text-align: left; }
+    .heat-tile.level-2 { background: #1e4a39; border-color: #3e8c6e; }
+    .heat-tile.level-3 { background: #247c5a; border-color: #55d3a0; }
+    .heat-tile.active { outline: 2px solid var(--lime); outline-offset: 1px; }
+    .heat-tile strong { font-size: 13px; }
+    .heat-tile span { color: #c3dbce; font-size: 10px; }
+    .source-composition { margin-top: 20px; display: grid; grid-template-columns: 105px minmax(0, 1fr); gap: 18px; align-items: center; }
+    .composition-plot { width: 98px; height: 98px; padding: 12px; border: 0; border-radius: 50%; display: grid; place-items: center; color: var(--text); }
+    .composition-center { width: 100%; height: 100%; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--ink); }
+    .composition-center strong { font-size: 19px; font-variant-numeric: tabular-nums; }
+    .composition-center small { color: var(--quiet); font-size: 10px; }
+    .composition-legend { min-width: 0; display: grid; gap: 3px; }
+    .composition-legend button { min-width: 0; height: 26px; padding: 0; display: flex; justify-content: space-between; align-items: center; gap: 6px; border: 0; background: transparent; color: var(--muted); font-size: 11px; text-align: left; }
+    .composition-legend button.active { color: var(--text); }
+    .legend-name { display: flex; align-items: center; gap: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .legend-dot { width: 7px; height: 7px; flex: 0 0 auto; border-radius: 50%; background: var(--mint); }
+    .legend-dot.politician { background: var(--blue); }
+    .legend-dot.celebrity { background: var(--amber); }
+    .composition-legend b { color: var(--text); font-variant-numeric: tabular-nums; }
+    .feed-section { padding-top: 22px; }
+    .feed-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+    .filter-control { min-width: 0; height: 38px; padding: 0 10px; display: flex; align-items: center; justify-content: space-between; gap: 4px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--text); font-size: 12px; font-weight: 650; }
+    .filter-control span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .filter-control svg { width: 14px; height: 14px; flex: 0 0 auto; color: var(--quiet); }
+    .filter-control.active { border-color: #578572; background: #1b3128; }
+    .filter-options { margin-top: 7px; padding: 5px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px; border: 1px solid var(--line); border-radius: 6px; background: #111a16; }
+    .filter-options button { min-height: 34px; min-width: 0; padding: 5px 8px; border: 0; border-radius: 4px; background: transparent; color: var(--muted); font-size: 11px; text-align: left; }
+    .filter-options button.active { background: #234335; color: var(--mint); }
+    .feed-flags { margin: 10px 0 12px; display: flex; flex-wrap: wrap; gap: 7px; }
+    .feed-flags button { min-height: 30px; padding: 0 10px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 5px; background: transparent; color: var(--muted); font-size: 11px; font-weight: 660; }
+    .feed-flags button.active { border-color: #4fa889; background: #17372c; color: var(--mint); }
+    .feed-flags svg { width: 13px; height: 13px; }
+    .active-asset { margin-bottom: 10px; padding: 6px 9px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid #739559; border-radius: 4px; background: #263519; color: var(--lime); font-size: 11px; }
+    .active-asset svg { width: 13px; height: 13px; }
+    .event-list { border-top: 1px solid var(--line); }
+    .event { padding: 18px 0 19px; border-bottom: 1px solid var(--line); }
+    .event-top { display: grid; grid-template-columns: 42px minmax(0, 1fr) 153px; align-items: center; gap: 8px; }
+    .event-top > div:nth-child(2) { min-width: 0; }
+    .avatar-wrap { width: 42px; height: 45px; position: relative; display: inline-block; flex: 0 0 auto; }
+    .avatar { position: relative; width: 42px; height: 42px; display: grid; place-items: center; overflow: hidden; border-radius: 50%; color: #f3f8f5; font-size: 14px; font-weight: 800; }
+    .avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .avatar.opinion { background: #35404a; }
+    .avatar.trade { background: #1d4b42; }
+    .avatar.politician { background: #3d4059; }
+    .avatar.celebrity { background: #664e39; }
+    .source-badge { position: absolute; right: -3px; bottom: 0; width: 18px; height: 18px; display: grid; place-items: center; overflow: hidden; border: 2px solid var(--ink); border-radius: 5px; background: #252c2a; color: #fff; font-size: 10px; font-weight: 800; }
+    .source-badge img { width: 100%; height: 100%; object-fit: contain; }
+    .source-badge.white-house { background: #fff; }
+    .source-badge.tie { background: #e9bc68; color: #241909; }
+    .source-badge.tie svg { width: 12px; height: 12px; }
+    .actor-name { width: 100%; padding: 0; overflow: hidden; border: 0; background: transparent; color: var(--text); text-align: left; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 730; }
+    .actor-meta { margin-top: 3px; overflow: hidden; color: var(--quiet); text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+    .event-time { align-self: start; margin-top: 2px; color: var(--quiet); font-size: 11px; white-space: nowrap; }
+    .performance { display: grid; grid-template-columns: 75px 78px; align-items: start; gap: 0; text-align: right; font-variant-numeric: tabular-nums; }
+    .performance-col { min-width: 0; }
+    .performance-label { display: block; height: 17px; overflow: hidden; color: var(--quiet); font-size: 10px; font-weight: 640; white-space: nowrap; }
+    .performance-numbers { display: flex; justify-content: flex-end; gap: 3px; }
+    .performance-numbers b { min-width: 25px; height: 23px; padding: 0 3px; display: grid; place-items: center; border-radius: 3px; font-size: 12px; }
+    .performance-numbers .win { background: #153b32; color: var(--mint); }
+    .performance-numbers .loss { background: #40261f; color: #f69b73; }
+    .performance-return { display: block; margin-top: 1px; font-size: 15px; line-height: 23px; font-weight: 780; white-space: nowrap; }
+    .event-body { width: 100%; padding: 13px 0 0 52px; border: 0; background: transparent; color: inherit; text-align: left; }
+    .event-title { display: block; font-size: 16px; font-weight: 710; line-height: 1.35; }
+    .event-summary { display: -webkit-box; margin-top: 7px; overflow: hidden; color: var(--muted); font-size: 13px; line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+    .event-footer { margin: 12px 0 0 52px; display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+    .event-footer .event-time { margin: 0 0 0 auto; }
+    .type-tag, .symbol-tag, .evidence-tag { min-height: 24px; display: inline-flex; align-items: center; gap: 4px; padding: 3px 7px; border-radius: 4px; font-size: 11px; font-weight: 720; }
+    .type-tag.opinion { color: var(--mint); background: #16352d; }
+    .type-tag.trade { color: var(--lime); background: #303a1c; }
+    .type-tag.direction { color: var(--mint); background: #16352d; }
+    .type-tag.funds { color: var(--lime); background: #303a1c; }
+    .type-tag.only { color: var(--amber); background: #3e3020; }
+    .symbol-tag { border: 1px solid var(--line); background: var(--surface); color: var(--text); }
+    .symbol-tag img { width: 15px; height: 15px; object-fit: contain; border-radius: 3px; }
+    .evidence-tag { color: var(--quiet); font-weight: 560; }
+    .empty { padding: 44px 8px; color: var(--muted); text-align: center; font-size: 14px; }
+    .search-box { height: 46px; margin: 2px 0 15px; padding: 0 13px; display: flex; align-items: center; gap: 9px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); color: var(--quiet); }
+    .search-box svg { width: 17px; height: 17px; }
+    .search-box input { width: 100%; border: 0; outline: none; background: transparent; color: var(--text); font-size: 14px; }
+    .search-box input::placeholder { color: var(--quiet); }
+    .asset-tabs { margin-bottom: 10px; display: flex; gap: 7px; overflow-x: auto; }
+    .asset-tabs button { height: 35px; padding: 0 13px; white-space: nowrap; font-size: 12px; }
+    .asset-tabs button.active { border-color: var(--mint); background: #1c332b; color: var(--mint); }
+    .asset-list { border-top: 1px solid var(--line); }
+    .asset-row { width: 100%; padding: 15px 0; display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 11px; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: inherit; text-align: left; }
+    .asset-logo { width: 40px; height: 40px; object-fit: contain; border-radius: 7px; background: #f4f5f2; }
+    .asset-name strong { display: block; font-size: 15px; }
+    .asset-name small { display: block; margin-top: 3px; color: var(--quiet); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .quote { text-align: right; font-variant-numeric: tabular-nums; }
+    .quote strong { display: block; font-size: 15px; }
+    .quote small { display: block; margin-top: 4px; font-size: 12px; font-weight: 700; }
+    .up { color: var(--mint); }
+    .down { color: var(--red); }
+    .asset-signal { grid-column: 2 / 4; padding-top: 3px; display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 11px; }
+    .asset-signal em { color: var(--lime); font-style: normal; white-space: nowrap; }
+    .detail-lead { margin-top: 18px; }
+    .detail-kicker { color: var(--mint); font-size: 12px; font-weight: 760; }
+    .detail-lead h2 { margin: 8px 0 9px; font-size: 26px; line-height: 1.2; }
+    .detail-lead p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.55; }
+    .detail-rule { height: 1px; margin: 22px 0; background: var(--line); }
+    .detail-label { color: var(--quiet); font-size: 11px; }
+    .detail-value { margin-top: 5px; font-size: 14px; line-height: 1.4; }
+    .time-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .time-grid > div { min-width: 0; }
+    .source-line { margin: 20px 0; padding: 12px 0; display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .source-line span { color: var(--muted); font-size: 13px; }
+    .source-line strong { max-width: 56%; font-size: 13px; text-align: right; }
+    .detail-actions { margin-top: 22px; display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+    .primary, .secondary { min-height: 45px; padding: 0 12px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; border-radius: 6px; font-size: 13px; font-weight: 760; }
+    .primary { border: 1px solid var(--mint); background: var(--mint); color: #07110c; }
+    .secondary { border: 1px solid var(--line); background: var(--surface); color: var(--text); }
+    .primary svg, .secondary svg { width: 16px; height: 16px; }
+    .person-head { margin-top: 18px; display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 12px; align-items: center; }
+    .person-head .avatar-wrap { width: 54px; height: 57px; }
+    .person-head .avatar { width: 54px; height: 54px; font-size: 19px; }
+    .person-head h2 { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 23px; }
+    .person-head p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+    .person-stats { margin-top: 22px; padding: 14px 0; display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .person-stats div { padding-right: 8px; min-width: 0; }
+    .person-stats div + div { padding-left: 11px; border-left: 1px solid var(--line); }
+    .person-stats strong { display: block; font-size: 18px; font-variant-numeric: tabular-nums; }
+    .person-stats span { display: block; margin-top: 4px; color: var(--quiet); font-size: 10px; }
+    .asset-detail-head { margin-top: 16px; display: flex; align-items: center; gap: 12px; }
+    .asset-detail-head img { width: 51px; height: 51px; object-fit: contain; border-radius: 9px; background: #fff; }
+    .asset-detail-head h2 { margin: 0; font-size: 23px; }
+    .asset-detail-head p { margin: 4px 0 0; color: var(--quiet); font-size: 12px; }
+    .asset-price { margin: 25px 0 0; font-size: 36px; font-weight: 750; font-variant-numeric: tabular-nums; }
+    .asset-price small { margin-left: 9px; font-size: 14px; }
+    .mini-chart { width: 100%; height: 105px; margin-top: 13px; }
+    .mini-chart polyline { fill: none; stroke: var(--mint); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+    .mini-chart line { stroke: var(--line); }
+    .trade-note { margin-top: 16px; padding: 12px; border: 1px solid #594b32; border-radius: 6px; background: #241e15; color: #e8cc9b; font-size: 12px; line-height: 1.5; }
+    .rail { padding-top: 35px; }
+    .rail-eyebrow { color: var(--mint); font-size: 11px; font-weight: 760; }
+    .rail h2 { max-width: 430px; margin: 13px 0 25px; font-size: clamp(25px, 3vw, 35px); line-height: 1.26; }
+    .rail-track { border-top: 1px solid #3b4940; }
+    .rail-item { padding: 19px 0; display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 13px; border-bottom: 1px solid #3b4940; }
+    .rail-item b { color: var(--mint); font-size: 13px; }
+    .rail-item strong { display: block; font-size: 16px; }
+    .rail-item span { display: block; margin-top: 5px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+    .rail-footer { margin-top: 24px; color: var(--quiet); font-size: 12px; line-height: 1.55; }
+    .rail-footer a { color: var(--mint); }
+    @media (max-width: 850px) {
+      .stage { grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 24px; padding: 19px 12px 45px; }
+      .phone { width: min(100%, 430px); height: 810px; min-height: 0; }
+      .rail { width: min(100%, 430px); padding-top: 0; }
+    }
+    @media (max-width: 480px) {
+      .preview-bar { min-height: 48px; padding: 8px 14px; }
+      .preview-note { font-size: 10px; }
+      .stage { display: block; padding: 0; }
+      .phone { width: 100%; height: calc(100dvh - 48px); min-height: 580px; border: 0; border-radius: 0; box-shadow: none; }
+      .rail { padding: 28px 22px 42px; }
+      .app-content { padding-inline: 19px; }
+    }
+    @media (max-width: 365px) {
+      .event-top { grid-template-columns: 39px minmax(0, 1fr) 137px; gap: 6px; }
+      .event-top .avatar-wrap, .event-top .avatar { width: 39px; height: 39px; }
+      .performance { grid-template-columns: 66px 71px; }
+      .performance-return { font-size: 13px; }
+      .event-body { padding-left: 45px; }
+      .event-footer { margin-left: 45px; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
+  </style>
+</head>
+<body>
+  <header class="preview-bar">
+    <div class="preview-brand"><b>b</b><span>bSmart · 主体事件首页</span></div>
+    <div class="preview-note">部分头像为真实照片 · 动态与指标均为 mock 演示</div>
+  </header>
+  <main class="stage">
+    <section class="phone" aria-label="bSmart 首页交互预览">
+      <div class="status"><span>9:41</span><span class="status-right"><i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i></span></div>
+      <div class="app-main" id="appMain"><div class="app-content" id="app"></div></div>
+    </section>
+    <aside class="rail" aria-label="方案结构">
+      <div class="rail-eyebrow">主体 · 事件 · 标的</div>
+      <h2>把人说过什么、做过什么，放回投资决策的上下文。</h2>
+      <div class="rail-track">
+        <div class="rail-item"><b>01</b><div><strong>先看全局</strong><span>资产热力图按参与的不同主体数着色；环图展示平台账户、政客和名人的活跃构成。</span></div></div>
+        <div class="rail-item"><b>02</b><div><strong>再收窄动态</strong><span>按主体、内容性质、时间、关注状态和算法趋势组合筛选，不把所有人的方向混成一个结论。</span></div></div>
+        <div class="rail-item"><b>03</b><div><strong>最后核对依据</strong><span>逐条查看观点、实际资金行为或公开申报，并区分事件发生与公开时间。</span></div></div>
+      </div>
+      <div class="rail-footer">此文件用于检验信息架构与交互，不连接真实行情或交易服务。人物头像来源：<a href="https://commons.wikimedia.org/wiki/File:Nancy_Pelosi_official_portrait.jpg" target="_blank" rel="noopener">Nancy Pelosi / US Congress</a>（公共领域）；Michael Burry 照片由用户提供。所有事件和绩效数值均为 mock。</div>
+    </aside>
+  </main>
+  <script src="../investor-discovery/lucide.min.js"></script>
+  <script>
+    const root = document.getElementById('app');
+    const scroller = document.getElementById('appMain');
+    const base = '../../../../ios/BSmart/Assets.xcassets/';
+    const logos = {
+      MU: base + 'Ticker_MU.imageset/MU.svg',
+      GOOGL: base + 'Ticker_GOOGL.imageset/GOOGL.svg',
+      NVDA: base + 'Ticker_NVDA.imageset/NVDA.png',
+      AAPL: base + 'Ticker_AAPL.imageset/AAPL.svg',
+      TSLA: base + 'Ticker_TSLA.imageset/TSLA.svg'
+    };
+    const assets = [
+      { symbol: 'MU', name: 'Micron Technology', price: '$108.42', change: '+2.84%', direction: 'up', group: 'watchlist' },
+      { symbol: 'GOOGL', name: 'Alphabet', price: '$301.16', change: '+0.67%', direction: 'up', group: 'holding' },
+      { symbol: 'NVDA', name: 'NVIDIA', price: '$191.28', change: '-1.26%', direction: 'down', group: 'market' },
+      { symbol: 'AAPL', name: 'Apple', price: '$256.07', change: '+0.32%', direction: 'up', group: 'market' },
+      { symbol: 'TSLA', name: 'Tesla', price: '$438.52', change: '-0.93%', direction: 'down', group: 'watchlist' }
+    ];
+    const actors = {
+      maya: { id: 'maya', name: 'Maya Chen', initials: 'MC', type: 'opinion', group: 'platform', platform: 'x', source: 'X · 投资账户', wins: 11, losses: 6, trackedReturn: '+12.4%', stats: [['17', '有方向观点'], ['11 / 17', '跟踪命中'], ['+12.4%', '观点跟踪收益']] },
+      connor: { id: 'connor', name: 'Connor', initials: 'C', type: 'trade', group: 'platform', platform: 'bsmart', source: 'bSmart · 平台交易者', wins: 15, losses: 9, trackedReturn: '+8.2%', stats: [['24', '已完成交易'], ['15 / 24', '真实胜负'], ['+8.2%', '已实现收益']] },
+      video: { id: 'video', name: 'Market Lens', initials: 'ML', type: 'opinion', group: 'platform', platform: 'youtube', source: 'YouTube · 投资账户', wins: 19, losses: 12, trackedReturn: '+9.1%', stats: [['31', '有方向观点'], ['19 / 31', '跟踪命中'], ['+9.1%', '观点跟踪收益']] },
+      reddit: { id: 'reddit', name: 'DeepValue', initials: 'DV', type: 'opinion', group: 'platform', platform: 'reddit', source: 'Reddit · 投资账户', wins: 8, losses: 5, trackedReturn: '+5.6%', stats: [['13', '有方向观点'], ['8 / 13', '跟踪命中'], ['+5.6%', '观点跟踪收益']] },
+      senator: { id: 'senator', name: 'Nancy Pelosi', initials: 'NP', type: 'politician', group: 'politician', source: '政客 · PTR 公开申报', portrait: 'https://upload.wikimedia.org/wikipedia/commons/9/92/Nancy_Pelosi_official_portrait.jpg', wins: 9, losses: 6, trackedReturn: '+14.2%', stats: [['公开', '资料类型'], ['区间', '金额形式'], ['需核对', '原始申报']] },
+      celebrity: { id: 'celebrity', name: 'Michael Burry', initials: 'MB', type: 'celebrity', group: 'celebrity', source: '名人 · 公开观点', portrait: 'assets/michael-burry.png', wins: 12, losses: 7, trackedReturn: '+16.4%', stats: [['公开', '观点来源'], ['未核验', '实际持仓'], ['需核对', '原始出处']] }
+    };
+    const events = [
+      { id: 'mu-view', actor: 'maya', nature: 'direction', label: '观点 + 交易方向', title: '关注 MU 新一轮需求变化', summary: '公开表达看多 MU，认为需求与库存变化改善了后续季度预期；未见已验证成交。', symbols: ['MU'], hours: 2, occurred: '今日 07:36 · 观点发表', published: '今日 07:41 · bSmart 收录', evidence: 'X 原文', trend: true },
+      { id: 'googl-trade', actor: 'connor', nature: 'funds', label: '观点 + 真实资金行为', title: '增持 GOOGL，并发表交易理由', summary: '平台内已验证的成交记录，交易理由随后公开；收益与持仓应以成交记录为准。', symbols: ['GOOGL'], hours: 4, occurred: '今日 05:28 · 平台成交', published: '今日 05:35 · 理由发表', evidence: 'bSmart 成交记录', trend: true },
+      { id: 'aapl-ptr', actor: 'senator', nature: 'only', label: '仅交易方向', title: '政客交易披露卡片示例', summary: '此条为版式演示，不代表 Nancy Pelosi 实际购入 AAPL；真实申报需核对交易日、公开日和金额区间。', symbols: ['AAPL'], hours: 7, occurred: '演示时间 · 申报所载交易日', published: '演示时间 · 申报公开', evidence: '示意 PTR 申报', trend: true },
+      { id: 'tsla-celebrity', actor: 'celebrity', nature: 'direction', label: '观点 + 交易方向', title: '公开观点与标的关联示例', summary: '此条为版式演示，不代表 Michael Burry 对 TSLA 发表过该观点或持有该标的。', symbols: ['TSLA'], hours: 11, occurred: '演示时间 · 观点发表', published: '演示时间 · bSmart 收录', evidence: '示意来源', trend: false },
+      { id: 'mu-video', actor: 'video', nature: 'direction', label: '观点 + 交易方向', title: '上调 MU 的关注级别', summary: '视频中提出更积极的 MU 配置观点，列出需求回升与估值变化两项理由。', symbols: ['MU'], hours: 18, occurred: '昨日 15:20 · 视频发表', published: '昨日 15:28 · bSmart 收录', evidence: 'YouTube 视频', trend: true },
+      { id: 'nvda-reddit', actor: 'reddit', nature: 'direction', label: '观点 + 交易方向', title: '讨论 NVDA 盈利预期', summary: '帖子指出盈利预期与当前估值之间的落差，给出谨慎配置方向。', symbols: ['NVDA'], hours: 22, occurred: '昨日 11:10 · 帖子发表', published: '昨日 11:16 · bSmart 收录', evidence: 'Reddit 原帖', trend: false },
+      { id: 'tsla-ptr', actor: 'senator', nature: 'only', label: '仅交易方向', title: '延迟披露卡片示例', summary: '此条为版式演示，不代表 Nancy Pelosi 实际卖出 TSLA；展示交易时间与公开时间的区别。', symbols: ['TSLA'], hours: 39, occurred: '演示时间 · 申报所载交易日', published: '演示时间 · 申报公开', evidence: '示意 PTR 申报', trend: true },
+      { id: 'googl-trade-2', actor: 'connor', nature: 'funds', label: '观点 + 真实资金行为', title: '建仓 GOOGL 并说明依据', summary: '平台成交后发表关于广告业务和估值的观点，两者在详情中分开标注时间。', symbols: ['GOOGL'], hours: 52, occurred: '9 月 26 日 · 平台成交', published: '9 月 26 日 · 理由发表', evidence: 'bSmart 成交记录', trend: false },
+      { id: 'aapl-reddit', actor: 'reddit', nature: 'direction', label: '观点 + 交易方向', title: '重新评估 AAPL 的增长预期', summary: '提出观望方向和关键观察项，没有可验证的实际交易记录。', symbols: ['AAPL'], hours: 92, occurred: '9 月 24 日 · 帖子发表', published: '9 月 24 日 · bSmart 收录', evidence: 'Reddit 原帖', trend: false },
+      { id: 'mu-celebrity', actor: 'celebrity', nature: 'direction', label: '观点 + 交易方向', title: '公开人物观点卡片示例', summary: '此条为版式演示，不代表 Michael Burry 对 MU 发表过该观点或持有该标的。', symbols: ['MU'], hours: 145, occurred: '演示时间 · 观点发表', published: '演示时间 · bSmart 收录', evidence: '示意来源', trend: false }
+    ];
+    const state = { view: 'home', mode: 'activity', window: 24, actorFilter: 'all', nature: 'all', order: 'newest', followingOnly: false, trendOnly: false, assetFilter: '', openMenu: '', group: 'watchlist', query: '', activeId: '', followed: new Set(['maya', 'connor']) };
+    const icon = name => `<i data-lucide="${name}" aria-hidden="true"></i>`;
+    function assetLogo(symbol) { return `<img src="${logos[symbol]}" alt="" loading="lazy">`; }
+    function header(title, back = false) {
+      return `<header class="app-header">${back ? `<div class="back-title"><button class="icon-button" data-back aria-label="返回首页">${icon('arrow-left')}</button><h1>${title}</h1></div>` : `<h1>${title}</h1>`}<button class="icon-button" data-search aria-label="搜索标的">${icon('search')}</button></header>`;
+    }
+    function avatarMark(actor) {
+      const badge = actor.platform === 'bsmart' ? `<img src="${base}AppIcon.appiconset/AppIcon-1024.png" alt="">`
+        : actor.platform === 'youtube' ? '<img src="../../../../web/public/platform/youtube.png" alt="">'
+        : actor.platform === 'reddit' ? '<img src="../../../../web/public/platform/reddit.png" alt="">'
+        : actor.platform === 'x' ? 'X'
+        : actor.group === 'politician' ? '<img src="assets/white-house.svg" alt="">'
+        : '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 2h8l-1 5-3 3-3-3zm2 8h4l3 10-5 3-5-3z"/></svg>';
+      const badgeClass = actor.group === 'politician' ? ' white-house' : actor.group === 'celebrity' ? ' tie' : '';
+      return `<span class="avatar-wrap"><span class="avatar ${actor.type}">${actor.initials}${actor.portrait ? `<img src="${actor.portrait}" alt="" loading="lazy" onerror="this.remove()">` : ''}</span><span class="source-badge${badgeClass}" title="${actor.source}">${badge}</span></span>`;
+    }
+    function agoLabel(hours) { return hours < 24 ? `${hours} 小时前` : `${Math.floor(hours / 24)} 天前`; }
+    function performanceMark(actor) {
+      return `<div class="performance" title="Mock 指标，仅用于展示布局"><div class="performance-col"><span class="performance-label">胜率</span><span class="performance-numbers" aria-label="胜 ${actor.wins}，负 ${actor.losses}"><b class="win">${actor.wins}</b><b class="loss">${actor.losses}</b></span></div><div class="performance-col"><span class="performance-label">跟踪收益</span><strong class="performance-return ${actor.trackedReturn.startsWith('-') ? 'down' : 'up'}">${actor.trackedReturn}</strong></div></div>`;
+    }
+    function eventCard(event) {
+      const actor = actors[event.actor];
+      return `<article class="event"><div class="event-top">${avatarMark(actor)}<div><button class="actor-name" data-actor="${actor.id}">${actor.name}</button><div class="actor-meta">${actor.source}</div></div>${performanceMark(actor)}</div><button class="event-body" data-event="${event.id}"><span class="event-title">${event.title}</span><span class="event-summary">${event.summary}</span></button><div class="event-footer"><span class="type-tag ${event.nature}">${event.label}</span>${event.symbols.map(symbol => `<button class="symbol-tag" data-asset="${symbol}">${assetLogo(symbol)}${symbol}</button>`).join('')}<span class="evidence-tag">${icon('shield-check')} ${event.evidence}</span><time class="event-time">${agoLabel(event.hours)}</time></div></article>`;
+    }
+    const actorOptions = [['all', '全部主体'], ['platform', '平台账户'], ['x', 'X'], ['youtube', 'YouTube'], ['reddit', 'Reddit'], ['bsmart', 'bSmart'], ['politician', '政客'], ['celebrity', '名人']];
+    const natureOptions = [['all', '全部性质'], ['direction', '观点 + 交易方向'], ['funds', '观点 + 真实资金行为'], ['only', '仅交易方向']];
+    const orderOptions = [['newest', '最新优先'], ['oldest', '最早优先']];
+    const menuDefs = {
+      actorFilter: { title: '主体', options: actorOptions },
+      nature: { title: '性质', options: natureOptions },
+      order: { title: '时间', options: orderOptions }
+    };
+    function windowEvents() { return events.filter(event => event.hours <= state.window); }
+    function visibleEvents() {
+      return windowEvents().filter(event => {
+        const actor = actors[event.actor];
+        const actorMatch = state.actorFilter === 'all' || actor.group === state.actorFilter || actor.platform === state.actorFilter;
+        return actorMatch && (state.nature === 'all' || event.nature === state.nature)
+          && (!state.followingOnly || state.followed.has(actor.id)) && (!state.trendOnly || event.trend)
+          && (!state.assetFilter || event.symbols.includes(state.assetFilter));
+      }).sort((a, b) => state.order === 'newest' ? a.hours - b.hours : b.hours - a.hours);
+    }
+    function activityOverview() {
+      const period = windowEvents();
+      const unique = [...new Set(period.map(event => event.actor))].map(id => actors[id]);
+      const groups = { platform: unique.filter(actor => actor.group === 'platform').length, politician: unique.filter(actor => actor.group === 'politician').length, celebrity: unique.filter(actor => actor.group === 'celebrity').length };
+      const total = unique.length || 1;
+      const platformEnd = groups.platform / total * 100;
+      const politicianEnd = (groups.platform + groups.politician) / total * 100;
+      const ring = `conic-gradient(var(--mint) 0 ${platformEnd}%, var(--blue) ${platformEnd}% ${politicianEnd}%, var(--amber) ${politicianEnd}% 100%)`;
+      const counts = assets.map(asset => ({ symbol: asset.symbol, count: new Set(period.filter(event => event.symbols.includes(asset.symbol)).map(event => event.actor)).size })).sort((a, b) => b.count - a.count || a.symbol.localeCompare(b.symbol));
+      return `<section class="overview" aria-label="主体活动总览"><div class="overview-top"><h2>市场脉搏</h2><div class="window-switch" role="group" aria-label="统计时间范围"><button class="${state.window === 24 ? 'active' : ''}" data-window="24" aria-pressed="${state.window === 24}">24H</button><button class="${state.window === 168 ? 'active' : ''}" data-window="168" aria-pressed="${state.window === 168}">7D</button></div></div><p class="overview-caption">按不同主体数统计 · ${state.window === 24 ? '近 24 小时' : '近 7 天'}</p><div class="visual-label">主体聚集的资产</div><div class="heatmap">${counts.map(({ symbol, count }) => `<button class="heat-tile level-${Math.min(count, 3)} ${state.assetFilter === symbol ? 'active' : ''}" data-heat-asset="${symbol}" aria-label="筛选 ${symbol}，${count} 位主体"><strong>${symbol}</strong><span>${count} 位主体</span></button>`).join('')}</div><div class="source-composition"><div class="composition-plot" style="background:${ring}" role="img" aria-label="${unique.length} 位活跃主体：平台账户 ${groups.platform}，政客 ${groups.politician}，名人 ${groups.celebrity}"><span class="composition-center"><strong>${unique.length}</strong><small>活跃主体</small></span></div><div class="composition-legend">${[['platform','平台账户'],['politician','政客'],['celebrity','名人']].map(([group,label]) => `<button class="${state.actorFilter === group ? 'active' : ''}" data-legend="${group}" aria-label="筛选${label}"><span class="legend-name"><span class="legend-dot ${group}"></span>${label}</span><b>${groups[group]}</b></button>`).join('')}</div></div></section>`;
+    }
+    function feedMenu() {
+      if (!state.openMenu) return '';
+      const { options } = menuDefs[state.openMenu];
+      return `<div class="filter-options" role="group" aria-label="${menuDefs[state.openMenu].title}筛选">${options.map(([value, label]) => `<button class="${state[state.openMenu] === value ? 'active' : ''}" data-filter-key="${state.openMenu}" data-filter-value="${value}" aria-pressed="${state[state.openMenu] === value}">${label}</button>`).join('')}</div>`;
+    }
+    function activityHome() {
+      const filtered = visibleEvents();
+      return `${activityOverview()}<section class="feed-section" id="feed"><div class="section-head"><h2>动态</h2><span>${filtered.length} 条</span></div><div class="feed-controls">${Object.entries(menuDefs).map(([key, def]) => { const label = def.options.find(([value]) => value === state[key])?.[1]; return `<button class="filter-control ${state[key] !== def.options[0][0] ? 'active' : ''}" data-menu="${key}" aria-expanded="${state.openMenu === key}"><span>${def.title} · ${label}</span>${icon('chevron-down')}</button>`; }).join('')}</div>${feedMenu()}<div class="feed-flags"><button class="${state.followingOnly ? 'active' : ''}" data-flag="followingOnly" aria-pressed="${state.followingOnly}">${icon('users-round')}仅看关注</button><button class="${state.trendOnly ? 'active' : ''}" data-flag="trendOnly" aria-pressed="${state.trendOnly}" title="显示平台算法筛选的趋势动态">${icon('trending-up')}算法趋势</button></div>${state.assetFilter ? `<button class="active-asset" data-clear-asset>${state.assetFilter} ${icon('x')}</button>` : ''}<div class="event-list">${filtered.length ? filtered.map(eventCard).join('') : '<div class="empty">当前筛选下暂无动态，可调整时间或筛选条件。</div>'}</div></section>`;
+    }
+    function assetRow(asset) {
+      const related = events.filter(event => event.symbols.includes(asset.symbol));
+      const actorCount = new Set(related.map(event => event.actor)).size;
+      return `<button class="asset-row" data-asset="${asset.symbol}"><img class="asset-logo" src="${logos[asset.symbol]}" alt=""><span class="asset-name"><strong>${asset.symbol}</strong><small>${asset.name}</small></span><span class="quote"><strong>${asset.price}</strong><small class="${asset.direction}">${asset.change}</small></span><span class="asset-signal"><span>${actorCount} 位主体 · ${related.length} 条动态</span><em>查看详情</em></span></button>`;
+    }
+    function assetHome() {
+      const q = state.query.trim().toLowerCase();
+      const filtered = assets.filter(asset => (state.group === 'market' || asset.group === state.group) && (!q || `${asset.symbol} ${asset.name}`.toLowerCase().includes(q)));
+      return `<div class="section-head"><h2>资产</h2><span>行情仅示意</span></div><label class="search-box">${icon('search')}<input id="assetSearch" type="search" placeholder="搜索标的或公司" value="${state.query.replaceAll('&','&amp;').replaceAll('"','&quot;').replaceAll('<','&lt;')}"></label><div class="asset-tabs">${[['holding','持仓'],['watchlist','自选'],['market','市场']].map(([value,label]) => `<button class="${state.group === value ? 'active' : ''}" data-group="${value}">${label}</button>`).join('')}</div><div class="asset-list">${filtered.length ? filtered.map(assetRow).join('') : '<div class="empty">没有找到匹配的标的</div>'}</div>`;
+    }
+    function home() {
+      return `${header('Today')}<div class="mode-switch" role="group" aria-label="首页视角"><button class="${state.mode === 'activity' ? 'active' : ''}" data-mode="activity" aria-pressed="${state.mode === 'activity'}">动态</button><button class="${state.mode === 'assets' ? 'active' : ''}" data-mode="assets" aria-pressed="${state.mode === 'assets'}">资产</button></div>${state.mode === 'activity' ? activityHome() : assetHome()}`;
+    }
+    function eventDetail() {
+      const event = events.find(item => item.id === state.activeId);
+      if (!event) return home();
+      const actor = actors[event.actor];
+      return `${header('动态详情', true)}<div class="detail-lead"><div class="detail-kicker">${event.label} · ${actor.source}</div><h2>${event.title}</h2><p>${event.summary}</p></div><div class="detail-rule"></div><div class="time-grid"><div><div class="detail-label">事件发生</div><div class="detail-value">${event.occurred}</div></div><div><div class="detail-label">公开 / 收录</div><div class="detail-value">${event.published}</div></div></div><div class="source-line"><span>原始依据</span><strong>${event.evidence}</strong></div><div class="section-head small"><h2>关联主体与资产</h2></div><button class="asset-row" data-actor="${actor.id}">${avatarMark(actor)}<span class="asset-name"><strong>${actor.name}</strong><small>${actor.source}</small></span>${icon('chevron-right')}</button>${event.symbols.map(symbol => { const asset = assets.find(item => item.symbol === symbol); return assetRow(asset); }).join('')}<div class="detail-actions"><button class="secondary" data-actor="${actor.id}">${icon('user-round')}查看主体</button><button class="primary" data-trade="${event.symbols[0]}">${icon('arrow-left-right')}交易标的</button></div>`;
+    }
+    function actorDetail() {
+      const actor = actors[state.activeId];
+      if (!actor) return home();
+      const own = events.filter(event => event.actor === actor.id);
+      const following = state.followed.has(actor.id);
+      return `${header('主体详情', true)}<div class="person-head">${avatarMark(actor)}<div><h2>${actor.name}</h2><p>${actor.source}</p></div></div><div class="detail-actions"><button class="${following ? 'secondary' : 'primary'}" data-follow="${actor.id}">${icon(following ? 'check' : 'plus')}${following ? '已追踪' : '追踪主体'}</button><button class="secondary" data-back>${icon('arrow-left')}返回动态</button></div><div class="person-stats">${actor.stats.map(([value,label]) => `<div><strong>${value}</strong><span>${label}</span></div>`).join('')}</div><div class="section-head small"><h2>近期记录</h2><span>${own.length} 条</span></div><div class="event-list">${own.map(eventCard).join('')}</div>`;
+    }
+    function assetDetail() {
+      const asset = assets.find(item => item.symbol === state.activeId);
+      if (!asset) return home();
+      const related = events.filter(event => event.symbols.includes(asset.symbol));
+      return `${header('标的详情', true)}<div class="asset-detail-head"><img src="${logos[asset.symbol]}" alt=""><div><h2>${asset.symbol}</h2><p>${asset.name}</p></div></div><div class="asset-price">${asset.price}<small class="${asset.direction}">${asset.change}</small></div><svg class="mini-chart" viewBox="0 0 360 100" preserveAspectRatio="none" aria-label="示意价格走势"><line x1="0" x2="360" y1="83" y2="83"></line><polyline points="0,75 25,62 48,69 71,48 90,57 111,41 132,51 151,44 171,57 194,34 213,39 231,26 251,42 270,29 293,36 318,16 340,24 360,13"></polyline></svg><div class="section-head small"><h2>相关主体动态</h2><span>${related.length} 条</span></div><div class="event-list">${related.map(eventCard).join('')}</div>`;
+    }
+    function tradePreview() {
+      const asset = assets.find(item => item.symbol === state.activeId);
+      if (!asset) return home();
+      return `${header('交易预览', true)}<div class="asset-detail-head"><img src="${logos[asset.symbol]}" alt=""><div><h2>${asset.symbol}</h2><p>${asset.name}</p></div></div><div class="asset-price">${asset.price}<small class="${asset.direction}">${asset.change}</small></div><div class="trade-note">本原型不连接交易服务。公开披露可能晚于实际交易；交易前需独立核查标的、价格与风险。</div><div class="detail-actions"><button class="secondary" data-asset="${asset.symbol}">${icon('chart-no-axes-combined')}查看标的</button><button class="primary" data-back>${icon('arrow-left')}返回首页</button></div>`;
+    }
+    function render(resetScroll = true) {
+      root.innerHTML = state.view === 'event' ? eventDetail() : state.view === 'actor' ? actorDetail() : state.view === 'asset' ? assetDetail() : state.view === 'trade' ? tradePreview() : home();
+      if (window.lucide) window.lucide.createIcons();
+      if (resetScroll) scroller.scrollTop = 0;
+    }
+    root.addEventListener('click', event => {
+      const button = event.target.closest('button');
+      if (!button) return;
+      if (button.hasAttribute('data-back')) { state.view = 'home'; render(); return; }
+      if (button.hasAttribute('data-search')) { state.view = 'home'; state.mode = 'assets'; state.group = 'market'; render(); root.querySelector('#assetSearch')?.focus(); return; }
+      if (button.dataset.mode) { state.mode = button.dataset.mode; render(); return; }
+      if (button.dataset.window) { state.window = Number(button.dataset.window); render(false); return; }
+      if (button.dataset.heatAsset) { state.assetFilter = state.assetFilter === button.dataset.heatAsset ? '' : button.dataset.heatAsset; render(false); const feed = root.querySelector('#feed'); if (feed) scroller.scrollTo({ top: scroller.scrollTop + feed.getBoundingClientRect().top - scroller.getBoundingClientRect().top - 10, behavior: 'smooth' }); return; }
+      if (button.dataset.legend) { state.actorFilter = state.actorFilter === button.dataset.legend ? 'all' : button.dataset.legend; render(false); const feed = root.querySelector('#feed'); if (feed) scroller.scrollTo({ top: scroller.scrollTop + feed.getBoundingClientRect().top - scroller.getBoundingClientRect().top - 10, behavior: 'smooth' }); return; }
+      if (button.dataset.menu) { state.openMenu = state.openMenu === button.dataset.menu ? '' : button.dataset.menu; render(false); return; }
+      if (button.dataset.filterKey) { state[button.dataset.filterKey] = button.dataset.filterValue; state.openMenu = ''; render(false); return; }
+      if (button.dataset.flag) { state[button.dataset.flag] = !state[button.dataset.flag]; render(false); return; }
+      if (button.hasAttribute('data-clear-asset')) { state.assetFilter = ''; render(false); return; }
+      if (button.dataset.group) { state.group = button.dataset.group; render(false); return; }
+      if (button.dataset.event) { state.view = 'event'; state.activeId = button.dataset.event; render(); return; }
+      if (button.dataset.actor) { state.view = 'actor'; state.activeId = button.dataset.actor; render(); return; }
+      if (button.dataset.asset) { state.view = 'asset'; state.activeId = button.dataset.asset; render(); return; }
+      if (button.dataset.trade) { state.view = 'trade'; state.activeId = button.dataset.trade; render(); return; }
+      if (button.dataset.follow) { const id = button.dataset.follow; state.followed.has(id) ? state.followed.delete(id) : state.followed.add(id); render(false); }
+    });
+    root.addEventListener('input', event => {
+      if (event.target.id !== 'assetSearch') return;
+      const position = event.target.selectionStart;
+      state.query = event.target.value;
+      render(false);
+      const input = root.querySelector('#assetSearch');
+      input?.focus();
+      input?.setSelectionRange(position, position);
+    });
+    render();
+  </script>
+</body>
+</html>

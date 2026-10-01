@@ -24,11 +24,37 @@ private struct BSmartCacheSnapshot: Codable {
 final class AppModel: ObservableObject {
     @Published private(set) var positions: [PortfolioPosition] = []
     @Published private(set) var signals: [PortfolioSignal] = []
-    @Published private(set) var smartAccountUpdates: [SmartAccountUpdate] = []
-    @Published private(set) var smartMoneyMovements: [SmartMoneyMovement] = []
-    @Published private(set) var intelligence: [TickerIntelligence] = []
-    @Published private(set) var smartAccounts: [SmartAccountProfile] = []
-    @Published private(set) var smartAccountEvidenceByAuthor: [String: [SmartAccountUpdate]] = [:]
+    @Published private(set) var smartAccountUpdates: [SmartAccountUpdate] = [] {
+        didSet {
+            updatesByID = Dictionary(smartAccountUpdates.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+            updatesByTicker = Dictionary(grouping: smartAccountUpdates, by: { $0.ticker.uppercased() })
+            updatesByAuthor = Dictionary(grouping: smartAccountUpdates, by: \.authorId)
+            priceEvidenceByTicker = Dictionary(grouping: smartAccountUpdates.compactMap(\.priceEvidence),
+                                              by: { $0.ticker.uppercased() })
+            todayFeedRevision &+= 1
+        }
+    }
+    @Published private(set) var nativeInvestorLoadFailed = false
+    @Published private(set) var subjectActivitySnapshot = TodaySubjectFeedSnapshot.bundled {
+        didSet { todayFeedRevision &+= 1; directoryRevision &+= 1 }
+    }
+    @Published private(set) var smartMoneyMovements: [SmartMoneyMovement] = [] {
+        didSet { todayFeedRevision &+= 1 }
+    }
+    @Published private(set) var intelligence: [TickerIntelligence] = [] {
+        didSet { intelligenceByTicker = Dictionary(intelligence.map { ($0.ticker.uppercased(), $0) },
+                                                   uniquingKeysWith: { first, _ in first }) }
+    }
+    @Published private(set) var smartAccounts: [SmartAccountProfile] = [] {
+        didSet {
+            accountsByID = Dictionary(smartAccounts.map { ($0.id.lowercased(), $0) },
+                                     uniquingKeysWith: { first, _ in first })
+            directoryRevision &+= 1
+        }
+    }
+    @Published private(set) var smartAccountEvidenceByAuthor: [String: [SmartAccountUpdate]] = [:] {
+        didSet { accountEvidenceRevision &+= 1 }
+    }
     private var accountEvidenceRequests: [String: UUID] = [:]
     private var lastAccountEvidenceRefreshAt: Date?
     @Published private(set) var loadingSmartAccountEvidenceIDs: Set<String> = []
@@ -40,6 +66,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var readTodayActivityIDs: Set<UUID> = []
     @Published private(set) var followedSmartAccountIDs: Set<String> = []
     @Published private(set) var followedSmartMoneyIDs: Set<String> = []
+    @Published private(set) var followedSubjectIDs: Set<String> = []
     @Published private(set) var linkedBrokerageAccounts: [LinkedBrokerageAccount] = []
     @Published private(set) var portfolioHistory: [PortfolioValuePoint] = []
     @Published private(set) var isLoading = false
@@ -53,6 +80,15 @@ final class AppModel: ObservableObject {
     @Published private(set) var smartMoneyFreshness: BSmartDataFreshness?
     @Published private(set) var errorMessage: String?
     let isUsingDemoData: Bool
+    private(set) var todayFeedRevision = 0
+    private(set) var directoryRevision = 0
+    private(set) var accountEvidenceRevision = 0
+    private var updatesByID: [UUID: SmartAccountUpdate] = [:]
+    private var updatesByTicker: [String: [SmartAccountUpdate]] = [:]
+    private var updatesByAuthor: [String: [SmartAccountUpdate]] = [:]
+    private var priceEvidenceByTicker: [String: [SmartAccountPriceEvidence]] = [:]
+    private var intelligenceByTicker: [String: TickerIntelligence] = [:]
+    private var accountsByID: [String: SmartAccountProfile] = [:]
 
     private let client: BSmartAPIClient
     func fetchTradeFeed(offset: Int, profileID: UUID? = nil) async throws -> TradeFeedPage {
@@ -66,7 +102,10 @@ final class AppModel: ObservableObject {
     }
     private let bootstrapFallbackClient: BSmartAPIClient?
     private let accountPreferences: AccountPreferencesProviding?
-    private let directMrCollieClient: DirectMrCollieAnswering?
+    private let nativeInvestors: NativeInvestorProviding?
+    private var nativeAccounts: [SmartAccountProfile] = []
+    private var nativeUpdates: [SmartAccountUpdate] = []
+    private var nativeInvestorRequestID = UUID()
     private let syncCoordinator: BSmartSyncCoordinator?
     private let defaults: UserDefaults
     private let portfolioBootstrapStrategy: PortfolioBootstrapStrategy
@@ -76,8 +115,10 @@ final class AppModel: ObservableObject {
     private let savedSignalStatesKey = "bsmart.signal-user-states.v1"
     private let readTodayActivityIDsKey = "bsmart.today-read-activities.v1"
     private let savedClientCacheKey = "bsmart.client-cache.v1"
+    private let contentCacheFileURL: URL?
     private let followedSmartAccountsKey = "bsmart.followed-smart-accounts.v1"
     private let followedSmartMoneyKey = "bsmart.followed-smart-money.v1"
+    private let followedSubjectsKey = "bsmart.followed-subjects.v1"
     private let followedOwnerKey = "bsmart.followed-intelligence-owner.v1"
     private let pendingFollowsPrefix = "bsmart.pending-follows.v1"
     private let remoteFollowsMigratedPrefix = "bsmart.remote-follows-migrated.v1"
@@ -101,8 +142,9 @@ final class AppModel: ObservableObject {
         client: BSmartAPIClient = BundleBSmartAPIClient(),
         bootstrapFallbackClient: BSmartAPIClient? = nil,
         accountPreferences: AccountPreferencesProviding? = nil,
-        directMrCollieClient: DirectMrCollieAnswering? = nil,
+        nativeInvestors: NativeInvestorProviding? = nil,
         defaults: UserDefaults = .standard,
+        contentCacheFileURL: URL? = nil,
         portfolioBootstrapStrategy: PortfolioBootstrapStrategy = .remoteFallback,
         syncCoordinator: BSmartSyncCoordinator? = nil,
         isUsingDemoData: Bool = false
@@ -110,8 +152,9 @@ final class AppModel: ObservableObject {
         self.client = client
         self.bootstrapFallbackClient = bootstrapFallbackClient
         self.accountPreferences = accountPreferences
-        self.directMrCollieClient = directMrCollieClient
+        self.nativeInvestors = nativeInvestors
         self.defaults = defaults
+        self.contentCacheFileURL = contentCacheFileURL
         self.portfolioBootstrapStrategy = portfolioBootstrapStrategy
         self.syncCoordinator = syncCoordinator
         self.isUsingDemoData = isUsingDemoData
@@ -261,6 +304,13 @@ final class AppModel: ObservableObject {
     func activateAccountContext(_ accountID: UUID?) {
         guard activeAccountID != accountID else { return }
         activeAccountID = accountID
+        nativeInvestorRequestID = UUID()
+        nativeInvestorLoadFailed = false
+        nativeAccounts = []
+        nativeUpdates = []
+        smartAccounts.removeAll { $0.platform == "bsmart" }
+        smartAccountUpdates.removeAll { $0.platform == "bsmart" }
+        smartAccountEvidenceByAuthor = smartAccountEvidenceByAuthor.filter { !$0.key.hasPrefix("bsmart:") }
         restoreFollowedIntelligence()
         restorePendingFollows()
         hasCompletedPortfolioSetup = restoredInitialOnboardingCompletion()
@@ -358,7 +408,19 @@ final class AppModel: ObservableObject {
         restoreSignalUserStates()
         restoreReadTodayActivities()
         restoreFollowedIntelligence()
-        let restoredCache = restoreClientCache()
+        var restoredCache = await restoreClientCache()
+        if let cached = client as? SupabaseContentClient { await cached.restoreCachedSnapshot() }
+        guard generation == loadGeneration, !Task.isCancelled else { return }
+        if let cached = client as? SupabaseContentClient, cached.hasCachedSnapshot,
+           (!restoredCache || (cached.freshness(for: .smartAccount)?.checkedAt ?? .distantPast)
+                > (smartAccountFreshness?.checkedAt ?? .distantPast)) {
+            do {
+                try await loadSnapshot(from: cached, localPortfolio: localPortfolio, prepareRemote: false)
+                restoredCache = true
+            } catch {
+                // A malformed disk snapshot cannot replace the last valid UI cache.
+            }
+        }
         if restoredCache {
             refreshCurrentPrices()
             hasFinishedInitialLoad = true
@@ -409,14 +471,17 @@ final class AppModel: ObservableObject {
 
         isLoading = false
         hasFinishedInitialLoad = true
+        Task { await refreshNativeInvestors() }
+        Task { await refreshSubjectActivity() }
     }
 
     private func loadSnapshot(
         from source: BSmartAPIClient,
         localPortfolio: [PortfolioPosition]?,
-        persist: Bool = true
+        persist: Bool = true,
+        prepareRemote: Bool = true
     ) async throws {
-        try await (source as? BSmartContentRefreshing)?.prepareContentRefresh()
+        if prepareRemote { try await (source as? BSmartContentRefreshing)?.prepareContentRefresh() }
         try Task.checkCancellation()
         async let loadedPortfolio = source.fetchPortfolio()
         async let loadedPortfolioHistory = fetchPortfolioHistoryIfAvailable(from: source)
@@ -438,18 +503,66 @@ final class AppModel: ObservableObject {
         let history = await loadedPortfolioHistory
         portfolioHistory = PortfolioValuationHistory.context(for: positions) == remotePortfolioContext ? history : []
         signals = (try await loadedSignals).sorted { $0.occurredAt > $1.occurredAt }
-        smartAccountUpdates = (try await loadedAccountUpdates).sorted { $0.publishedAt > $1.publishedAt }
+        smartAccountUpdates = ((try await loadedAccountUpdates) + nativeUpdates)
+            .sorted { $0.publishedAt > $1.publishedAt }
         smartMoneyMovements = (try await loadedMoneyMovements).sorted { $0.observedAt > $1.observedAt }
         intelligence = (try await loadedIntelligence).sorted { $0.ticker < $1.ticker }
         refreshCurrentPrices()
-        smartAccounts = (try await loadedAccounts).sorted { $0.score > $1.score }
+        if localPortfolio == nil && !positions.isEmpty { persistPortfolio() }
+        smartAccounts = ((try await loadedAccounts) + nativeAccounts).sorted { $0.score > $1.score }
         smartMoney = (try await loadedMoney).sorted { $0.changedAt > $1.changedAt }
         dailyDigestSnapshot = await loadedDigest
         lastDataRefreshAt = resolvedLatestDataAsOf()
         if persist {
-            persistClientCache()
+            await persistClientCache()
         }
         enqueueLocalStateBootstrap()
+    }
+
+    func refreshNativeInvestors() async {
+        guard let accountID = activeAccountID, let nativeInvestors else { return }
+        let requestID = UUID()
+        nativeInvestorRequestID = requestID
+        do {
+            let snapshot = try await nativeInvestors.nativeInvestors(accountID: accountID)
+            guard !Task.isCancelled, activeAccountID == accountID,
+                  nativeInvestorRequestID == requestID else { return }
+            nativeAccounts = snapshot.profiles.map(\.smartAccount)
+            nativeUpdates = snapshot.updates.map(\.smartAccountUpdate)
+            let accounts = (smartAccounts.filter { $0.platform != "bsmart" } + nativeAccounts).sorted { $0.score > $1.score }
+            let updates = (smartAccountUpdates.filter { $0.platform != "bsmart" } + nativeUpdates).sorted { $0.publishedAt > $1.publishedAt }
+            if smartAccounts != accounts { smartAccounts = accounts }
+            if smartAccountUpdates != updates {
+                smartAccountUpdates = updates
+                smartAccountEvidenceByAuthor = smartAccountEvidenceByAuthor.filter { !$0.key.hasPrefix("bsmart:") }
+            }
+            if nativeInvestorLoadFailed { nativeInvestorLoadFailed = false }
+        } catch {
+            guard !Task.isCancelled, activeAccountID == accountID,
+                  nativeInvestorRequestID == requestID else { return }
+            nativeInvestorLoadFailed = true
+        }
+    }
+
+    func refreshSubjectActivity() async {
+        guard let provider = client as? BSmartSubjectActivityProviding else { return }
+        do {
+            let snapshot = try await provider.fetchSubjectActivity()
+            guard !Task.isCancelled else { return }
+            if snapshot.subjects != subjectActivitySnapshot.subjects
+                || snapshot.events != subjectActivitySnapshot.events {
+                subjectActivitySnapshot = snapshot
+            }
+        } catch {
+            // Preserve bundled or last good content while the optional feed is unavailable.
+        }
+    }
+
+    func subjectHistory(id: String) async -> TodaySubjectActivity? {
+        guard let provider = client as? BSmartSubjectActivityProviding,
+              let snapshot = try? await provider.fetchSubjectActivity(subjectID: id)
+        else { return nil }
+        return TodaySubjectActivity.history(for: id, in: snapshot)
     }
 
     func retry() async {
@@ -481,14 +594,23 @@ final class AppModel: ObservableObject {
                 loadedMoney,
                 loadedAccounts
             )
-            let accountsChanged = Set(smartAccounts) != Set(refreshed.5)
-                || Set(smartAccountUpdates) != Set(refreshed.1)
-            signals = refreshed.0.sorted { $0.occurredAt > $1.occurredAt }
-            smartAccountUpdates = refreshed.1.sorted { $0.publishedAt > $1.publishedAt }
-            smartMoneyMovements = refreshed.2.sorted { $0.observedAt > $1.observedAt }
-            intelligence = refreshed.3.sorted { $0.ticker < $1.ticker }
-            smartMoney = refreshed.4.sorted { $0.changedAt > $1.changedAt }
-            smartAccounts = refreshed.5.sorted { $0.score > $1.score }
+            let nextSignals = refreshed.0.sorted { $0.occurredAt > $1.occurredAt }
+            let nextUpdates = (refreshed.1 + nativeUpdates).sorted { $0.publishedAt > $1.publishedAt }
+            let nextMovements = refreshed.2.sorted { $0.observedAt > $1.observedAt }
+            let nextIntelligence = refreshed.3.sorted { $0.ticker < $1.ticker }
+            let nextMoney = refreshed.4.sorted { $0.changedAt > $1.changedAt }
+            let nextAccounts = (refreshed.5 + nativeAccounts).sorted { $0.score > $1.score }
+            let accountsChanged = smartAccounts != nextAccounts || smartAccountUpdates != nextUpdates
+            let contentChanged = accountsChanged || signals != nextSignals || smartMoneyMovements != nextMovements
+                || intelligence != nextIntelligence || smartMoney != nextMoney
+            if signals != nextSignals { signals = nextSignals }
+            if smartAccountUpdates != nextUpdates { smartAccountUpdates = nextUpdates }
+            if smartMoneyMovements != nextMovements { smartMoneyMovements = nextMovements }
+            if intelligence != nextIntelligence { intelligence = nextIntelligence }
+            if smartMoney != nextMoney { smartMoney = nextMoney }
+            if smartAccounts != nextAccounts { smartAccounts = nextAccounts }
+            Task { await refreshNativeInvestors() }
+            Task { await refreshSubjectActivity() }
             let history = await loadedPortfolioHistory
             if PortfolioValuationHistory.context(for: positions) == remotePortfolioContext {
                 portfolioHistory = history
@@ -497,7 +619,7 @@ final class AppModel: ObservableObject {
             refreshCurrentPrices()
             lastDataRefreshAt = resolvedLatestDataAsOf()
             errorMessage = nil
-            persistClientCache()
+            if contentChanged { await persistClientCache() }
             // A newly published ranking may also change historical representative works.
             if accountsChanged || lastAccountEvidenceRefreshAt.map({ Date().timeIntervalSince($0) >= 300 }) != false {
                 lastAccountEvidenceRefreshAt = Date()
@@ -649,8 +771,13 @@ final class AppModel: ObservableObject {
         readTodayActivityIDs = []
         followedSmartAccountIDs = []
         followedSmartMoneyIDs = []
+        followedSubjectIDs = []
         linkedBrokerageAccounts = []
         portfolioHistory = []
+        nativeAccounts = []
+        nativeUpdates = []
+        smartAccounts.removeAll { $0.platform == "bsmart" }
+        smartAccountUpdates.removeAll { $0.platform == "bsmart" }
         hasCompletedPortfolioSetup = false
 
         [
@@ -661,12 +788,15 @@ final class AppModel: ObservableObject {
             savedClientCacheKey,
             followedSmartAccountsKey,
             followedSmartMoneyKey,
+            followedSubjectsKey,
             linkedBrokerageAccountsKey
         ].forEach(defaults.removeObject(forKey:))
+        if let contentCacheFileURL { try? FileManager.default.removeItem(at: contentCacheFileURL) }
         defaults.removeObject(forKey: activeOnboardingCompletionKey)
         defaults.removeObject(forKey: valuationHistoryKey)
         defaults.removeObject(forKey: followedKey(followedSmartAccountsKey))
         defaults.removeObject(forKey: followedKey(followedSmartMoneyKey))
+        defaults.removeObject(forKey: followedKey(followedSubjectsKey))
         if let pendingFollowsKey { defaults.removeObject(forKey: pendingFollowsKey) }
         pendingFollows = [:]
 
@@ -822,8 +952,19 @@ final class AppModel: ObservableObject {
         queueFollow(.money, id: id, following: followedSmartMoneyIDs.contains(id))
     }
 
+    func isFollowingSubject(_ id: String) -> Bool {
+        followedSubjectIDs.contains(id)
+    }
+
+    func toggleSubjectFollow(_ id: String) {
+        if !followedSubjectIDs.insert(id).inserted {
+            followedSubjectIDs.remove(id)
+        }
+        persistFollowedIntelligence()
+    }
+
     func intelligence(for ticker: String) -> TickerIntelligence? {
-        intelligence.first { $0.ticker.caseInsensitiveCompare(ticker) == .orderedSame }
+        intelligenceByTicker[ticker.uppercased()]
     }
 
     func signals(for ticker: String) -> [PortfolioSignal] {
@@ -831,7 +972,7 @@ final class AppModel: ObservableObject {
     }
 
     func accountUpdates(for ticker: String) -> [SmartAccountUpdate] {
-        smartAccountUpdates.filter { $0.ticker.caseInsensitiveCompare(ticker) == .orderedSame }
+        updatesByTicker[ticker.uppercased()] ?? []
     }
 
     func moneyMovements(for ticker: String) -> [SmartMoneyMovement] {
@@ -839,7 +980,7 @@ final class AppModel: ObservableObject {
     }
 
     func accountUpdate(id: UUID) -> SmartAccountUpdate? {
-        smartAccountUpdates.first { $0.id == id }
+        updatesByID[id]
     }
 
     func moneyMovement(id: UUID) -> SmartMoneyMovement? {
@@ -847,13 +988,15 @@ final class AppModel: ObservableObject {
     }
 
     func accountUpdates(for account: SmartAccountProfile) -> [SmartAccountUpdate] {
-        smartAccountUpdates.filter { $0.authorId == account.id }
+        updatesByAuthor[account.id] ?? []
+    }
+
+    func accountPriceEvidence(for ticker: String) -> [SmartAccountPriceEvidence] {
+        priceEvidenceByTicker[ticker.uppercased()] ?? []
     }
 
     func smartAccountProfile(for update: SmartAccountUpdate) -> SmartAccountProfile {
-        if let account = smartAccounts.first(where: {
-            $0.id.caseInsensitiveCompare(update.authorId) == .orderedSame
-        }) {
+        if let account = accountsByID[update.authorId.lowercased()] {
             return account
         }
 
@@ -945,6 +1088,10 @@ final class AppModel: ObservableObject {
     }
 
     func loadSmartAccountEvidence(for account: SmartAccountProfile, refresh: Bool = false) async {
+        if account.platform == "bsmart" {
+            smartAccountEvidenceByAuthor[account.id] = accountUpdates(for: account)
+            return
+        }
         if !refresh {
             guard smartAccountEvidenceByAuthor[account.id] == nil,
                   !loadingSmartAccountEvidenceIDs.contains(account.id) else { return }
@@ -1035,33 +1182,6 @@ final class AppModel: ObservableObject {
         )
     }
 
-    func queryMrCollie(
-        _ question: String,
-        locale: String,
-        conversation: [MrCollieConversationTurn] = []
-    ) async throws -> MrCollieResponse {
-        let query = MrCollieQuery(
-            question: question,
-            locale: locale,
-            conversation: conversation
-        )
-        if let directMrCollieClient {
-            return try await directMrCollieClient.answer(
-                query: query,
-                portfolio: positions,
-                signals: signals,
-                smartAccountUpdates: smartAccountUpdates,
-                smartMoneyMovements: smartMoneyMovements,
-                intelligence: intelligence
-            )
-        }
-        return try await client.queryMrCollie(query)
-    }
-
-    var canQueryMrCollieRemotely: Bool {
-        directMrCollieClient != nil || !isUsingDemoData
-    }
-
     private func priorityValue(_ priority: SignalPriority) -> Int {
         switch priority {
         case .critical: 3
@@ -1143,11 +1263,13 @@ final class AppModel: ObservableObject {
     private func persistFollowedIntelligence() {
         defaults.set(followedSmartAccountIDs.sorted(), forKey: followedKey(followedSmartAccountsKey))
         defaults.set(followedSmartMoneyIDs.sorted(), forKey: followedKey(followedSmartMoneyKey))
+        defaults.set(followedSubjectIDs.sorted(), forKey: followedKey(followedSubjectsKey))
     }
 
     private func restoreFollowedIntelligence() {
         followedSmartAccountIDs = Set(defaults.stringArray(forKey: followedKey(followedSmartAccountsKey)) ?? [])
         followedSmartMoneyIDs = Set(defaults.stringArray(forKey: followedKey(followedSmartMoneyKey)) ?? [])
+        followedSubjectIDs = Set(defaults.stringArray(forKey: followedKey(followedSubjectsKey)) ?? [])
     }
 
     private func followedKey(_ base: String) -> String {
@@ -1229,36 +1351,47 @@ final class AppModel: ObservableObject {
         )
     }
 
-    private func persistClientCache() {
+    private func persistClientCache() async {
         let snapshot = BSmartCacheSnapshot(
             savedAt: Date(),
             dataAsOf: lastDataRefreshAt,
             dailyDigestSnapshot: dailyDigestSnapshot,
             signals: signals,
-            smartAccountUpdates: smartAccountUpdates,
+            smartAccountUpdates: smartAccountUpdates.filter { $0.platform != "bsmart" },
             smartMoneyMovements: smartMoneyMovements,
             intelligence: intelligence,
-            smartAccounts: smartAccounts,
+            smartAccounts: smartAccounts.filter { $0.platform != "bsmart" },
             smartMoney: smartMoney,
             smartAccountFreshness: smartAccountFreshness,
             smartMoneyFreshness: smartMoneyFreshness,
             portfolioHistory: portfolioHistory
         )
-        guard let data = try? JSONEncoder().encode(snapshot) else { return }
-        defaults.set(data, forKey: savedClientCacheKey)
+        guard let result = try? await BSmartContentIO.shared.persist(snapshot, to: contentCacheFileURL) else { return }
+        if result.savedToFile { defaults.removeObject(forKey: savedClientCacheKey) }
+        else { defaults.set(result.data, forKey: savedClientCacheKey) }
     }
 
     @discardableResult
-    private func restoreClientCache() -> Bool {
-        guard let data = defaults.data(forKey: savedClientCacheKey),
-              let snapshot = try? JSONDecoder().decode(BSmartCacheSnapshot.self, from: data)
-        else { return false }
+    private func restoreClientCache() async -> Bool {
+        let generation = loadGeneration
+        let fileSnapshot: BSmartCacheSnapshot?
+        if let url = contentCacheFileURL { fileSnapshot = await BSmartContentIO.shared.read(BSmartCacheSnapshot.self, from: url) }
+        else { fileSnapshot = nil }
+        let defaultsSnapshot: BSmartCacheSnapshot?
+        if let data = defaults.data(forKey: savedClientCacheKey), data.count <= 16_777_216 {
+            defaultsSnapshot = try? await BSmartContentIO.shared.decode(BSmartCacheSnapshot.self, from: data)
+        } else { defaultsSnapshot = nil }
+        guard generation == loadGeneration, !Task.isCancelled else { return false }
+        guard let snapshot = [fileSnapshot, defaultsSnapshot].compactMap({ $0 })
+            .max(by: { $0.savedAt < $1.savedAt }) else { return false }
         signals = snapshot.signals.sorted { $0.occurredAt > $1.occurredAt }
         dailyDigestSnapshot = snapshot.dailyDigestSnapshot
-        smartAccountUpdates = snapshot.smartAccountUpdates.sorted { $0.publishedAt > $1.publishedAt }
+        smartAccountUpdates = snapshot.smartAccountUpdates.filter { $0.platform != "bsmart" }
+            .sorted { $0.publishedAt > $1.publishedAt }
         smartMoneyMovements = snapshot.smartMoneyMovements.sorted { $0.observedAt > $1.observedAt }
         intelligence = snapshot.intelligence.sorted { $0.ticker < $1.ticker }
-        smartAccounts = snapshot.smartAccounts.sorted { $0.score > $1.score }
+        smartAccounts = snapshot.smartAccounts.filter { $0.platform != "bsmart" }
+            .sorted { $0.score > $1.score }
         smartMoney = snapshot.smartMoney.sorted { $0.changedAt > $1.changedAt }
         smartAccountFreshness = snapshot.smartAccountFreshness
         smartMoneyFreshness = snapshot.smartMoneyFreshness
@@ -1313,14 +1446,17 @@ final class AppModel: ObservableObject {
             intelligence.map { ($0.ticker.uppercased(), $0.currentPrice) },
             uniquingKeysWith: { _, latest in latest }
         )
-        positions = positions.map { position in
+        let updatedPositions = positions.map { position in
             var updated = position
             if let currentPrice = priceByTicker[position.ticker.uppercased()] {
                 updated.currentPrice = currentPrice
             }
             return updated
         }
-        persistPortfolio()
+        if positions != updatedPositions {
+            positions = updatedPositions
+            persistPortfolio()
+        }
     }
 
     private func enqueueLocalStateBootstrap() {

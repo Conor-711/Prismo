@@ -3,6 +3,7 @@ import SwiftUI
 struct BSmartCollapsingPager<Selection: Hashable, Header: View, Tabs: View, Content: View>: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.bSmartFloatingNavigationFrame) private var floatingNavigationFrame
+    @Environment(\.bSmartPageIsActive) private var isPageActive
     @Binding private var selection: Selection
     @State private var scrollState: BSmartCollapsingScrollState<Selection>
     @State private var headerHeight: CGFloat = 0
@@ -10,6 +11,7 @@ struct BSmartCollapsingPager<Selection: Hashable, Header: View, Tabs: View, Cont
     @State private var headerDragOrigin: CGFloat?
     private let sections: [Selection]
     private let collapseHeader: Bool
+    private let extendsUnderHomeIndicator: Bool
     private let pageIdentifier: (Selection) -> String
     private let header: (CGSize) -> Header
     private let tabs: () -> Tabs
@@ -17,6 +19,7 @@ struct BSmartCollapsingPager<Selection: Hashable, Header: View, Tabs: View, Cont
     private let refresh: () async -> Void
 
     init(selection: Binding<Selection>, sections: [Selection], collapseHeader: Bool = false,
+         extendsUnderHomeIndicator: Bool = false,
          pageIdentifier: @escaping (Selection) -> String,
          @ViewBuilder header: @escaping (CGSize) -> Header,
          @ViewBuilder tabs: @escaping () -> Tabs,
@@ -26,6 +29,7 @@ struct BSmartCollapsingPager<Selection: Hashable, Header: View, Tabs: View, Cont
         _scrollState = State(initialValue: BSmartCollapsingScrollState(selection: selection.wrappedValue))
         self.sections = sections
         self.collapseHeader = collapseHeader
+        self.extendsUnderHomeIndicator = extendsUnderHomeIndicator
         self.pageIdentifier = pageIdentifier
         self.header = header
         self.tabs = tabs
@@ -42,13 +46,16 @@ struct BSmartCollapsingPager<Selection: Hashable, Header: View, Tabs: View, Cont
                             VStack(spacing: 0) {
                                 Color.clear.frame(height: headerHeight + tabHeight)
                                 content(section)
+                                    .environment(\.bSmartPageIsActive, isPageActive && section == selection)
                                     .padding(BSmartSpacing.large)
                                     .frame(maxWidth: .infinity,
                                            minHeight: max(0, viewport.size.height - tabHeight),
                                            alignment: .topLeading)
                                 // Keep trailing clearance outside lazy content and its minimum-height frame.
                                 Color.clear.frame(height: BSmartFloatingNavigationLayout.bottomSpacing(
-                                    viewport: viewport.frame(in: .global), navigationFrame: floatingNavigationFrame
+                                    viewport: viewport.frame(in: .global).offsetBy(
+                                        dx: 0, dy: extendsUnderHomeIndicator ? viewport.safeAreaInsets.bottom : 0
+                                    ), navigationFrame: floatingNavigationFrame
                                 ))
                             }
                             .background(BSmartCollapsingScrollProbe(section: section, state: scrollState))
@@ -61,6 +68,10 @@ struct BSmartCollapsingPager<Selection: Hashable, Header: View, Tabs: View, Cont
                     }
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
+                .frame(height: viewport.size.height
+                       + (extendsUnderHomeIndicator ? viewport.safeAreaInsets.bottom : 0), alignment: .top)
+                // Expanding a page-styled TabView centers its child; keep the page's top fixed.
+                .offset(y: extendsUnderHomeIndicator ? viewport.safeAreaInsets.bottom / 2 : 0)
 
                 // A single header preserves chart state while each list keeps its own scroll position.
                 VStack(spacing: 0) {
@@ -82,7 +93,7 @@ struct BSmartCollapsingPager<Selection: Hashable, Header: View, Tabs: View, Cont
                 .background(BSmartColor.ink)
                 .modifier(BSmartCollapsingHeaderOffset(state: scrollState))
             }
-            .clipped()
+            .modifier(BSmartPagerClipping(shouldClip: !extendsUnderHomeIndicator))
             .onChange(of: selection) { _, section in scrollState.select(section) }
             .onChange(of: collapseHeader) { _, collapse in
                 if collapse { scrollState.scrollHeader(to: max(headerHeight, scrollState.currentOffset)) }
@@ -106,6 +117,14 @@ struct BSmartCollapsingPager<Selection: Hashable, Header: View, Tabs: View, Cont
                     scrollState.scrollHeader(to: origin - value.predictedEndTranslation.height, animated: !reduceMotion)
                 }
             }
+    }
+}
+
+private struct BSmartPagerClipping: ViewModifier {
+    let shouldClip: Bool
+
+    @ViewBuilder func body(content: Content) -> some View {
+        if shouldClip { content.clipped() } else { content }
     }
 }
 

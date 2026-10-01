@@ -1,11 +1,11 @@
 import SwiftUI
 
 enum BSmartColor {
-    static let ink = adaptive(dark: (9, 11, 11), light: (246, 247, 249))
-    static let canvas = adaptive(dark: (6, 8, 8), light: (235, 239, 243))
-    static let surface = adaptive(dark: (18, 21, 20), light: (255, 255, 255))
-    static let elevated = adaptive(dark: (24, 28, 27), light: (237, 242, 246))
-    static let recessed = adaptive(dark: (13, 16, 15), light: (233, 238, 241))
+    static let ink = adaptive(dark: (17, 22, 21), light: (246, 247, 249))
+    static let canvas = adaptive(dark: (13, 18, 18), light: (235, 239, 243))
+    static let surface = adaptive(dark: (27, 33, 31), light: (255, 255, 255))
+    static let elevated = adaptive(dark: (35, 42, 39), light: (237, 242, 246))
+    static let recessed = adaptive(dark: (22, 28, 26), light: (233, 238, 241))
     static let tabBarTop = adaptive(dark: (31, 32, 38), light: (255, 255, 255))
     static let tabBarBottom = adaptive(dark: (20, 21, 26), light: (248, 250, 252))
     static let tabSelectionTop = adaptive(dark: (61, 62, 70), light: (223, 241, 234))
@@ -20,8 +20,8 @@ enum BSmartColor {
         dark: (255, 255, 255, 0.17),
         light: (0, 106, 85, 0.3)
     )
-    static let line = adaptive(dark: (38, 44, 42), light: (190, 201, 210))
-    static let strongLine = adaptive(dark: (58, 68, 64), light: (145, 160, 173))
+    static let line = adaptive(dark: (46, 57, 53), light: (190, 201, 210))
+    static let strongLine = adaptive(dark: (67, 79, 73), light: (145, 160, 173))
     static let primaryText = adaptive(dark: (247, 248, 249), light: (19, 27, 35))
     static let secondaryText = adaptive(dark: (171, 179, 188), light: (62, 76, 89))
     static let tertiaryText = adaptive(dark: (107, 116, 126), light: (81, 97, 110))
@@ -56,9 +56,9 @@ enum BSmartColor {
     )
 
     // Raised content, inset controls and disabled actions have distinct light-mode roles.
-    static let raisedSurface = adaptive(dark: (24, 28, 27), light: (255, 255, 255))
-    static let selectedControlSurface = adaptive(dark: (24, 28, 27), light: (255, 255, 255))
-    static let disabledControl = adaptive(dark: (13, 16, 15), light: (225, 232, 238))
+    static let raisedSurface = adaptive(dark: (35, 42, 39), light: (255, 255, 255))
+    static let selectedControlSurface = adaptive(dark: (35, 42, 39), light: (255, 255, 255))
+    static let disabledControl = adaptive(dark: (22, 28, 26), light: (225, 232, 238))
     static let inputOutline = adaptiveAlpha(dark: (0, 0, 0, 0), light: (121, 137, 151, 1))
     static let softDivider = adaptiveAlpha(dark: (38, 44, 42, 0.5), light: (190, 201, 210, 1))
     static let cardShadow = adaptiveAlpha(dark: (0, 0, 0, 0), light: (27, 43, 58, 0.045))
@@ -176,33 +176,8 @@ extension View {
             .tint(BSmartColor.brand)
     }
 
-    func bSmartDetailPage() -> some View {
-        modifier(BSmartDetailPageModifier())
-    }
-
-    @ViewBuilder
-    func bSmartMatchedTransitionSource<ID: Hashable>(
-        id: ID,
-        in namespace: Namespace.ID
-    ) -> some View {
-        if #available(iOS 18.0, *) {
-            matchedTransitionSource(id: id, in: namespace)
-        } else {
-            self
-        }
-    }
-
-    @ViewBuilder
-    func bSmartZoomNavigationTransition<ID: Hashable>(
-        sourceID: ID,
-        in namespace: Namespace.ID,
-        enabled: Bool = true
-    ) -> some View {
-        if #available(iOS 18.0, *), enabled {
-            navigationTransition(.zoom(sourceID: sourceID, in: namespace))
-        } else {
-            self
-        }
+    func bSmartDetailPage(enabled: Bool = true, allowsBack: Bool = true) -> some View {
+        modifier(BSmartDetailPageModifier(enabled: enabled, allowsBack: allowsBack))
     }
 
     func bSmartPanel(
@@ -223,55 +198,57 @@ extension View {
 }
 
 private struct BSmartDetailPageModifier: ViewModifier {
+    let enabled: Bool
+    let allowsBack: Bool
     @EnvironmentObject private var router: AppRouter
     @Environment(\.dismiss) private var dismiss
     @State private var visibilityToken = UUID()
 
     func body(content: Content) -> some View {
+        if enabled {
         content
             .toolbar(.hidden, for: .tabBar)
             .navigationBarBackButtonHidden(true)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .topBarLeading) { Group {
                     Button(action: dismissDetail) {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 16, weight: .semibold))
                     }
+                    .buttonStyle(.bSmartToolbar)
+                    .disabled(!allowsBack)
                     .accessibilityLabel("Back".bSmartLocalized)
                     .accessibilityIdentifier("detail.back")
-                }
+                }.buttonStyle(.bSmartToolbar) }
+                .bSmartHideSystemBackground()
             }
             .background {
-                BSmartDetailVisibilityObserver(router: router, token: visibilityToken)
+                BSmartDetailVisibilityObserver(router: router, token: visibilityToken, allowsBack: allowsBack)
                     .frame(width: 0, height: 0)
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)
             }
+        } else {
+            content
+        }
     }
 
     private func dismissDetail() {
-        router.setTabBarHidden(false, token: visibilityToken)
-        DispatchQueue.main.async {
-            dismiss()
-        }
+        dismiss()
     }
 }
 
 struct BSmartDetailNavigationLink<ID: Hashable, Destination: View, Label: View>: View {
     let id: ID
-    private let usesZoomTransition: Bool
     private let destination: () -> Destination
     private let label: () -> Label
-    @Namespace private var transition
 
     init(
         id: ID,
-        usesZoomTransition: Bool = true,
         @ViewBuilder destination: @escaping () -> Destination,
         @ViewBuilder label: @escaping () -> Label
     ) {
         self.id = id
-        self.usesZoomTransition = usesZoomTransition
         self.destination = destination
         self.label = label
     }
@@ -279,10 +256,9 @@ struct BSmartDetailNavigationLink<ID: Hashable, Destination: View, Label: View>:
     var body: some View {
         NavigationLink {
             destination()
-                .bSmartZoomNavigationTransition(sourceID: id, in: transition, enabled: usesZoomTransition)
         } label: {
             label()
-                .bSmartMatchedTransitionSource(id: id, in: transition)
         }
+        .id(id)
     }
 }

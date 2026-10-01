@@ -105,7 +105,7 @@ struct PortfolioValueChart: View {
                             .frame(maxWidth: .infinity, minHeight: 36)
                             .background(period == item ? BSmartColor.brand.opacity(0.1) : .clear,
                                         in: RoundedRectangle(cornerRadius: 8))
-                    }.buttonStyle(.plain)
+                    }.buttonStyle(.bSmartPlain)
                         .accessibilityAddTraits(period == item ? .isSelected : [])
                         .accessibilityIdentifier("portfolio.period.\(item.rawValue)")
                 }

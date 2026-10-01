@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 
 protocol HyperliquidOrderBroadcasting: Sendable {
     func submit(_ permit: HyperliquidOrderSubmissionPermit, lease: FundingSigningLease) async throws -> Data?
@@ -63,6 +64,7 @@ struct HyperliquidOrderBroadcaster: HyperliquidOrderBroadcasting, UnifiedAccount
 
 private final class HyperliquidExchangeResponse: NSObject, URLSessionDataDelegate, @unchecked Sendable {
     private static let limit = 8192
+    private static let logger = Logger(subsystem: "today.bsmart.ios", category: "TradingSubmission")
     private let completion: @Sendable (Data?) -> Void
     private var data = Data()
     private var finished = false
@@ -75,6 +77,8 @@ private final class HyperliquidExchangeResponse: NSObject, URLSessionDataDelegat
         guard !finished, let http = response as? HTTPURLResponse, http.statusCode == 200,
               http.url == HyperliquidOrderBroadcaster.endpoint, http.mimeType == "application/json",
               http.expectedContentLength <= Self.limit else {
+            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+            Self.logger.notice("outcome=unusable_response http_status=\(status)")
             completionHandler(.cancel); finish(nil, session: session); return
         }
         accepted = true; completionHandler(.allow)
@@ -87,6 +91,8 @@ private final class HyperliquidExchangeResponse: NSObject, URLSessionDataDelegat
     }
 
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        let code = (error as NSError?)?.code ?? 0
+        Self.logger.notice("outcome=completed accepted_response=\(self.accepted) error_code=\(code)")
         finish(error == nil && accepted ? data : nil, session: session)
     }
 

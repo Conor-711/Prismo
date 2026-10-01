@@ -9,6 +9,24 @@ servers:
       project: { default: your-project }
 security: [{ accountBearer: [] }]
 paths:
+  /subject-activity:
+    get:
+      operationId: subjectActivity
+      description: Returns recent 400-day events by default, or the complete three-year history for one subject. SEC 13F events are quarterly disclosures, not executed trades. Each subject may carry unaudited three-year research estimates separate from formal metrics and Score.
+      parameters:
+        - in: query
+          name: subjectID
+          schema: { type: string, pattern: '^(politician|celebrity|institution):[A-Za-z0-9_-]{1,80}$' }
+      responses:
+        '200':
+          description: Validated production subject activity snapshot, filtered in the database.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SubjectActivity' }
+        '401': { description: Verified Supabase user required. }
+        '404': { description: No production snapshot or unknown subject. }
+        '422': { description: Invalid subjectID. }
+        '503': { description: Content unavailable. }
   /manifest:
     get:
       operationId: contentManifest
@@ -50,6 +68,42 @@ components:
   securitySchemes:
     accountBearer: { type: http, scheme: bearer, bearerFormat: Supabase JWT }
   schemas:
+    SubjectActivity:
+      type: object
+      required: [schemaVersion, subjects, events]
+      properties:
+        schemaVersion: { type: integer, const: 1 }
+        snapshotAt: { type: [string, 'null'], format: date-time }
+        subjects:
+          type: array
+          items:
+            type: object
+            required: [id, kind, name]
+            properties:
+              id: { type: string }
+              kind: { type: string, enum: [politician, celebrity, institution] }
+              name: { type: string }
+              research:
+                oneOf:
+                  - { type: 'null' }
+                  - { $ref: '#/components/schemas/SubjectResearch' }
+        events: { type: array, items: { type: object } }
+    SubjectResearch:
+      type: object
+      required: [method, asOf, sourceSince, latestMarketDate, candidatePositions, pricedPositions, directionalWins, directionalLosses, directionalObservations, directionalWinRate, openPositionPositiveRate, meanOpenReturn]
+      properties:
+        method: { type: string, const: three_year_open_positions_v1 }
+        asOf: { type: string, format: date }
+        sourceSince: { type: string, format: date }
+        latestMarketDate: { type: string, format: date }
+        candidatePositions: { type: integer, minimum: 0 }
+        pricedPositions: { type: integer, minimum: 0 }
+        directionalWins: { type: integer, minimum: 0 }
+        directionalLosses: { type: integer, minimum: 0 }
+        directionalObservations: { type: integer, minimum: 0 }
+        directionalWinRate: { type: [number, 'null'], minimum: 0, maximum: 1 }
+        openPositionPositiveRate: { type: [number, 'null'], minimum: 0, maximum: 1 }
+        meanOpenReturn: { type: [number, 'null'], minimum: -1 }
     Manifest:
       type: object
       required: [schemaVersion, revision, collections]

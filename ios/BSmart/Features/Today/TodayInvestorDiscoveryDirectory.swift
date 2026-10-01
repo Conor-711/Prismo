@@ -19,11 +19,11 @@ struct TodayInvestorDiscoveryDirectory: View {
         NavigationStack {
             TodayInvestorDirectoryContent(discovery: discovery, sector: sector)
                 .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
+                    ToolbarItem(placement: .topBarTrailing) { Group {
                         Button { dismiss() } label: { Image(systemName: "xmark") }
                             .accessibilityLabel("Close".bSmartLocalized)
                             .accessibilityIdentifier("discovery.directory.close")
-                    }
+                    }.buttonStyle(.bSmartToolbar) }.bSmartHideSystemBackground()
                 }
         }
     }
@@ -81,11 +81,10 @@ private struct TodayInvestorDirectoryContent: View {
         .background(BSmartColor.ink)
         .navigationTitle("Discover investors".bSmartLocalized)
         .navigationBarTitleDisplayMode(.inline)
-        .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always),
-                    prompt: "Investor, sector or ticker".bSmartLocalized)
+        .bSmartSearchable(text: $query, prompt: "Investor, sector or ticker".bSmartLocalized)
         .bSmartPage()
         .accessibilityIdentifier("discovery.directory")
-        .fullScreenCover(item: $profileSession) { TodayInvestorProfileBrowser(session: $0) }
+        .navigationDestination(item: $profileSession) { TodayInvestorProfileBrowser(session: $0) }
     }
 
     private var filters: some View {

@@ -104,10 +104,6 @@ struct DeviceWalletRecoveryView: View {
         .navigationTitle("Recovery phrase".bSmartLocalized)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button { clearSecrets(); dismiss() } label: { Image(systemName: "xmark") }
-                    .accessibilityLabel("Close".bSmartLocalized)
-            }
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
                 Button("Done".bSmartLocalized) { inputFocused = false }
@@ -133,6 +129,7 @@ struct DeviceWalletRecoveryView: View {
         .privacySensitive()
         .interactiveDismissDisabled(wallet.isBusy)
         .accessibilityIdentifier("wallet.recovery-screen")
+        .bSmartDetailPage(allowsBack: !wallet.isBusy)
     }
 
     private func clearSecrets(invalidateReveal: Bool = true) {
@@ -148,6 +145,6 @@ struct DeviceWalletRecoveryView: View {
                 .frame(maxWidth: .infinity, minHeight: 48)
                 .foregroundStyle(BSmartColor.onAccent)
                 .background(BSmartColor.brand, in: RoundedRectangle(cornerRadius: 8))
-        }.buttonStyle(.plain)
+        }.buttonStyle(.bSmartPlain)
     }
 }

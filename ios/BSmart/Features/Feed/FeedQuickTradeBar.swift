@@ -37,7 +37,8 @@ struct FeedQuickTradeBar: View {
                 BSmartTradeSheet(symbol: item.opinion.ticker, initialSide: item.side,
                     store: trading.makeSession(), coin: item.marketCoin) {
                     request = nil
-                }.environment(\.opinionTradeSource, item.source)
+                }.environment(\.opinionTradeSource,
+                              item.opinion.sourceKind == "native_trade" ? nil : item.source)
             }
         }
     }

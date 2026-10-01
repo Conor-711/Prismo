@@ -173,7 +173,8 @@ extension AppModel {
     func searchItems(markets: [HyperliquidPerpMarket]) -> [AppSearchItem] {
         tickerCatalog(markets: markets).map(AppSearchItem.ticker)
             + (smartAccountUpdates + smartAccountEvidenceByAuthor.values.flatMap { $0 }).map(AppSearchItem.opinion)
-            + smartMoneyMovements.map(AppSearchItem.movement)
-            + smartAccounts.map(AppSearchItem.author) + smartMoney.map(AppSearchItem.money)
+            + (BSmartProductVisibility.onchainSmartMoney ? smartMoneyMovements.map(AppSearchItem.movement) : [])
+            + smartAccounts.map(AppSearchItem.author)
+            + (BSmartProductVisibility.onchainSmartMoney ? smartMoney.map(AppSearchItem.money) : [])
     }
 }

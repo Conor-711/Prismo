@@ -20,6 +20,7 @@ struct FriendsView: View {
     @State private var loading = true
     @State private var viewedAccount: UUID?
     @State private var errorMessage: String?
+    @State private var refreshInFlight = false
     @Namespace private var tabSelection
 
     private struct RefreshKey: Hashable {
@@ -28,7 +29,8 @@ struct FriendsView: View {
     }
 
     private var refreshKey: RefreshKey {
-        .init(accountID: account.identity?.id, active: router.selection == .friends && phase == .active)
+        .init(accountID: account.identity?.id, active: router.selection == .friends && phase == .active
+              && !showingGlobal && selectedPeer == nil && !showingFind)
     }
 
     var body: some View {
@@ -135,7 +137,7 @@ struct FriendsView: View {
                             }
                         }
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.bSmartPlain)
                 .accessibilityAddTraits(section == item ? .isSelected : [])
                 .accessibilityIdentifier("friends.tab.\(item.rawValue)")
             }
@@ -178,7 +180,7 @@ struct FriendsView: View {
                     Image(systemName: "chevron.right").font(.subheadline).foregroundStyle(BSmartColor.secondaryText)
                 }.frame(minHeight: 78).contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.bSmartPlain)
             .accessibilityValue(globalChatUnread.hasUnread ? "Unread messages".bSmartLocalized : "")
             .accessibilityIdentifier("friends.global")
             Divider().overlay(BSmartColor.softDivider)
@@ -207,7 +209,7 @@ struct FriendsView: View {
                             }
                         }.frame(minHeight: 72)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.bSmartPlain)
                     .accessibilityIdentifier("friends.chat.\(conversation.id.uuidString)")
                     Divider().overlay(BSmartColor.softDivider)
                 }
@@ -230,7 +232,7 @@ struct FriendsView: View {
                             SocialPersonLabel(profile: conversation.profile,
                                 subtitle: conversation.lastMessage.text)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.bSmartPlain)
                         Divider().overlay(BSmartColor.softDivider)
                     }
                 }
@@ -257,18 +259,19 @@ struct FriendsView: View {
     }
 
     private func refresh() async {
-        guard let id = account.identity?.id, router.selection == .friends else { return }
-        loading = true
+        guard let id = account.identity?.id, refreshKey.active, !refreshInFlight else { return }
+        refreshInFlight = true
+        if snapshot.conversations.isEmpty { loading = true }
+        defer { loading = false; refreshInFlight = false }
         do {
             let value = try await NativeSocialClient(account: account).snapshot(accountID: id)
             guard !Task.isCancelled, account.identity?.id == id else { return }
-            snapshot = value
+            if snapshot != value { snapshot = value }
             errorMessage = nil
         } catch {
-            guard account.identity?.id == id else { return }
+            guard !Task.isCancelled, account.identity?.id == id else { return }
             errorMessage = "Friends are unavailable. Please try again.".bSmartLocalized
         }
-        loading = false
     }
 
 }

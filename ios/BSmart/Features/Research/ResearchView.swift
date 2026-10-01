@@ -3,6 +3,7 @@ import SwiftUI
 struct AllTickersView: View {
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var trading: HyperliquidTradingStore
+    @Environment(\.bSmartPageIsActive) private var isPageActive
     @State private var query = ""
     @State private var catalog: [AppTickerCatalogEntry] = []
     @State private var filter: TickerDirectoryFilter = .all
@@ -10,12 +11,13 @@ struct AllTickersView: View {
     @State private var sections = TickerDirectorySections(catalog: [])
     @State private var showsSortOptions = false
     var isActive: Bool = true
+    private var active: Bool { isActive && isPageActive }
     var onSearchFocusChanged: (Bool) -> Void = { _ in }
 
     var body: some View {
         let search = query.trimmingCharacters(in: .whitespacesAndNewlines)
         LazyVStack(alignment: .leading, spacing: 12) {
-            TickerDirectorySearchField(isActive: isActive, onQueryChanged: { query = $0 },
+            TickerDirectorySearchField(isActive: active, onQueryChanged: { query = $0 },
                                        onFocusChanged: onSearchFocusChanged)
             filterPicker
             HStack {
@@ -50,21 +52,21 @@ struct AllTickersView: View {
         .background(BSmartColor.ink)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("portfolio.all-tickers")
-        .onChange(of: isActive, initial: true) { _, active in
+        .onChange(of: active, initial: true) { _, active in
             if active { refreshDirectory() } else { showsSortOptions = false }
         }
         .onChange(of: model.lastDataRefreshAt) { _, _ in refreshDirectory() }
-        .onChange(of: trading.marketCatalog) { _, _ in
+        .onChange(of: trading.catalogRevision) { _, _ in
             refreshDirectory()
         }
         .onChange(of: filter) { _, _ in updateResults() }
         .onChange(of: sort) { _, _ in updateResults() }
         .onChange(of: query) { _, _ in updateResults() }
-        .task { if trading.marketCatalog.isEmpty { await trading.loadFullCatalog() } }
+        .task(id: active) { if active && trading.marketCatalog.isEmpty { await trading.loadFullCatalog() } }
     }
 
     private func refreshDirectory() {
-        guard isActive else { return }
+        guard active else { return }
         catalog = model.tickerCatalog(markets: trading.marketCatalog)
         updateResults()
     }
@@ -88,7 +90,7 @@ struct AllTickersView: View {
                             .overlay(RoundedRectangle(cornerRadius: 6)
                                 .strokeBorder(BSmartColor.line, lineWidth: filter == option ? 1 : 0.5))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.bSmartPlain)
                     .accessibilityAddTraits(filter == option ? .isSelected : [])
                     .accessibilityIdentifier("portfolio.ticker-filter.\(option.rawValue)")
                 }
@@ -135,7 +137,7 @@ struct AllTickersView: View {
                     .frame(minHeight: 44)
                     .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.bSmartPlain)
                 .accessibilityAddTraits(sort == option ? .isSelected : [])
                 .accessibilityIdentifier("portfolio.ticker-sort.\(option.rawValue)")
                 if option != TickerDirectorySort.allCases.last {
@@ -154,7 +156,7 @@ struct AllTickersView: View {
             } label: {
                 BSmartMarketRow(entry: entry, compact: true)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.bSmartPlain)
             .accessibilityIdentifier("portfolio.ticker.\(entry.symbol)")
         }
     }
@@ -180,14 +182,14 @@ private struct TickerDirectorySearchField: View {
                 Button { text = ""; focused = true } label: {
                     Image(systemName: "xmark.circle.fill").frame(width: 28, height: 36)
                 }
-                .buttonStyle(.plain).foregroundStyle(BSmartColor.secondaryText)
+                .buttonStyle(.bSmartPlain).foregroundStyle(BSmartColor.secondaryText)
                 .accessibilityLabel("Clear".bSmartLocalized)
             }
             if focused {
                 Button { focused = false } label: {
                     Image(systemName: "keyboard.chevron.compact.down").frame(width: 28, height: 36)
                 }
-                .buttonStyle(.plain).foregroundStyle(BSmartColor.secondaryText)
+                .buttonStyle(.bSmartPlain).foregroundStyle(BSmartColor.secondaryText)
                 .accessibilityLabel("Dismiss keyboard".bSmartLocalized)
             }
         }

@@ -1,0 +1,88 @@
+openapi: 3.1.0
+info:
+  title: bSmart Equity Routing Infrastructure
+  version: 0.1.0
+  description: Read-only discovery and indicative buys. No signing, funding or execution capability.
+servers:
+  - url: https://dzyitinagewdfkzjkuiz.supabase.co/functions/v1/bsmart-markets
+security: [{ accountBearer: [] }]
+paths:
+  /route:
+    get:
+      operationId: getEquityRoute
+      description: HL first; xStocks only after complete verified HL absence. No-store. Never reroutes an existing position.
+      parameters:
+        - { in: query, name: ticker, required: true, schema: { type: string, pattern: '^[A-Za-z][A-Za-z0-9.-]{0,15}$' } }
+      responses:
+        '200':
+          description: Discovery only, not signing authority.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EquityRoute' }
+        '401': { description: Verified Apple/Google account required. }
+        '422': { description: Invalid ticker or unknown/duplicate query fields. }
+        '503': { description: Catalog observation incomplete or unavailable; no fallback. }
+  /preview:
+    get:
+      operationId: getIndicativeXStocksBuy
+      description: Amount-specific Jupiter V2 quote without wallet or transaction. Raw token units, not shares. Always non-executable.
+      parameters:
+        - { in: query, name: ticker, required: true, schema: { type: string, pattern: '^[A-Za-z][A-Za-z0-9.-]{0,15}$' } }
+        - { in: query, name: amountUSDC, required: true, schema: { type: string, pattern: '^(0|[1-9][0-9]{0,5})(\.[0-9]{1,6})?$' } }
+      responses:
+        '200':
+          description: Indicative buy; balances, net fees and gas sponsorship unverified.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [route, inputAmountRaw, outputAmountRaw, router, observedAt, executable, gasCoverage]
+                properties:
+                  route: { $ref: '#/components/schemas/EquityRoute' }
+                  inputAmountRaw: { type: string, pattern: '^[1-9][0-9]*$' }
+                  outputAmountRaw: { type: string, pattern: '^[1-9][0-9]*$' }
+                  router: { type: string, enum: [metis, jupiterz, dflow, okx] }
+                  observedAt: { type: string, format: date-time }
+                  executable: { const: false }
+                  gasCoverage: { const: unverified }
+        '401': { description: Verified Apple/Google account required. }
+        '409': { description: HL route must use existing HL quote flow, or no available xStocks route. }
+        '422': { description: Invalid ticker, amount, or query fields. }
+        '503': { description: Preview disabled, credentials missing, provider unavailable or invalid quote. }
+components:
+  securitySchemes:
+    accountBearer: { type: http, scheme: bearer, bearerFormat: JWT }
+  schemas:
+    EquityRoute:
+      type: object
+      additionalProperties: false
+      required: [ticker, venue, product, status, reason, market, observedAt, executionEnabled]
+      properties:
+        ticker: { type: string }
+        venue: { enum: [hyperliquid, xstocks, none] }
+        product: { enum: [perpetual, spot, none] }
+        status: { enum: [available, blocked, unsupported] }
+        reason: { enum: [hl_listed, hl_collateral_unsupported, xstocks_listed, xstocks_halted, not_listed] }
+        market:
+          oneOf:
+            - type: 'null'
+            - type: object
+              additionalProperties: false
+              required: [coin, dex, collateralToken, maxLeverage]
+              properties:
+                coin: { type: string }
+                dex: { type: string }
+                collateralToken: { type: integer, minimum: 0 }
+                maxLeverage: { type: integer, minimum: 1 }
+            - type: object
+              additionalProperties: false
+              required: [assetId, symbol, network, mint, maxLeverage]
+              properties:
+                assetId: { type: string }
+                symbol: { type: string }
+                network: { const: solana-mainnet }
+                mint: { type: string }
+                maxLeverage: { const: 1 }
+        observedAt: { type: string, format: date-time }
+        executionEnabled: { const: false }

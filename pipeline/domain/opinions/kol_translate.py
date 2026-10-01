@@ -37,7 +37,9 @@ TRANS_SYSTEM = (
     "你是股票投资社区帖子的翻译器，既不是摘要器、也不是逐字机翻。给定某社区用户/博主关于一只美股的"
     "帖子原文(语言可能为中/英/日/韩)，把它**完整翻译**成自然、地道的中文和英文。硬性要求：\n"
     "1) 逐句翻译，原文有几句、译文就有几句，保持相当篇幅与段落/换行；不概括、不提炼、不合并、不删细节、不加原文没有的内容；\n"
-    "2) 保留全部信息：数字、日期、价格、代码($NVDA 等)、公司名、事件、语气、强调；\n"
+    "2) 保留全部信息：数字、日期、价格、代码($NVDA 等)、公司名、事件、语气、强调。"
+    "所有阿拉伯数字必须在中英译文中原样出现；例如原文 2 contracts 译为 2 份合约，"
+    "不要写成两份合约或 two contracts，也不要把 1k 改写成 1000；\n"
     "3) **按股票/投资语境意译行话与俚语，绝不字面直译**。常见(英→中)：(in/be) green=上涨/盈利(赚钱)、"
     "(in) red=下跌/亏损、bag/bagholder=套牢(盘)、to the moon=暴涨、tendies=收益、DD=深度研究、YOLO=梭哈、"
     "puts/calls=看跌/看涨期权、diamond hands=死拿不卖、paper hands=拿不住就割、printing money=疯狂赚钱、dip=回调。"
@@ -246,7 +248,9 @@ def _translate_whole(source: str, providers: list[str]) -> dict[str, str] | None
         print(f"[kol-translate] incomplete {provider}: source={len(source)} "
               f"zh={len(norm['zh'])} en={len(norm['en'])} missing={missing}", flush=True)
         repair = ("完整修订下列翻译，不要概括或添加事实。中文 zh 和英文 en 都必须保留原文中"
-                  f"每个阿拉伯数字原样出现：{required}。\n原文：\n{source}\n初稿：\n"
+                  f"每个阿拉伯数字原样出现：{required}。数字必须使用阿拉伯数字，不可改写为中文数字、"
+                  "英文数字单词或另一种数值格式；检查每个数字在两份译文中均存在。\n原文：\n"
+                  f"{source}\n初稿：\n"
                   + json.dumps(norm, ensure_ascii=False))
         revised = _messages_json_with(provider, TRANS_SYSTEM, repair, max_tokens=16000)
         if isinstance(revised, dict) and all(isinstance(revised.get(k), str) and revised[k].strip()

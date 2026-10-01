@@ -152,7 +152,7 @@ paths:
         - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
       responses:
         '200':
-          description: Hyperliquid perps equity history, separate spot USDC and current perps positions; not_connected when no registered wallet.
+          description: Hyperliquid current perps equity, spot USDC, mode-aware account value, equity history and current positions; not_connected when no registered wallet.
           content:
             application/json:
               schema: {$ref: './bsmart-v1.yaml#/components/schemas/FeedPublicPortfolio'}
@@ -186,7 +186,7 @@ paths:
   /bsmart-feed/orders:
     post:
       operationId: registerOpinionBeforeSubmission
-      description: Binds source only; cannot place or execute any order. Immutable by cloid.
+      description: Binds source only; cannot place or execute any order. Immutable by cloid. Published subject holdings without a ticker may link their server-owned underlyingTicker; explicit tickers take precedence. This records an underlying trade, not replication of an option position.
       requestBody:
         required: true
         content:
@@ -268,6 +268,18 @@ paths:
         '401': {description: Verified native account required.}
         '422': {description: Invalid filters or pagination.}
         '503': {description: Statistics unavailable.}
+  /bsmart-feed/ability-leaderboard:
+    get:
+      operationId: investorAbilityLeaderboard
+      description: Atomic, versioned, absolute follow-ability Score leaderboard across actor kinds. Never uses legacy percentile scores. Unpublished snapshots have no ranked items.
+      responses:
+        '200':
+          description: Published snapshot or explicit unpublished state.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/InvestorAbilityLeaderboard'}
+        '401': {description: Verified native account required.}
+        '503': {description: Snapshot unavailable or invalid.}
   /bsmart-feed/popular:
     get:
       operationId: nativePopularOpinions
@@ -302,6 +314,50 @@ components:
     supabaseUser: {type: http, scheme: bearer, bearerFormat: JWT}
     publishableKey: {type: apiKey, in: header, name: apikey}
   schemas:
+    NativeTradeContext:
+      type: object
+      required: [sourceKind, status, marketCoin, side]
+      properties:
+        sourceKind: {type: string, enum: [opinion, direct]}
+        eventKind: {type: string, enum: [opening, closing], description: Optional additive field. A settled original opening remains an opening event.}
+        status: {type: string, enum: [open, closed, historical, unknown]}
+        marketCoin: {type: string}
+        side: {type: string, enum: [long, short]}
+        notionalUSD: {type: [string, 'null'], description: Original event notional, never replaced with later close notional.}
+        leverage: {type: [integer, 'null'], minimum: 1}
+        unrealizedPnlUSD: {type: [string, 'null']}
+        realizedPnlUSD: {type: [string, 'null'], description: For a settled opening, exchange closed PnL less both opening and closing USDC fees; excludes funding. Null when exact attribution is unavailable.}
+        entryPriceUSD: {type: [string, 'null']}
+        currentPriceUSD: {type: [string, 'null']}
+        exitPriceUSD: {type: [string, 'null'], description: Size-weighted verified exit fill price.}
+        base: {type: [object, 'null']}
+    InvestorAbilityLeaderboard:
+      type: object
+      required: [status, version, revision, asOf, scoreUnit, items]
+      properties:
+        status: {type: string, enum: [published, unpublished]}
+        version: {type: string, const: follow-ability-v1}
+        revision: {type: [integer, 'null'], minimum: 1}
+        asOf: {type: [string, 'null'], format: date-time}
+        scoreUnit: {type: string, const: annualized_adjusted_pp}
+        items:
+          type: array
+          maxItems: 10000
+          items:
+            type: object
+            required: [actorKind, actorId, displayName, platform, avatarURL, status, score, observedCalendarDays, independentDecisionDays, pricedCoverage, rank]
+            properties:
+              actorKind: {type: string, enum: [platform, politician, celebrity, insider, institution]}
+              actorId: {type: string}
+              displayName: {type: string}
+              platform: {type: [string, 'null']}
+              avatarURL: {type: [string, 'null'], format: uri}
+              status: {type: string, enum: [scored, insufficient_history, unverified_source, unaudited_backtest, incomplete_prices]}
+              score: {type: [number, 'null'], description: Unbounded absolute adjusted annualized follower-return percentage points, not a percentile.}
+              observedCalendarDays: {type: integer, minimum: 0}
+              independentDecisionDays: {type: integer, minimum: 0}
+              pricedCoverage: {type: number, minimum: 0, maximum: 1}
+              rank: {type: [integer, 'null'], minimum: 1}
     DiscoveryRankingsPage:
       type: object
       required: [kind, sort, window, asOf, items, nextOffset]

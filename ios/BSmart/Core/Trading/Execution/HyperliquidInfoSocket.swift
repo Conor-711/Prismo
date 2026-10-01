@@ -113,8 +113,13 @@ actor HyperliquidInfoConnection {
         guard let value = pending[id] else { return }
         if response["type"] as? String == "error" {
             let status = (response["payload"] as? String).flatMap { Int($0.prefix(3)) }
-            let failure: HyperliquidInfoSocketError = status.map { (500...599).contains($0) } == true ? .unavailable : .rejected
-            finish(id: id, result: .failure(failure))
+            if status == 429 || status.map({ (500...599).contains($0) }) == true {
+                // Back off this shared socket instead of sending every concurrent
+                // observation through a connection the venue has just rate-limited.
+                disconnect(generation: current)
+            } else {
+                finish(id: id, result: .failure(HyperliquidInfoSocketError.rejected))
+            }
             return
         }
         guard response["type"] as? String == "info",

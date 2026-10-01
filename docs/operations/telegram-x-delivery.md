@@ -22,11 +22,13 @@ make telegram-x-sync
 
 现有三小时 `make content-delivery` 先同步一份频道 ZIP/JSONL，接着处理 X 队列中最早的待办包。只识别目标频道文档，不处理聊天文本或其他频道。`data/inbox/telegram/state.json` 保存 Telegram update offset；接收、筛选、入队成功后才前进，避免下载失败导致漏包。内容哈希在 X 队列去重，故重复同步不重复发布。
 
-交付 ZIP 可包含 `tweets.jsonl` 或 `tweets_*.jsonl`；清单、README 和 roster 是旁车文件，不作为观点输入。每条推文仍需通过既有字段和时间校验。只读 Telegram 请求有有限重试，超过重试次数仍保持失败可见。
+交付 ZIP 可包含 `tweets.jsonl` 或 `tweets_*.jsonl`；清单、README 和 roster 不作为观点输入。其中扩展包的 `roster.csv` 仅用于按作者 ID、`selection_group` 和组内 `rank` 筛选；每条推文仍需通过既有字段和时间校验。只读 Telegram 请求有有限重试，超过重试次数仍保持失败可见。
 
 2026-09-23 验收：频道文件 `bsmart_Xtweets_ExT_f3000_r2897_260922_23Z_p1of1_260923v3.zip`（662,653 字节）含 237 条推文，前 25% 排名筛出 4 条，其中 1 条形成通过完整翻译校验的观点。发布 revision `a30354a54712f7af8970307283980ec56ffd06d83ee3a5c6cbee74c4b2feb759` 的 `databaseVerified=true`；自动下载的 ZIP 与筛选文件随即清理，频道原件未动。`publicAPIVerified=false`，尚不代表 App 前台已验收。首次发布被历史标的 ATAI 的过期行情阻断；[Nasdaq 公司行动公告](https://www.nasdaqtrader.com/TraderNews.aspx?id=ECA2026-633)证实它于 2026-09-10 最后交易，本地 `ticker_meta.is_active` 已设为 0，不补造价格。
 
-在任何新帖提炼前，先检查 `data/inbox/x/ranking-snapshot.json`：存在时只使用其中固定的旧版 Top 25% 作者 ID，不重新评分；尚未建立快照时才按本机正式 `sv_investor_score` 的 X 合格作者排序取前 `ceil(25%)`。只把入选作者原帖写入衍生包，不改源包。每包保留源哈希、原帖数、选中帖数、排名时间及作者 ID 集合。之后沿用 `x-daily` 的 Qwen 观点抽取、完整原文翻译、摘要、评分、质量检查和 Supabase 发布；`skipTranslation=false`。固定名单不代表新作者会自动进入前 25%；需要更新排名口径时，应单独评审，不能暗中放宽。
+在任何新帖提炼前，先检查 `data/inbox/x/ranking-snapshot.json`：存在时只使用其中固定的旧版 Top 25% 作者 ID，不重新评分；尚未建立快照时才按本机正式 `sv_investor_score` 的 X 合格作者排序取前 `ceil(25%)`。对包含扩展名册的 ZIP，另外分别按其原有 `stock`（中文美股）和 `crypto` 组内 `rank` 取前 `ceil(25%)`，不得从推文语言或 ticker 猜测所属组，也不重算旧版排名。旧包没有这些列时维持原有范围。只把入选作者原帖写入衍生包，不改源包；回执按三组分别记录入选作者与帖子数量。之后沿用 `x-daily` 的 Qwen 观点抽取、完整原文翻译、摘要、评分、质量检查和 Supabase 发布；`skipTranslation=false`。这次扩容只完成筛选逻辑，尚未验证加密标的提炼、行情结算及线上发布；不能把筛选成功等同于 App 已有新数据。
+
+2026-09-30 最新 `rel20260930-v7` ZIP 核对：完整名册 6,397 人，其中旧组 2,897、中文美股 500、加密 3,000。固定旧组仍为 58 人；新组分别取 125 和 750 人。2,546 条原始推文筛得 785 条（旧组 45、中文美股 258、加密 482），工作包保存在 `data/inbox/x/manual/95b1ef8f5e9c5d8cbd7d799f91db83a3497f13eff1772d5d3d1d127d493760fd/`；状态仅为 inspected/selected，未入队或发布。
 
 手动补齐机器人加入前的历史 ZIP，先用已验收的接收回执冻结名单，再为每份原包生成最多 900 行的工作包：
 

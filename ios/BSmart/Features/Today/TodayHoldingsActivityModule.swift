@@ -5,6 +5,8 @@ struct TodayHoldingsActivityModule: View {
 
     var body: some View {
         TodayHoldingsActivityContent(isPreview: true, refreshID: refreshID)
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("today.holdings.module")
     }
 }
 
@@ -105,7 +107,7 @@ private struct TodayHoldingsActivityContent: View {
                 } label: {
                     TodayEditorialSectionTitle(title: "For your holdings", showsDisclosure: true)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.bSmartPlain)
                 .accessibilityIdentifier("today.holdings.title")
             }
             if !isPreview && !snapshot.tickers.isEmpty {
@@ -208,13 +210,15 @@ private struct TodayHoldingsActivityContent: View {
 
     private var filters: some View {
         VStack(spacing: 14) {
-            Picker("Sources".bSmartLocalized, selection: $source) {
-                ForEach(TodayActivityFilter.allCases) { filter in
-                    Text(filter == .all ? "All sources".bSmartLocalized : filter.label).tag(filter)
+            if BSmartProductVisibility.onchainSmartMoney {
+                Picker("Sources".bSmartLocalized, selection: $source) {
+                    ForEach(TodayActivityFilter.allCases) { filter in
+                        Text(filter == .all ? "All sources".bSmartLocalized : filter.label).tag(filter)
+                    }
                 }
+                .pickerStyle(.segmented)
+                .accessibilityIdentifier("holdings.source-filter")
             }
-            .pickerStyle(.segmented)
-            .accessibilityIdentifier("holdings.source-filter")
             if !isPreview {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
@@ -242,7 +246,7 @@ private struct TodayHoldingsActivityContent: View {
             .overlay(RoundedRectangle(cornerRadius: 8)
                 .strokeBorder(ticker == value ? BSmartColor.brand : BSmartColor.line))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.bSmartPlain)
         .accessibilityIdentifier("holdings.ticker.\(value ?? "all")")
         .accessibilityAddTraits(ticker == value ? .isSelected : [])
     }
@@ -261,7 +265,8 @@ private struct TodayHoldingsActivityContent: View {
 
     private func rebuild() {
         snapshot = .make(positions: model.positions, accountUpdates: model.smartAccountUpdates,
-                         moneyMovements: model.smartMoneyMovements, tradingPositions: livePositions)
+                         moneyMovements: BSmartProductVisibility.onchainSmartMoney ? model.smartMoneyMovements : [],
+                         tradingPositions: livePositions)
         if let ticker, !snapshot.tickers.contains(ticker) { self.ticker = nil }
     }
 

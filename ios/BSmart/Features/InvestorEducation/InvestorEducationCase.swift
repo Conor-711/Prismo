@@ -48,7 +48,7 @@ struct InvestorEducationCase: View {
                         .background(BSmartColor.brand, in: RoundedRectangle(cornerRadius: 6))
                         .foregroundStyle(BSmartColor.onAccent)
                 }
-                .buttonStyle(.plain).accessibilityIdentifier("education.reveal")
+                .buttonStyle(.bSmartPlain).accessibilityIdentifier("education.reveal")
                 Spacer(minLength: 12)
                 VStack(alignment: .trailing, spacing: 5) {
                     Text(revealed ? "+\(example.returnPercent.formatted(.number.precision(.fractionLength(2))))%" : "—")

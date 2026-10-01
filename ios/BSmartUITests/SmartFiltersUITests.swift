@@ -40,6 +40,11 @@ final class SmartFiltersUITests: XCTestCase {
         let app = openFilters()
         app.buttons["smart.filter.platform.X"].tap()
         app.buttons["smart.filters.results"].tap()
+        guard app.descendants(matching: .any)["smart.section.money"].exists else {
+            XCTAssertFalse(app.buttons["smart.money.filters"].exists)
+            XCTAssertTrue(app.buttons["smart.account.filters"].exists)
+            return
+        }
         app.descendants(matching: .any)["smart.section.money"].tap()
         app.buttons["smart.money.filters"].tap()
         let results = app.buttons["smart.filters.results"]
@@ -79,9 +84,7 @@ final class SmartFiltersUITests: XCTestCase {
         XCTAssertTrue(row.isHittable)
         XCTAssertGreaterThanOrEqual(row.frame.minX, app.frame.minX)
         XCTAssertLessThanOrEqual(row.frame.maxX, app.frame.maxX)
-        let tab = app.buttons["smart.section.accounts"]
-        XCTAssertGreaterThanOrEqual(tab.frame.height, 44)
-        XCTAssertLessThanOrEqual(tab.frame.maxX, app.frame.maxX)
+        XCTAssertFalse(app.buttons["smart.section.money"].exists)
         row.tap()
         XCTAssertTrue(app.descendants(matching: .any)["smart.account.detail"].waitForExistence(timeout: 5))
     }
@@ -93,6 +96,11 @@ final class SmartFiltersUITests: XCTestCase {
         let accounts = app.scrollViews["smart.page.accounts"]
         XCTAssertTrue(accounts.waitForExistence(timeout: 5))
         accounts.swipeLeft()
+        guard app.buttons["smart.section.money"].exists else {
+            XCTAssertFalse(app.buttons["smart.money.filters"].exists)
+            XCTAssertTrue(app.buttons["smart.account.filters"].exists)
+            return
+        }
         let moneyFilter = app.buttons["smart.money.filters"]
         XCTAssertTrue(moneyFilter.waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["smart.section.money"].isSelected)

@@ -87,6 +87,12 @@ def run(path):
         step('score', (lambda: {'status': 'frozen'}) if rankings_frozen else
              (lambda: score.score_investors(con, sources={source}, initialize_schema=False)))
 
+        if source == 'reddit':
+            from .readings import prepare_readings
+            if 'reading' not in state['steps']:
+                state['steps'].pop('export', None)
+            step('reading', lambda: prepare_readings(con, ids, until, state['maxCalls']))
+
         def export():
             release = path.parent / 'release'
             release.mkdir(exist_ok=True)
@@ -101,10 +107,13 @@ def run(path):
                 output = release / (name + '.json')
                 write_json(output, items)
                 entries[name] = {'count': len(items), 'sha256': hashlib.sha256(output.read_bytes()).hexdigest()}
-            write_json(release / 'platform-manifest.json', {'version': 1, 'status': 'ready', 'platform': source,
+            manifest = {'version': 1, 'status': 'ready', 'platform': source,
                 'asOf': datetime.now(timezone.utc).isoformat(), 'sourceThrough': raw['sourceThrough'],
                 'crawlComplete': True, 'crawlFrom': state['since'], 'crawlThrough': state['until'],
-                'provider': raw['provider'], 'collections': entries})
+                'provider': raw['provider'], 'collections': entries}
+            if source == 'youtube' and state.get('partialPublishedRevision'):
+                manifest.update(partialBackfill=True, priorPartialRevision=state['partialPublishedRevision'])
+            write_json(release / 'platform-manifest.json', manifest)
             return entries
         step('export', export)
         state.update(status='ready', activeStep=None)

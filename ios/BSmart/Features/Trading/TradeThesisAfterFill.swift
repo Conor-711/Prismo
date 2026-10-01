@@ -24,7 +24,7 @@ struct TradeThesisAfterFill: View {
                     .foregroundStyle(BSmartColor.onAccent)
                     .frame(maxWidth: .infinity, minHeight: 52)
                     .background(accent, in: RoundedRectangle(cornerRadius: 8))
-                }.buttonStyle(.plain).disabled(busy)
+                }.buttonStyle(.bSmartPlain).disabled(busy)
                     .accessibilityIdentifier("trade.thesis.write")
                 if let error { Text(error).font(.callout).foregroundStyle(BSmartColor.bear) }
             }

@@ -15,7 +15,10 @@ struct DebugTradingMarketClient: HyperliquidMarketDataClient {
         if ProcessInfo.processInfo.arguments.contains("--ui-trading-delayed-market") {
             try await Task.sleep(for: .seconds(2))
         }
-        let symbols = dex.name.isEmpty ? ["BTC"] : dex.name == "xyz" ? ["NVDA", "SPCX", "SNDK"] : ["MSTR"]
+        var symbols = dex.name.isEmpty ? ["BTC"] : dex.name == "xyz" ? ["NVDA", "SPCX", "SNDK"] : ["MSTR"]
+        if dex.name == "xyz", ProcessInfo.processInfo.arguments.contains("--ui-subject-option-fixture") {
+            symbols.append("TSLA")
+        }
         return symbols.map { symbol in
             let price: Double = symbol == "SPCX" ? 149.45 : symbol == "SNDK" ? 1765.4 : 200
             return HyperliquidPerpMarket(

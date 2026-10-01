@@ -34,9 +34,9 @@ struct SignalLibraryView: View {
             .navigationTitle("Signal library")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
+                ToolbarItem(placement: .confirmationAction) { Group {
                     Button("Done") { dismiss() }
-                }
+                }.buttonStyle(.bSmartToolbar) }.bSmartHideSystemBackground()
             }
         }
         .presentationDetents([.large])
@@ -45,27 +45,27 @@ struct SignalLibraryView: View {
 
     @ViewBuilder
     private var savedContent: some View {
-        if model.savedSignals.isEmpty {
+        if model.savedSignals.filter(\.isVisibleInProduct).isEmpty {
             emptyState(
                 title: "No saved signals",
                 detail: "Save a signal from its detail page to keep the evidence close.",
                 symbol: "bookmark"
             )
         } else {
-            signalList(model.savedSignals, allowsRestore: false)
+            signalList(model.savedSignals.filter(\.isVisibleInProduct), allowsRestore: false)
         }
     }
 
     @ViewBuilder
     private var ignoredContent: some View {
-        if model.ignoredPortfolioSignals.isEmpty {
+        if model.ignoredPortfolioSignals.filter(\.isVisibleInProduct).isEmpty {
             emptyState(
                 title: "No ignored signals",
                 detail: "Signals you remove from Today can be restored here.",
                 symbol: "eye.slash"
             )
         } else {
-            signalList(model.ignoredPortfolioSignals, allowsRestore: true)
+            signalList(model.ignoredPortfolioSignals.filter(\.isVisibleInProduct), allowsRestore: true)
         }
     }
 
@@ -82,7 +82,7 @@ struct SignalLibraryView: View {
                             model.restoreIgnoredSignal(signal.id)
                         }
                         .font(.caption.weight(.bold))
-                        .buttonStyle(.bordered)
+                        .buttonStyle(.bSmartSecondary)
                     }
                 } else {
                     BSmartDetailNavigationLink(id: "signal-library-\(signal.id)") {
@@ -90,7 +90,7 @@ struct SignalLibraryView: View {
                     } label: {
                         signalRow(signal)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.bSmartPlain)
                 }
             }
             .listRowBackground(BSmartColor.surface)

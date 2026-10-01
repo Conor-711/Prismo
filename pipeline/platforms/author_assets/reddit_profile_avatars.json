@@ -2,6 +2,10 @@
   "checkedAt": "2026-09-10",
   "method": "Avatar links on public Reddit profile pages; some pages were search-index snapshots. Not a claim of live profile freshness.",
   "profiles": {
+    "onetwothreepooandpee": {"checkedAt": "2026-10-01", "profileURL": "https://www.reddit.com/user/OneTwoThreePooAndPee/", "avatarURL": "https://i.redd.it/snoovatar/avatars/62900a95-bc8a-4a73-b2e4-4ac9f4f02d1c.png"},
+    "sufficient-flan1565": {"checkedAt": "2026-10-01", "profileURL": "https://www.reddit.com/user/Sufficient-Flan1565/", "avatarURL": "https://www.redditstatic.com/avatars/defaults/v2/avatar_default_2.png"},
+    "thetahedge": {"checkedAt": "2026-10-01", "profileURL": "https://www.reddit.com/user/ThetaHedge/", "avatarURL": "https://i.redd.it/snoovatar/avatars/66cc6067-08df-4d34-8753-496b449015eb.png"},
+    "bflo-retail": {"checkedAt": "2026-10-01", "profileURL": "https://www.reddit.com/user/BFLO-Retail/", "avatarURL": "https://styles.redditmedia.com/t5_3v5r8a/styles/profileIcon_u7x13xj3csng1.png"},
     "smart_money_hq": {"profileURL": "https://www.reddit.com/user/Smart_Money_HQ/", "avatarURL": "https://www.redditstatic.com/avatars/defaults/v2/avatar_default_7.png"},
     "useful_tangerine4340": {"profileURL": "https://www.reddit.com/user/Useful_Tangerine4340/", "avatarURL": "https://www.redditstatic.com/avatars/defaults/v2/avatar_default_1.png"},
     "alpha247365": {"profileURL": "https://www.reddit.com/user/alpha247365/", "avatarURL": "https://www.redditstatic.com/avatars/defaults/v2/avatar_default_6.png"},

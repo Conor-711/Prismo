@@ -134,14 +134,16 @@ def process(item, inbox):
     release = ROOT / 'data/runtime/x-daily' / item['packageHash'] / 'release'
     python = str(ROOT / 'services/client_api/.venv/bin/python')
     # Publisher is idempotent; a crash after commit is recovered by the next run.
-    command([python, '-m', 'services.client_api.content_release', '--input-dir', str(release), '--apply'],
-            inbox / (item['packageHash'] + '.publish.log'), timeout=600, env=environment)
+    publish_args = [python, '-m', 'services.client_api.content_release', '--input-dir', str(release), '--apply']
+    if os.environ.get('BSMART_X_CONTENT_ONLY') == '1':
+        publish_args.append('--content-only')
+    command(publish_args, inbox / (item['packageHash'] + '.publish.log'), timeout=2400, env=environment)
     receipt = json.loads((release / 'supabase-publication.json').read_text())
     if receipt['status'] not in {'published', 'already-published'}:
         raise RuntimeError('publication_unconfirmed')
     verification = inbox / (item['packageHash'] + '.verified.json')
     command([python, '-m', 'services.client_api.content_release.verify_database', '--revision', receipt['revision'],
-             '--output', str(verification)], inbox / (item['packageHash'] + '.verify.log'), timeout=600, env=environment)
+             '--output', str(verification)], inbox / (item['packageHash'] + '.verify.log'), timeout=1800, env=environment)
     return json.loads(verification.read_text())
 
 

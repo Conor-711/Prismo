@@ -26,7 +26,7 @@ struct BrokerageConnectionView: View {
                             } label: {
                                 linkedAccountRow(account)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.bSmartPlain)
                         }
                     }
 
@@ -44,7 +44,7 @@ struct BrokerageConnectionView: View {
                         } label: {
                             providerRow(provider)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.bSmartPlain)
                         .accessibilityIdentifier("brokerage.provider.\(provider.rawValue)")
                     }
 
@@ -57,9 +57,9 @@ struct BrokerageConnectionView: View {
             .navigationTitle("Brokerage connections".bSmartLocalized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
+                ToolbarItem(placement: .confirmationAction) { Group {
                     Button("Done".bSmartLocalized) { dismiss() }
-                }
+                }.buttonStyle(.bSmartToolbar) }.bSmartHideSystemBackground()
             }
         }
         .bSmartPage()
@@ -198,7 +198,7 @@ private struct BrokerageProviderSetupView: View {
         .background(BSmartColor.ink)
         .navigationTitle(provider.displayName)
         .navigationBarTitleDisplayMode(.inline)
-        .confirmationDialog(
+        .bSmartConfirmationDialog(
             "Disconnect %@?".bSmartLocalized(provider.displayName),
             isPresented: $isConfirmingDisconnect,
             titleVisibility: .visible
@@ -212,6 +212,7 @@ private struct BrokerageProviderSetupView: View {
             Text("Imported positions stay in your portfolio until you remove them.".bSmartLocalized)
         }
         .accessibilityIdentifier("brokerage-setup.\(provider.rawValue)")
+        .bSmartDetailPage()
     }
 
     private var providerHeader: some View {
@@ -273,7 +274,7 @@ private struct BrokerageProviderSetupView: View {
                 .background(BSmartColor.brand)
                 .clipShape(RoundedRectangle(cornerRadius: BSmartRadius.control, style: .continuous))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.bSmartPlain)
             .disabled(isAuthorizing)
             .accessibilityIdentifier("brokerage.preview-authorization")
         }
@@ -321,7 +322,7 @@ private struct BrokerageProviderSetupView: View {
                 .background(BSmartColor.brand)
                 .clipShape(RoundedRectangle(cornerRadius: BSmartRadius.control, style: .continuous))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.bSmartPlain)
             .accessibilityIdentifier("brokerage.finish-prototype")
 
             Text("Only selected U.S. equities enter the portfolio. Unsupported assets remain visible in this preview.".bSmartLocalized)
@@ -360,7 +361,7 @@ private struct BrokerageProviderSetupView: View {
                 Label("Refresh connection preview", systemImage: "arrow.clockwise")
                     .frame(maxWidth: .infinity, minHeight: 44)
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(.bSmartSecondary)
 
             Button(role: .destructive) {
                 isConfirmingDisconnect = true
@@ -368,7 +369,7 @@ private struct BrokerageProviderSetupView: View {
                 Label("Disconnect %@".bSmartLocalized(provider.displayName), systemImage: "link.badge.minus")
                     .frame(maxWidth: .infinity, minHeight: 44)
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(.bSmartSecondary)
         }
     }
 
@@ -424,7 +425,7 @@ private struct BrokerageProviderSetupView: View {
             .padding(.vertical, BSmartSpacing.small)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.bSmartPlain)
         .disabled(!holding.isSupported)
         .opacity(holding.isSupported ? 1 : 0.7)
     }

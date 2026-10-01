@@ -7,6 +7,12 @@ struct TradeFeedRow: View {
     var demo: TradeFeedDemoData? = nil
 
     private var accent: Color { item.side == .long ? BSmartColor.bull : BSmartColor.bear }
+    private var tradeAction: String {
+        if item.opinion.sourceKind == "native_trade", item.opinion.lifecycle == .closed {
+            return (item.side == .long ? "Close short" : "Close long").bSmartLocalized
+        }
+        return (item.side == .long ? "Long" : "Short").bSmartLocalized
+    }
     private var excerpt: String {
         let original = item.opinion.originalText?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return original.isEmpty ? item.opinion.thesis : original
@@ -32,7 +38,7 @@ struct TradeFeedRow: View {
                         }
                     }.contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.bSmartPlain)
                 .accessibilityIdentifier("feed.user.\(item.id.uuidString)")
                 Spacer(minLength: 4)
                 VStack(alignment: .trailing, spacing: 4) {
@@ -63,8 +69,9 @@ struct TradeFeedRow: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityIdentifier("thesis.body.\(item.id.uuidString)")
             }
-            VStack(alignment: .leading, spacing: 12) {
-                BSmartDetailNavigationLink(id: "feed.author.\(item.id)", usesZoomTransition: false) {
+            if item.opinion.sourceKind != "native_trade" {
+                VStack(alignment: .leading, spacing: 12) {
+                BSmartDetailNavigationLink(id: "feed.author.\(item.id)") {
                     SmartAccountDetailView(account: model.smartAccountProfile(for: item.opinion))
                 } label: {
                     HStack(spacing: 9) {
@@ -83,7 +90,7 @@ struct TradeFeedRow: View {
                     }
                     .foregroundStyle(BSmartColor.primaryText).frame(minHeight: 44).contentShape(Rectangle())
                 }
-                .buttonStyle(.plain).accessibilityIdentifier("feed.author.\(item.id.uuidString)")
+                .buttonStyle(.bSmartPlain).accessibilityIdentifier("feed.author.\(item.id.uuidString)")
                 BSmartDetailNavigationLink(id: "feed.opinion.\(item.id)") {
                     SmartAccountEvidenceDetailView(update: item.opinion)
                 } label: {
@@ -100,10 +107,11 @@ struct TradeFeedRow: View {
                     }
                     .fixedSize(horizontal: false, vertical: true).contentShape(Rectangle())
                 }
-                .buttonStyle(.plain).accessibilityIdentifier("feed.opinion.\(item.id.uuidString)")
+                .buttonStyle(.bSmartPlain).accessibilityIdentifier("feed.opinion.\(item.id.uuidString)")
+                }
+                .padding(.leading, 14)
+                .overlay(alignment: .leading) { Rectangle().fill(BSmartColor.line).frame(width: 2) }
             }
-            .padding(.leading, 14)
-            .overlay(alignment: .leading) { Rectangle().fill(BSmartColor.line).frame(width: 2) }
             HStack(spacing: 12) {
                 if demo == nil {
                     TradeThesisActions(item: item, onPublished: onTradeDismiss)
@@ -118,7 +126,7 @@ struct TradeFeedRow: View {
 
     private var executionInstrument: some View {
         HStack(alignment: .center, spacing: 10) {
-            Label((item.side == .long ? "Long" : "Short").bSmartLocalized,
+            Label(tradeAction,
                   systemImage: item.side == .long ? "arrow.up.right" : "arrow.down.right")
                 .font(.system(size: 15, weight: .semibold)).foregroundStyle(accent)
             BSmartDetailNavigationLink(id: "feed.instrument.\(item.id)") {
@@ -130,7 +138,7 @@ struct TradeFeedRow: View {
                         .foregroundStyle(BSmartColor.primaryText)
                 }
             }
-            .buttonStyle(.plain).accessibilityIdentifier("feed.ticker.\(item.id.uuidString)")
+            .buttonStyle(.bSmartPlain).accessibilityIdentifier("feed.ticker.\(item.id.uuidString)")
         }.fixedSize(horizontal: true, vertical: false)
     }
 

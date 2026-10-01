@@ -1,7 +1,72 @@
 import XCTest
+import SwiftUI
+import WebKit
 @testable import BSmart
 
 final class TickerMarketRequestTests: XCTestCase {
+    func testTradingViewFallbackRequiresKnownExchange() {
+        XCTAssertEqual(TradingViewChartSymbol.forTicker("oust"), "NASDAQ:OUST")
+        XCTAssertEqual(TradingViewChartSymbol.forTicker("PLTR"), "NASDAQ:PLTR")
+        XCTAssertEqual(TradingViewChartSymbol.forTicker("UBER"), "NYSE:UBER")
+        XCTAssertNil(TradingViewChartSymbol.forTicker("UNVERIFIED"))
+        XCTAssertNil(TradingViewChartSymbol.forTicker("../OUST"))
+    }
+
+    func testTradingViewBlankSnapshotIsNotMarkedLoaded() {
+        let size = CGSize(width: 390, height: 445)
+        let blank = UIGraphicsImageRenderer(size: size).image { context in
+            UIColor(red: 17 / 255, green: 22 / 255, blue: 21 / 255, alpha: 1).setFill()
+            context.fill(CGRect(origin: .zero, size: size))
+        }
+        XCTAssertFalse(TradingViewChartPixelCheck.hasVisibleContent(blank))
+        let lightBlank = UIGraphicsImageRenderer(size: size).image { context in
+            UIColor.white.setFill()
+            context.fill(CGRect(origin: .zero, size: size))
+        }
+        XCTAssertFalse(TradingViewChartPixelCheck.hasVisibleContent(lightBlank))
+
+        let chart = UIGraphicsImageRenderer(size: size).image { context in
+            UIColor(red: 17 / 255, green: 22 / 255, blue: 21 / 255, alpha: 1).setFill()
+            context.fill(CGRect(origin: .zero, size: size))
+            UIColor.white.setFill()
+            context.fill(CGRect(x: 20, y: 30, width: 100, height: 20))
+        }
+        XCTAssertTrue(TradingViewChartPixelCheck.hasVisibleContent(chart))
+    }
+
+    @MainActor
+    func testTradingViewFallbackHasVisibleWebViewWidth() async {
+        let store = HyperliquidTradingStore(client: MissingMarketClient(failDex: nil))
+        await store.runLiveMarket(symbol: "OUST")
+
+        let controller = UIHostingController(rootView:
+            HyperliquidTradingView(symbol: "OUST").environmentObject(store))
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 844))
+        window.rootViewController = controller
+        window.makeKeyAndVisible()
+        defer { window.isHidden = true }
+
+        try? await Task.sleep(for: .milliseconds(200))
+        controller.view.layoutIfNeeded()
+
+        func findWebView(in view: UIView) -> WKWebView? {
+            if let webView = view as? WKWebView { return webView }
+            return view.subviews.lazy.compactMap { findWebView(in: $0) }.first
+        }
+        let webView = findWebView(in: controller.view)
+        XCTAssertNotNil(webView)
+        XCTAssertGreaterThan(webView?.bounds.width ?? 0, 300)
+        if let webView {
+            var origin: String?
+            for _ in 0..<15 {
+                origin = try? await webView.evaluateJavaScript("window.location.origin") as? String
+                if origin == "https://bsmart.today" { break }
+                try? await Task.sleep(for: .milliseconds(100))
+            }
+            XCTAssertEqual(origin, "https://bsmart.today")
+        }
+    }
+
     @MainActor
     func testMissingPerpMarketOffersOnlyVerifiedExternalDestinations() async {
         let store = HyperliquidTradingStore(client: MissingMarketClient(failDex: nil))

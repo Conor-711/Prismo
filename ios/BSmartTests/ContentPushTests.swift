@@ -3,6 +3,22 @@ import XCTest
 
 @MainActor
 final class ContentPushTests: XCTestCase {
+    func testSubjectFollowsJoinAuthorInterestsAndUnfollowRemovesThem() throws {
+        let suite = "bsmart.push.subject-tests.\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let model = AppModel(client: BundleBSmartAPIClient(), defaults: defaults)
+        model.toggleSmartAccountFollow("X:Author")
+        model.toggleSubjectFollow("politician:H001082")
+        model.toggleSubjectFollow("celebrity:bill-ackman")
+        let initial = PushInterestSnapshot.from(model)
+        XCTAssertEqual(initial.authors, ["x:author", "politician:h001082", "celebrity:bill-ackman"])
+        model.toggleSubjectFollow("politician:H001082")
+        var scoped = initial
+        scoped.applyChanges(from: initial, to: .from(model))
+        XCTAssertEqual(scoped.authors, ["x:author", "celebrity:bill-ackman"])
+    }
+
     func testRegistrationRotationDisableAndLogout() async throws {
         let (account, registration) = await setup()
         AccountExchangeURLProtocol.configure(data: Data(#"{"registered":true}"#.utf8))

@@ -120,3 +120,30 @@ def test_publication_uses_system_proxy_when_shell_has_none(monkeypatch):
     environment = job._publication_environment()
     assert environment['HTTPS_PROXY'] == 'http://127.0.0.1:7897'
     assert environment['X_INGEST_ENABLED'] == 'false'
+
+
+def test_content_only_catchup_is_explicit(tmp_path, monkeypatch):
+    inbox = tmp_path / 'inbox'
+    item = job.enqueue(package(tmp_path), inbox)
+    monkeypatch.setattr(job, 'ROOT', tmp_path)
+    release = tmp_path / 'data/runtime/x-daily' / item['packageHash'] / 'release'
+    release.mkdir(parents=True)
+    commands = []
+
+    def execute(args, log, **kwargs):
+        commands.append(args)
+        if '--input-dir' in args:
+            (release / 'supabase-publication.json').write_text(json.dumps({
+                'status': 'published', 'revision': 'a' * 64}))
+        elif '--revision' in args:
+            Path(args[args.index('--output') + 1]).write_text(json.dumps({
+                'databaseVerified': True, 'revision': 'a' * 64}))
+
+    monkeypatch.setattr(job, 'command', execute)
+    monkeypatch.setenv('BSMART_X_CONTENT_ONLY', '1')
+    assert job.process(item, inbox)['databaseVerified'] is True
+    assert '--content-only' in commands[1]
+    monkeypatch.delenv('BSMART_X_CONTENT_ONLY')
+    commands.clear()
+    assert job.process(item, inbox)['databaseVerified'] is True
+    assert '--content-only' not in commands[1]

@@ -27,10 +27,10 @@ struct NotificationSettingsView: View {
             .navigationTitle("Alerts")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) { Group {
                     Button("Done") { dismiss() }
                         .fontWeight(.semibold)
-                }
+                }.buttonStyle(.bSmartToolbar) }.bSmartHideSystemBackground()
             }
             .task {
                 await notifications.refreshAuthorizationStatus()
@@ -53,7 +53,9 @@ struct NotificationSettingsView: View {
                 VStack(alignment: .leading, spacing: BSmartSpacing.xSmall) {
                     Text("Portfolio-aware alerts")
                         .font(.title3.weight(.bold))
-                    Text("bSmart alerts you when qualified views or public capital moves materially change for a tracked stock.")
+                    Text(BSmartProductVisibility.onchainSmartMoney
+                        ? "bSmart alerts you when qualified views or public capital moves materially change for a tracked stock."
+                        : "bSmart alerts you when qualified views change for a tracked stock.")
                         .font(.subheadline)
                         .foregroundStyle(BSmartColor.secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
@@ -121,7 +123,9 @@ struct NotificationSettingsView: View {
                 .padding(.bottom, BSmartSpacing.small)
             preferenceToggle(
                 title: "Important changes",
-                detail: "Material Smart Account, Smart Money, confirmation and divergence signals.",
+                detail: BSmartProductVisibility.onchainSmartMoney
+                    ? "Material Smart Account, Smart Money, confirmation and divergence signals."
+                    : "Material updates from Smart Accounts you track.",
                 isOn: Binding(
                     get: { notificationPreferences.preferences.instantAlertsEnabled },
                     set: notificationPreferences.setInstantAlertsEnabled
@@ -232,7 +236,7 @@ struct NotificationSettingsView: View {
                     Label("Send preview alert", systemImage: "paperplane.fill")
                         .frame(maxWidth: .infinity, minHeight: 44)
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.bSmartPrimary)
 
                 if let message = notifications.statusMessage {
                     Text(message)
@@ -251,7 +255,7 @@ struct NotificationSettingsView: View {
 
     private var previewSignal: PortfolioSignal? {
         (model.portfolioSignals + model.signals).first {
-            notificationPreferences.isTickerEnabled($0.ticker)
+            $0.isVisibleInProduct && notificationPreferences.isTickerEnabled($0.ticker)
         }
     }
 

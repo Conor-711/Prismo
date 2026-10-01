@@ -22,7 +22,6 @@ struct BSmartApp: App {
     init() {
         let client: BSmartAPIClient
         let portfolioBootstrapStrategy: PortfolioBootstrapStrategy
-        let directMrCollieClient: DirectMrCollieAnswering?
         let syncCoordinator: BSmartSyncCoordinator?
         let isUsingDemoData: Bool
         let accountClient: AccountAuthenticating?
@@ -37,7 +36,6 @@ struct BSmartApp: App {
             client = DebugBSmartAPIClient(scenario: scenario)
             portfolioBootstrapStrategy = .remoteFallback
             syncCoordinator = nil
-            directMrCollieClient = nil
             isUsingDemoData = true
             accountClient = nil
         } else {
@@ -45,7 +43,6 @@ struct BSmartApp: App {
             client = composition.client
             portfolioBootstrapStrategy = composition.portfolioBootstrapStrategy
             syncCoordinator = composition.syncCoordinator
-            directMrCollieClient = composition.directMrCollieClient
             isUsingDemoData = composition.isUsingDemoData
             accountClient = composition.accountClient
         }
@@ -54,7 +51,6 @@ struct BSmartApp: App {
         client = composition.client
         portfolioBootstrapStrategy = composition.portfolioBootstrapStrategy
         syncCoordinator = composition.syncCoordinator
-        directMrCollieClient = composition.directMrCollieClient
         isUsingDemoData = composition.isUsingDemoData
         accountClient = composition.accountClient
         #endif
@@ -98,7 +94,10 @@ struct BSmartApp: App {
             client: client,
             bootstrapFallbackClient: isUsingDemoData ? nil : BundleBSmartAPIClient(),
             accountPreferences: preferences,
-            directMrCollieClient: directMrCollieClient,
+            nativeInvestors: isUsingDemoData ? nil : NativeTradeFeedClient(account: access),
+            contentCacheFileURL: client is SupabaseContentClient
+                ? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
+                    .appendingPathComponent("BSmartViewCache.json") : nil,
             portfolioBootstrapStrategy: portfolioBootstrapStrategy,
             syncCoordinator: syncCoordinator,
             isUsingDemoData: isUsingDemoData
@@ -123,6 +122,7 @@ struct BSmartApp: App {
     var body: some Scene {
         WindowGroup {
             AppRootView()
+                .buttonStyle(.bSmartPlain)
                 .background(BSmartKeyboardDismissal().frame(width: 0, height: 0))
                 .scrollDismissesKeyboard(.interactively)
                 .environmentObject(model)
@@ -172,6 +172,10 @@ struct BSmartApp: App {
                     guard mayLoadContent else { return }
                     Task { await model.refreshLiveIntelligence() }
                 }
+                .onReceive(NotificationCenter.default.publisher(for: .bSmartNativeInvestorChanged)) { _ in
+                    guard mayLoadContent else { return }
+                    Task { await model.refreshNativeInvestors() }
+                }
                 .task(id: contentSessionID) {
                     guard mayLoadContent else { return }
                     model.activateAccountContext(accountAccess.identity?.id)
@@ -213,6 +217,7 @@ struct BSmartApp: App {
                     }
                 }
                 .onChange(of: model.followedSmartAccountIDs) { notifications.interestsChanged() }
+                .onChange(of: model.followedSubjectIDs) { notifications.interestsChanged() }
                 .onChange(of: model.followedSmartMoneyIDs) { notifications.interestsChanged() }
                 .onChange(of: model.positions) { notifications.interestsChanged() }
         }

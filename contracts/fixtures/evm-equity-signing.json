@@ -1,0 +1,444 @@
+{
+  "testOnly": true,
+  "source": "Pinned official CoW SDK + viem, disposable public key 1",
+  "vectors": [
+    {
+      "payload": {
+        "schema": "equity_signing_v1",
+        "state": "signing",
+        "signingStartedAt": "2026-10-01T00:00:00.000Z",
+        "preparationHash": "e8c36ce2f28d6aba97f334a13b57deedf4b518e959842e54c9c98b8fd1dba741",
+        "prepared": {
+          "schema": "cow_order_v1",
+          "intentId": "12345678-1234-1234-1234-123456789abc",
+          "intentVersion": 1,
+          "account": "12345678-1234-1234-1234-123456789abc",
+          "fingerprint": "318ae1697aea7bb8d06f676306dd88d4b64c267dd7e2c2efff25e586409b1ee7",
+          "owner": "0x7e5f4552091a69125d5dfcb7b8c2659029395bdf",
+          "instrument": {
+            "assetId": "12345678-1234-1234-1234-123456789abc",
+            "symbol": "ASTSx",
+            "network": "Ethereum",
+            "chainId": 1,
+            "token": "0x1111111111111111111111111111111111111111",
+            "usdc": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+            "tokenVariant": "raw",
+            "maxLeverage": 1
+          },
+          "side": "buy",
+          "order": {
+            "sellToken": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+            "buyToken": "0x1111111111111111111111111111111111111111",
+            "receiver": "0x7e5f4552091a69125d5dfcb7b8c2659029395bdf",
+            "sellAmount": "100000000",
+            "buyAmount": "1990000000000000000",
+            "feeAmount": "0",
+            "kind": "sell",
+            "validTo": 1790813100,
+            "appData": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "partiallyFillable": false,
+            "sellTokenBalance": "erc20",
+            "buyTokenBalance": "erc20"
+          },
+          "domain": {
+            "name": "Gnosis Protocol",
+            "version": "v2",
+            "chainId": 1,
+            "verifyingContract": "0x9008D19f58AAbD9eD0D60971565AA8510560ab41"
+          },
+          "orderUid": "0x34c499f59980f0df0122707cd945ecf62faf2fb4df30cf1647ef49938e597de07e5f4552091a69125d5dfcb7b8c2659029395bdf6abda3ac",
+          "orderDigest": "0x34c499f59980f0df0122707cd945ecf62faf2fb4df30cf1647ef49938e597de0",
+          "expiresAt": "2026-10-01T00:01:00.000Z"
+        },
+        "executionEnabled": false
+      },
+      "typedData": {
+        "domain": {
+          "name": "Gnosis Protocol",
+          "version": "v2",
+          "chainId": 1,
+          "verifyingContract": "0x9008D19f58AAbD9eD0D60971565AA8510560ab41"
+        },
+        "types": {
+          "EIP712Domain": [
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "version",
+              "type": "string"
+            },
+            {
+              "name": "chainId",
+              "type": "uint256"
+            },
+            {
+              "name": "verifyingContract",
+              "type": "address"
+            }
+          ],
+          "Order": [
+            {
+              "name": "sellToken",
+              "type": "address"
+            },
+            {
+              "name": "buyToken",
+              "type": "address"
+            },
+            {
+              "name": "receiver",
+              "type": "address"
+            },
+            {
+              "name": "sellAmount",
+              "type": "uint256"
+            },
+            {
+              "name": "buyAmount",
+              "type": "uint256"
+            },
+            {
+              "name": "validTo",
+              "type": "uint32"
+            },
+            {
+              "name": "appData",
+              "type": "bytes32"
+            },
+            {
+              "name": "feeAmount",
+              "type": "uint256"
+            },
+            {
+              "name": "kind",
+              "type": "string"
+            },
+            {
+              "name": "partiallyFillable",
+              "type": "bool"
+            },
+            {
+              "name": "sellTokenBalance",
+              "type": "string"
+            },
+            {
+              "name": "buyTokenBalance",
+              "type": "string"
+            }
+          ]
+        },
+        "primaryType": "Order",
+        "message": {
+          "sellToken": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "buyToken": "0x1111111111111111111111111111111111111111",
+          "receiver": "0x7e5f4552091a69125d5dfcb7b8c2659029395bdf",
+          "sellAmount": "100000000",
+          "buyAmount": "1990000000000000000",
+          "feeAmount": "0",
+          "kind": "sell",
+          "validTo": 1790813100,
+          "appData": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "partiallyFillable": false,
+          "sellTokenBalance": "erc20",
+          "buyTokenBalance": "erc20"
+        }
+      },
+      "signature": "0xd5ec2cb3d0f5343e5d8ca294a1d8909ccab366b259ab8a6b7cbb288da10928125819757d6ba2b6105b789b634aa497550584f13047b89fc90336998e35aa9a621c",
+      "ethSignSignature": "0x02efbe761d39b39bfe20ab4347b8184a8433c6184289e1f39a970cf0f21c725d352b5912ed8de340ca2f141777fc9dd3267e4587ab7fc99f09f8a5dcb89998c31b"
+    },
+    {
+      "payload": {
+        "schema": "equity_signing_v1",
+        "state": "signing",
+        "signingStartedAt": "2026-10-01T00:00:00.000Z",
+        "preparationHash": "56dbbb47e4c2751861ec02acd9568e344e0a35ff40d35fbf1be0d254ef5e8f6f",
+        "prepared": {
+          "schema": "cow_order_v1",
+          "intentId": "12345678-1234-1234-1234-123456789abc",
+          "intentVersion": 1,
+          "account": "12345678-1234-1234-1234-123456789abc",
+          "fingerprint": "fdaa5c74bd844f6ea22713a2f399af4470a4e87e02311f6ca2a32fbe96701a98",
+          "owner": "0x7e5f4552091a69125d5dfcb7b8c2659029395bdf",
+          "instrument": {
+            "assetId": "12345678-1234-1234-1234-123456789abc",
+            "symbol": "ASTSx",
+            "network": "Ink",
+            "chainId": 57073,
+            "token": "0x1111111111111111111111111111111111111111",
+            "usdc": "0x2d270e6886d130d724215a266106e6832161eaed",
+            "tokenVariant": "raw",
+            "maxLeverage": 1
+          },
+          "side": "buy",
+          "order": {
+            "sellToken": "0x2d270e6886d130d724215a266106e6832161eaed",
+            "buyToken": "0x1111111111111111111111111111111111111111",
+            "receiver": "0x7e5f4552091a69125d5dfcb7b8c2659029395bdf",
+            "sellAmount": "100000000",
+            "buyAmount": "1990000000000000000",
+            "feeAmount": "0",
+            "kind": "sell",
+            "validTo": 1790813100,
+            "appData": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "partiallyFillable": false,
+            "sellTokenBalance": "erc20",
+            "buyTokenBalance": "erc20"
+          },
+          "domain": {
+            "name": "Gnosis Protocol",
+            "version": "v2",
+            "chainId": 57073,
+            "verifyingContract": "0x9008D19f58AAbD9eD0D60971565AA8510560ab41"
+          },
+          "orderUid": "0x9ab62e6a07730cd8dd67d87851505a3fcc13598a185d7838a41337952909af217e5f4552091a69125d5dfcb7b8c2659029395bdf6abda3ac",
+          "orderDigest": "0x9ab62e6a07730cd8dd67d87851505a3fcc13598a185d7838a41337952909af21",
+          "expiresAt": "2026-10-01T00:01:00.000Z"
+        },
+        "executionEnabled": false
+      },
+      "typedData": {
+        "domain": {
+          "name": "Gnosis Protocol",
+          "version": "v2",
+          "chainId": 57073,
+          "verifyingContract": "0x9008D19f58AAbD9eD0D60971565AA8510560ab41"
+        },
+        "types": {
+          "EIP712Domain": [
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "version",
+              "type": "string"
+            },
+            {
+              "name": "chainId",
+              "type": "uint256"
+            },
+            {
+              "name": "verifyingContract",
+              "type": "address"
+            }
+          ],
+          "Order": [
+            {
+              "name": "sellToken",
+              "type": "address"
+            },
+            {
+              "name": "buyToken",
+              "type": "address"
+            },
+            {
+              "name": "receiver",
+              "type": "address"
+            },
+            {
+              "name": "sellAmount",
+              "type": "uint256"
+            },
+            {
+              "name": "buyAmount",
+              "type": "uint256"
+            },
+            {
+              "name": "validTo",
+              "type": "uint32"
+            },
+            {
+              "name": "appData",
+              "type": "bytes32"
+            },
+            {
+              "name": "feeAmount",
+              "type": "uint256"
+            },
+            {
+              "name": "kind",
+              "type": "string"
+            },
+            {
+              "name": "partiallyFillable",
+              "type": "bool"
+            },
+            {
+              "name": "sellTokenBalance",
+              "type": "string"
+            },
+            {
+              "name": "buyTokenBalance",
+              "type": "string"
+            }
+          ]
+        },
+        "primaryType": "Order",
+        "message": {
+          "sellToken": "0x2d270e6886d130d724215a266106e6832161eaed",
+          "buyToken": "0x1111111111111111111111111111111111111111",
+          "receiver": "0x7e5f4552091a69125d5dfcb7b8c2659029395bdf",
+          "sellAmount": "100000000",
+          "buyAmount": "1990000000000000000",
+          "feeAmount": "0",
+          "kind": "sell",
+          "validTo": 1790813100,
+          "appData": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "partiallyFillable": false,
+          "sellTokenBalance": "erc20",
+          "buyTokenBalance": "erc20"
+        }
+      },
+      "signature": "0xe17813cc7e55ab06d699596b28ac0bbb4495a753abcda9d05241bf6f739b4ded04b2a18b4692522b7e7ce44acbacb2f43fd1ac89f62eccada8f8b613270cc6211b",
+      "ethSignSignature": "0xfd1d442cc65e0cd554506b00be8ccae127e10e109c8236a36ffc01c7158646130b2a8440a0661e30035083462577e24ae6a2117f7d96d854e95666380a0fa47a1c"
+    },
+    {
+      "payload": {
+        "schema": "equity_signing_v1",
+        "state": "signing",
+        "signingStartedAt": "2026-10-01T00:00:00.000Z",
+        "preparationHash": "88f890b0c58032ed9973f2e62eabea3629c2cc9f7c79b6625cad8061061ed28e",
+        "prepared": {
+          "schema": "cow_order_v1",
+          "intentId": "12345678-1234-1234-1234-123456789abc",
+          "intentVersion": 1,
+          "account": "12345678-1234-1234-1234-123456789abc",
+          "fingerprint": "a6b55b94e4d5cece4b02a45fc4f49a9c2d56d1b1c55bea9d5ee694600fabf79d",
+          "owner": "0x7e5f4552091a69125d5dfcb7b8c2659029395bdf",
+          "instrument": {
+            "assetId": "12345678-1234-1234-1234-123456789abc",
+            "symbol": "ASTSx",
+            "network": "Ethereum",
+            "chainId": 1,
+            "token": "0x1111111111111111111111111111111111111111",
+            "usdc": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+            "tokenVariant": "raw",
+            "maxLeverage": 1
+          },
+          "side": "buy",
+          "order": {
+            "sellToken": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+            "buyToken": "0x1111111111111111111111111111111111111111",
+            "receiver": "0x7e5f4552091a69125d5dfcb7b8c2659029395bdf",
+            "sellAmount": "100000000",
+            "buyAmount": "1990000000000000000000",
+            "feeAmount": "0",
+            "kind": "sell",
+            "validTo": 1790813100,
+            "appData": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "partiallyFillable": false,
+            "sellTokenBalance": "erc20",
+            "buyTokenBalance": "erc20"
+          },
+          "domain": {
+            "name": "Gnosis Protocol",
+            "version": "v2",
+            "chainId": 1,
+            "verifyingContract": "0x9008D19f58AAbD9eD0D60971565AA8510560ab41"
+          },
+          "orderUid": "0x8825aa76eaf55be727b8d8a9010aaa983747a60512bbafac5152c1ef5f293d357e5f4552091a69125d5dfcb7b8c2659029395bdf6abda3ac",
+          "orderDigest": "0x8825aa76eaf55be727b8d8a9010aaa983747a60512bbafac5152c1ef5f293d35",
+          "expiresAt": "2026-10-01T00:01:00.000Z"
+        },
+        "executionEnabled": false
+      },
+      "typedData": {
+        "domain": {
+          "name": "Gnosis Protocol",
+          "version": "v2",
+          "chainId": 1,
+          "verifyingContract": "0x9008D19f58AAbD9eD0D60971565AA8510560ab41"
+        },
+        "types": {
+          "EIP712Domain": [
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "version",
+              "type": "string"
+            },
+            {
+              "name": "chainId",
+              "type": "uint256"
+            },
+            {
+              "name": "verifyingContract",
+              "type": "address"
+            }
+          ],
+          "Order": [
+            {
+              "name": "sellToken",
+              "type": "address"
+            },
+            {
+              "name": "buyToken",
+              "type": "address"
+            },
+            {
+              "name": "receiver",
+              "type": "address"
+            },
+            {
+              "name": "sellAmount",
+              "type": "uint256"
+            },
+            {
+              "name": "buyAmount",
+              "type": "uint256"
+            },
+            {
+              "name": "validTo",
+              "type": "uint32"
+            },
+            {
+              "name": "appData",
+              "type": "bytes32"
+            },
+            {
+              "name": "feeAmount",
+              "type": "uint256"
+            },
+            {
+              "name": "kind",
+              "type": "string"
+            },
+            {
+              "name": "partiallyFillable",
+              "type": "bool"
+            },
+            {
+              "name": "sellTokenBalance",
+              "type": "string"
+            },
+            {
+              "name": "buyTokenBalance",
+              "type": "string"
+            }
+          ]
+        },
+        "primaryType": "Order",
+        "message": {
+          "sellToken": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "buyToken": "0x1111111111111111111111111111111111111111",
+          "receiver": "0x7e5f4552091a69125d5dfcb7b8c2659029395bdf",
+          "sellAmount": "100000000",
+          "buyAmount": "1990000000000000000000",
+          "feeAmount": "0",
+          "kind": "sell",
+          "validTo": 1790813100,
+          "appData": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "partiallyFillable": false,
+          "sellTokenBalance": "erc20",
+          "buyTokenBalance": "erc20"
+        }
+      },
+      "signature": "0x37f1d99b0b7f4e7999d152fdd48b63c096f57a894ebeb1336c9619ae8ad53fb9303b8376754cf2fd25aee6d70fef4ef90d15585619c57c07bd801342f41310c51c",
+      "ethSignSignature": "0x3f158c238ab5b56281a10f350b04b83693d11842aeb21c2eb89926cd576be6ce68f9e107dfd8d2a65ab542449cf787a9ee862a18790b0174a93badb9681aa19c1b"
+    }
+  ]
+}

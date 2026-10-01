@@ -446,6 +446,44 @@ as part of final production acceptance.
 - BatchLabs, [MessagePack writer source](https://github.com/BatchLabs/MessagePack-Swift/blob/c6fabe5afe1261f927a448187b20e84b9af34720/Sources/MessagePack/Writer.swift), revision dated 2020-04-22.
 ## Native order lifecycle (2026-09-11)
 
+Recovery revision (2026-10-01): entry loading reads the encrypted local order
+history before preparing a new trade. An outstanding `submitting`/`uncertain`
+record is checked once by its original cloid; both entry and completion expose
+manual read-only verification. A history failure fails closed. Verification of an
+older order does not display it as completion of the newly selected market.
+Exact terminal order evidence releases the reservation even if optional fill
+detail lookup fails. Recovered fills notify portfolio/feed consumers and allow
+server attribution reconciliation without fabricating price/fee evidence.
+`unknownOid`, mismatched intent and transport failure do not release reservations.
+The original signed request is never replayed.
+
+The one-use submission permit now tracks whether its protected start operation
+was invoked. Only `recordOrderNotSubmitted(permit, wallet:)` can seal that same
+unstarted permit under its lock, then persist `submitting -> notSubmitted` with
+the original signature retained. Sealing prevents a concurrent or late start.
+A permit that already started, a lost permit after restart, or an uncertain
+request cannot use this transition. This is proof of non-submission, not a TTL
+reset or an inference from absent fills. Other funding lifecycles are unchanged.
+
+Read transport revision (2026-10-01) supersedes the no-retry rule below: socket
+rejection may fall back to the fixed, credential-free HTTPS `/info` endpoint.
+Socket 429/5xx disconnects into cooldown. HTTP transient network failures or
+429/500/502/503/504 allow at most one extra identical read, only within the early
+four-second window; backoff is 250-1000 ms. Long or unparseable Retry-After values
+do not trigger an immediate retry. Cancellation, TLS failure, wrong origin,
+oversize or permanent HTTP rejection are not retried. Existing freshness and
+schema/identity checks remain required. `/exchange` has no retry; diagnostics
+log response status/error code, never signed bodies or credentials.
+
+Focused regression on 2026-10-01: 132 tests passed in
+`Test-bSmart-2026.10.01_13-07-02-+0800.xcresult`, including store recovery,
+permit sealing/restart, fill recovery, exact acknowledgement/signature encoding,
+transport fallback and owner-value isolation. Connected iPhone 15 read-only UI
+checks verified account value/edge return and order entry/refresh/close; no order
+or transfer was submitted. These checks do not prove recovery of a different
+user's legacy uncertain order or funded execution. Repository architecture audit
+still reports nine existing unrelated feature-network/WebView boundary findings.
+
 Latest latency revision (2026-09-22): execution info reads prefer a shared native
 connection to the official Hyperliquid WebSocket post API, retaining typed decode
 and original request/server timestamps. Order-only observations parallelize five

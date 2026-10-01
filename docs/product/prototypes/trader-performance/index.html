@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <link rel="icon" href="../../../../web/public/favicon.ico">
+  <title>bSmart · 交易者表现预览</title>
+  <style>
+    :root { color-scheme: dark; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif; letter-spacing: 0; background: #090d0b; color: #f4f7f5; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; }
+    button, a { -webkit-tap-highlight-color: transparent; }
+    button { font: inherit; cursor: pointer; }
+    a { color: inherit; text-decoration: none; }
+    .shell { max-width: 1260px; min-height: 100vh; margin: auto; display: grid; grid-template-columns: 278px minmax(0, 1fr); border-inline: 1px solid #202824; }
+    .sidebar { border-right: 1px solid #242d28; background: #101613; padding: 35px 19px; }
+    .brand { display: inline-flex; font-size: 28px; font-weight: 760; line-height: 1; align-items: baseline; margin: 1px 8px 59px; letter-spacing: 0; }
+    .brand span { color: #54dcc0; }
+    .side-label, .eyebrow { color: #8fa39a; text-transform: uppercase; font-size: 11px; font-weight: 700; letter-spacing: 1px; }
+    .side-label { margin: 0 9px 13px; }
+    .account-switcher { display: grid; gap: 3px; }
+    .account-option { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 10px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: #ccd4cf; text-align: left; }
+    .account-option:hover { background: #1b2721; }
+    .account-option[aria-current="true"] { background: #1a2923; border-color: #325446; color: #fff; }
+    .account-option img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #252c27; flex: none; }
+    .account-option strong { display: block; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .account-option small { display: block; color: #94aaa0; margin-top: 4px; font-size: 11px; }
+    .account-option .account-copy { min-width: 0; }
+    .sidebar-foot { margin: 28px 10px; border-top: 1px solid #2a322e; padding-top: 18px; color: #83928a; font-size: 11px; line-height: 1.6; }
+    .main { min-width: 0; padding: 28px clamp(24px, 5.4vw, 72px) 75px; }
+    .topline { display: flex; align-items: center; justify-content: space-between; gap: 16px; color: #99a9a0; font-size: 12px; padding-bottom: 35px; }
+    .topline strong { color: #eaf0ec; font-size: 15px; font-weight: 650; }
+    .topline time { white-space: nowrap; }
+    .mobile-switcher { display: none; }
+    .profile-head { display: flex; align-items: center; gap: 19px; }
+    .profile-head > img { width: 73px; height: 73px; border-radius: 50%; object-fit: cover; background: #252b27; flex: none; }
+    .identity { min-width: 0; }
+    .identity h1 { font-size: 29px; line-height: 1.2; font-weight: 710; margin: 0 0 6px; }
+    .identity p { color: #97a49c; margin: 0; font-size: 14px; overflow-wrap: anywhere; }
+    .profile-head .follow { margin-left: auto; min-height: 40px; padding: 0 19px; color: #081610; border: 0; border-radius: 5px; background: #56d9bd; font-size: 13px; font-weight: 690; white-space: nowrap; }
+    .profile-head .follow[aria-pressed="true"] { background: #25352c; color: #a8c9b4; border: 1px solid #3e5947; }
+    .rank-strip { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; margin: 24px 0 35px; color: #a7b5ab; font-size: 12px; }
+    .rank-strip .rank { display: inline-flex; align-items: center; padding: 5px 9px; border: 1px solid #a6c83d; color: #d5ec79; border-radius: 4px; font-weight: 700; }
+    .rank-strip .sep { color: #46534b; }
+    .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; border-top: 1px solid #27322b; padding-top: 23px; }
+    .section-head h2 { margin: 0; font-size: 17px; font-weight: 670; }
+    .section-head span { color: #87988e; font-size: 12px; white-space: nowrap; }
+    .performance { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: end; gap: 25px; padding: 23px 0 27px; }
+    .return-label { color: #97a99e; font-size: 12px; display: flex; align-items: center; gap: 7px; }
+    .return-label .dot { width: 6px; height: 6px; border-radius: 50%; background: #54dcc0; }
+    .return-value { color: #52daba; font-size: clamp(49px, 7vw, 76px); font-weight: 680; line-height: 1.12; font-variant-numeric: tabular-nums; margin: 5px 0 7px; }
+    .return-period { color: #98a79e; font-size: 12px; }
+    .return-comparison { color: #b5c9b7; font-size: 11px; margin-top: 8px; }
+    .win-block { padding-bottom: 7px; }
+    .win-block strong { display: block; font-size: 27px; font-weight: 680; font-variant-numeric: tabular-nums; margin-top: 8px; }
+    .win-bar { display: flex; height: 6px; overflow: hidden; border-radius: 3px; margin: 11px 0 7px; background: #393f3b; }
+    .win-bar span { display: block; background: #a8ce43; width: var(--win); }
+    .win-block small { color: #97a79d; font-size: 11px; }
+    .metric-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid #28322b; border-bottom: 1px solid #28322b; }
+    .metric { padding: 18px 12px 18px 0; }
+    .metric + .metric { border-left: 1px solid #28322b; padding-left: 18px; }
+    .metric span { display: block; color: #91a096; font-size: 11px; line-height: 1.4; }
+    .metric strong { display: block; margin-top: 6px; font-size: 20px; font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .metric strong.negative { color: #f47f71; }
+    .metric small { color: #798c80; font-size: 10px; }
+    .tabs { display: flex; align-items: center; gap: 29px; border-bottom: 1px solid #28322b; margin-top: 28px; }
+    .tabs button { color: #8b9a91; border: 0; border-bottom: 2px solid transparent; background: none; padding: 0 0 12px; font-size: 13px; font-weight: 630; }
+    .tabs button[aria-selected="true"] { color: #f2f5f2; border-color: #54dcc0; }
+    .tab-panel { padding-top: 23px; }
+    .list-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 13px; }
+    .list-heading h3 { margin: 0; font-size: 15px; font-weight: 650; }
+    .list-heading small { color: #8a988e; font-size: 11px; }
+    .trade-list { display: grid; gap: 9px; }
+    .trade-card { border: 1px solid #2b352e; border-radius: 6px; background: #151c17; overflow: hidden; }
+    .trade-toggle { width: 100%; display: grid; grid-template-columns: 37px minmax(0,1fr) auto 18px; align-items: center; gap: 10px; min-height: 76px; padding: 11px 14px; border: 0; background: transparent; color: inherit; text-align: left; }
+    .trade-toggle:hover { background: #1d2921; }
+    .trade-toggle img { width: 34px; height: 34px; object-fit: contain; border-radius: 4px; background: #222924; }
+    .ticker-line { display: flex; align-items: center; gap: 7px; min-width: 0; }
+    .ticker-line strong { font-size: 15px; }
+    .direction { color: #54d6a3; font-size: 11px; font-weight: 620; }
+    .trade-card small { display: block; color: #8b9d91; font-size: 11px; margin-top: 5px; }
+    .trade-return { font-size: 18px; font-weight: 680; font-variant-numeric: tabular-nums; white-space: nowrap; color: #56d7aa; }
+    .trade-return.loss { color: #ef786a; }
+    .trade-toggle svg { width: 16px; height: 16px; color: #829489; transition: transform .2s; }
+    .trade-card.opened .trade-toggle svg { transform: rotate(180deg); }
+    .trade-detail { display: none; padding: 0 14px 16px 61px; border-top: 1px solid #2b352e; }
+    .trade-card.opened .trade-detail { display: block; }
+    .trade-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; padding-top: 16px; }
+    .trade-detail-grid span { display: block; font-size: 10px; color: #8a9b8d; }
+    .trade-detail-grid strong { display: block; font-size: 12px; margin-top: 4px; font-weight: 590; font-variant-numeric: tabular-nums; }
+    .source-link { display: inline-flex; align-items: center; gap: 5px; color: #67d9c2; font-size: 12px; margin-top: 16px; }
+    .source-link svg { width: 13px; height: 13px; }
+    .open-label { color: #e4c885; font-size: 10px; margin-left: 2px; }
+    .filters { display: flex; gap: 6px; margin: 0 0 16px; }
+    .filters button { border: 1px solid #35453a; border-radius: 4px; background: transparent; color: #a9b8ae; font-size: 11px; padding: 8px 13px; }
+    .filters button[aria-pressed="true"] { background: #214134; color: #78e0c4; border-color: #3b8067; }
+    .method { color: #a9b6ac; line-height: 1.8; font-size: 13px; max-width: 690px; }
+    .method h3 { font-size: 15px; color: #f0f5f1; margin: 0 0 8px; }
+    .method p { margin: 0 0 16px; }
+    .method dl { display: grid; grid-template-columns: 118px 1fr; gap: 13px 16px; border-top: 1px solid #2b352e; padding-top: 18px; }
+    .method dt { color: #e4eee5; font-weight: 620; }
+    .method dd { margin: 0; }
+    .footnote { margin-top: 26px; color: #7e9084; font-size: 11px; line-height: 1.7; }
+    .footnote strong { color: #aec2b2; font-weight: 650; }
+    .mobile-bottom { display: none; }
+    @media (max-width: 760px) {
+      .shell { display: block; border: 0; }
+      .sidebar { display: none; }
+      .main { padding: max(20px, env(safe-area-inset-top)) 20px max(90px, env(safe-area-inset-bottom)); }
+      .topline { padding-bottom: 24px; }
+      .mobile-switcher { display: flex; gap: 9px; overflow-x: auto; margin: 0 -20px 24px; padding: 0 20px 7px; scrollbar-width: none; }
+      .mobile-switcher::-webkit-scrollbar { display: none; }
+      .mobile-switcher button { display: flex; align-items: center; gap: 7px; flex: none; padding: 7px 12px 7px 7px; border: 1px solid #314137; border-radius: 4px; color: #a7b7ab; background: #171f19; font-size: 12px; }
+      .mobile-switcher button[aria-current="true"] { border-color: #59cfad; color: #edf8f0; }
+      .mobile-switcher img { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
+      .profile-head > img { width: 64px; height: 64px; }
+      .identity h1 { font-size: 24px; }
+      .profile-head .follow { padding: 0 12px; }
+      .rank-strip { margin-bottom: 27px; }
+      .performance { gap: 14px; grid-template-columns: 1.25fr 1fr; }
+      .return-value { font-size: clamp(43px, 10vw, 61px); }
+      .win-block strong { font-size: 23px; }
+      .mobile-bottom { display: flex; position: fixed; z-index: 5; bottom: max(12px, env(safe-area-inset-bottom)); left: 20px; right: 20px; height: 55px; align-items: center; justify-content: space-around; border: 1px solid #344139; border-radius: 28px; background: #1c231fe8; backdrop-filter: blur(16px); box-shadow: 0 8px 30px #0008; }
+      .mobile-bottom button { display: flex; justify-content: center; align-items: center; border: 0; background: none; color: #9ca9a0; width: 49px; height: 43px; border-radius: 22px; }
+      .mobile-bottom button[aria-current="true"] { color: #58dbbb; background: #2a3b31; }
+      .mobile-bottom svg { width: 22px; height: 22px; }
+    }
+    @media (max-width: 390px) {
+      .main { padding-inline: 16px; }
+      .mobile-switcher { margin-inline: -16px; padding-inline: 16px; }
+      .profile-head { gap: 11px; }
+      .profile-head > img { width: 54px; height: 54px; }
+      .profile-head .follow { min-height: 36px; font-size: 12px; }
+      .identity h1 { font-size: 22px; }
+      .performance { display: block; }
+      .win-block { margin-top: 22px; max-width: 180px; }
+      .metric strong { font-size: 17px; }
+      .metric + .metric { padding-left: 10px; }
+      .trade-toggle { grid-template-columns: 31px minmax(0,1fr) auto 13px; gap: 7px; padding-inline: 9px; }
+      .trade-toggle img { width: 30px; height: 30px; }
+      .trade-return { font-size: 16px; }
+      .trade-detail { padding-left: 47px; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; scroll-behavior: auto !important; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar" aria-label="账户列表">
+      <div class="brand">b<span>Smart</span></div>
+      <p class="side-label">Smart Accounts</p>
+      <div class="account-switcher" id="desktop-accounts"></div>
+      <p class="sidebar-foot">从数据库最早收录的可执行观点起算，包含入选前历史。所有收益均为回测结果，与作者真实账户资产、实盘交易无关。</p>
+    </aside>
+    <main class="main">
+      <div class="topline"><strong>交易者档案</strong><time datetime="2026-08-13">数据截至 2026.08.13</time></div>
+      <div class="mobile-switcher" id="mobile-accounts" aria-label="切换作者"></div>
+      <header class="profile-head">
+        <img id="avatar" alt="">
+        <div class="identity"><h1 id="name"></h1><p id="handle"></p></div>
+        <button id="follow" class="follow" type="button" aria-pressed="false">+ 追踪</button>
+      </header>
+      <div class="rank-strip"><span class="rank" id="rank"></span><span id="rank-detail"></span><span class="sep">·</span><span id="profile-focus"></span></div>
+      <section aria-labelledby="performance-title">
+        <div class="section-head"><h2 id="performance-title">观点跟随表现</h2><span>收录以来 · 非实盘</span></div>
+        <div class="performance">
+          <div><div class="return-label"><span class="dot"></span>收录以来跟随收益</div><div class="return-value" id="total-return"></div><div class="return-period" id="return-period"></div><div class="return-comparison" id="return-comparison"></div></div>
+          <div class="win-block"><div class="eyebrow">回测交易命中率</div><strong id="win-rate"></strong><div class="win-bar" id="win-bar"><span></span></div><small id="win-count"></small></div>
+        </div>
+        <div class="metric-row">
+          <div class="metric"><span>可执行观点</span><strong id="signal-count"></strong><small>收录以来</small></div>
+          <div class="metric"><span>回测交易</span><strong id="trade-count"></strong><small>含快照盯市</small></div>
+          <div class="metric"><span>最大回撤</span><strong class="negative" id="drawdown"></strong><small>回测组合净值</small></div>
+        </div>
+      </section>
+      <div class="tabs" role="tablist" aria-label="档案内容">
+        <button type="button" role="tab" data-tab="overview" aria-selected="true">概览</button>
+        <button type="button" role="tab" data-tab="trades" aria-selected="false">交易记录</button>
+        <button type="button" role="tab" data-tab="method" aria-selected="false">统计口径</button>
+      </div>
+      <div id="panel" class="tab-panel" role="tabpanel"></div>
+      <p class="footnote"><strong>说明：</strong>这是基于当前作者池的历史回测快照，存在事后入选偏差。不同作者起始日期不同，不能直接用累计收益排名；正式榜单应使用统一时间窗口。</p>
+    </main>
+  </div>
+  <nav class="mobile-bottom" aria-label="应用导航">
+    <button type="button" aria-label="首页"><i data-lucide="house"></i></button>
+    <button type="button" aria-label="搜索"><i data-lucide="search"></i></button>
+    <button type="button" aria-label="发现"><i data-lucide="layers-3"></i></button>
+    <button type="button" aria-label="好友"><i data-lucide="users-round"></i></button>
+    <button type="button" aria-label="档案" aria-current="true"><i data-lucide="circle-user-round"></i></button>
+  </nav>
+  <script src="../investor-discovery/data.js"></script>
+  <script src="../investor-discovery/lucide.min.js"></script>
+  <script>
+    const logoRoot = '../../../../ios/BSmart/Assets.xcassets/';
+    const logos = {
+      AXTI: 'Ticker_AXTI.imageset/AXTI.png', AAOI: 'Ticker_AAOI.imageset/AAOI.png',
+      IREN: 'Ticker_IREN.imageset/IREN.png', SNDK: 'Ticker_SNDK.imageset/SNDK.svg',
+      MU: 'Ticker_MU.imageset/MU.svg', BE: 'Ticker_BE.imageset/BE.svg'
+    };
+    const people = [
+      {
+        handle: '@aleabitoreddit', name: 'Serenity', focus: '光通信 · AI 基础设施', rank: 'Top 2.3%', rankDetail: 'X 作者排名 3 / 132',
+        total: '+120.3%', period: '2025.09.30 — 2026.08.13 · 215 个交易日', annualized: '+152.4%', benchmark: '+17.3%', winRate: '56.9%', wins: 37, tradesCount: 65, signals: 97, drawdown: '-32.8%',
+        trades: [
+          { ticker: 'AXTI', direction: '看多', result: '+345.38%', closed: true, entry: '$17.59 · 2026.01.26', exit: '$78.36 · 2026.06.09', source: 'https://twitter.com/1940360837547565056/status/2015096496019112151' },
+          { ticker: 'IREN', direction: '看多', result: '-26.99%', closed: true, entry: '$48.97 · 2025.11.20', exit: '$35.80 · 2025.12.18', source: 'https://twitter.com/1940360837547565056/status/1991116739577307184' },
+          { ticker: 'AAOI', direction: '看多', result: '+20.85%', closed: false, entry: '$107.55 · 2026.03.02', exit: '$130.08 · 2026.08.13', source: 'https://twitter.com/1940360837547565056/status/2027488567971443170' }
+        ]
+      },
+      {
+        handle: '@wey_how12640', name: 'Wey How', focus: '半导体 · 趋势交易', rank: 'Top 9.8%', rankDetail: 'X 作者排名 13 / 132',
+        total: '+115.9%', period: '2025.07.21 — 2026.08.13 · 265 个交易日', annualized: '+107.9%', benchmark: '+23.7%', winRate: '64.3%', wins: 27, tradesCount: 42, signals: 79, drawdown: '-40.8%',
+        trades: [
+          { ticker: 'MU', direction: '看多', result: '+148.06%', closed: true, entry: '$374.13 · 2026.04.07', exit: '$928.41 · 2026.05.27', source: 'https://twitter.com/1707559719215489024/status/2041299021676019959' },
+          { ticker: 'SNDK', direction: '看多', result: '+64.24%', closed: true, entry: '$651.23 · 2026.01.30', exit: '$1,070.20 · 2026.04.27', source: 'https://twitter.com/1707559719215489024/status/2016680315834745059' },
+          { ticker: 'BE', direction: '看多', result: '-3.73%', closed: true, entry: '$145.00 · 2026.02.09', exit: '$139.74 · 2026.02.13', source: 'https://twitter.com/1707559719215489024/status/2019578567500394995' },
+          { ticker: 'SNDK', direction: '看多', result: '-29.68%', closed: false, entry: '$2,170.00 · 2026.06.26', exit: '$1,528.11 · 2026.08.13', source: 'https://twitter.com/1707559719215489024/status/2070052077704040734' }
+        ]
+      }
+    ];
+    const avatarFor = handle => window.DISCOVERY_PEOPLE?.find(person => person.handle.toLowerCase() === handle.toLowerCase())?.avatar || '';
+    const state = { person: new URLSearchParams(location.search).get('account') === 'wey' ? 1 : 0, tab: 'overview', filter: 'all', followed: new Set() };
+    const $ = selector => document.querySelector(selector);
+    function icon(name) { return `<i data-lucide="${name}"></i>`; }
+    function tradeCard(trade, index) {
+      const loss = trade.result.startsWith('-');
+      const logo = logos[trade.ticker];
+      return `<article class="trade-card">
+        <button class="trade-toggle" type="button" aria-expanded="false" aria-controls="detail-${index}">
+          <img src="${logoRoot}${logo}" alt="${trade.ticker} Logo">
+          <span><span class="ticker-line"><strong>${trade.ticker}</strong><span class="direction">${trade.direction}</span>${trade.closed ? '' : '<span class="open-label">待结算</span>'}</span><small>${trade.closed ? '已结束 · 单笔回测收益' : '截至快照日 · 浮动表现'}</small></span>
+          <span class="trade-return ${loss ? 'loss' : ''}">${trade.result}</span>${icon('chevron-down')}
+        </button>
+        <div class="trade-detail" id="detail-${index}"><div class="trade-detail-grid"><div><span>回测入场</span><strong>${trade.entry}</strong></div><div><span>${trade.closed ? '规则退出' : '快照价格'}</span><strong>${trade.exit}</strong></div></div><a class="source-link" href="${trade.source}" target="_blank" rel="noopener noreferrer">查看观点原帖 ${icon('arrow-up-right')}</a></div>
+      </article>`;
+    }
+    function renderPanel() {
+      const person = people[state.person];
+      const panel = $('#panel');
+      if (state.tab === 'method') {
+        panel.innerHTML = `<section class="method"><h3>指标如何计算</h3><p>从数据库最早收录的可执行观点开始，包含作者入选正式池之前的记录，不代表其整个投资生涯。回测在观点发布后的下一交易日复权开盘入场，同标的同方向延续持仓，反向判断则按规则翻向；未指明周期的观点按 20 个交易日处理。组合持仓等权，并计入 10bps 往返交易成本。</p><dl><dt>跟随总收益</dt><dd>从首笔可执行观点到 2026.08.13 的组合净值变化；包括尚未结束仓位的快照盯市表现。</dd><dt>年化 / SPY</dt><dd>年化收益按各自回测区间折算；SPY 为同区间的基准累计收益，不同起点不可直接比较。</dd><dt>回测命中率</dt><dd>净收益为正的回测交易记录 ÷ 全部回测交易记录；包含截至快照日盯市记录，不等于已平仓胜率。</dd><dt>最大回撤</dt><dd>回测区间内组合净值从历史高点至后续低点的最大跌幅。</dd><dt>选择偏差</dt><dd>作者来自当前池，回看其入选前历史有事后筛选偏差，不能当作当时可执行的公开榜单。</dd><dt>真实交易</dt><dd>此数据不能证明作者实际买卖、持仓规模、杠杆倍数或真实账户盈亏。</dd></dl></section>`;
+      } else {
+        const trades = state.tab === 'overview' ? person.trades.slice(0, 3) : person.trades.filter(trade => state.filter === 'all' || (state.filter === 'closed') === trade.closed);
+        panel.innerHTML = `${state.tab === 'trades' ? `<div class="filters" aria-label="筛选交易"><button type="button" data-filter="all" aria-pressed="${state.filter === 'all'}">全部</button><button type="button" data-filter="closed" aria-pressed="${state.filter === 'closed'}">已结束</button><button type="button" data-filter="open" aria-pressed="${state.filter === 'open'}">待结算</button></div>` : ''}<div class="list-heading"><h3>${state.tab === 'overview' ? '代表交易' : '交易记录'}</h3><small>历史节选 ${trades.length} 笔 · 非全历史清单</small></div><div class="trade-list">${trades.map(tradeCard).join('')}</div>`;
+        panel.querySelectorAll('.trade-toggle').forEach(button => button.addEventListener('click', () => {
+          const expanded = button.getAttribute('aria-expanded') === 'true';
+          button.setAttribute('aria-expanded', String(!expanded));
+          button.closest('.trade-card').classList.toggle('opened', !expanded);
+        }));
+        panel.querySelectorAll('[data-filter]').forEach(button => button.addEventListener('click', () => { state.filter = button.dataset.filter; renderPanel(); }));
+      }
+      window.lucide?.createIcons({ attrs: { 'stroke-width': 1.8 } });
+    }
+    function renderAccountSwitchers() {
+      $('#desktop-accounts').innerHTML = people.map((person, index) => `<button class="account-option" type="button" data-account="${index}" aria-current="${state.person === index}"><img src="${avatarFor(person.handle)}" alt=""><span class="account-copy"><strong>${person.name}</strong><small>${person.handle}</small></span></button>`).join('');
+      $('#mobile-accounts').innerHTML = people.map((person, index) => `<button type="button" data-account="${index}" aria-current="${state.person === index}"><img src="${avatarFor(person.handle)}" alt="">${person.name}</button>`).join('');
+      document.querySelectorAll('[data-account]').forEach(button => button.addEventListener('click', () => { state.person = Number(button.dataset.account); state.filter = 'all'; render(); }));
+    }
+    function render() {
+      const person = people[state.person];
+      $('#avatar').src = avatarFor(person.handle);
+      $('#avatar').alt = `${person.name} 头像`;
+      $('#name').textContent = person.name;
+      $('#handle').textContent = person.handle;
+      $('#rank').textContent = person.rank;
+      $('#rank-detail').textContent = person.rankDetail;
+      $('#profile-focus').textContent = person.focus;
+      $('#total-return').textContent = person.total;
+      $('#return-period').textContent = person.period;
+      $('#return-comparison').textContent = `年化 ${person.annualized} · 同期 SPY ${person.benchmark}`;
+      $('#win-rate').textContent = person.winRate;
+      $('#win-count').textContent = `${person.wins} 笔正收益 / ${person.tradesCount} 笔回测交易`;
+      $('#win-bar').style.setProperty('--win', person.winRate);
+      $('#signal-count').textContent = person.signals;
+      $('#trade-count').textContent = person.tradesCount;
+      $('#drawdown').textContent = person.drawdown;
+      const followed = state.followed.has(person.handle);
+      $('#follow').textContent = followed ? '已追踪' : '+ 追踪';
+      $('#follow').setAttribute('aria-pressed', String(followed));
+      renderAccountSwitchers();
+      renderPanel();
+    }
+    $('#follow').addEventListener('click', () => { const handle = people[state.person].handle; state.followed.has(handle) ? state.followed.delete(handle) : state.followed.add(handle); render(); });
+    document.querySelectorAll('[data-tab]').forEach(button => button.addEventListener('click', () => {
+      state.tab = button.dataset.tab;
+      document.querySelectorAll('[data-tab]').forEach(tab => tab.setAttribute('aria-selected', String(tab === button)));
+      renderPanel();
+    }));
+    render();
+  </script>
+</body>
+</html>

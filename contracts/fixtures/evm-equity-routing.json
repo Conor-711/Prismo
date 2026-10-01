@@ -1,0 +1,27 @@
+{
+  "fixtureOnly": true,
+  "routes": [
+    {
+      "ticker": "ASTS", "venue": "xstocks", "product": "spot", "status": "available", "reason": "xstocks_listed",
+      "market": null,
+      "instruments": [{
+        "assetId": "12345678-1234-1234-1234-123456789abc", "symbol": "ASTSx", "network": "Ethereum",
+        "chainId": 1, "token": "0x1111111111111111111111111111111111111111",
+        "usdc": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "tokenVariant": "raw", "maxLeverage": 1
+      }],
+      "observedAt": "2026-10-01T00:00:00.000Z", "executionEnabled": false,
+      "gasCoverage": "unverified", "defaultSaleProceedsDestination": "hyperliquid_perps"
+    },
+    {
+      "ticker": "ASTS", "venue": "hyperliquid", "product": "perpetual", "status": "available", "reason": "hl_listed",
+      "market": { "coin": "xyz:ASTS", "dex": "xyz", "collateralToken": 0, "maxLeverage": 10 }, "instruments": [],
+      "observedAt": "2026-10-01T00:00:00.000Z", "executionEnabled": false,
+      "gasCoverage": "unverified", "defaultSaleProceedsDestination": "hyperliquid_perps"
+    },
+    {
+      "ticker": "OUST", "venue": "none", "product": "none", "status": "unsupported", "reason": "not_in_v1",
+      "market": null, "instruments": [], "observedAt": "2026-10-01T00:00:00.000Z", "executionEnabled": false,
+      "gasCoverage": "unverified", "defaultSaleProceedsDestination": "hyperliquid_perps"
+    }
+  ]
+}

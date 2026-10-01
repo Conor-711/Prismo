@@ -13,7 +13,8 @@ def plan(session, now, *, keep_recent=4, grace_hours=48):
     active = session.get(Active, 'production')
     if not active:
         raise ValueError('No active content release')
-    releases = session.scalars(select(Release).order_by(Release.created_at.desc(), Release.revision.desc())).all()
+    releases = session.execute(select(Release.revision, Release.created_at, Release.provenance)
+        .order_by(Release.created_at.desc(), Release.revision.desc())).all()
     cutoff = now - timedelta(hours=grace_hours)
     protected = {active.revision, *(release.revision for release in releases[:keep_recent])}
     protected.update(release.revision for release in releases
@@ -28,18 +29,28 @@ def plan(session, now, *, keep_recent=4, grace_hours=48):
 
 def prune(engine, *, apply=False, now=None):
     now = now or datetime.now(timezone.utc)
-    with Session(engine) as session, session.begin():
-        if engine.dialect.name == 'postgresql':
-            session.execute(text('select pg_advisory_xact_lock(721534915)'))
+    with Session(engine) as session:
         result = plan(session, now)
-        if apply:
-            for revision in result['eligible']:
+    removed = 0
+    if apply:
+        # Recheck protections under the publisher lock for each committed batch.
+        for revision in reversed(result['eligible']):
+            with Session(engine) as session, session.begin():
+                if engine.dialect.name == 'postgresql':
+                    session.execute(text('select pg_advisory_xact_lock(721534915)'))
+                if revision not in plan(session, now)['eligible']:
+                    continue
                 session.execute(delete(Page).where(Page.revision == revision))
                 session.execute(delete(Release).where(Release.revision == revision))
+            removed += 1
+        with Session(engine) as session:
+            current = plan(session, now)
+    else:
+        current = result
     return {'status': 'pruned' if apply else 'planned',
-            'activeRevision': result['activeRevision'],
-            'removed': len(result['eligible']) if apply else 0,
-            'eligible': len(result['eligible']), 'retained': result['retained']}
+            'activeRevision': current['activeRevision'],
+            'removed': removed,
+            'eligible': len(result['eligible']), 'retained': current['retained']}
 
 
 def main():

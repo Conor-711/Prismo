@@ -64,9 +64,9 @@ struct UserProfileEditor: View {
             .background(BSmartColor.ink)
             .navigationTitle("Edit profile".bSmartLocalized).navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
+                ToolbarItem(placement: .cancellationAction) { Group {
                     Button("Cancel".bSmartLocalized) { dismiss() }
-                }
+                }.buttonStyle(.bSmartToolbar) }.bSmartHideSystemBackground()
             }
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 Button("Save".bSmartLocalized) {

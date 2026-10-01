@@ -17,7 +17,7 @@ struct OpinionTradersDemoView: View {
                 Text(data.ticker).font(.caption.weight(.semibold))
                 Button(action: onRefresh) {
                     Image(systemName: "arrow.clockwise").frame(width: 44, height: 44)
-                }.buttonStyle(.plain).accessibilityLabel("Retry".bSmartLocalized)
+                }.buttonStyle(.bSmartPlain).accessibilityLabel("Retry".bSmartLocalized)
                     .accessibilityIdentifier("opinion.traders.demo.refresh")
             }
             Button { expanded.toggle() } label: {
@@ -30,7 +30,7 @@ struct OpinionTradersDemoView: View {
                     Spacer(minLength: 0)
                     Image(systemName: expanded ? "chevron.up" : "chevron.down").font(.caption)
                 }.frame(minHeight: 44).contentShape(Rectangle())
-            }.buttonStyle(.plain).accessibilityIdentifier("opinion.traders.expand")
+            }.buttonStyle(.bSmartPlain).accessibilityIdentifier("opinion.traders.expand")
             OpinionTradeSplitBar(longTraders: data.longTraders, shortTraders: data.shortTraders)
 
             if expanded {

@@ -43,7 +43,7 @@ final class HyperliquidInfoConnectionTests: XCTestCase {
         }
     }
 
-    func testServerRejectionIsNotRetried() async throws {
+    func testServerRateLimitEntersCooldownWithoutRetryingSocket() async throws {
         let socket = InfoSocketStub()
         let connection = HyperliquidInfoConnection(makeSocket: { socket })
         let task = Task { try await connection.read(.dexs) }
@@ -51,8 +51,11 @@ final class HyperliquidInfoConnectionTests: XCTestCase {
         socket.feed(try JSONSerialization.data(withJSONObject: ["channel": "post", "data": [
             "id": socket.sent[0].id, "response": ["type": "error", "payload": "429"]]]))
         do { _ = try await task.value; XCTFail("Accepted rejection") }
-        catch { guard case HyperliquidInfoSocketError.rejected = error else { return XCTFail("\(error)") } }
+        catch { guard case HyperliquidInfoSocketError.unavailable = error else { return XCTFail("\(error)") } }
+        do { _ = try await connection.read(.dexs); XCTFail("Rate-limited socket reused") }
+        catch { guard case HyperliquidInfoSocketError.unavailable = error else { return XCTFail("\(error)") } }
         XCTAssertEqual(socket.sent.count, 1)
+        XCTAssertTrue(socket.closed)
     }
 
     func testServerOutageCanUseReadOnlyHTTPFallback() async throws {

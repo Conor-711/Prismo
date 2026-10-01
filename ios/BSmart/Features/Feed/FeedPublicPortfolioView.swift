@@ -6,10 +6,20 @@ private enum PublicPortfolioPeriod: String, CaseIterable, Identifiable {
     var id: Self { self }
 }
 
-struct FeedPublicPortfolioView: View {
+struct FeedPublicPortfolioView<TrailingControl: View>: View {
     let portfolio: FeedPublicPortfolio
+    let valueAccessibilityIdentifier: String
+    private let trailingControl: TrailingControl
     @State private var period: PublicPortfolioPeriod = .day
     @State private var selectedDate: Date?
+
+    init(portfolio: FeedPublicPortfolio,
+         valueAccessibilityIdentifier: String = "feed.profile.equity-value",
+         @ViewBuilder trailingControl: () -> TrailingControl) {
+        self.portfolio = portfolio
+        self.valueAccessibilityIdentifier = valueAccessibilityIdentifier
+        self.trailingControl = trailingControl()
+    }
 
     private var points: [FeedPublicPortfolio.Point] {
         switch period {
@@ -43,6 +53,7 @@ struct FeedPublicPortfolioView: View {
                     Text(money(selected?.valueUSD ?? portfolio.perpsEquityUSD))
                         .font(.system(size: 29, weight: .semibold, design: .rounded))
                         .monospacedDigit().lineLimit(1).minimumScaleFactor(0.7)
+                        .accessibilityIdentifier(valueAccessibilityIdentifier)
                     if let change {
                         Text(change.formatted(.bSmartDollars.sign(strategy: .always()).precision(.fractionLength(2)))
                              + (percentageChange.map { " (" + $0 + ")" } ?? "") + " · " + period.rawValue)
@@ -54,16 +65,20 @@ struct FeedPublicPortfolioView: View {
                     }
                 }
                 Spacer(minLength: 4)
-                HStack(spacing: 2) {
-                    ForEach(PublicPortfolioPeriod.allCases) { item in
-                        Button { period = item; selectedDate = nil } label: {
-                            Text(item.rawValue).font(.caption.weight(.semibold))
-                                .foregroundStyle(period == item ? BSmartColor.primaryText : BSmartColor.secondaryText)
-                                .frame(minWidth: 38, minHeight: 36)
-                                .background(period == item ? BSmartColor.selectedControlSurface : .clear,
-                                            in: RoundedRectangle(cornerRadius: 6))
-                        }.buttonStyle(.plain).accessibilityAddTraits(period == item ? .isSelected : [])
+                VStack(alignment: .trailing, spacing: 6) {
+                    HStack(spacing: 2) {
+                        ForEach(PublicPortfolioPeriod.allCases) { item in
+                            Button { period = item; selectedDate = nil } label: {
+                                Text(item.rawValue).font(.caption.weight(.semibold))
+                                    .foregroundStyle(period == item ? BSmartColor.primaryText : BSmartColor.secondaryText)
+                                    .frame(minWidth: 38, minHeight: 36)
+                                    .background(period == item ? BSmartColor.selectedControlSurface : .clear,
+                                                in: RoundedRectangle(cornerRadius: 6))
+                            }.buttonStyle(.bSmartPlain).accessibilityAddTraits(period == item ? .isSelected : [])
+                                .accessibilityIdentifier("portfolio.period.\(item.rawValue)")
+                        }
                     }
+                    trailingControl
                 }
             }
             if points.count > 1 {
@@ -105,6 +120,7 @@ struct FeedPublicPortfolioView: View {
             Text("Perps equity and spot USDC are shown separately; shared collateral is not added twice.".bSmartLocalized)
                 .font(.caption).foregroundStyle(BSmartColor.secondaryText)
         }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("feed.profile.portfolio")
     }
 
@@ -116,6 +132,15 @@ struct FeedPublicPortfolioView: View {
     private var percentageChange: String? {
         guard let change, let first = points.first?.value, first > 0 else { return nil }
         return (change / first * 100).formatted(.number.sign(strategy: .always()).precision(.fractionLength(2))) + "%"
+    }
+}
+
+extension FeedPublicPortfolioView where TrailingControl == EmptyView {
+    init(portfolio: FeedPublicPortfolio,
+         valueAccessibilityIdentifier: String = "feed.profile.equity-value") {
+        self.init(portfolio: portfolio, valueAccessibilityIdentifier: valueAccessibilityIdentifier) {
+            EmptyView()
+        }
     }
 }
 
@@ -161,10 +186,12 @@ struct FeedPublicPositionsView: View {
                         }.monospacedDigit()
                     }
                     .frame(minHeight: 68).contentShape(Rectangle())
-                }.buttonStyle(.plain)
+                }.buttonStyle(.bSmartPlain)
                 Divider().overlay(BSmartColor.softDivider)
             }
-        }.accessibilityIdentifier("feed.profile.positions")
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("feed.profile.positions")
     }
 
     private func money(_ raw: String?, signed: Bool = false) -> String {

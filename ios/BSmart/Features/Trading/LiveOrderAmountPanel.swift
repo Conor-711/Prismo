@@ -43,7 +43,7 @@ struct LiveOrderAmountPanel: View {
                                 Text(reducing ? "\(value)%" : "$\(value)").font(.subheadline.weight(.semibold))
                                     .frame(maxWidth: .infinity, minHeight: 38)
                                     .background(BSmartColor.recessed, in: RoundedRectangle(cornerRadius: 8))
-                            }.buttonStyle(.plain).accessibilityIdentifier("trade.amount.preset.\(value)")
+                            }.buttonStyle(.bSmartPlain).accessibilityIdentifier("trade.amount.preset.\(value)")
                         }
                     }
                     keypad
@@ -78,7 +78,7 @@ struct LiveOrderAmountPanel: View {
                 .foregroundStyle(showsChart == chart ? accent : BSmartColor.tertiaryText)
                 .frame(width: 44, height: 38)
                 .background(showsChart == chart ? BSmartColor.selectedControlSurface : .clear, in: RoundedRectangle(cornerRadius: 6))
-        }.buttonStyle(.plain).accessibilityLabel(label.bSmartLocalized)
+        }.buttonStyle(.bSmartPlain).accessibilityLabel(label.bSmartLocalized)
             .accessibilityAddTraits(showsChart == chart ? .isSelected : [])
             .accessibilityIdentifier(chart ? "trade.mode.chart" : "trade.mode.keypad")
     }
@@ -99,7 +99,7 @@ struct LiveOrderAmountPanel: View {
                                 if key == "delete" { Image(systemName: "delete.left").font(.system(size: 22)) }
                                 else { Text(key).font(.system(size: 28, weight: .regular, design: .rounded)) }
                             }.frame(maxWidth: .infinity, minHeight: 44).contentShape(Rectangle())
-                        }.buttonStyle(.plain).disabled(reducing && key == ".")
+                        }.buttonStyle(.bSmartPlain).disabled(reducing && key == ".")
                             .opacity(reducing && key == "." ? 0 : 1)
                             .accessibilityLabel(key == "delete" ? "Delete".bSmartLocalized : key)
                             .accessibilityIdentifier("trade.key.\(key)")

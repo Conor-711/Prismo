@@ -19,14 +19,6 @@ from services.client_api.read_models import (
     FixtureReadModelRepository,
     ReadModelRepository,
 )
-from services.client_api.mr_collie import (
-    MrCollieConfig,
-    MrCollieRateLimiter,
-    MrCollieRateLimitExceeded,
-    MrCollieService,
-    MrCollieUnavailable,
-    MrCollieUpstreamError,
-)
 from services.client_api.schemas import (
     ClientTelemetryBatch,
     DailyDigestSnapshot,
@@ -34,8 +26,6 @@ from services.client_api.schemas import (
     HealthResponse,
     InstallationRegistration,
     InstallationSession,
-    MrCollieQuery,
-    MrCollieResponse,
     NotificationPreferences,
     PortfolioEntryInput,
     PortfolioPosition,
@@ -91,7 +81,6 @@ def _document_datetime(value: Any) -> datetime | None:
 
 def create_app(
     settings: ClientAPISettings | None = None,
-    mr_collie_service: MrCollieService | None = None,
     opinion_trade_repository: OpinionTradeRepository | None = None,
 ) -> FastAPI:
     resolved_settings = settings or ClientAPISettings.from_environment()
@@ -107,13 +96,6 @@ def create_app(
         session_lifetime_days=resolved_settings.session_lifetime_days,
         telemetry_retention_days=resolved_settings.telemetry_retention_days,
     )
-    collie = mr_collie_service or MrCollieService(MrCollieConfig(
-        api_key=resolved_settings.deepseek_api_key,
-        base_url=resolved_settings.deepseek_base_url,
-        model=resolved_settings.mr_collie_model,
-        timeout_seconds=resolved_settings.mr_collie_timeout_seconds,
-    ))
-    collie_rate_limiter = MrCollieRateLimiter(resolved_settings.mr_collie_requests_per_minute)
     account_settings = AccountAuthSettings.from_environment(resolved_settings.environment)
     account_repository = AccountRepository(resolved_settings.database_url)
     account_http = httpx.AsyncClient(follow_redirects=False)
@@ -124,7 +106,6 @@ def create_app(
             async with deletion_worker_lifecycle(account_settings, account_repository, account_http):
                 yield
         finally:
-            await collie.close()
             await account_http.aclose()
             account_repository.engine.dispose()
             read_models.dispose()
@@ -138,7 +119,6 @@ def create_app(
     app.state.settings = resolved_settings
     app.state.read_models = read_models
     app.state.state_store = state_store
-    app.state.mr_collie = collie
 
     @app.exception_handler(RequestValidationError)
     async def validation_error(request: Request, error: RequestValidationError):
@@ -272,41 +252,6 @@ def create_app(
             summary=digest.summary,
             signals=digest.signals,
         )
-
-    @app.post("/v1/mr-collie/query", response_model=MrCollieResponse)
-    async def query_mr_collie(
-        payload: MrCollieQuery,
-        response: Response,
-        installation: InstallationDependency,
-    ) -> MrCollieResponse:
-        try:
-            response.headers["Cache-Control"] = "no-store"
-            collie_rate_limiter.check(str(installation.installation_id))
-            portfolio = [
-                portfolio_response(item).model_dump(by_alias=True, mode="json")
-                for item in state_store.list_portfolio(installation.installation_id)
-            ]
-            return await collie.answer(
-                payload,
-                portfolio=portfolio,
-                signals=read_models.portfolio_signals(),
-                intelligence=read_models.ticker_intelligence(),
-            )
-        except MrCollieRateLimitExceeded as error:
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail=str(error),
-            ) from error
-        except MrCollieUnavailable as error:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail=str(error),
-            ) from error
-        except MrCollieUpstreamError as error:
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=str(error),
-            ) from error
 
     @app.put("/v1/devices", status_code=status.HTTP_204_NO_CONTENT)
     def put_device(payload: DeviceRegistrationInput, installation: InstallationDependency) -> Response:

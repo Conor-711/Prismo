@@ -2,6 +2,20 @@
 
 Smart Account 是 bSmart 用于发现和评估公开市场观点作者的产品域；Score 是作者或观点的具体数值评分。
 
+## 研究中的绝对 Score（未发布）
+
+`pipeline/domain/investor_ability` 定义独立的 `follow-ability-v1` 研究评分。它以信息公开后可执行的跟踪组合扣费净收益、同暴露基准及风险为输入，输出不封顶、可为负的年化跟单收益调整百分点，或不可评分状态；`evidence_weight` 是计算权重，不是另一个分数。其来源认证、最低样本、公式和主体准入见 `docs/product/investor-ability-score-v1.md`。此对象**不是**下方旧 `score`、`percentile` 或榜单排名字段的替代值；不能将它写入旧字段或展示为已验证的未来收益。
+
+本地研究产物 `data/reports/investor_ability/subjects.json` 将历史 `win_rate`（净盈利交易占已平仓交易比例）、`follow_return`（窗口内扣费后的组合时间加权总收益）和 `research_score`（未经审计的 v1 候选公式值）分列。`research_score` 不等于可发布的 `published_score`；三者均不能直接映射到现有 App 的正式榜单字段。样本不足时三项为空并保留覆盖率、已结算数和排除原因；正式只读服务契约需完成独立审计后再设计。
+
+### 发现页跨主体 Score 榜单
+
+`GET /bsmart-feed/ability-leaderboard` 只读取 `bsmart_investor_ability_snapshot` 的单次原子发布版本。`status=unpublished` 表示尚无经过审计的快照；不能回退到旧百分位排名、政客展示收益或演示名人数据。`version=follow-ability-v1`、`scoreUnit=annualized_adjusted_pp`，数值是无上下限的年化跟单收益调整百分点，不是收益承诺。快照项目按 `actorKind + actorId` 唯一，涵盖平台账户、政客、名人、公司内部人及机构；允许来源尚未准备好的类别暂时没有项目。
+
+客户端收到 `status=unpublished` 时，可从当前已加载的平台账户及政客/名人/机构名单本地生成确定性的 `mock-v1` 模拟榜单，仅展示交互效果。模拟分与旧排名、历史表现、收益及真实评分算法均无关；不写入数据库、不通过接口发布，列表和详情都必须标注为模拟。正式快照发布后直接使用服务端真实榜单，不混入模拟项。
+
+每个项目包含 `actorKind`、`actorId`、`displayName`、可空的 `platform`/`avatarURL`、`status`、可空的 `score`、`observedCalendarDays`、`independentDecisionDays`、`pricedCoverage` 和可空的 `rank`。仅 `status=scored` 可提供有限数值及名次；其他状态的分数与名次必须为空，排在已评分主体之后。分数降序、同分同名次且名次跳号，稳定 ID 破同分展示顺序。客户端可按类别过滤，但不得重新打分或将类别内位置当作全局名次。无快照时展示未发布空态，读取失败展示错误重试态。写入仅允许受控的 service-role 发布任务，且需通过研究评分准入与来源审计；不得让客户端写入。
+
 ## Canonical Terminology
 
 2026-09-13: author detail's `Trades inspired` is a separate real-execution
@@ -19,6 +33,13 @@ methodology and limitations grouped inside the existing collapsed disclosure.
 历史数据库和构建产物仍保留 `sv_*` 表、`sv`/`platformSv` 字段、`smart_voice` Python 包、`smartVoice.json` 与 `smartVoice*` TypeScript adapter。这些名称属于兼容层；在没有数据库迁移和双读验证前不得直接重命名。兼容层进入产品界面时必须映射为 `Score`。
 
 ## Author Score Meta
+
+2026-10-01 Reddit content eligibility: published profiles and activity may include
+all existing scored Reddit authors with `n_eff >= 1` and `settled_calls >= 2`,
+without a Top 25% activity cutoff. This is a source-specific content-selection
+policy, not a change to Score, the research formula or historical rank values.
+Activity still requires validated directional calls, source text and summaries.
+X and YouTube retain their current qualification and Top 25% activity policies.
 
 | 字段 | 类型 | 说明 |
 |---|---|---|

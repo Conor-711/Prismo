@@ -4,6 +4,49 @@ bSmart iOS is the primary MVP client. It is built from scratch in SwiftUI and
 shares the existing backend, database, pipeline algorithms, product contracts,
 and design language. It does not embed the website with `WKWebView`.
 
+### xStocks CoW Codec (2026-10-01, Not Activated)
+
+`Core/Trading/Equities/EquityCowSigningPayload` strictly decodes the internal
+v0.5.1 equity contract, rejecting extra nested fields. `Core/Wallet/EquityCowOrderCodec`
+uses existing WalletCore and BigInt to validate reviewed account/owner/intent,
+production domain, raw token/USDC, exact uint256 amounts and expiry, then reproduce
+the official SDK's EIP-712 digest and UID. It reuses low-S owner signature recovery
+and never accesses a key, calls Privy, sends network requests or submits an order.
+Public disposable key-1 vectors cover Ethereum, Ink and an amount above UInt64.
+Server signing exposure must be durable before any future wallet invocation;
+signing/unknown records cannot be cancelled or released on timeout. No App UI/store
+or public signing HTTP path is wired. Sells, bounded funding/return consent, sponsor
+and execution remain blocked; the existing HL trading path is unchanged.
+
+### Standard Page Navigation (2026-10-01)
+
+Detail destinations use standard navigation rather than shared-element zoom.
+`BSmartDetailNavigationLink`, author/avatar and ticker/logo entries push inside
+the existing stack; the investor browser also uses a navigation destination.
+`BSmartEdgeBackNavigation` restores UIKit's edge-pop start gate when custom back
+buttons hide the native item. One retained proxy per stack forwards the remaining
+delegate behavior, rejects non-edge/vertical/leftward gestures, root pops, active
+transitions, presentations and protected operations. iOS 26's separate full-content
+pop recognizer is disabled. UIKit still owns interactive progress and cancellation;
+there is no full-page SwiftUI dismissal drag. `allowsBack` gates both the custom
+button and edge gesture. The visibility observer keeps each tab-bar token until
+its controller disappears, including reappearance after a cancelled pop.
+
+`BSmartButtonStyles` draws normal, primary, secondary and 44pt toolbar actions with
+immediate pressed/disabled states. Toolbar items hide automatic system backgrounds.
+`BSmartDialog` replaces app-owned alerts/confirmation dialogs; actions run before
+their pending binding is cleared. Search fields use app-drawn clear buttons and a
+stable height. Authentication, biometric prompts and OS permissions remain system
+controlled; financial authorization and recovery safeguards are not bypassed.
+
+`Core/Data/OwnerPortfolioStore` coalesces account-scoped reads with a 30-second cache.
+Tab cancellation does not discard a useful read, but account changes and `clear`
+reject late results. Home displays only validated `accountValueUSD`; missing values
+or refresh errors offer retry, never fabricated zero equity. Server v36 adds the
+already-contracted net-worth fields to the live v35 bundle without changing order
+or source-attribution modules. A historical portfolio outage does not block current
+balances; unverified account modes and missing day changes stay unavailable.
+
 ### Home Scroll Stability (2026-09-22)
 
 Device watchdog reports identified main-thread stalls in representative-story
@@ -78,7 +121,7 @@ its lightweight introduction. `TodayRepresentativeStory` projects available dail
 bars and source-linked calls without changing Score, settlements or API contracts.
 The compact chart precedes the 14pt Dynamic Type story, uses dotted dates and at most the
 earliest three bullish nodes; short leaders and 44pt targets keep clustered calls
-readable. Cards and nodes use shared-element navigation through
+readable. Cards and nodes use standard push navigation through
 `TodayRepresentativeOpinionDestination` to the standard `SmartAccountEvidenceDetailView`.
 Resolution matches author, ticker and source URL, not a representative ID that may
 refer to a different call. Marker-only summaries retain their actual horizon and
@@ -387,9 +430,8 @@ profile, extracted from the Smart hub. `SmartAccountPortraitHeader` expands the
 existing cached source image during scroll overshoot and fades only its title;
 the parent changes state only at the compact-navigation threshold. No custom
 drag recognizer competes with chart zoom or scrolling. Author entry points
-use ordinary push navigation: the shared link's optional
-`usesZoomTransition: false` avoids the system Zoom pull-to-dismiss recognizer
-stealing the portrait pull. All other destinations keep their existing transition.
+use ordinary push navigation, as do other detail links. No page-level Zoom
+pull-to-dismiss recognizer competes with the portrait pull.
 The fixed follow action
 uses a bottom safe-area inset and the existing AppModel tracking state.
 Representative works precede recent-view timelines, latest available ticker
@@ -406,6 +448,35 @@ The new subject trade aggregate and money attribution are documented separately 
 
 ### Platform Profiles
 
+2026-10-01: `FeedPublicProfileView` now only resolves public identity into
+`SmartAccountDetailView`; search, Feed, chat and follower-notification links use
+the same portrait detail as Today. `NativeTraderDetailSections` embeds the existing
+equity chart, separate spot USDC, actual open positions and paged trade history.
+`Core/Data/NativeTraderDetailStore` owns read/follow state, independent error states
+and viewer/profile/request fencing; messaging and server-backed native following
+stay in the shared page. No fabricated zero balances or duplicate portfolio page.
+Portfolio and position containers use explicit accessibility containment so their
+section identifiers do not override value, period-control or position-link identifiers.
+
+Subject history removes the old ticker header, retaining one asset module and
+the source-bound Sync action. `SubjectOptionInterpretation` is a deterministic
+presentation rule for exact disclosed long Call/Put holdings, not Score, generated
+research or investor net sentiment. Brief exposure-change copy sits inside the
+asset identity module, with a small superscript question-mark button (44pt hit area)
+opening an app-styled compact popover. There is no separate interpretation heading,
+expander or inline sync disclaimer; limitations and underlying-only sync semantics
+are inside that popover. The holding logo is top-aligned with the symbol;
+issuer text uses one line and omits generic COM. The interpretation's 22pt layout
+row stays independent of its 44pt hit area, with a separate gap before Sync.
+It does not intercept the event-detail link.
+Unknown types stay unknown, reduced exposure never flips stance,
+and unreported positions never imply a confirmed close. Options sync only the
+published underlying with retained original-event quote;
+it does not preselect a trade side. No option return is computed from stock prices.
+The installed debug build passed 40 focused client tests and a connected-iPhone
+read-only UI flow covering layout, explanation, Sync entry and real portfolio data;
+no orders, transfers or follow-state mutations were performed. Not uploaded to TestFlight.
+
 `AccountProfile` is the canonical Supabase account profile. `NativeAccountProfileClient`
 uses the existing validated account session without requiring a wallet. `AccountProfileStore`
 fences late responses; signed-in `UserProfileHeader` and `AccountProfileEditor` use cloud
@@ -418,7 +489,7 @@ wallet recovery. See `docs/contracts/account_profiles.md` and the isolated profi
 ### Investor Education
 
 `Features/InvestorEducation` adds an isolated native page reached through one
-compact entry below the existing homepage investor focus. Shared zoom navigation,
+compact entry below the existing homepage investor focus. Standard push navigation,
 detail tab visibility and AppModel following are reused. The offline, validated
 `InvestorEducationSnapshot` and 1,289-author JPEG atlas live in `Resources`, separate
 from live recommendations and scores. Only a selected positive Wey How SNDK case
@@ -625,6 +696,16 @@ position changes require a new review. Funding still reads shared/spot USDC and
 retains deposit-fallback evidence; these are collateral mechanics, not spot trading.
 No real funded trade has been executed for acceptance. See
 `docs/contracts/hyperliquid_execution.md`.
+
+Trading recovery (2026-10-01): `HyperliquidMarketOrderStore` loads pending local
+orders on entry and reconciles the original cloid without resubmission. Entry and
+completion provide custom status-check controls; no exact terminal proof means
+no new order, and local history failure also fails closed. Terminal recovery is
+independent of optional fills and rechecks server attribution. A sealed unstarted
+submission permit can durably record `notSubmitted`; a started/lost permit cannot.
+Read-only socket errors may fall back to HTTPS, with one bounded transient HTTP
+retry. Exchange submission is still one-shot. See the execution contract for
+state, identity and transport boundaries.
 
 Itemized fills/history are deferred from the MVP UI. Confirmation now returns the
 exchange acknowledgement without automatically reading fills. The existing
@@ -900,8 +981,7 @@ The first iOS release owns four user-facing scenes:
 3. `Smart`: parallel Smart Account and Smart Money discovery, ranking, tracking,
    and evidence.
 4. `Feed`: newest-first public trades through high-score authors’ opinions, with
-   independent user, author, opinion and ticker navigation. `Mr Collie` opens from
-   the profile’s lower-right circular launcher as a full-screen research assistant.
+   independent user, author, opinion and ticker navigation.
 
 The root tab order is `Today / Feed / Search / My profile`. The last tab uses
 a person icon and preserves the `portfolio` route and accessibility IDs. Local
@@ -912,34 +992,13 @@ photo downsampling and edits. A matching verified device wallet can supply its
 public address. Otherwise an explicitly labeled, non-copyable example is shown
 with a no-transfer warning; opening this page never creates or binds a wallet.
 Smart Account and Smart Money remain parallel sources across the product.
-`Mr Collie` is an interpretation layer over portfolio, signal, Smart Account, Smart
-Money, and ticker-intelligence models; it must not become a parallel source of
-market facts.
+The profile has no AI assistant entry. The former assistant page and its
+model-backed API were removed; the offline content processing pipeline is separate.
 
 The app is portfolio-first. Generic dashboards are not copied into iOS unless
 they directly support one of these scenes.
 
-### Trade Feed and profile assistant
-
-The 2026-09-22 AI layout uses the same compact native navigation as other detail
-pages. `AIAssistantWelcome`, `AIAssistantAnswer` and `AIAssistantComposer` keep
-presentation inside `Features/AI`; the parent retains conversation orchestration.
-Suggested questions are divider-separated rows, answers use full-width body text
-with collapsible evidence, and the keyboard-aware composer is a bottom safe-area
-inset. Status decorations and redundant helper subtitles are removed. Source data
-times and actual service-failure notices remain. Requests, grounded fallback,
-conversation context and evidence navigation use their existing implementations.
-
-Validation: simulator build and four UI regression cases pass (Chinese light-mode
-large text, typed submission/reset, evidence round trip, repeated profile opening
-and tab restoration), along with the existing grounded-answer unit case.
-Architecture, terminology and diff whitespace checks pass.
-
-`ProfileAssistantLauncher` owns the circular avatar, full-screen presentation and
-one tab-visibility token. The existing `AIAssistantView` accepts a close action;
-its composer no longer reserves root-tab space. Native zoom expands from the
-launcher on supported iOS versions. Dismissal releases only the assistant token,
-so nested detail navigation cannot accidentally reveal the root tabs.
+### Trade Feed
 
 `Core/Models/TradeFeed`, `Core/Data/TradeFeedStore` and `Features/Feed` consume the
 new `/v1/trade-feed` and `/v1/public-traders/{profileId}` read APIs. Each event is
@@ -968,7 +1027,7 @@ amounts. The real reconciler and authenticated consent service remain required;
 `TodayHomeContent` hosts `TodayInvestorDiscoveryModule` above three scene pages,
 replacing the home price/opinion chart. The header discovers people only; opinions
 remain in the lower home sections. Clicking the text-only discovery heading opens
-`TodayInvestorDiscoveryPage` with shared zoom navigation and detail tab hiding.
+`TodayInvestorDiscoveryPage` with standard push navigation and detail tab hiding.
 Its search, platform, specialty and following filters retain the complete published
 platform Top 25% cohort; homepage filters are hidden. Education reuses the same
 directory content within its platform-scoped modal. `TodayInvestorPool` arranges
@@ -1037,6 +1096,35 @@ inferred across sources. Research and product rules are in
 
 ### Investor-grouped Smart updates
 
+Source switching uses `TodayFeedSourceProjection` to prepare all nine source
+projections off the main actor after content, activity-type, sort or follow-scope
+changes. Disclosed days are parsed once per day; sorting resolves dates and
+trending weights once per item, outside comparisons. A source tap only selects
+prepared runs in the same no-animation transaction as the selected button, and
+resets the visible limit; it does not restart filtering or wait for a task.
+During a background content refresh, the last complete projection remains usable
+only with the same display configuration and follow sets. The complete next
+projection commits atomically against its revision/configuration, using the
+current source; cancelled or superseded workers cannot overwrite a later choice.
+Type/follow filtering, empty-source states, preview behavior and consecutive
+actor folding are unchanged. Projections are view-local memory, not persisted
+data or a new network read model. `TodayFeedSourceProjectionTests` cover every
+source/filter/order combination, linear date resolution, cancellation and the
+bundled-data preparation/lookup benchmark; `TodaySourceSwitchUITests` check
+selection/content correspondence and provide a no-reset, no-trade device path.
+
+Validated on 2026-10-01: 34 simulator regressions and eight iPhone 15 tests passed,
+including read-only switching across bSmart, disclosed-subject and social
+sources. The debug app was overwrite-installed and normally relaunched with
+existing account data preserved; no order, transfer or follow mutation was
+performed. For 489 bundled subject events, the iPhone benchmark measured old
+comparison sorting at 127.28 ms, all-source preparation at 11.21 ms, and 2,000
+prepared dictionary selections at 1.18 ms. These are compute/lookup timings,
+not end-to-end frame-rendering latency. Global boundary/terminology checks retain
+the nine existing iOS violations and existing bundled subject JSON terminology
+failure; no newly added projection file violates those boundaries. No TestFlight
+upload was performed.
+
 `TodayInvestorActivity` replaces the standalone-opinion home feed with an
 investor-first projection of the current Smart Account and Smart Money read
 models. It keeps a real rolling 30-day window, excludes future records, dedupes
@@ -1075,7 +1163,6 @@ ios/
 │       ├── Research/          # Reusable all-tickers directory and ticker detail
 │       ├── Trading/           # Trade-first ticker workspace and market picker
 │       ├── Smart/
-│       ├── AI/                # Profile-launched Mr Collie and deterministic fallback
 │       ├── Feed/              # Public trades, profile destinations and quick actions
 │       └── Settings/
 ├── BSmartTests/
@@ -1250,17 +1337,6 @@ is introduced; scores, feed layout and data-source composition are unchanged.
   Hyperliquid's official `/info` endpoint for `perpDexs`, `metaAndAssetCtxs`, and
   `candleSnapshot`. Feature views must depend on `HyperliquidMarketDataClient`
   and may not construct endpoint requests themselves.
-- `Mr Collie` first attempts the configured DeepSeek client in controlled
-  internal builds or the authenticated `POST /v1/mr-collie/query` Client API in
-  live builds. Both paths consume bounded, already-published read models and
-  preserve evidence IDs and data timestamps.
-- If remote AI is unavailable, `AIResearchAssistant` provides the original
-  deterministic local answer from the already loaded client models and routes
-  users back to auditable event or ticker detail. It must not manufacture
-  unsupported market facts or recalculate Score.
-- A temporary direct DeepSeek key may be injected only through the ignored
-  `ios/Config/Secrets.xcconfig`. It is an internal testing exception; wider
-  distribution must use the server AI gateway.
 - `PaperTradingEngine` remains an isolated legacy/test sandbox; ordinary market
   entry and Feed shortcuts no longer invoke it. The app-account area uses verified
   HyperCore balances or an unavailable state, never the sandbox's US$10,000,
@@ -1566,7 +1642,7 @@ and interaction, not the data or ranking contracts:
   It normalizes and deduplicates symbols, retaining unavailable quotes as nil.
   `TickerDestinationView` gives every ticker an isolated market session and
   opens a market/evidence detail when no intelligence snapshot exists.
-  Opt-in logo links use the same destination and shared zoom presentation;
+  Opt-in logo links use the same destination and standard full-screen presentation;
   selection controls and decorative logos remain non-navigating.
 - Portfolio history is a separate optional valuation contract. The client may
   chart server or brokerage snapshots, but must show an unavailable state
@@ -1616,6 +1692,60 @@ and regenerated.
   pipeline, and iOS contract changes to be reviewed together.
 
 ## Trade theses (2026-09-22, backend deployed)
+
+### Original opening-card settlement (2026-10-01)
+
+`NativeTradeContext.eventKind` is additive and optional for older responses:
+`opening` remains an original opening record even when its status becomes `closed`;
+`closing` denotes the existing separate reduction record. Legacy closed records
+without an entry price still decode as closing records. The position panel preserves
+original opening notional/entry and source quote, adds exit price as a third column,
+and shows net realized PnL instead of unrealized PnL. Its original synchronization
+entry is retained; separate closing events keep their prior no-sync presentation.
+
+Server `opening_settlement.ts` matches only a fully evidenced isolated round trip
+and never estimates per-order PnL from current price or other positions. It uses
+existing fixed-decimal verification helpers; open/close fees are included and funding
+is excluded. Ambiguous merged openings, reversals or unavailable/truncated fill
+history remain unknown. Original theory and source snapshot are not rewritten.
+See `docs/contracts/supabase_trade_feed.md` for the settlement and history bounds.
+60 focused simulator tests and 46 Edge tests pass; contract fixtures and deployed
+import-graph readback pass. No schema migration or exchange write is involved.
+
+### Editor recovery and quote preview (2026-10-01)
+
+`TradeThesisVerificationWait` bounds pending-only reads and reconciliation for the
+same account/cloid (four synchronization attempts, waits of 1/3/6 seconds). It never
+resubmits an exchange write or makes an unverified trade eligible. Already verified
+activity bypasses synchronization; cancellation, account change and missing schema
+escape without a retry loop. The backend releases failed claim leases with the same
+bounded backoff and claim fencing rather than retaining an ended in-flight lease.
+
+`Core/Data/TradeThesisDraftStore` isolates drafts by account ID and verified trade
+ID. The editor updates memory immediately and serializes protected atomic JSON
+writes on a disk actor, preserving original paragraphs and Unicode. Reopening an
+editor restores the draft unless the user has already typed while disk loading.
+Failed publication keeps it; successful publication removes only that draft.
+`DeviceAccountDeletionCleanup` writes an account tombstone and erases its drafts;
+late queued edits cannot resurrect them. Account switching still dismisses the
+editor and never shows another account's draft. Disk failures are surfaced, not
+treated as successful persistence. Wallet locking/authentication policies are unchanged.
+
+`NativeBaseQuotePresentation` selects current avatars only for exact source-author
+ID/platform matches, falling back to the registered image. Quoted previews collapse
+empty/trailing paragraph lines and size to actual text; original snapshots and detail
+text are unchanged. Existing source navigation and trade facts are preserved.
+
+Validation: 59 focused simulator tests, 16 connected-iPhone unit tests and 31 Edge
+regressions passed. The debug build was installed and normally launched; no orders,
+transfers or thesis publication were made. Edge deployment used the downloaded live
+v46 import graph, changed only `reconcile.ts`, and downloaded it again to verify
+identical deployed sources. No migration required or production DDL executed.
+The additional connected-device quote UI test passed on existing live CRWD data:
+BFLO-Retail renders as an image rather than a text initial, preview contains no
+paragraph breaks and fits within 96pt, and source-detail navigation returns safely.
+Whole-repository checks still report nine existing architecture violations and one
+existing bundled subject-activity terminology violation; these are unrelated to this change.
 
 `Core/Models/TradeThesis` and `Core/Data/NativeTradeThesisClient` extend verified
 trade activity with original reasoning and per-user like state. UI stays in

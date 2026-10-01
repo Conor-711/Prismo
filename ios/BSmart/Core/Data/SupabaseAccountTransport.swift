@@ -56,6 +56,10 @@ final class SupabaseAccountTransport: @unchecked Sendable {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("no-store", forHTTPHeaderField: "Cache-Control")
+        if path.hasPrefix("functions/v1/bsmart-content/") {
+            request.timeoutInterval = 25
+            request.setValue("us-east-1", forHTTPHeaderField: "x-region")
+        }
         if let token {
             guard TradingAccountSession.validSupabaseAccessToken(token) else { throw AccountAccessError.expired }
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
@@ -71,7 +75,11 @@ final class SupabaseAccountTransport: @unchecked Sendable {
             if http.statusCode == 429 { throw SocialChatError.rateLimited }
             if http.statusCode == 422 { throw SocialChatError.invalidMessage }
         }
-        if path == "functions/v1/bsmart-feed/orders", http.statusCode != expectedStatus {
+        if ["functions/v1/bsmart-feed/orders", "functions/v1/bsmart-feed/orders/direct"].contains(path),
+           http.statusCode != expectedStatus {
+            if path == "functions/v1/bsmart-feed/orders/direct", http.statusCode == 404 {
+                throw OpinionLinkError.endpointUnavailable
+            }
             guard http.mimeType == "application/json" else { throw OpinionLinkError.unavailable }
             var data = Data()
             for try await byte in bytes {

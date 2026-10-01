@@ -3,6 +3,8 @@ info:
   title: bSmart Client API
   version: 1.8.0
   x-native-social-contract: supabase-social.yaml
+  x-equity-routing-contract: supabase-markets.yaml
+  x-equity-signing-contract: supabase-equities.yaml
   description: Versioned research and legacy account contract. Opt-in immutable Supabase research delivery reuses these item models via supabase-content.yaml. Current native Google/Apple login uses Supabase Auth directly; wallet registry is specified in supabase-wallet.yaml and docs/contracts/supabase_account.md. Native Feed and subject-attributed trade totals use supabase-feed.yaml. Provider-managed perpetuals deposits use supabase-funding.yaml.
 servers:
   - url: https://api.bsmart.today
@@ -485,34 +487,6 @@ paths:
                 $ref: "#/components/schemas/DailyDigestSnapshot"
         "404":
           description: No daily digest has been generated for this installation yet
-  /v1/mr-collie/query:
-    post:
-      operationId: queryMrCollie
-      summary: Ask Mr Collie to explain the current portfolio and ticker evidence using DeepSeek.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/MrCollieQuery"
-      responses:
-        "200":
-          description: Evidence-grounded answer with server-validated citations.
-          headers:
-            Cache-Control:
-              schema:
-                type: string
-              description: Always `no-store` because the response is installation-specific.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MrCollieResponse"
-        "429":
-          description: Installation request limit reached.
-        "502":
-          description: DeepSeek returned an unusable response.
-        "503":
-          description: DeepSeek is not configured or temporarily unavailable.
   /v1/telemetry/events:
     post:
       operationId: postClientTelemetryEvents
@@ -916,12 +890,14 @@ components:
     FeedPublicPortfolio:
       type: object
       additionalProperties: false
-      required: [status, perpsEquityUSD, equityAsOf, spotUSDC, positions, history]
+      required: [status, perpsEquityUSD, equityAsOf, spotUSDC, accountValueUSD, dayChangeUSD, positions, history]
       properties:
         status: {type: string, enum: [ready, not_connected]}
-        perpsEquityUSD: {type: [string, 'null'], description: Latest Hyperliquid perp portfolio history value; not summed with spot cash.}
+        perpsEquityUSD: {type: [string, 'null'], description: Current Hyperliquid perps account equity across DEXs, falling back to the latest portfolio sample when needed.}
         equityAsOf: {type: [integer, 'null'], description: Exchange portfolio sample timestamp in milliseconds.}
         spotUSDC: {type: [string, 'null'], description: HyperCore spot USDC balance, shown separately.}
+        accountValueUSD: {type: [string, 'null'], description: Current spot USDC plus separate perps equity, or spot USDC alone when balances are shared. Null when account mode cannot be verified.}
+        dayChangeUSD: {type: [string, 'null'], description: Perps equity change between the first and last available 24-hour portfolio samples; unavailable for shared balances or sparse history.}
         positions:
           type: array
           maxItems: 1000
@@ -1262,6 +1238,16 @@ components:
           description: Up to ten Score-positive views; the earliest positive anchor first, then the highest-contributing remaining views.
           items:
             $ref: "#/components/schemas/SmartAccountOpinionMarker"
+    SmartAccountPriceOutcome:
+      type: object
+      description: Same-basis daily closes from a public view through the latest available trading day, without chart candles.
+      required: [startDay, startPrice, latestDay, latestPrice, priceBasis]
+      properties:
+        startDay: { type: string, format: date }
+        startPrice: { type: number, exclusiveMinimum: 0 }
+        latestDay: { type: string, format: date }
+        latestPrice: { type: number, exclusiveMinimum: 0 }
+        priceBasis: { type: string, enum: [raw, adjusted] }
     SmartAccountOpinionMarker:
       type: object
       required: [id, publishedAt, viewDay, viewPrice, direction, contribution, horizon, thesis]
@@ -1429,6 +1415,10 @@ components:
           anyOf:
             - $ref: "#/components/schemas/SmartAccountPriceEvidence"
             - type: "null"
+        priceOutcome:
+          anyOf:
+            - $ref: "#/components/schemas/SmartAccountPriceOutcome"
+            - type: "null"
     SmartMoneyMovement:
       type: object
       required:
@@ -1589,66 +1579,6 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/PortfolioSignal"
-    MrCollieQuery:
-      type: object
-      additionalProperties: false
-      required: [question]
-      properties:
-        question: { type: string, minLength: 1, maxLength: 1500 }
-        locale: { type: string, minLength: 2, maxLength: 32, default: en }
-        conversation:
-          type: array
-          maxItems: 8
-          default: []
-          items:
-            $ref: "#/components/schemas/MrCollieConversationTurn"
-    MrCollieConversationTurn:
-      type: object
-      additionalProperties: false
-      required: [role, content]
-      properties:
-        role:
-          type: string
-          enum: [user, assistant]
-        content: { type: string, minLength: 1, maxLength: 2400 }
-    MrCollieEvidence:
-      type: object
-      additionalProperties: false
-      required: [id, source, sourceType, title, detail]
-      properties:
-        id: { type: string }
-        source:
-          type: string
-          enum: [Smart Account, Smart Money]
-        sourceType:
-          type: string
-          enum: [smart_account, smart_money]
-        title: { type: string }
-        detail: { type: string }
-        metric: { type: [string, "null"] }
-        observedAt: { type: [string, "null"], format: date-time }
-    MrCollieResponse:
-      type: object
-      additionalProperties: false
-      required:
-        [question, title, summary, nextStep, evidence, generatedAt, dataAsOf, contextVersion, model]
-      properties:
-        question: { type: string }
-        title: { type: string }
-        summary: { type: string }
-        context: { type: [string, "null"] }
-        nextStep: { type: string }
-        ticker: { type: [string, "null"] }
-        signalId: { type: [string, "null"], format: uuid }
-        evidence:
-          type: array
-          maxItems: 6
-          items:
-            $ref: "#/components/schemas/MrCollieEvidence"
-        generatedAt: { type: string, format: date-time }
-        dataAsOf: { type: string, format: date-time }
-        contextVersion: { type: string }
-        model: { type: string }
     SignalFeedback:
       type: string
       enum: [useful, not_relevant, too_late, unclear]

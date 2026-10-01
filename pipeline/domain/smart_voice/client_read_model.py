@@ -4,11 +4,11 @@ from __future__ import annotations
 import json
 import sqlite3
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
 from ...common.smart_account_titles import build_smart_account_activity_titles
-from ...common.reddit_profile_avatars import avatar_url as reddit_avatar_url
+from ...common.reddit_profile_avatars import avatar_url as reddit_avatar_url, username as reddit_username
 from .representative_intro import enrich_representative_intros
 
 
@@ -46,7 +46,7 @@ LIFECYCLE_LABELS = {
 QUALIFIED_FILTER = """
        (source = 'x' AND n_eff >= 8 AND settled_calls >= 10)
     OR (source = 'youtube' AND n_eff >= 4 AND settled_calls >= 5)
-    OR (source = 'reddit' AND n_eff >= 3 AND settled_calls >= 4)
+    OR (source = 'reddit' AND n_eff >= 1 AND settled_calls >= 2)
     OR (source IN ('xueqiu', 'toss') AND n_eff >= 5 AND settled_calls >= 8)
 """
 
@@ -224,6 +224,44 @@ def _price_evidence(
     }
 
 
+def _price_outcome(
+    connection: sqlite3.Connection,
+    *,
+    ticker: str,
+    published_at: str,
+    as_of: datetime,
+    has_adjusted_close: bool,
+) -> dict[str, Any] | None:
+    """Compact same-basis closes for every update, without repeating chart candles."""
+    if not _table_exists(connection, "price_daily"):
+        return None
+    price_column = "adj_close" if has_adjusted_close else "close"
+    basis_sql = ("CASE WHEN source IN ('nasdaq', 'nasdaq_raw') THEN 'raw' "
+                 "ELSE 'adjusted' END") if has_adjusted_close else "'raw'"
+    latest = connection.execute(
+        f"SELECT day, {price_column}, {basis_sql} FROM price_daily "
+        f"WHERE ticker=? AND day<=? AND {price_column}>0 ORDER BY day DESC LIMIT 1",
+        (ticker, as_of.date().isoformat()),
+    ).fetchone()
+    if not latest or (as_of.date() - date.fromisoformat(latest[0])).days > 7:
+        return None
+    start = connection.execute(
+        f"SELECT day, {price_column} FROM price_daily "
+        f"WHERE ticker=? AND day>=? AND day<=date(?, '+4 days') "
+        f"AND {price_column}>0 AND {basis_sql}=? ORDER BY day LIMIT 1",
+        (ticker, published_at[:10], published_at[:10], latest[2]),
+    ).fetchone()
+    if not start or start[0] > latest[0]:
+        return None
+    return {
+        "startDay": start[0],
+        "startPrice": round(float(start[1]), 6),
+        "latestDay": latest[0],
+        "latestPrice": round(float(latest[1]), 6),
+        "priceBasis": latest[2],
+    }
+
+
 def _representative_price_evidence(
     connection: sqlite3.Connection,
     *,
@@ -374,7 +412,8 @@ def _profile_metadata(
             )
 
     if not metadata["avatar_url"] and _table_exists(connection, "author_avatar"):
-        asset_handle = investor_id.removeprefix("youtube:") if source == "youtube" else clean_handle
+        asset_handle = (investor_id.removeprefix("youtube:") if source == "youtube" else
+                        reddit_username(investor_id) if source == "reddit" else clean_handle)
         row = connection.execute(
             """
             SELECT url FROM author_avatar
@@ -528,7 +567,8 @@ def _update_rows(
          WHERE call.is_actionable_call = 1
            AND call.direction IN ('bull', 'bear')
            AND call.lifecycle_action IN ({','.join('?' for _ in LIFECYCLE_LABELS)})
-           AND ranked.platform_rank <= CAST((ranked.platform_population + 3) / 4 AS INTEGER)
+           AND (call.source = 'reddit'
+                OR ranked.platform_rank <= CAST((ranked.platform_population + 3) / 4 AS INTEGER))
            {ticker_filter}
            AND datetime(call.created_at) >= datetime(?, ?)
            AND datetime(call.created_at) <= datetime(?)
@@ -803,6 +843,7 @@ def _call_document(
     *,
     metadata: dict[str, Any],
     price_evidence: dict[str, Any] | None,
+    price_outcome: dict[str, Any] | None = None,
     include_settlement: bool = False,
 ) -> dict[str, Any]:
     activity_titles = build_smart_account_activity_titles(
@@ -836,6 +877,7 @@ def _call_document(
         "authorVerified": metadata["verified"],
         "originalText": row["original_text"],
         "priceEvidence": price_evidence,
+        "priceOutcome": price_outcome,
         "sourcePostId": row["source_post_id"],
         "sourceURL": row["evidence_url"],
         "ingestedAt": _iso(row["ingested_at"]) if row["ingested_at"] else None,
@@ -932,6 +974,13 @@ def build_smart_account_client_collections(
 
     updates = []
     price_evidence_cache: dict[tuple[str, ...], dict[str, Any] | None] = {}
+    price_outcome_cache: dict[tuple[str, ...], dict[str, Any] | None] = {}
+    completed_day = min((as_of or datetime.now(timezone.utc)).date(),
+                        datetime.now(timezone.utc).date() - timedelta(days=1))
+    price_as_of = datetime.combine(completed_day, datetime.min.time(), tzinfo=timezone.utc)
+    has_adjusted_close = _table_exists(connection, "price_daily") and _column_exists(
+        connection, "price_daily", "adj_close"
+    )
     priced_authors: set[str] = set()
     for row in _update_rows(
         connection,
@@ -953,6 +1002,12 @@ def build_smart_account_client_collections(
                 ticker=row["ticker"],
                 published_at=row["created_at"],
             )
+        if cache_key not in price_outcome_cache:
+            price_outcome_cache[cache_key] = _price_outcome(
+                connection, ticker=row["ticker"], published_at=row["created_at"],
+                as_of=price_as_of,
+                has_adjusted_close=has_adjusted_close,
+            )
         price_evidence = None
         if row["investor_id"] not in priced_authors:
             price_evidence = price_evidence_cache[cache_key]
@@ -963,6 +1018,7 @@ def build_smart_account_client_collections(
                 row,
                 metadata=metadata,
                 price_evidence=price_evidence,
+                price_outcome=price_outcome_cache[cache_key],
             )
         )
 

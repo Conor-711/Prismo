@@ -92,7 +92,7 @@ struct OnboardingDiscoveryPage: View {
                     .overlay { Circle().stroke(BSmartColor.brand, lineWidth: 2) }
                     .frame(width: 44, height: 44)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.bSmartPlain)
                 .accessibilityLabel("Bullish view %d · %@ · %@".bSmartLocalized(
                     index,
                     TodayRepresentativeStoryCopy.day(call.day),

@@ -10,7 +10,7 @@ SV_SEGMENT_BANDS := top10,top25
 
 .PHONY: install venv db-init migrate seed seed-cn sample ingest refresh extract analyze analyze-mock \
         rollup narratives narrative-rotation brief worker daily daily-build cn-backfill demo stats test web-install web-dev clean help \
-        arch-check terminology-check sv-price-history sv-v0-candidates sv-v0 sv-v0-prod hyperliquid-smart-money hyperliquid-smart-money-live export-smart-account-read-model sv-ticker-signals sv-indicator-backtest sv-indicator-report sv-segment-backtest sv-portfolio-backtest sv-rank-event-research smart-product-signal-backtest smart-account-follow-backtest reddit-sv-authors sv-v0-reddit-candidates sv-v0-reddit-prod tw-match cf-deploy \
+        arch-check terminology-check sv-price-history subject-price-history subject-price-history-massive sv-v0-candidates sv-v0 sv-v0-prod hyperliquid-smart-money hyperliquid-smart-money-live export-smart-account-read-model sv-ticker-signals sv-indicator-backtest sv-indicator-report sv-segment-backtest sv-portfolio-backtest sv-rank-event-research smart-product-signal-backtest smart-account-follow-backtest reddit-sv-authors sv-v0-reddit-candidates sv-v0-reddit-prod tw-match cf-deploy \
         backup-db snapshot-db restore-db data-clean data-status xueqiu-author-auth xueqiu-author-plan xueqiu-author-run xueqiu-author-drain xueqiu-author-status xueqiu-sv-full \
         ios-generate ios-resolve ios-build ios-test ios-live-seed ios-live-unified-seed ios-live-api ios-live-smart-money ios-local-check ios-alpha-check ios-alpha-archive ios-release-check contract-check mvp-coverage-audit congress-score \
         client-api-install client-api-dev client-api-test client-api-seed-mock client-api-alpha-seed client-api-alpha-dev client-api-plan-notifications client-api-notification-worker \
@@ -38,6 +38,7 @@ help:
 	@echo "  make cn-backfill   回填中概·港股语料（爬30天+AI打标+双market聚合+翻译）"
 	@echo "  make worker        启动调度：每天 UTC+8 08:00 自动跑 daily-build"
 	@echo "  make sv-price-history     补齐 Score 所需日线价格"
+	@echo "  make subject-price-history  从公开来源补齐首页主体动态标的日线（默认 25 个标的）"
 	@echo "  make sv-v0                运行 Smart Account v0：候选召回 → LLM 结构化 → 结算 → 导出"
 	@echo "  make sv-v0-prod           生产级 Score：更大候选池 + 作者均衡 LLM 抽样"
 	@echo "  make hyperliquid-smart-money  Hyperliquid TradFi 地址发现、Onchain Score 评分和页面数据导出"
@@ -235,6 +236,14 @@ xueqiu-sv-full:
 # 可局部补齐：make sv-price-history ONLY=MU,NVDA
 sv-price-history:
 	$(MANAGE) sv-price-history --start $(or $(START),2025-06-01) --top-n $(or $(TOP_N),1000) --min-count $(or $(MIN_COUNT),25) --workers $(or $(WORKERS),8) --sleep $(or $(SLEEP),0.02) $(if $(ONLY),--only $(ONLY),)
+
+subject-price-history:
+	$(PY) -m pipeline.platforms.market_data.public_prices --limit $(or $(LIMIT),0) --sleep $(or $(SLEEP),0.75) $(if $(ONLY),--tickers $(ONLY),) $(if $(END),--end $(END),)
+	$(PY) -m pipeline.jobs.congress_capture.ios_feed --enrich-existing
+
+subject-price-history-massive:
+	$(PY) -m pipeline.platforms.market_data.massive_prices --limit $(or $(LIMIT),5) --sleep $(or $(SLEEP),13) $(if $(ONLY),--tickers $(ONLY),) $(if $(START),--start $(START),) $(if $(END),--end $(END),)
+	$(PY) -m pipeline.jobs.congress_capture.ios_feed --enrich-existing
 
 # Hyperliquid HIP-3 TradFi 聪明钱：动态市场发现 → 地址候选 → 近 30 天成交 → Onchain Score → Web JSON。
 hyperliquid-smart-money:

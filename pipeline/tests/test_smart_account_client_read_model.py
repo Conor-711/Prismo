@@ -1,9 +1,62 @@
 from __future__ import annotations
 
 import sqlite3
+import pytest
 from datetime import datetime, timezone
 
-from pipeline.domain.smart_voice.client_read_model import build_smart_account_client_collections
+from pipeline.domain.smart_voice.client_read_model import (
+    _price_outcome,
+    _update_rows,
+    build_smart_account_client_collections,
+)
+
+
+@pytest.mark.parametrize('source,expected', [('reddit',4), ('youtube',1), ('x',1)])
+def test_reddit_updates_include_all_qualified_ranks_only(source, expected):
+    connection = _database()
+    connection.row_factory = sqlite3.Row
+    connection.execute('UPDATE sv_investor_score SET source=?, platform_scores_json=?',
+                       (source, '{"'+source+'":120}'))
+    connection.execute('UPDATE sv_call SET source=?', (source,))
+    if source == 'reddit':
+        connection.execute("UPDATE sv_investor_score SET n_eff=1,settled_calls=2 WHERE investor_id='author-4'")
+    base = dict(connection.execute('SELECT * FROM sv_call').fetchone())
+    for index in range(2,5):
+        row = {**base, 'candidate_id': f'{source}-post-{index}', 'tweet_id':f'post-{index}',
+               'investor_id':f'author-{index}'}
+        connection.execute('INSERT INTO sv_call ('+','.join(row)+') VALUES ('+
+                           ','.join('?' for _ in row)+')', tuple(row.values()))
+    rows = _update_rows(connection, as_of=datetime(2026,8,5,tzinfo=timezone.utc), days=2,limit=0)
+    assert len(rows) == expected
+    if source == 'reddit':
+        assert max(row['platform_percentile'] for row in rows) == 1
+        connection.execute("UPDATE sv_investor_score SET n_eff=0,settled_calls=0 WHERE investor_id='author-4'")
+        assert len(_update_rows(connection, as_of=datetime(2026,8,5,tzinfo=timezone.utc), days=2,limit=0)) == 3
+    connection.close()
+
+
+def test_price_outcome_uses_one_price_basis_and_rejects_stale_quotes() -> None:
+    connection = sqlite3.connect(":memory:")
+    connection.execute(
+        "CREATE TABLE price_daily (ticker TEXT, day TEXT, close REAL, adj_close REAL, source TEXT)"
+    )
+    connection.executemany("INSERT INTO price_daily VALUES (?, ?, ?, ?, ?)", [
+        ("AAPL", "2026-09-24", 100, 90, "yahoo"),
+        ("AAPL", "2026-09-29", 120, 120, "nasdaq_raw"),
+    ])
+    as_of = datetime(2026, 9, 30, tzinfo=timezone.utc)
+    assert _price_outcome(connection, ticker="AAPL", published_at="2026-09-24T12:00:00Z",
+                          as_of=as_of, has_adjusted_close=True) is None
+
+    connection.execute("INSERT INTO price_daily VALUES ('AAPL', '2026-09-25', 110, 110, 'nasdaq_raw')")
+    assert _price_outcome(connection, ticker="AAPL", published_at="2026-09-24T12:00:00Z",
+                          as_of=as_of, has_adjusted_close=True) == {
+        "startDay": "2026-09-25", "startPrice": 110.0,
+        "latestDay": "2026-09-29", "latestPrice": 120.0, "priceBasis": "raw",
+    }
+    assert _price_outcome(connection, ticker="AAPL", published_at="2026-09-24T12:00:00Z",
+                          as_of=datetime(2026, 10, 10, tzinfo=timezone.utc),
+                          has_adjusted_close=True) is None
 
 
 def _database() -> sqlite3.Connection:
@@ -260,6 +313,13 @@ def test_existing_rankings_project_into_client_contracts() -> None:
             },
         ],
     }
+    assert updates[0]["priceOutcome"] == {
+        "startDay": "2026-08-04",
+        "startPrice": 182.0,
+        "latestDay": "2026-08-05",
+        "latestPrice": 188.0,
+        "priceBasis": "raw",
+    }
 
     evidence = result["smart-account-evidence"]
     assert len(evidence) == 1
@@ -359,6 +419,12 @@ def test_representative_evidence_uses_three_highest_contributing_tickers() -> No
     assert all(row["evidenceRole"] == "representative" for row in evidence)
     assert all(row["priceEvidence"] is not None for row in evidence)
     assert all(row["settlement"]["contribution"] > 0 for row in evidence)
+
+    updates = [row for row in result["smart-account-updates"]
+               if row["authorId"] == "author-1" and row["ticker"] in {"MU", "PLTR", "TSLA"}]
+    assert len(updates) == 4
+    assert all(row["priceOutcome"] is not None for row in updates)
+    assert sum(row["priceEvidence"] is not None for row in updates) <= 1
 
 
 def test_update_only_projection_skips_profiles_and_historical_evidence() -> None:

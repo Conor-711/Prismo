@@ -21,7 +21,7 @@ struct SmartMoneySourceActivity: View {
                             Text(movement.direction.label.bSmartLocalized).foregroundStyle(movement.direction.color)
                             Image(systemName: "chevron.right").font(.caption)
                         }.frame(minHeight: 44).contentShape(Rectangle())
-                    }.buttonStyle(.plain)
+                    }.buttonStyle(.bSmartPlain)
                     Divider().overlay(BSmartColor.line)
                 }
                 if movements.count > 5 {

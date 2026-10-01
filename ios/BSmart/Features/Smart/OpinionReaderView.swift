@@ -5,6 +5,9 @@ struct OpinionReaderView: View {
     let update: SmartAccountUpdate
     @State private var prefersOriginal = false
     @State private var selectedPhoto: OpinionPhotoSelection?
+    #if DEBUG
+    @State private var didOpenPhotoPreview = false
+    #endif
     @ScaledMetric(relativeTo: .body) private var fontSize = 17.0
 
     private var content: OpinionReadingContent {
@@ -83,6 +86,15 @@ struct OpinionReaderView: View {
         .fullScreenCover(item: $selectedPhoto) { photo in
             OpinionPhotoViewer(image: photo.image)
         }
+        #if DEBUG
+        .task {
+            guard !didOpenPhotoPreview,
+                  ProcessInfo.processInfo.arguments.contains("--ui-opinion-photo-preview"),
+                  let image = UIImage(named: "Ticker_NVDA") else { return }
+            didOpenPhotoPreview = true
+            selectedPhoto = OpinionPhotoSelection(url: URL(string: "https://example.invalid/photo-preview")!, image: image)
+        }
+        #endif
     }
 
     private var controls: some View {
@@ -133,7 +145,7 @@ struct OpinionReaderView: View {
                     if selected { Capsule().fill(BSmartColor.brand).frame(height: 2) }
                 }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.bSmartPlain)
         .accessibilityAddTraits(selected ? .isSelected : [])
         .accessibilityIdentifier(original ? "opinion.reader.show-original" : "opinion.reader.show-translation")
     }
@@ -149,7 +161,7 @@ struct OpinionReaderView: View {
                 .help("Open original source".bSmartLocalized)
             }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.bSmartPlain)
         .font(.system(size: 16, weight: .medium))
         .foregroundStyle(BSmartColor.secondaryText)
     }
@@ -203,7 +215,7 @@ private struct OpinionInlinePhoto: View {
                         .frame(maxWidth: .infinity)
                         .clipShape(RoundedRectangle(cornerRadius: 6))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.bSmartPlain)
                 .accessibilityLabel("View image".bSmartLocalized)
             } else if failed {
                 Image(systemName: "photo")
@@ -244,9 +256,8 @@ private struct OpinionPhotoViewer: View {
     var body: some View {
         ZStack(alignment: .topTrailing) {
             Color.black.ignoresSafeArea()
-            GeometryReader { geometry in
-                ZoomableOpinionPhoto(image: image, viewport: geometry.size)
-            }
+            ZoomableOpinionPhoto(image: image)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             Button { dismiss() } label: {
                 Image(systemName: "xmark")
                     .font(.system(size: 17, weight: .semibold))
@@ -254,23 +265,23 @@ private struct OpinionPhotoViewer: View {
                     .frame(width: 44, height: 44)
                     .background(.black.opacity(0.55), in: Circle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.bSmartPlain)
             .accessibilityLabel("Close".bSmartLocalized)
+            .accessibilityIdentifier("opinion.photo.close")
             .padding(16)
         }
         .statusBarHidden()
-        .accessibilityIdentifier("opinion.photo.viewer")
     }
 }
 
 private struct ZoomableOpinionPhoto: UIViewRepresentable {
     let image: UIImage
-    let viewport: CGSize
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
-    func makeUIView(context: Context) -> UIScrollView {
-        let scrollView = UIScrollView()
+    func makeUIView(context: Context) -> PhotoScrollView {
+        let scrollView = PhotoScrollView()
+        scrollView.accessibilityIdentifier = "opinion.photo.viewer"
         scrollView.backgroundColor = .black
         scrollView.delegate = context.coordinator
         scrollView.minimumZoomScale = 1
@@ -279,6 +290,10 @@ private struct ZoomableOpinionPhoto: UIViewRepresentable {
         scrollView.showsVerticalScrollIndicator = false
         context.coordinator.scrollView = scrollView
         scrollView.addSubview(context.coordinator.imageView)
+        scrollView.onBoundsChange = { [weak coordinator = context.coordinator, weak scrollView] in
+            guard let scrollView else { return }
+            coordinator?.layoutImage(in: scrollView)
+        }
         let doubleTap = UITapGestureRecognizer(
             target: context.coordinator, action: #selector(Coordinator.doubleTap(_:))
         )
@@ -287,27 +302,56 @@ private struct ZoomableOpinionPhoto: UIViewRepresentable {
         return scrollView
     }
 
-    func updateUIView(_ scrollView: UIScrollView, context: Context) {
+    func updateUIView(_ scrollView: PhotoScrollView, context: Context) {
         let coordinator = context.coordinator
-        guard coordinator.displayedImage !== image || coordinator.viewport != viewport else { return }
-        coordinator.displayedImage = image
-        coordinator.viewport = viewport
-        coordinator.imageView.image = image
-        let width = max(viewport.width, 1)
-        let height = max(viewport.height, 1)
-        let fit = min(width / max(image.size.width, 1), height / max(image.size.height, 1))
-        let size = CGSize(width: image.size.width * fit, height: image.size.height * fit)
-        scrollView.zoomScale = 1
-        coordinator.imageView.frame = CGRect(origin: .zero, size: size)
-        scrollView.contentSize = size
-        coordinator.centerImage()
+        if coordinator.displayedImage !== image {
+            coordinator.displayedImage = image
+            coordinator.imageView.image = image
+            coordinator.laidOutImage = nil
+        }
+        coordinator.layoutImage(in: scrollView)
+    }
+
+    final class PhotoScrollView: UIScrollView {
+        var onBoundsChange: (() -> Void)?
+        private var previousSize: CGSize = .zero
+
+        override func layoutSubviews() {
+            super.layoutSubviews()
+            guard bounds.size != previousSize else { return }
+            previousSize = bounds.size
+            onBoundsChange?()
+        }
     }
 
     final class Coordinator: NSObject, UIScrollViewDelegate {
         let imageView = UIImageView()
         weak var scrollView: UIScrollView?
         var displayedImage: UIImage?
-        var viewport: CGSize = .zero
+        var laidOutImage: UIImage?
+        var laidOutSize: CGSize = .zero
+
+        override init() {
+            super.init()
+            imageView.isAccessibilityElement = true
+            imageView.accessibilityLabel = "View image".bSmartLocalized
+            imageView.accessibilityIdentifier = "opinion.photo.image"
+        }
+
+        func layoutImage(in scrollView: UIScrollView) {
+            guard let image = displayedImage,
+                  scrollView.bounds.width > 0, scrollView.bounds.height > 0,
+                  laidOutImage !== image || laidOutSize != scrollView.bounds.size else { return }
+            laidOutImage = image
+            laidOutSize = scrollView.bounds.size
+            let fit = min(scrollView.bounds.width / max(image.size.width, 1),
+                          scrollView.bounds.height / max(image.size.height, 1))
+            let size = CGSize(width: image.size.width * fit, height: image.size.height * fit)
+            scrollView.zoomScale = 1
+            imageView.frame = CGRect(origin: .zero, size: size)
+            scrollView.contentSize = size
+            centerImage()
+        }
 
         func viewForZooming(in scrollView: UIScrollView) -> UIView? { imageView }
 

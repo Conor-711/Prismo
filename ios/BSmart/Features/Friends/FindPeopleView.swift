@@ -70,9 +70,9 @@ struct FindPeopleView: View {
             .navigationTitle("Find people".bSmartLocalized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) { Group {
                     Button("Done".bSmartLocalized) { dismiss() }
-                }
+                }.buttonStyle(.bSmartToolbar) }.bSmartHideSystemBackground()
             }
         }
         .bSmartPage()

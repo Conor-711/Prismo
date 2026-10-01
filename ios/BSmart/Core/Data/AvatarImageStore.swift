@@ -9,6 +9,23 @@ struct AvatarImage: @unchecked Sendable {
     let image: UIImage
 }
 
+enum AvatarResourceIdentity {
+    static func url(for url: URL) -> URL {
+        guard url.scheme == "https", let host = url.host, host.hasSuffix(".supabase.co"),
+              url.user == nil, url.password == nil, url.port == nil,
+              var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return url }
+        let prefix = "/storage/v1/object/sign/bsmart-profile-avatars/"
+        guard url.path.hasPrefix(prefix) else { return url }
+        let parts = url.path.dropFirst(prefix.count).split(separator: "/", omittingEmptySubsequences: false)
+        guard parts.count == 2, UUID(uuidString: String(parts[0])) != nil,
+              parts[1].hasSuffix(".jpg"), UUID(uuidString: String(parts[1].dropLast(4))) != nil else { return url }
+        // Uploaded profile filenames are immutable UUIDs. Only the access token rotates.
+        components.queryItems = components.queryItems?.filter { $0.name != "token" }
+        if components.queryItems?.isEmpty == true { components.queryItems = nil }
+        return components.url ?? url
+    }
+}
+
 enum AuthorAvatarAsset {
     static func key(for url: URL) -> String {
         SHA256.hash(data: Data(url.absoluteString.utf8)).map { String(format: "%02x", $0) }.joined()
@@ -77,30 +94,34 @@ actor AvatarImageStore {
     func image(for url: URL) async -> AvatarImage? {
         guard url.scheme?.lowercased() == "https", url.host != nil,
               url.user == nil, url.password == nil else { return nil }
-        if let cached = memory.object(forKey: url as NSURL), cached.expiresAt > now() {
-            return cached.value
+        let identity = AvatarResourceIdentity.url(for: url)
+        if let cached = memory.object(forKey: identity as NSURL), cached.expiresAt > now() {
+            return AvatarImage(sourceURL: url, image: cached.value.image)
         }
-        if let pending = inFlight[url] { return await pending.value }
-        if let date = retryAfter[url], date > now() { return nil }
+        if let pending = inFlight[identity] {
+            return await pending.value.map { AvatarImage(sourceURL: url, image: $0.image) }
+        }
+        if let date = retryAfter[identity], date > now() { return nil }
         // One disappearing cell must not cancel a download shared by other cells.
         let task = Task { await load(url) }
-        inFlight[url] = task
+        inFlight[identity] = task
         let result = await task.value
-        inFlight[url] = nil
+        inFlight[identity] = nil
         if let result {
             let cost = (result.image.cgImage?.bytesPerRow ?? 0) * (result.image.cgImage?.height ?? 0)
             memory.setObject(MemoryEntry(value: result, expiresAt: now().addingTimeInterval(86_400)),
-                             forKey: url as NSURL, cost: cost)
-            retryAfter[url] = nil
+                             forKey: identity as NSURL, cost: cost)
+            retryAfter[identity] = nil
         } else {
             retryAfter = retryAfter.filter { $0.value > now() }
-            retryAfter[url] = max(retryAfter[url] ?? .distantPast, now().addingTimeInterval(failureCooldown))
+            retryAfter[identity] = max(retryAfter[identity] ?? .distantPast, now().addingTimeInterval(failureCooldown))
         }
         return result
     }
 
     private func load(_ url: URL) async -> AvatarImage? {
-        let key = AuthorAvatarAsset.key(for: url)
+        let identity = AvatarResourceIdentity.url(for: url)
+        let key = AuthorAvatarAsset.key(for: identity)
         if let data = disk.read(key: key, now: now()), let image = Self.decode(data, url: url) {
             return image
         }
@@ -115,7 +136,7 @@ actor AvatarImageStore {
             case let .success((data, http)):
                 if http.statusCode == 429 {
                     let delay = Double(http.value(forHTTPHeaderField: "Retry-After") ?? "") ?? 60
-                    retryAfter[url] = now().addingTimeInterval(max(60, delay))
+                    retryAfter[identity] = now().addingTimeInterval(max(60, delay))
                     return nil
                 }
                 guard (200..<300).contains(http.statusCode),

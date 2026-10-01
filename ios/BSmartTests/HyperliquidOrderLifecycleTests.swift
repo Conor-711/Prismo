@@ -90,6 +90,64 @@ final class HyperliquidOrderLifecycleTests: XCTestCase {
         XCTAssertFalse(started)
     }
 
+    func testUnstartedPermitIsDurablySealedAndUnblocksFutureOrders() async throws {
+        let context = OrderLifecycleContext(); defer { context.cleanup() }
+        let (journal, quote, id, permit) = try await context.permit()
+        let record = try await journal.recordOrderNotSubmitted(permit, wallet: F.wallet)
+        XCTAssertEqual(record?.state, .notSubmitted)
+        XCTAssertNotNil(record?.signature)
+        XCTAssertFalse(record?.blocksNewOrder(at: context.clock.now) ?? true)
+        var started = false
+        XCTAssertThrowsError(try permit.start(lease: context.lease()) { _ in started = true })
+        XCTAssertFalse(started)
+        let restored = try await context.journal().orderRecords(wallet: F.wallet)
+        XCTAssertEqual(restored.first?.id, id)
+        XCTAssertEqual(restored.first?.state, .notSubmitted)
+        let nextOrder = try HyperliquidOrderIntent(wallet: F.wallet, market: quote.order.market,
+            side: quote.order.side, size: quote.order.size.wire, limitPrice: quote.order.limitPrice.wire,
+            reduceOnly: false, cloid: "0x00000000000000000000000000000002",
+            nonce: quote.order.nonce + 1, expiresAfter: quote.order.expiresAfter)
+        let nextPreview = try await HyperliquidOrderPreviewProvider(
+            reader: TradingCheckReaderStub(preview: [Q.fees(), Q.book()]),
+            clock: { context.clock.now }, continuousClock: { context.clock.instant })
+            .preview(order: nextOrder, wallet: F.wallet, account: Q.snapshot(clock: context.clock),
+                     reviewedLeverage: 10, reviewedMarginMode: .cross)
+        _ = try await journal.reserveOrder(id: UUID(), preview: nextPreview, wallet: F.wallet,
+                                          continuousNow: context.clock.instant)
+    }
+
+    func testStartedPermitCannotBeClearedEvenWithoutAResponse() async throws {
+        let context = OrderLifecycleContext(); defer { context.cleanup() }
+        let (journal, _, id, permit) = try await context.permit()
+        try permit.start(lease: context.lease()) { _ in }
+        let unsent = try await journal.recordOrderNotSubmitted(permit, wallet: F.wallet)
+        XCTAssertNil(unsent)
+        let record = try await journal.recordOrderResponse(id: id, response: nil, wallet: F.wallet)
+        XCTAssertEqual(record.state, .uncertain)
+        XCTAssertTrue(record.blocksNewOrder(at: context.clock.now))
+        let restored = try await context.journal().orderRecords(wallet: F.wallet)
+        XCTAssertEqual(restored.first?.state, .uncertain)
+    }
+
+    func testWrongWalletCannotSealAnUnstartedPermit() async throws {
+        let context = OrderLifecycleContext(); defer { context.cleanup() }
+        let (journal, _, _, permit) = try await context.permit()
+        let wrong = DeviceWalletSummary(accountID: UUID(), address: F.wallet.address, recoveryVerified: true)
+        await expectJournalFailure { try await journal.recordOrderNotSubmitted(permit, wallet: wrong) }
+        var started = false
+        try permit.start(lease: context.lease()) { _ in started = true }
+        XCTAssertTrue(started)
+    }
+
+    func testRevokedLeaseRetainsProofThatSubmissionNeverStarted() async throws {
+        let context = OrderLifecycleContext(); defer { context.cleanup() }
+        let (journal, _, _, permit) = try await context.permit()
+        let lease = context.lease(); lease.invalidate()
+        XCTAssertThrowsError(try permit.start(lease: lease) { _ in XCTFail("Must not start") })
+        let record = try await journal.recordOrderNotSubmitted(permit, wallet: F.wallet)
+        XCTAssertEqual(record?.state, .notSubmitted)
+    }
+
     func testStaleBookPreventsSubmissionPermit() async throws {
         let context = OrderLifecycleContext(); defer { context.cleanup() }
         let (journal, quote, id) = try await context.signed()

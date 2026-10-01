@@ -112,7 +112,7 @@ struct BSmartPriceChart<Overlay: View>: View {
             Image(systemName: symbol).font(.system(size: 14, weight: .medium))
                 .frame(width: 44, height: 36).contentShape(Rectangle())
         }
-        .buttonStyle(.plain).foregroundStyle(BSmartColor.secondaryText)
+        .buttonStyle(.bSmartPlain).foregroundStyle(BSmartColor.secondaryText)
         .accessibilityLabel(label.bSmartLocalized).help(label.bSmartLocalized)
         .accessibilityIdentifier("\(identifier).\(suffix)")
     }
@@ -231,7 +231,7 @@ struct BSmartPriceChart<Overlay: View>: View {
                         .overlay(Circle().stroke(entry.0.color, lineWidth: 1.5))
                         .frame(width: 44, height: 44).contentShape(Circle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.bSmartPlain)
                 .position(x: center.x + frame.minX, y: center.y + frame.minY)
                 .accessibilityLabel(entry.0.label)
                 .accessibilityIdentifier(entry.0.accessibilityID)

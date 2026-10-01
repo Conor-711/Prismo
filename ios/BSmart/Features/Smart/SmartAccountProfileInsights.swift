@@ -94,7 +94,7 @@ struct SmartAccountCurrentViewsSection: View {
                                     Image(systemName: "chevron.right").font(.caption)
                                         .foregroundStyle(BSmartColor.tertiaryText)
                                 }.frame(minHeight: 44)
-                            }.buttonStyle(.plain)
+                            }.buttonStyle(.bSmartPlain)
                         }.padding(.vertical, 8)
                         Divider().overlay(BSmartColor.line)
                     }
@@ -104,7 +104,7 @@ struct SmartAccountCurrentViewsSection: View {
                         Label((expanded ? "Show less" : "View all").bSmartLocalized,
                               systemImage: expanded ? "chevron.up" : "chevron.down")
                             .font(.subheadline.weight(.semibold)).frame(maxWidth: .infinity, minHeight: 44)
-                    }.buttonStyle(.plain).accessibilityIdentifier("smart.account.current-views.all")
+                    }.buttonStyle(.bSmartPlain).accessibilityIdentifier("smart.account.current-views.all")
                 }
             }
         }.accessibilityIdentifier("smart.account.current-views")
@@ -141,7 +141,7 @@ struct SmartAccountLatestViewsSection: View {
                             } label: {
                                 latestViewRow(update).padding(.bottom, 24)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.bSmartPlain)
                             .accessibilityIdentifier(index == 0 ? "smart.account.latest-view.first" : "smart.account.latest-view.\(index)")
                         }.fixedSize(horizontal: false, vertical: true)
                     }
@@ -156,7 +156,7 @@ struct SmartAccountLatestViewsSection: View {
                     }
                     .font(.subheadline.weight(.semibold))
                     .frame(minHeight: 44).contentShape(Rectangle())
-                }.buttonStyle(.plain).accessibilityIdentifier("smart.account.latest-views.all")
+                }.buttonStyle(.bSmartPlain).accessibilityIdentifier("smart.account.latest-views.all")
             }
         }.accessibilityIdentifier("smart.account.latest-views")
     }

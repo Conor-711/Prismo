@@ -1,0 +1,18 @@
+{
+  "synthetic": true,
+  "signaturesIncluded": false,
+  "request": { "expectedVersion": 0 },
+  "response": {
+    "intentId": "12345678-1234-1234-1234-123456789abc",
+    "version": 1,
+    "owner": "0x7e5f4552091a69125d5dfcb7b8c2659029395bdf",
+    "fingerprint": "318ae1697aea7bb8d06f676306dd88d4b64c267dd7e2c2efff25e586409b1ee7",
+    "orderUid": "0x34c499f59980f0df0122707cd945ecf62faf2fb4df30cf1647ef49938e597de07e5f4552091a69125d5dfcb7b8c2659029395bdf6abda3ac",
+    "network": "Ethereum",
+    "expiresAt": "2026-10-01T00:01:00.000Z",
+    "state": "reserved",
+    "reservationsImplemented": true,
+    "signingEnabled": false,
+    "executionEnabled": false
+  }
+}

@@ -3,8 +3,6 @@ import SwiftUI
 struct TodayMarketActivityView: View {
     let packages: [TodayViewpointPackage]
     let opportunities: [TodayAlphaOpportunity]
-    @Namespace private var consensusTransition
-    @Namespace private var alphaTransition
 
     private var previewOpportunities: [TodayAlphaOpportunity] {
         opportunities.filter { $0.kind == .smartAccount }
@@ -17,7 +15,7 @@ struct TodayMarketActivityView: View {
             } label: {
                 TodayEditorialSectionTitle(title: "Trending Tickers", showsDisclosure: true)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.bSmartPlain)
             .accessibilityIdentifier("today.consensus.title")
 
             if packages.isEmpty { emptyState }
@@ -25,12 +23,10 @@ struct TodayMarketActivityView: View {
                 ForEach(Array(packages.prefix(2).enumerated()), id: \.element.id) { index, package in
                     NavigationLink {
                         TodayViewpointPackageDetailView(package: package, style: index % 2)
-                            .bSmartZoomNavigationTransition(sourceID: package.id, in: consensusTransition)
                     } label: {
                         TodayViewpointPackageCard(package: package, style: index % 2, width: nil, isStacked: true)
-                            .bSmartMatchedTransitionSource(id: package.id, in: consensusTransition)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.bSmartPlain)
                     .accessibilityIdentifier("today.viewpoint-package.\(package.ticker.lowercased())")
                 }
             }
@@ -42,7 +38,7 @@ struct TodayMarketActivityView: View {
             } label: {
                 TodayEditorialSectionTitle(title: "Alpha Tickers", showsDisclosure: true)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.bSmartPlain)
             .padding(.top, BSmartSpacing.large)
             .accessibilityIdentifier("today.alpha.title")
 
@@ -50,12 +46,10 @@ struct TodayMarketActivityView: View {
             ForEach(previewOpportunities.prefix(2)) { opportunity in
                 NavigationLink {
                     TodayAlphaOpportunityDetailView(opportunity: opportunity)
-                        .bSmartZoomNavigationTransition(sourceID: opportunity.id, in: alphaTransition)
                 } label: {
                     TodayAlphaDiscoveryRow(opportunity: opportunity)
-                        .bSmartMatchedTransitionSource(id: opportunity.id, in: alphaTransition)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.bSmartPlain)
                 .accessibilityIdentifier("today.smart-alpha.\(opportunity.kind.rawValue).\(opportunity.ticker.lowercased())")
             }
         }

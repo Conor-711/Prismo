@@ -70,7 +70,7 @@ struct ProfilePhotoEditor<Avatar: View, Options: View>: View {
                     }
                 }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.bSmartPlain)
         .accessibilityLabel("Change photo".bSmartLocalized)
         .accessibilityIdentifier("profile.photo.change")
         .frame(maxWidth: .infinity, alignment: .leading)

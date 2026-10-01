@@ -1,15 +1,18 @@
 import SwiftUI
 
-/// Zoom transitions can detach SwiftUI content before the presented controller disappears.
+/// Tracks native navigation visibility independently of SwiftUI view removal.
 struct BSmartDetailVisibilityObserver: UIViewControllerRepresentable {
     let router: AppRouter
     let token: UUID
+    var allowsBack = true
 
     func makeUIViewController(context: Context) -> BSmartDetailVisibilityController {
-        BSmartDetailVisibilityController(router: router, token: token)
+        BSmartDetailVisibilityController(router: router, token: token, allowsBack: allowsBack)
     }
 
-    func updateUIViewController(_ controller: BSmartDetailVisibilityController, context: Context) {}
+    func updateUIViewController(_ controller: BSmartDetailVisibilityController, context: Context) {
+        controller.allowsBack = allowsBack
+    }
 
     static func dismantleUIViewController(_ controller: BSmartDetailVisibilityController, coordinator: ()) {
         // Let SwiftUI finish removing the view before publishing router changes.
@@ -22,10 +25,18 @@ struct BSmartDetailVisibilityObserver: UIViewControllerRepresentable {
 final class BSmartDetailVisibilityController: UIViewController {
     let router: AppRouter
     let token: UUID
+    var allowsBack: Bool {
+        didSet {
+            if oldValue != allowsBack, viewIfLoaded?.window != nil {
+                restoreEdgeBackForCurrentPage()
+            }
+        }
+    }
 
-    init(router: AppRouter, token: UUID) {
+    init(router: AppRouter, token: UUID, allowsBack: Bool = true) {
         self.router = router
         self.token = token
+        self.allowsBack = allowsBack
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -45,6 +56,28 @@ final class BSmartDetailVisibilityController: UIViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         router.setTabBarHidden(true, token: token)
+        restoreEdgeBackForCurrentPage()
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        // SwiftUI can reset the recognizer after applying its hidden back item.
+        if view.window != nil, navigationController?.transitionCoordinator == nil {
+            restoreEdgeBackForCurrentPage()
+        }
+    }
+
+    func restoreEdgeBackForCurrentPage() {
+        guard let navigationController, let top = navigationController.topViewController else { return }
+        // A retained parent page must not override the current page's protected workflow.
+        var ancestor: UIViewController? = self
+        while let current = ancestor {
+            if current === top {
+                BSmartEdgeBackNavigation.enable(on: navigationController, allowsBack: allowsBack)
+                return
+            }
+            ancestor = current.parent
+        }
     }
 
     override func viewDidDisappear(_ animated: Bool) {

@@ -34,7 +34,7 @@ struct SmartAccountRepresentativeWorks: View {
                                 .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(
                                     selected.ticker == work.ticker ? BSmartColor.brand : BSmartColor.line))
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.bSmartPlain)
                             .accessibilityAddTraits(selected.ticker == work.ticker ? .isSelected : [])
                             .accessibilityIdentifier("account.work.select.\(work.ticker)")
                         }
@@ -101,7 +101,7 @@ private struct RepresentativeWorkDetail: View {
                                 Rectangle().fill(selected?.id == marker.id ? BSmartColor.brand : .clear).frame(height: 2)
                             }
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.bSmartPlain)
                         .accessibilityAddTraits(selected?.id == marker.id ? .isSelected : [])
                         .accessibilityIdentifier("account.work.opinion.\(index)")
                     }
@@ -170,7 +170,7 @@ private struct RepresentativeWorkDetail: View {
                 .background(showsCandles == candles ? BSmartColor.brand : BSmartColor.surface,
                             in: RoundedRectangle(cornerRadius: 8))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.bSmartPlain)
         .accessibilityLabel(label.bSmartLocalized)
         .accessibilityAddTraits(showsCandles == candles ? .isSelected : [])
         .accessibilityIdentifier(candles ? "account.work.candles" : "account.work.line")

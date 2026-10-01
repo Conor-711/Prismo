@@ -26,6 +26,10 @@ final class HyperliquidMarketOrderStore: ObservableObject {
     @Published private(set) var isLoadingEntry = false
     @Published private(set) var entryError: String?
     @Published private(set) var isComposing = false
+    @Published private(set) var pendingOrder: HyperliquidOrderRecord?
+    @Published private(set) var recoveryError: String?
+    @Published private(set) var historyUnavailable = false
+    var requiresOrderRecovery: Bool { pendingOrder != nil || historyUnavailable }
     private let service: any AccountWalletServicing
     private let reader: any HyperliquidExecutionReading
     private let journal: FundingTransactionJournal
@@ -87,6 +91,11 @@ final class HyperliquidMarketOrderStore: ObservableObject {
             guard registration.accountId == wallet.accountID, registration.address == wallet.address else {
                 throw DeviceWalletError.accountChanged
             }
+            await loadHistory(wallet: wallet)
+            if let pendingOrder, [.submitting, .uncertain].contains(pendingOrder.state) {
+                await reconcile(pendingOrder, wallet: wallet, readFillDetails: false, presentResult: false)
+                try validate()
+            }
             async let snapshotRequest = accountSnapshot(wallet: wallet, dex: dex, coin: coin)
             async let feeRequest = reader.read(.fees(owner: wallet.address))
             let snapshot = try await snapshotRequest
@@ -111,12 +120,21 @@ final class HyperliquidMarketOrderStore: ObservableObject {
             let summaries = try await journal.orderFillSummaries(wallet: wallet)
             guard token == revision, service.walletAccountID == wallet.accountID else { return }
             history = records; fills = summaries
-        } catch { if token == revision { errorMessage = FundingJournalError.unavailable.localizedDescription } }
+            pendingOrder = records.first { $0.blocksNewOrder(at: clock()) }
+            historyUnavailable = false
+        } catch {
+            if token == revision, service.walletAccountID == wallet.accountID {
+                historyUnavailable = true
+                recoveryError = FundingJournalError.unavailable.orderMessage
+            }
+        }
     }
 
-    func reconcile(_ record: HyperliquidOrderRecord, wallet: DeviceWalletSummary) async {
+    func reconcile(_ record: HyperliquidOrderRecord, wallet: DeviceWalletSummary,
+                   readFillDetails: Bool = true, presentResult: Bool = true) async {
         guard !activeOperation else { return }
-        activeOperation = true; isBusy = true; errorMessage = nil
+        activeOperation = true; isBusy = true; recoveryError = nil
+        if presentResult { errorMessage = nil }
         let token = revision
         defer { activeOperation = false; isBusy = false }
         do {
@@ -125,16 +143,31 @@ final class HyperliquidMarketOrderStore: ObservableObject {
             guard var resolved = records.first(where: { $0.id == record.id }) else { throw FundingJournalError.conflict }
             if [.submitting, .uncertain].contains(resolved.state) {
                 let response = try await reader.read(.orderStatus(owner: wallet.address, cloid: resolved.order.cloid))
+                _ = try HyperliquidOrderStatus.decode(response, order: resolved.order.restored(wallet: wallet))
                 resolved = try await journal.reconcileOrder(id: resolved.id, response: response, wallet: wallet)
             }
-            if token == revision, service.walletAccountID == wallet.accountID { result = resolved }
+            if token == revision, service.walletAccountID == wallet.accountID,
+               presentResult || result?.id == resolved.id {
+                result = resolved
+            }
             try Task.checkCancellation()
             guard token == revision, service.walletAccountID == wallet.accountID else { throw DeviceWalletError.accountChanged }
-            try await readFills(resolved, wallet: wallet)
-        } catch { if token == revision { errorMessage = "Fill verification is incomplete. Your order will not be resent.".bSmartLocalized } }
+            if resolved.state == .reconciled, let attribution {
+                let order = try resolved.order.restored(wallet: wallet)
+                Task { await attribution.synchronize(order: order) }
+            }
+            if readFillDetails, resolved.fillOrderID != nil { try await readFills(resolved, wallet: wallet) }
+        } catch {
+            if token == revision, service.walletAccountID == wallet.accountID, !(error is CancellationError) {
+                recoveryError = error is HyperliquidOrderStatusError
+                    ? "The exchange has not found this order. Its status is still unverified; it will not be resent.".bSmartLocalized
+                    : "Fill verification is incomplete. Your order will not be resent.".bSmartLocalized
+                if presentResult { errorMessage = recoveryError }
+            }
+        }
         if token == revision {
             if service.walletAccountID == wallet.accountID { await loadHistory(wallet: wallet) }
-            else { result = nil; history = []; fills = [:]; errorMessage = nil }
+            else { result = nil; history = []; fills = [:]; pendingOrder = nil; recoveryError = nil }
         }
     }
 
@@ -158,6 +191,7 @@ final class HyperliquidMarketOrderStore: ObservableObject {
         do {
             try await waitForSession(wallet: wallet, token: token)
             try check(wallet: wallet, token: token)
+            try await checkPendingOrders(wallet: wallet, token: token)
             async let authority: Void = verify(wallet: wallet, token: token)
             async let snapshotRequest = accountSnapshot(wallet: wallet, dex: dex, coin: coin)
             async let feeRequest = reader.read(.fees(owner: wallet.address))
@@ -238,6 +272,7 @@ final class HyperliquidMarketOrderStore: ObservableObject {
         do {
             if preparedSnapshot == nil { try await verify(wallet: wallet, token: token) }
             else { try check(wallet: wallet, token: token) }
+            try await checkPendingOrders(wallet: wallet, token: token)
             let snapshot: HyperliquidTradingSnapshot
             if let preparedSnapshot {
                 try preparedSnapshot.validate(wallet: wallet, now: clock(), continuousNow: continuousClock())
@@ -280,7 +315,7 @@ final class HyperliquidMarketOrderStore: ObservableObject {
             // These are independent read-only checks; signing still awaits every result.
             async let refreshed = signingPreview(reviewed, wallet: wallet, sameSlide: sameSlide)
             async let authority: Void = verify(wallet: wallet, token: token)
-            if !reviewed.order.reduceOnly, let attribution {
+            if let attribution, !reviewed.order.reduceOnly || attribution.tracksReductions {
                 phase = .linking
                 do { try await attribution.register(order: reviewed.order); didAttribute = true }
                 catch {
@@ -330,9 +365,18 @@ final class HyperliquidMarketOrderStore: ObservableObject {
             phase = .submitting
             do { response = try await broadcaster.submit(permit, lease: scope) }
             catch { response = nil }
-            let recorded = try await journal.recordOrderResponse(id: id, response: response, wallet: wallet)
+            let recorded: HyperliquidOrderRecord
+            if response == nil, let unsent = try await journal.recordOrderNotSubmitted(permit, wallet: wallet) {
+                recorded = unsent
+            } else {
+                recorded = try await journal.recordOrderResponse(id: id, response: response, wallet: wallet)
+            }
+            timing.mark("exchange." + recorded.state.rawValue + (response == nil ? ".missing_response" : ".received_response"))
             scope.invalidate(); lease = nil
-            if token == revision { result = recorded }
+            if token == revision {
+                result = recorded
+                await loadHistory(wallet: wallet)
+            }
         } catch {
             if token == revision {
                 errorMessage = didReserve ? HyperliquidLiveOrderError.recoveryRequired.localizedDescription : message(error)
@@ -346,6 +390,13 @@ final class HyperliquidMarketOrderStore: ObservableObject {
         let response = try await reader.read(.fills(owner: wallet.address, start: start, end: record.order.expiresAfter + 2000))
         // Retain observed evidence even if the user leaves during this read. Never submit again.
         try await journal.recordOrderFills(id: record.id, response: response, wallet: wallet)
+    }
+
+    private func checkPendingOrders(wallet: DeviceWalletSummary, token: UUID) async throws {
+        await loadHistory(wallet: wallet)
+        try check(wallet: wallet, token: token)
+        guard !historyUnavailable else { throw FundingJournalError.unavailable }
+        guard pendingOrder == nil else { throw FundingJournalError.conflict }
     }
 
     private func refresh(_ reviewed: HyperliquidOrderPreview, wallet: DeviceWalletSummary) async throws -> HyperliquidOrderPreview {

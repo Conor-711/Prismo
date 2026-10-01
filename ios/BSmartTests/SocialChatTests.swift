@@ -1,8 +1,46 @@
+import Combine
 import XCTest
 import UIKit
 @testable import BSmart
 
 final class SocialChatTests: XCTestCase {
+    @MainActor
+    func testRecentChatPagesAreBoundedExpireAndNeverCrossAccounts() {
+        var now = Date(timeIntervalSince1970: 1000)
+        let cache = SocialChatRecentPages(maximumRooms: 2, now: { now })
+        let accountID = UUID()
+        let page = SocialMessagesPage(items: [SocialMessage(id: UUID(), isMine: false, text: "Hello", sentAt: now)],
+                                      nextBeforeAt: nil, nextBeforeID: nil)
+        cache.store(page, roomID: "global", accountID: accountID)
+        XCTAssertEqual(cache.page(roomID: "global", accountID: accountID)?.items, page.items)
+        now = now.addingTimeInterval(1)
+        cache.store(page, roomID: "peer-one", accountID: accountID)
+        now = now.addingTimeInterval(1)
+        cache.store(page, roomID: "peer-two", accountID: accountID)
+        XCTAssertNil(cache.page(roomID: "global", accountID: accountID))
+        XCTAssertNotNil(cache.page(roomID: "peer-two", accountID: accountID))
+        now = now.addingTimeInterval(240)
+        XCTAssertNil(cache.page(roomID: "peer-two", accountID: accountID))
+        cache.store(page, roomID: "global", accountID: accountID)
+        XCTAssertNil(cache.page(roomID: "global", accountID: UUID()))
+        XCTAssertNil(cache.page(roomID: "global", accountID: accountID))
+        cache.store(page, roomID: "global", accountID: accountID)
+        cache.activate(accountID: nil)
+        XCTAssertNil(cache.page(roomID: "global", accountID: accountID))
+    }
+
+    func testIdleChatPollingSlowsDownAndFailureBackoffIsBounded() {
+        var state = SocialChatRefreshState()
+        XCTAssertEqual(state.pollDelay(idlePolls: 0), 5)
+        XCTAssertEqual(state.pollDelay(idlePolls: 2), 15)
+        _ = state.failed(hasMessages: true)
+        XCTAssertEqual(state.pollDelay(idlePolls: 0), 10)
+        for _ in 0..<10 { _ = state.failed(hasMessages: true) }
+        XCTAssertEqual(state.pollDelay(idlePolls: 0), 30)
+        state.succeeded()
+        XCTAssertEqual(state.pollDelay(idlePolls: 0), 5)
+    }
+
     @MainActor
     func testGlobalChatUnreadIgnoresOwnMessagesAndClearsWhenViewed() {
         let suite = "bsmart.global-chat-tests.\(UUID().uuidString)"
@@ -66,6 +104,29 @@ final class SocialChatTests: XCTestCase {
         store.activate(accountID: firstAccount)
         store.ingest([message], accountID: firstAccount)
         XCTAssertTrue(store.hasUnread)
+    }
+
+    @MainActor
+    func testRepeatedChatSnapshotDoesNotRepublishUnreadState() throws {
+        let suite = "bsmart.global-chat-publishing-tests.\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let accountID = UUID()
+        let store = GlobalChatUnreadStore(defaults: defaults)
+        store.ingest([], accountID: accountID)
+        let message = SocialMessage(id: UUID(), isMine: false, text: "New", sentAt: .now)
+        store.ingest([message], accountID: accountID)
+        var publications = 0
+        let observer = store.objectWillChange.sink { publications += 1 }
+        store.ingest([message], accountID: accountID)
+        XCTAssertTrue(store.hasUnread)
+        XCTAssertEqual(publications, 0)
+        store.markRead([message])
+        XCTAssertFalse(store.hasUnread)
+        publications = 0
+        store.markRead([message])
+        XCTAssertEqual(publications, 0)
+        withExtendedLifetime(observer) {}
     }
 
     func testRichMessageDecodesImageOnlyAndReply() throws {

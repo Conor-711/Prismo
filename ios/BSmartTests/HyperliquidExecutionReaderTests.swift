@@ -109,6 +109,69 @@ final class HyperliquidExecutionReaderTests: XCTestCase {
         catch { XCTAssertTrue(error is HyperliquidTradingCheckError) }
     }
 
+    func testSocketRejectionStillRequiresAValidHTTPObservation() async throws {
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [ExecutionURLProtocol.self]
+        let connection = HyperliquidInfoConnection(makeSocket: { RejectedInfoSocket() })
+        let reader = HyperliquidExecutionReader(configuration: config, connection: connection)
+        ExecutionURLProtocol.configure(data: Data("[]".utf8))
+        let bytes = try await reader.read(.dexs)
+        XCTAssertEqual(bytes, Data("[]".utf8))
+        XCTAssertEqual(ExecutionURLProtocol.captured?.0.url, HyperliquidExecutionReader.endpoint)
+    }
+
+    func testTransientNetworkFailureRetriesOnlyTheExactInfoRequestOnce() async throws {
+        ExecutionURLProtocol.configureSequence([
+            .init(error: .networkConnectionLost), .init(data: Data("[]".utf8))
+        ])
+        let bytes = try await makeReader().read(.dexs)
+        XCTAssertEqual(bytes, Data("[]".utf8))
+        let requests = ExecutionURLProtocol.requests
+        XCTAssertEqual(requests.count, 2)
+        XCTAssertTrue(requests.allSatisfy { $0.0.url == HyperliquidExecutionReader.endpoint })
+        XCTAssertEqual(requests[0].1, requests[1].1)
+    }
+
+    func testTransientServerErrorHasAtMostOneRetryAndNeverAcceptsErrorBody() async throws {
+        for status in [429, 503] {
+            ExecutionURLProtocol.configureSequence([
+                .init(status: status), .init(data: Data("[]".utf8))
+            ])
+            let bytes = try await makeReader().read(.dexs)
+            XCTAssertEqual(bytes, Data("[]".utf8))
+            XCTAssertEqual(ExecutionURLProtocol.requests.count, 2)
+
+            ExecutionURLProtocol.configure(status: status, data: Data("[]".utf8))
+            do { _ = try await makeReader().read(.dexs); XCTFail("Persistent failure accepted") }
+            catch { XCTAssertTrue(error is HyperliquidTradingCheckError) }
+            XCTAssertEqual(ExecutionURLProtocol.requests.count, 2)
+        }
+    }
+
+    func testPermanentHTTPAndTLSFailuresAreNotRetried() async throws {
+        ExecutionURLProtocol.configure(status: 400, data: Data("[]".utf8))
+        do { _ = try await makeReader().read(.dexs); XCTFail("Bad request accepted") } catch {}
+        XCTAssertEqual(ExecutionURLProtocol.requests.count, 1)
+        ExecutionURLProtocol.configureSequence([.init(error: .serverCertificateUntrusted)])
+        do { _ = try await makeReader().read(.dexs); XCTFail("Untrusted origin accepted") } catch {}
+        XCTAssertEqual(ExecutionURLProtocol.requests.count, 1)
+    }
+
+    func testWrongOriginAndLongOrUnparseableRetryAfterDoNotRetry() async throws {
+        ExecutionURLProtocol.configureSequence([
+            .init(status: 503, url: "https://example.invalid/info"), .init(data: Data("[]".utf8))
+        ])
+        do { _ = try await makeReader().read(.dexs); XCTFail("Wrong origin accepted") } catch {}
+        XCTAssertEqual(ExecutionURLProtocol.requests.count, 1)
+        for retryAfter in ["60", "Thu, 01 Oct 2026 06:00:00 GMT", "NaN", "-1"] {
+            ExecutionURLProtocol.configureSequence([
+                .init(status: 429, retryAfter: retryAfter), .init(data: Data("[]".utf8))
+            ])
+            do { _ = try await makeReader().read(.dexs); XCTFail("Must respect backoff") } catch {}
+            XCTAssertEqual(ExecutionURLProtocol.requests.count, 1)
+        }
+    }
+
     private func makeReader() -> HyperliquidExecutionReader {
         let config = URLSessionConfiguration.ephemeral; config.protocolClasses = [ExecutionURLProtocol.self]
         return .init(configuration: config, useWebSocket: false)
@@ -125,20 +188,46 @@ private struct UnavailableInfoSocket: HyperliquidInfoSocket {
     func close() {}
 }
 
+private actor RejectedInfoSocket: HyperliquidInfoSocket {
+    private var id: Int?
+    private var replied = false
+    func send(_ data: Data) throws {
+        id = (try JSONSerialization.jsonObject(with: data) as? [String: Any])?["id"] as? Int
+    }
+    func receive() async throws -> Data {
+        while id == nil || replied { try await Task.sleep(for: .milliseconds(5)) }
+        replied = true
+        return try JSONSerialization.data(withJSONObject: ["channel": "post", "data": [
+            "id": id!, "response": ["type": "error", "payload": "400 Bad Request"]]])
+    }
+    nonisolated func close() {}
+}
+
 private final class ExecutionURLProtocol: URLProtocol, @unchecked Sendable {
     private static let lock = NSLock()
     private static var response = Response()
     private static var copy: (URLRequest, Data)?
+    private static var script: [Response] = []
+    private static var allRequests: [(URLRequest, Data)] = []
     private var stopped: XCTestExpectation?
     struct Response {
         var status = 200, mime = "application/json", data = Data()
         var url: String?, length: String?
         var hanging: (XCTestExpectation, XCTestExpectation)?
+        var error: URLError.Code?
+        var retryAfter: String?
     }
     static var captured: (URLRequest, Data)? { lock.withLock { copy } }
+    static var requests: [(URLRequest, Data)] { lock.withLock { allRequests } }
     static func configure(status: Int = 200, mime: String = "application/json", data: Data,
                           url: String? = nil, length: String? = nil, hanging: (XCTestExpectation, XCTestExpectation)? = nil) {
-        lock.withLock { response = .init(status: status, mime: mime, data: data, url: url, length: length, hanging: hanging); copy = nil }
+        lock.withLock {
+            response = .init(status: status, mime: mime, data: data, url: url, length: length, hanging: hanging)
+            copy = nil; script = []; allRequests = []
+        }
+    }
+    static func configureSequence(_ values: [Response]) {
+        lock.withLock { response = .init(); script = values; copy = nil; allRequests = [] }
     }
     override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
@@ -153,10 +242,16 @@ private final class ExecutionURLProtocol: URLProtocol, @unchecked Sendable {
                 body.append(contentsOf: buffer.prefix(count))
             }
         }
-        let value = Self.lock.withLock { Self.copy = (request, body); return Self.response }
+        let value = Self.lock.withLock {
+            Self.copy = (request, body)
+            Self.allRequests.append((request, body))
+            return Self.script.isEmpty ? Self.response : Self.script.removeFirst()
+        }
+        if let error = value.error { client?.urlProtocol(self, didFailWithError: URLError(error)); return }
         if let hanging = value.hanging { stopped = hanging.1; hanging.0.fulfill(); return }
         var headers = ["Content-Type": value.mime]
         if let length = value.length { headers["Content-Length"] = length }
+        if let retryAfter = value.retryAfter { headers["Retry-After"] = retryAfter }
         let http = HTTPURLResponse(url: value.url.flatMap(URL.init(string:)) ?? request.url!, statusCode: value.status,
                                    httpVersion: "HTTP/1.1", headerFields: headers)!
         client?.urlProtocol(self, didReceive: http, cacheStoragePolicy: .notAllowed)

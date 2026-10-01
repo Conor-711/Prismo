@@ -3,12 +3,9 @@ import Foundation
 extension NativeTradeFeedClient {
     // Already verified trades must not depend on a second exchange sync succeeding.
     func activityForWriting(cloid: String, accountID: UUID) async throws -> TradeFeedItem {
-        do {
-            return try await activity(cloid: cloid, accountID: accountID)
-        } catch TradeThesisError.pending {
-            _ = try await synchronize(accountID: accountID, cloid: cloid)
-            return try await activity(cloid: cloid, accountID: accountID)
-        }
+        try await TradeThesisVerificationWait.load(
+            read: { try await activity(cloid: cloid, accountID: accountID) },
+            synchronize: { _ = try await synchronize(accountID: accountID, cloid: cloid) })
     }
 
     func activity(cloid: String, accountID: UUID) async throws -> TradeFeedItem {
@@ -35,6 +32,30 @@ extension NativeTradeFeedClient {
     }
 }
 
+@MainActor
+enum TradeThesisVerificationWait {
+    static func load<Value>(read: () async throws -> Value, synchronize: () async throws -> Void,
+                           pause: (Duration) async throws -> Void = { try await Task.sleep(for: $0) }) async throws -> Value {
+        // Another verifier may hold the lease. Re-read only this order; never resubmit it.
+        let delays: [Duration] = [.seconds(1), .seconds(3), .seconds(6)]
+        for attempt in 0...delays.count {
+            try Task.checkCancellation()
+            do { return try await read() }
+            catch TradeThesisError.pending {
+                do { try await synchronize() }
+                catch AccountAccessError.unavailable { /* A transient read-side failure can recover. */ }
+                catch TradeThesisError.unavailable { }
+                do { return try await read() }
+                catch TradeThesisError.pending {
+                    guard attempt < delays.count else { throw TradeThesisError.pending }
+                    try await pause(delays[attempt])
+                }
+            }
+        }
+        throw TradeThesisError.pending
+    }
+}
+
 struct TradeThesisChange {
     let accountID: UUID
     let thesis: TradeThesis
@@ -42,4 +63,5 @@ struct TradeThesisChange {
 
 extension Notification.Name {
     static let bSmartTradeThesisUpdated = Notification.Name("bSmartTradeThesisUpdated")
+    static let bSmartNativeInvestorChanged = Notification.Name("bSmartNativeInvestorChanged")
 }

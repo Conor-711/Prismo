@@ -36,9 +36,10 @@ struct TradingMarketsView: View {
                 selectedMarket = nil
             }
         }
-        .searchable(text: $search, prompt: "Market or symbol".bSmartLocalized)
+        .bSmartSearchable(text: $search, prompt: "Market or symbol".bSmartLocalized)
         .scrollContentBackground(.hidden).background(BSmartColor.ink)
         .navigationTitle("Trade perpetuals".bSmartLocalized).navigationBarTitleDisplayMode(.inline)
+        .bSmartDetailPage()
         .task { await trading.loadFullCatalog() }
         .refreshable { await trading.loadFullCatalog() }
         .bSmartPage()

@@ -91,7 +91,7 @@ export async function handleWaitlist(request: Request, env: WaitlistEnvironment)
       email, lang: body.lang, createdAt: new Date().toISOString(), source: "bsmart.today",
       ...(application ? { requestVersion: "beta-application-2026-09-13", requestMethod: "application-button" } : { consentVersion: "beta-invitation-2026-09-13" }),
       }),
-      survey, surveyVersion: "investment-interests-required-2026-09-15", surveySubmittedAt: new Date().toISOString(),
+      survey, surveyVersion: "investment-interests-optional-2026-09-26", surveySubmittedAt: new Date().toISOString(),
     }));
     return reply(200);
   } catch {

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { SmartAccountWorkspace } from "@/features/smart-account";
 import { getSmartVoiceBoard, getSmartVoiceDetailInvestors } from "@/features/smart-account/svMock";
 import { getHyperliquidSmartMoneyData } from "@/features/smart-account/hyperliquidData";
+import { showOnchainSmartMoney } from "@/features/smart-account/productVisibility";
 import { getSmartVoiceLiveCalls, getSmartVoiceMarketData, getSmartVoiceOverviewStats } from "@/server/queries/smartVoiceQueries";
 import { defaultLocale, isLocale, type Locale } from "@/lib/i18n";
 
@@ -22,7 +23,7 @@ export default function SmartAccountPage({ params }: { params: { lang: string } 
   const liveCalls = getSmartVoiceLiveCalls(320);
   const stats = getSmartVoiceOverviewStats();
   const profileIds = getSmartVoiceDetailInvestors(board).map((investor) => investor.id);
-  const hyperliquidData = getHyperliquidSmartMoneyData();
+  const hyperliquidData = showOnchainSmartMoney ? getHyperliquidSmartMoneyData() : null;
   return (
     <SmartAccountWorkspace
       boardMeta={{

@@ -31,7 +31,7 @@ struct HyperliquidArchivedOrder: Codable, Equatable, Sendable {
 
 struct HyperliquidOrderRecord: Codable, Equatable, Sendable, Identifiable {
     enum State: String, Codable, Sendable {
-        case review, signing, signed, submitting, uncertain, filled, rejected, cancelled, reconciled
+        case review, signing, signed, submitting, uncertain, filled, rejected, cancelled, reconciled, notSubmitted
     }
     let id: UUID
     let order: HyperliquidArchivedOrder
@@ -57,7 +57,7 @@ struct HyperliquidOrderRecord: Codable, Equatable, Sendable, Identifiable {
         switch state {
         case .submitting, .uncertain: return true
         case .review, .signing, .signed: return now.timeIntervalSince1970 * 1000 <= Double(order.expiresAfter)
-        case .filled, .rejected, .cancelled, .reconciled: return false
+        case .filled, .rejected, .cancelled, .reconciled, .notSubmitted: return false
         }
     }
 
@@ -74,6 +74,8 @@ struct HyperliquidOrderRecord: Codable, Equatable, Sendable, Identifiable {
             guard signature == nil, response == nil else { throw FundingJournalError.integrity }
         case .signed, .submitting, .uncertain:
             guard signature != nil, response == nil else { throw FundingJournalError.integrity }
+        case .notSubmitted:
+            guard signature != nil, response == nil, reconciliation == nil else { throw FundingJournalError.integrity }
         case .filled:
             guard signature != nil, case .filled = acknowledgement else { throw FundingJournalError.integrity }
         case .rejected:
@@ -93,9 +95,9 @@ struct HyperliquidOrderRecord: Codable, Equatable, Sendable, Identifiable {
         case .review: allowed = [.signing, .cancelled]
         case .signing: allowed = [.signed]
         case .signed: allowed = [.submitting]
-        case .submitting: allowed = [.uncertain, .filled, .rejected, .reconciled]
+        case .submitting: allowed = [.uncertain, .filled, .rejected, .reconciled, .notSubmitted]
         case .uncertain: allowed = [.reconciled]
-        case .filled, .rejected, .cancelled, .reconciled: allowed = []
+        case .filled, .rejected, .cancelled, .reconciled, .notSubmitted: allowed = []
         }
         guard allowed.contains(state) else { throw FundingJournalError.invalidTransition }
     }

@@ -127,6 +127,7 @@ struct BSmartWordmark: View {
 struct BSmartSmartMoneyAvatar: View {
     let identity: SmartMoneyPublicIdentity
     var size: CGFloat = 40
+    var cornerRadius: CGFloat? = nil
 
     private var assetName: String {
         let names = [
@@ -161,9 +162,10 @@ struct BSmartSmartMoneyAvatar: View {
             .resizable()
             .scaledToFill()
             .frame(width: size, height: size)
-            .clipShape(Circle())
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius ?? size / 2, style: .continuous))
             .overlay {
-                Circle().stroke(accent, lineWidth: max(1.5, size * 0.065))
+                RoundedRectangle(cornerRadius: cornerRadius ?? size / 2, style: .continuous)
+                    .stroke(accent, lineWidth: max(1.5, size * 0.065))
             }
             .accessibilityLabel("%@ · Anonymous capital account".bSmartLocalized(identity.displayName))
     }
@@ -209,7 +211,7 @@ struct BSmartHelpButton: View {
                 .foregroundStyle(BSmartColor.tertiaryText)
                 .frame(width: 28, height: 28)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.bSmartPlain)
         .accessibilityLabel("More information".bSmartLocalized)
     }
 }
@@ -232,9 +234,9 @@ struct BSmartHelpSheet: View {
             .navigationTitle(title.bSmartLocalized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
+                ToolbarItem(placement: .confirmationAction) { Group {
                     Button("Done".bSmartLocalized) { dismiss() }
-                }
+                }.buttonStyle(.bSmartToolbar) }.bSmartHideSystemBackground()
             }
         }
         .presentationDetents([.medium, .large])
@@ -260,8 +262,19 @@ struct BSmartIconButton: View {
                     Circle().stroke(BSmartColor.line, lineWidth: 0.75)
                 }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.bSmartPlain)
         .accessibilityLabel(accessibilityLabel.bSmartLocalized)
+    }
+}
+
+extension ToolbarContent {
+    @ToolbarContentBuilder
+    func bSmartHideSystemBackground() -> some ToolbarContent {
+        if #available(iOS 26.0, *) {
+            sharedBackgroundVisibility(.hidden)
+        } else {
+            self
+        }
     }
 }
 
@@ -553,31 +566,43 @@ struct BSmartAvatar: View {
     var size: CGFloat = 40
     var fallbackColor: Color = BSmartColor.sky
     var fallbackSymbol: String? = nil
+    var bundledAssetName: String? = nil
+    var isOrganization: Bool = false
+    var cornerRadius: CGFloat? = nil
     @Environment(\.scenePhase) private var scenePhase
     @State private var loadedImage: AvatarImage?
 
     private var imageURL: URL? { url ?? RedditAuthorAvatars.url(forDisplayName: name) }
+    private var bundledImage: UIImage? { bundledAssetName.flatMap { UIImage(named: $0) } }
 
     var body: some View {
         Group {
-            if let asset = AuthorAvatarAsset.name(for: imageURL) {
+            if let bundledImage {
+                bundledContent(bundledImage)
+            } else if let asset = AuthorAvatarAsset.name(for: imageURL) {
                 Image(asset).resizable().scaledToFill()
-            } else if let loadedImage, loadedImage.sourceURL == imageURL {
+            } else if let loadedImage, let imageURL,
+                      AvatarResourceIdentity.url(for: loadedImage.sourceURL) == AvatarResourceIdentity.url(for: imageURL) {
                 Image(uiImage: loadedImage.image).resizable().scaledToFill()
             } else {
                 fallback
             }
         }
         .frame(width: size, height: size)
-        .clipShape(Circle())
+        .background(isOrganization && bundledImage != nil ? .white : .clear)
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius ?? (isOrganization ? min(8, size * 0.18) : size / 2)))
         .overlay {
-            Circle().stroke(BSmartColor.line, lineWidth: 0.75)
+            RoundedRectangle(cornerRadius: cornerRadius ?? (isOrganization ? min(8, size * 0.18) : size / 2))
+                .stroke(BSmartColor.line, lineWidth: 0.75)
         }
         .accessibilityLabel("%@ avatar".bSmartLocalized(name))
         .task(id: RequestKey(url: imageURL, isActive: scenePhase == .active)) {
-            guard scenePhase == .active, let url = imageURL, AuthorAvatarAsset.name(for: url) == nil else { return }
+            guard scenePhase == .active, bundledImage == nil, let url = imageURL,
+                  AuthorAvatarAsset.name(for: url) == nil else { return }
+            if let loadedImage,
+               AvatarResourceIdentity.url(for: loadedImage.sourceURL) == AvatarResourceIdentity.url(for: url) { return }
             let result = await AvatarImageStore.shared.image(for: url)
-            guard !Task.isCancelled else { return }
+            guard !Task.isCancelled, result != nil else { return }
             loadedImage = result
         }
     }
@@ -585,6 +610,25 @@ struct BSmartAvatar: View {
     private struct RequestKey: Hashable {
         let url: URL?
         let isActive: Bool
+    }
+
+    @ViewBuilder
+    private func bundledContent(_ image: UIImage) -> some View {
+        if isOrganization, bundledAssetName == "SubjectAvatar_institution_citadel" {
+            Image(uiImage: image).resizable().scaledToFill()
+        } else if isOrganization, bundledAssetName == "SubjectAvatar_institution_ark" {
+            let imageHeight = size * 0.82
+            Image(uiImage: image)
+                .resizable()
+                .frame(width: imageHeight * image.size.width / image.size.height, height: imageHeight)
+                .frame(width: size - 8, height: size - 8, alignment: .leading)
+                .clipped()
+                .padding(4)
+        } else if isOrganization {
+            Image(uiImage: image).resizable().scaledToFit().padding(4)
+        } else {
+            Image(uiImage: image).resizable().scaledToFill()
+        }
     }
 
     private var fallback: some View {
@@ -703,7 +747,7 @@ struct BSmartErrorView: View {
             Text(message)
         } actions: {
             Button("Try again", action: retry)
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.bSmartPrimary)
         }
         .accessibilityIdentifier("app.error")
         .bSmartPage()

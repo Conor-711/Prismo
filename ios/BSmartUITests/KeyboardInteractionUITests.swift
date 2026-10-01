@@ -60,7 +60,7 @@ final class KeyboardInteractionUITests: XCTestCase {
         XCTAssertTrue(app.buttons["profile.edit"].waitForExistence(timeout: 3))
     }
 
-    func testSmartSearchKeepsLatestQueryAndSwitchingSectionsClearsIt() {
+    func testSmartSearchKeepsLatestQueryWithoutOnchainSection() {
         let app = launch()
         app.buttons["discovery.open-directory"].tap()
         let field = app.textFields["smart.search"]
@@ -68,9 +68,8 @@ final class KeyboardInteractionUITests: XCTestCase {
         field.tap(); field.typeText("Serenity")
         XCTAssertTrue(app.staticTexts["Serenity"].waitForExistence(timeout: 5))
         XCTAssertEqual(field.value as? String, "Serenity")
-        app.descendants(matching: .any)["smart.section.money"].tap()
-        XCTAssertNotEqual(field.value as? String, "Serenity")
-        app.descendants(matching: .any)["smart.section.accounts"].tap()
+        XCTAssertFalse(app.descendants(matching: .any)["smart.section.money"].exists)
+        app.buttons["Clear"].tap()
         XCTAssertTrue(app.buttons["smart.account.row.first"].waitForExistence(timeout: 5))
     }
 

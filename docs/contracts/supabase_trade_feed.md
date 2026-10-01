@@ -1,5 +1,28 @@
 # Supabase Trade Feed
 
+## Original opening-card settlement, 2026-10-01
+
+Native investor updates retain their original IDs, theory, quotation, opening
+notional and entry price after closure. `trade.eventKind` distinguishes `opening`
+from `closing`; `status=closed` may now describe a settled original opening event.
+For that event, `exitPriceUSD` is the size-weighted exit fill price and
+`realizedPnlUSD` is exchange-reported closed PnL less opening and closing USDC
+fees (builder fee is already included; funding payments are not included).
+The existing separate closing event keeps its existing verified close-order data.
+
+Attribution is read-only and exact, not FIFO estimates: require all registered
+opening fill IDs/order ID, a position starting at zero, continuous `startPosition`
+values, only fills from that opening order followed by reductions to zero, and
+valid unique fill IDs, decimal amounts and fees. Partial exits are aggregated only
+once the original position is fully flat. Other same-coin opening orders, reversals,
+missing history, foreign fee tokens or truncated responses leave settlement unknown.
+Later reopenings cannot inherit or erase the prior round trip's settlement.
+No account-wide PnL, limit price or current mark is substituted for realized facts.
+
+Fill reads extend to an anchored current time, with a bounded three-page/6,000-fill
+history budget per wallet. Incomplete reads fail closed. No SQL migration, exchange
+write, signing or existing performance aggregate change is required.
+
 ## Trade theses, 2026-09-22 (pending rollout)
 
 See `trade_thesis.md`. Native Feed now uses the viewer-aware social projection
@@ -131,6 +154,23 @@ listed separately: unified/portfolio margin can share that collateral, so the
 client never sums it with perps equity into a fabricated total. Positions
 include exchange-reported notional value, entry, unrealized PnL and ROI ratio.
 No signing or trading capability is exposed by this endpoint.
+
+Subject-detail consolidation (2026-10-01): all native public-profile entry points
+resolve to the shared portrait Smart Account detail. The existing portfolio endpoint
+supplies equity/history, separate spot USDC and current positions inline; trading
+history, follow and messaging remain available without a second profile design.
+Failed portfolio reads remain unavailable, never zero; view state fences late responses
+by viewer/profile and request generation.
+
+For published holding events with no `ticker`, source attribution may resolve the
+server-owned `underlyingTicker`. It cannot fall back for trades or opinions, cannot
+override an explicit ticker, and must retain the exact original event in the quote.
+This links an underlying-stock/perpetual trade, not an option execution. The compact
+explanation popover states this distinction; the card does not repeat a disclaimer
+line. The UI never sets the user's trade side from option interpretation.
+Option explanation uses only exact Call/Put holding metadata and the disclosed
+change; reduced exposure does not imply the opposite outlook, and absent holdings
+do not prove closing trades. Unknown or sample data are not given an invented outlook.
 
 Migration 004 adds `longTraders` and `shortTraders` to opinion-detail counts.
 Their sum is `totalTraders`, including users without public profiles; one person

@@ -122,7 +122,6 @@ enum BSmartLocalization {
         "Smart",
         "Smart Account",
         "Smart Money",
-        "Mr Collie",
     ]
 
     private static let sourceBundle = Bundle(for: BundleToken.self)

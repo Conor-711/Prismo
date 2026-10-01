@@ -80,6 +80,28 @@ final class NativeFeedSessionTests: XCTestCase {
             source: .init(opinionID: UUID(), ticker: "NVDA"), order: order))
     }
 
+    func testSubjectTradeRegistrationSendsOnlyCanonicalReferenceIDs() throws {
+        let source = OpinionTradeSource(opinionID: nil, ticker: "NVDA",
+                                        subjectID: "politician:member-1", subjectEventID: "filing-1")
+        let reference = try XCTUnwrap(NativeActivityReference(source: source))
+        let order = try HyperliquidOrderTestSupport.order()
+        let payload = NativeDirectOrderAttribution.registration(order: order, source: reference)
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(payload)) as? [String: Any])
+        let encoded = try XCTUnwrap(json["source"] as? [String: String])
+        XCTAssertEqual(encoded, ["kind": "subject", "subjectID": "politician:member-1",
+                                 "eventID": "filing-1"])
+        XCTAssertNil(json["opinionId"])
+
+        let updateID = UUID()
+        let nativeSource = OpinionTradeSource(opinionID: nil, ticker: "NVDA", nativeUpdateID: updateID)
+        let nativeReference = try XCTUnwrap(NativeActivityReference(source: nativeSource))
+        let nativePayload = NativeDirectOrderAttribution.registration(order: order, source: nativeReference)
+        let nativeJSON = try XCTUnwrap(JSONSerialization.jsonObject(
+            with: JSONEncoder().encode(nativePayload)) as? [String: Any])
+        let nativeEncoded = try XCTUnwrap(nativeJSON["source"] as? [String: String])
+        XCTAssertEqual(nativeEncoded, ["kind": "native", "updateID": updateID.uuidString])
+    }
+
     private func signedIn(authority: AccountSessionAuthority? = .supabase) async -> (AccountAccessStore, TradingAccountSession) {
         let session = TradingAccountSession(account: .init(id: UUID(), provider: .google),
             accessToken: authority == .supabase ? "eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJ0ZXN0In0.disposableSignatureForTests" : String(repeating: "x", count: 64),

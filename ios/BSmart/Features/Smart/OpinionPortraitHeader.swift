@@ -36,7 +36,8 @@ struct OpinionPortraitHeader: View {
                     BSmartAvatar(url: avatarURL, name: update.authorName,
                         size: layout.avatarFrame.width, fallbackSymbol: "person.fill")
                         .bSmartSubjectDestination(update)
-                    if update.platformPercentile.isFinite, (0...1).contains(update.platformPercentile) {
+                    if update.platform != "bsmart" && update.platformPercentile.isFinite,
+                       (0...1).contains(update.platformPercentile) {
                         Text("Top %d%%".bSmartLocalized(max(1, Int(ceil(update.platformPercentile * 100)))))
                             .font(.subheadline.weight(.bold)).monospacedDigit()
                             .foregroundStyle(BSmartColor.brand)

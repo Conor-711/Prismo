@@ -102,10 +102,10 @@ struct AddPositionView: View {
             .navigationTitle(position == nil ? "Add ticker" : "Edit \(position?.ticker ?? "ticker")")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
+                ToolbarItem(placement: .cancellationAction) { Group {
                     Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
+                }.buttonStyle(.bSmartToolbar) }.bSmartHideSystemBackground()
+                ToolbarItem(placement: .confirmationAction) { Group {
                     Button(position == nil ? "Add" : "Save") {
                         let didSave = model.savePortfolioEntry(
                             id: position?.id,
@@ -120,7 +120,7 @@ struct AddPositionView: View {
                     }
                     .fontWeight(.semibold)
                     .disabled(!canSave)
-                }
+                }.buttonStyle(.bSmartToolbar) }.bSmartHideSystemBackground()
             }
         }
         .presentationDetents([.large])

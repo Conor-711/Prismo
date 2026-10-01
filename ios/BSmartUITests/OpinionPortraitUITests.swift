@@ -97,6 +97,27 @@ final class OpinionPortraitUITests: XCTestCase {
         XCTAssertFalse(chart.exists)
     }
 
+    func testFullScreenPhotoStartsCenteredAndCanZoom() {
+        let app = openOpinion(extraArguments: ["--ui-opinion-photo-preview"])
+        let viewer = app.descendants(matching: .any)["opinion.photo.viewer"].firstMatch
+        let photo = app.descendants(matching: .any)["opinion.photo.image"].firstMatch
+        let close = app.buttons["opinion.photo.close"]
+        XCTAssertTrue(viewer.waitForExistence(timeout: 5))
+        XCTAssertTrue(photo.waitForExistence(timeout: 5))
+        XCTAssertEqual(photo.frame.midX, viewer.frame.midX, accuracy: 4)
+        XCTAssertEqual(photo.frame.midY, viewer.frame.midY, accuracy: 8)
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = "opinion-photo-centered"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+        XCTAssertTrue(close.isHittable, app.debugDescription)
+        let fittedWidth = photo.frame.width
+        photo.doubleTap()
+        XCTAssertGreaterThan(photo.frame.width, fittedWidth)
+        close.tap()
+        XCTAssertFalse(viewer.exists)
+    }
+
     private func assertRankBelowAvatar(in app: XCUIApplication, cover: XCUIElement) {
         let rank = app.staticTexts["opinion.author-rank"]
         XCTAssertTrue(rank.isHittable)
@@ -109,12 +130,13 @@ final class OpinionPortraitUITests: XCTestCase {
         XCTAssertFalse(cover.staticTexts["opinion.ticker"].exists)
     }
 
-    private func openOpinion(light: Bool = false) -> XCUIApplication {
+    private func openOpinion(light: Bool = false, extraArguments: [String] = []) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-reset-state", "--ui-scenario=loaded", "--ui-trading-fixture", "--ui-opinion-traders-fixture", "--ui-search-fixture",
             "--ui-appearance", light ? "light" : "dark", "-AppleLanguages", light ? "(zh-Hans)" : "(en)",
             "-AppleLocale", light ? "zh_CN" : "en_US"]
         if light { app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryXXXL"] }
+        app.launchArguments += extraArguments
         app.launch()
         let search = app.buttons["app.tab.search"]
         XCTAssertTrue(search.waitForExistence(timeout: 10))

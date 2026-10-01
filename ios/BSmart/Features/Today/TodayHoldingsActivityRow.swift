@@ -37,7 +37,7 @@ struct TodayHoldingsActivityRow: View {
             }
             .contentShape(RoundedRectangle(cornerRadius: 8))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.bSmartPlain)
         .accessibilityIdentifier("holdings.activity.\(activity.isSmartAccount ? "account" : "money").\(activity.id)")
     }
 

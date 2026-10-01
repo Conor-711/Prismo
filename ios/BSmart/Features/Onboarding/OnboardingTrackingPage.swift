@@ -55,7 +55,7 @@ struct OnboardingTrackingPage: View {
                 .background(isFollowing ? BSmartColor.brand : BSmartColor.brand.opacity(0.12))
                 .clipShape(Capsule())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.bSmartPlain)
             .accessibilityIdentifier("onboarding.follow-featured")
         }
     }

@@ -3,8 +3,8 @@
 export const zh = {
   betaLanding: {
     survey: {
-      title: "申请体验 bSmart", required: "所有项目均为必填",
-      channels: "你平时关注哪些投资信息渠道？", multiple: "可多选",
+      title: "申请体验 bSmart", required: "邮箱必填",
+      channels: "你平时关注哪些投资信息渠道？", multiple: "选填 · 可多选", optional: "选填",
       channelsRequired: "请至少选择一个信息渠道。", contactRequired: "请填写你的联系方式。",
       accounts: "投资账号", accountsDetail: "Twitter/X、YouTube、Reddit 等",
       politicians: "政客", politiciansDetail: "佩洛西、Trump 等", institutions: "机构",
@@ -13,7 +13,22 @@ export const zh = {
       platform: "联系平台", handle: "联系方式", handlePlaceholder: "你的账号或个人主页链接", wechat: "微信",
       invalid: "请检查填写内容，选择其他渠道后请补充说明。",
     },
-    tagline: "追踪最聪明投资者的最佳方式",
+    tagline: "发现投资者，追踪观点，结合市场做出判断。",
+    site: {
+      productNav: "产品", accessNav: "申请体验", beta: "iOS 内测开放中",
+      heroTitle: "发现聪明投资者，让交易更有依据。",
+      heroDescription: "查看他们的观点、历史表现及对应行情，跟进市场变化，再决定是否交易。",
+      heroCTA: "申请 iOS 内测资格", heroHint: "留下邮箱，获取内测邀请",
+      productEyebrow: "产品实景", productTitle: "走进 bSmart",
+      productDescription: "投资者资料、价格图表和公开市场观点，在这里查看。",
+      investorTitle: "先认识投资者", investorDescription: "查看公开观点、关注的标的和历史表现，再决定是否追踪。",
+      marketTitle: "把观点放回行情里", marketDescription: "在价格图表上看到投资者发表观点的时间，结合当时的市场情况阅读。",
+      updatesTitle: "持续关注后续动态", updatesDescription: "追踪投资者和标的的最新公开观点，不必来回切换平台。",
+      formIntro: "在一个地方查看投资者的历史观点、市场背景与最新动态。留下邮箱，有内测名额时我们会联系你。",
+      formPanelTitle: "内测申请", formOptional: "补充偏好与联系方式", formSubmit: "申请内测邀请",
+      formPrivacy: "邮箱仅用于内测邀请，不发送营销邮件。",
+      footerContact: "联系 bSmart", footerEmail: "邮箱", footerX: "X",
+    },
     apply: "申请加入", applied: "已申请",
     screenTitle: "先看过往判断，\n再决定关注谁。", screenFeatures: ["历史观点", "标的动态", "聪明钱追踪"], screenFeaturesLabel: "bSmart 产品",
     title: "bSmart · 让值得关注的观点，来到你面前",
@@ -35,7 +50,7 @@ export const zh = {
     proofKicker: "04 / 保留观点的来处", proofTitle: "从别人的观点，\n走到自己的判断。",
     proofStory: "bSmart 聚合公开观点，保留作者、时间和来源。先看清依据，再决定是否行动。决定权，始终在你。",
     proofSteps: ["找到观点", "回到原文", "自己判断"], proofQuote: "观点属于作者。\n判断属于你。", proofTag: "有来源，才有下一步。",
-    ctaKicker: "给下一次判断，一个更好的开始", ctaTitle: "少一点噪音。\n多一点自己的判断。", ctaStory: "bSmart 正在小范围内测。留下邮箱，加入等候名单。", email: "邮箱地址", emailPlaceholder: "你的 Email", submitting: "正在提交…", successTitle: "已加入内测等候名单。", successBody: "有体验名额时，我们会通过邮件联系你。", another: "使用其他邮箱", consent: "我同意接收 bSmart 内测邀请，并已阅读", privacy: "隐私说明", consentRequired: "请先阅读隐私说明并同意接收内测邀请。", invalidEmail: "请输入有效的邮箱地址。", unavailable: "邮件收集暂不可用，请稍后重试。", networkError: "暂时无法提交，请检查网络后重试。", tooMany: "提交较频繁，请稍后再试。", retry: "重新提交", privacyTitle: "你的邮箱，只用于内测联系", privacyBody: "我们收集你的邮箱、申请时间和页面语言，用于管理内测名单及发送体验邀请。名单存储于 Cloudflare，不会公开展示，也不用于广告营销。为防止滥用，短期保存网络标识的散列值。申请不保证获得名额。", privacyDelete: "如需删除申请或停止联系，请发送邮件至 zfy3712z@gmail.com。", close: "关闭", disclaimer: "公开观点仅供参考，不构成投资建议。历史表现不代表未来结果。", footer: "Stay curious. Think for yourself.", contact: "联系我们", backTop: "回到顶部",
+    ctaKicker: "给下一次判断，一个更好的开始", ctaTitle: "少一点噪音。\n多一点自己的判断。", ctaStory: "bSmart 正在小范围内测。留下邮箱，加入等候名单。", email: "邮箱地址", emailPlaceholder: "你的 Email", submitting: "正在提交…", successTitle: "已加入内测等候名单。", successBody: "有体验名额时，我们会通过邮件联系你。", another: "使用其他邮箱", consent: "我同意接收 bSmart 内测邀请，并已阅读", privacy: "隐私说明", consentRequired: "请先阅读隐私说明并同意接收内测邀请。", invalidEmail: "请输入有效的邮箱地址。", unavailable: "邮件收集暂不可用，请稍后重试。", networkError: "暂时无法提交，请检查网络后重试。", tooMany: "提交较频繁，请稍后再试。", retry: "重新提交", privacyTitle: "你的信息，只用于内测联系", privacyBody: "我们收集你的邮箱、申请时间和页面语言，以及你自愿填写的信息来源与其他联系方式，用于管理内测名单及发送体验邀请。名单存储于 Cloudflare，不会公开展示，也不用于广告营销。为防止滥用，短期保存网络标识的散列值。申请不保证获得名额。", privacyDelete: "如需删除申请或停止联系，请发送邮件至 zfy3712z@gmail.com。", close: "关闭", disclaimer: "公开观点仅供参考，不构成投资建议。历史表现不代表未来结果。", footer: "Stay curious. Think for yourself.", contact: "联系我们", backTop: "回到顶部",
   },
   meta: {
     title: "bSmart · Reddit 美股舆情情报",

@@ -3,8 +3,9 @@ export type Intent = {
   opinionId: string; authorId: string; ticker: string; cloid: string; coin: string;
   side: "buy" | "sell"; size: string; limitPrice: string; nonce: number; expiresAfter: number;
 };
+export type DirectIntent = Omit<Intent, "opinionId" | "authorId"> & { reduceOnly: boolean };
 export type RegisteredOrder = {
-  id: string; wallet: string; intent: Intent; registered_at: string;
+  id: string; wallet: string; intent: Intent | DirectIntent; registered_at: string;
 };
 export type InfoReader = (body: Record<string, unknown>) => Promise<any>;
 export const uuid = (s: unknown): s is string => typeof s === "string" &&
@@ -17,6 +18,10 @@ export function decimal(value: unknown): bigint {
   }
   const [whole, fraction = ""] = value.split(".");
   return BigInt(whole) * 10n ** 18n + BigInt(fraction.padEnd(18, "0"));
+}
+function signedDecimal(value: unknown): bigint {
+  if (typeof value !== "string" || !/^-?\d{1,20}(\.\d{1,18})?$/.test(value)) throw new Error("invalid_decimal");
+  return value.startsWith("-") ? -decimal(value.slice(1)) : decimal(value);
 }
 function wire(value: bigint, scale: number): string {
   const digits = value.toString().padStart(scale + 1, "0");
@@ -40,7 +45,35 @@ export function validateIntent(input: any, now = Date.now()): Intent {
   return { ...input, opinionId: input.opinionId.toLowerCase() };
 }
 
-export async function verifyHip3Market(intent: Intent, info: InfoReader): Promise<void> {
+export function validateDirectIntent(input: any, now = Date.now()): DirectIntent {
+  const keys = ["ticker", "cloid", "coin", "side", "size", "limitPrice", "nonce", "expiresAfter", "reduceOnly"];
+  if (!input || typeof input !== "object" || Array.isArray(input) || Object.keys(input).length !== keys.length ||
+      !keys.every(k => k in input) || typeof input.reduceOnly !== "boolean" ||
+      typeof input.coin !== "string" ||
+      !/^[a-zA-Z0-9_-]{1,64}(?::[a-zA-Z0-9_-]{1,64})?$/.test(input.coin)) throw new Error("invalid_intent");
+  const { reduceOnly, ...order } = input;
+  const checked = validateIntent({ ...order, coin: input.coin.includes(":") ? input.coin : `xyz:${input.coin}`,
+    opinionId: "00000000-0000-4000-8000-000000000001",
+    authorId: "bsmart:direct" }, now);
+  const { opinionId: _opinionId, authorId: _authorId, ...direct } = checked;
+  return { ...direct, coin: input.coin, reduceOnly };
+}
+
+export async function verifyDirectMarket(intent: Pick<DirectIntent, "coin" | "ticker">,
+  info: InfoReader): Promise<void> {
+  if (intent.coin.includes(":")) return await verifyHip3Market(intent, info);
+  if (intent.coin !== intent.ticker) throw new Error("market_unavailable");
+  const meta = await info({ type: "meta", dex: "" });
+  if (!meta || !Array.isArray(meta.universe) || (meta.collateralToken ?? 0) !== 0) {
+    throw new Error("upstream_unavailable");
+  }
+  const market = meta.universe.find((entry: any) => entry?.name === intent.coin);
+  if (!market || market.isDelisted === true || !Number.isInteger(market.maxLeverage) ||
+      market.maxLeverage <= 0 || !Number.isInteger(market.szDecimals) ||
+      market.szDecimals < 0 || market.szDecimals > 6) throw new Error("market_unavailable");
+}
+
+export async function verifyHip3Market(intent: Pick<Intent, "coin" | "ticker">, info: InfoReader): Promise<void> {
   const [dex, symbol] = intent.coin.split(":");
   if (symbol !== intent.ticker) throw new Error("market_unavailable");
   const dexs = await info({ type: "perpDexs" });
@@ -66,7 +99,7 @@ export async function verifyExecution(record: RegisteredOrder, info: InfoReader,
   if (result?.status === "unknownOid") return null;
   const status = result?.order?.status, order = result?.order?.order;
   if (result?.status !== "order" || !order || order.cloid !== i.cloid || order.coin !== i.coin ||
-      order.side !== (i.side === "buy" ? "B" : "A") || order.reduceOnly !== false ||
+      order.side !== (i.side === "buy" ? "B" : "A") || order.reduceOnly !== ("reduceOnly" in i && i.reduceOnly) ||
       order.isTrigger !== false || !["Ioc", "FrontendMarket"].includes(order.tif) ||
       decimal(order.origSz) !== decimal(i.size) || decimal(order.limitPx) !== decimal(i.limitPrice) ||
       !Number.isSafeInteger(order.oid) || order.oid <= 0 || !Number.isSafeInteger(order.timestamp) ||
@@ -79,7 +112,7 @@ export async function verifyExecution(record: RegisteredOrder, info: InfoReader,
   const rows = await info({ type: "userFillsByTime", user: record.wallet,
     startTime: Math.floor(registered), endTime: i.expiresAfter + 2000, aggregateByTime: false });
   if (!Array.isArray(rows) || rows.length >= 2000) throw new Error("incomplete_fills");
-  let total = 0n, notional = 0n, first = Infinity, last = 0;
+  let total = 0n, notional = 0n, realizedPnl = 0n, fees = 0n, first = Infinity, last = 0;
   const ids = new Set<number>();
   for (const f of rows.filter(f => f.oid === order.oid)) {
     if (f.coin !== i.coin || f.side !== order.side || !Number.isSafeInteger(f.tid) || f.tid < 0 || ids.has(f.tid) ||
@@ -92,13 +125,22 @@ export async function verifyExecution(record: RegisteredOrder, info: InfoReader,
       throw new Error("invalid_fill");
     }
     ids.add(f.tid); total += size; notional += size * price;
+    if ("reduceOnly" in i) {
+      fees += decimal(f.fee);
+      if (i.reduceOnly) realizedPnl += signedDecimal(f.closedPnl);
+    }
     first = Math.min(first, f.time); last = Math.max(last, f.time);
   }
   if (total > decimal(i.size) || (status === "filled" && total !== decimal(i.size))) throw new Error("incomplete_fills");
   if (total === 0n) return null;
+  const close = "reduceOnly" in i && i.reduceOnly;
+  const net = realizedPnl - fees;
   return { side: i.side === "buy" ? "long" : "short", notionalUSD: wire(notional, 36),
     marketCoin: i.coin, executedAt: new Date(first).toISOString(), lastFilledAt: new Date(last).toISOString(),
-    orderID: String(order.oid), fillIDs: [...ids].map(String) };
+    orderID: String(order.oid), fillIDs: [...ids].map(String),
+    ...("reduceOnly" in i ? { feeUSD: wire(fees, 18) } : {}),
+    ...(close ? { reduceOnly: true, realizedPnlUSD: realizedPnl < 0n ? "-" + wire(-realizedPnl, 18) : wire(realizedPnl, 18),
+      netRealizedPnlUSD: net < 0n ? "-" + wire(-net, 18) : wire(net, 18) } : {}) };
 }
 
 export async function boundedJSON(url: string, init: RequestInit = {}, limit = 1048576): Promise<any> {

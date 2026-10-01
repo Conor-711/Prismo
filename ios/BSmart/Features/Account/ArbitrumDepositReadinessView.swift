@@ -41,6 +41,7 @@ struct ArbitrumDepositReadinessView: View {
         .navigationTitle("Deposit USDC".bSmartLocalized)
         .navigationBarTitleDisplayMode(.inline)
         .accessibilityIdentifier("account.deposit-screen")
+        .bSmartDetailPage()
         .bSmartPage()
     }
 

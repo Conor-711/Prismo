@@ -34,7 +34,8 @@ struct TickerIntelligenceView: View {
     private var activities: [TickerSmartActivityItem] {
         TickerSmartActivityItem.items(ticker: activeSymbol,
             accountUpdates: model.accountUpdates(for: activeSymbol),
-            moneyMovements: model.moneyMovements(for: activeSymbol))
+            moneyMovements: BSmartProductVisibility.onchainSmartMoney
+                ? model.moneyMovements(for: activeSymbol) : [])
     }
 
     var body: some View {
@@ -63,7 +64,7 @@ struct TickerIntelligenceView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) { assetNavigationHeader }
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItem(placement: .topBarTrailing) { Group {
                 Button {
                     model.setTickerFollowed(model.position(for: activeSymbol) == nil,
                                             ticker: activeSymbol, companyName: companyName)
@@ -77,8 +78,8 @@ struct TickerIntelligenceView: View {
                     ? "In portfolio" : model.position(for: activeSymbol) == nil
                         ? "Follow ticker" : "Unfollow ticker").bSmartLocalized)
                 .accessibilityIdentifier("ticker.follow")
-            }
-            ToolbarItem(placement: .topBarTrailing) {
+            }.buttonStyle(.bSmartToolbar) }.bSmartHideSystemBackground()
+            ToolbarItem(placement: .topBarTrailing) { Group {
                 Button { showsPositionEditor = true } label: {
                     Image(systemName: model.position(for: activeSymbol) == nil ? "plus.circle" : "pencil")
                 }
@@ -86,7 +87,7 @@ struct TickerIntelligenceView: View {
                     ? "Add to portfolio or watchlist" : "Edit tracked ticker").bSmartLocalized)
                 .accessibilityIdentifier(model.position(for: activeSymbol) == nil
                     ? "ticker-intelligence.track" : "ticker-intelligence.edit")
-            }
+            }.buttonStyle(.bSmartToolbar) }.bSmartHideSystemBackground()
         }
         .sheet(isPresented: $showsMarketPicker) {
             HyperliquidMarketPickerView().environmentObject(trading)
@@ -114,7 +115,7 @@ struct TickerIntelligenceView: View {
                                 .frame(height: selection == section ? 2 : 0.5)
                         }
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.bSmartPlain)
                 .accessibilityAddTraits(selection == section ? .isSelected : [])
                 .accessibilityIdentifier("ticker.section.\(section.id)")
             }
@@ -142,7 +143,7 @@ struct TickerIntelligenceView: View {
             .foregroundStyle(BSmartColor.primaryText)
             .frame(maxWidth: 230, minHeight: 44, alignment: .leading)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.bSmartPlain)
         .accessibilityIdentifier("trade.market-picker")
     }
 }

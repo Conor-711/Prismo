@@ -34,3 +34,15 @@ verify_jwt = false
 [functions.bsmart-withdrawals]
 # Handler verifies Supabase Auth and wallet ownership before every operation.
 verify_jwt = false
+
+[functions.bsmart-markets]
+# Read-only routing; handler verifies Apple/Google accounts with Auth getUser.
+verify_jwt = false
+
+[functions.bsmart-equities]
+# EVM discovery only; handler verifies Apple/Google accounts with Auth getUser.
+verify_jwt = false
+
+[functions.bsmart-push]
+# Scheduler-only; validates its independent Vault token before reading devices.
+verify_jwt = false

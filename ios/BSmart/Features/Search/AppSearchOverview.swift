@@ -51,7 +51,7 @@ struct AppSearchOverview: View {
                                     .background(BSmartColor.surface, in: RoundedRectangle(cornerRadius: 8))
                                     .overlay { RoundedRectangle(cornerRadius: 8).stroke(BSmartColor.line.opacity(0.6), lineWidth: 0.5) }
                                     .contentShape(Rectangle())
-                                }.buttonStyle(.plain).accessibilityIdentifier("search.overview.\(item.id)")
+                                }.buttonStyle(.bSmartPlain).accessibilityIdentifier("search.overview.\(item.id)")
                             }
                         }
                     }
@@ -86,7 +86,7 @@ struct AppSearchOverview: View {
                                             }.frame(height: rankHeight)
                                         }
                                     }.frame(width: 104)
-                                }.buttonStyle(.plain).accessibilityIdentifier("search.overview.\(item.id)")
+                                }.buttonStyle(.bSmartPlain).accessibilityIdentifier("search.overview.\(item.id)")
                                     .accessibilityLabel([item.title, item.investorRanking].compactMap { $0 }.joined(separator: ", "))
                             }
                         }.padding(.vertical, 2)
@@ -98,7 +98,7 @@ struct AppSearchOverview: View {
                     heading("Latest views")
                     ForEach(data.opinions) { item in
                         Button { open(item) } label: { AppSearchResultRow(item: item) }
-                            .buttonStyle(.plain).accessibilityIdentifier("search.overview.\(item.id)")
+                            .buttonStyle(.bSmartPlain).accessibilityIdentifier("search.overview.\(item.id)")
                     }
                 }.accessibilityElement(children: .contain).accessibilityIdentifier("search.overview.opinions")
             }

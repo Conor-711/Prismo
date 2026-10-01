@@ -15,7 +15,18 @@ protocol BSmartAPIClient {
     func fetchSmartMoney() async throws -> [SmartMoneySignal]
     func fetchSmartMoneyEvidence(accountID: String) async throws -> [SmartMoneyRepresentativeEvidence]
     func fetchDailyDigest() async throws -> DailyDigestSnapshot?
-    func queryMrCollie(_ query: MrCollieQuery) async throws -> MrCollieResponse
+}
+
+@MainActor
+protocol BSmartSubjectActivityProviding {
+    func fetchSubjectActivity() async throws -> TodaySubjectFeedSnapshot
+    func fetchSubjectActivity(subjectID: String) async throws -> TodaySubjectFeedSnapshot
+}
+
+extension BSmartSubjectActivityProviding {
+    func fetchSubjectActivity(subjectID: String) async throws -> TodaySubjectFeedSnapshot {
+        try await fetchSubjectActivity()
+    }
 }
 
 protocol BSmartDataFreshnessProviding: Sendable {
@@ -43,9 +54,6 @@ extension BSmartAPIClient {
 
     func fetchSmartMoneyEvidence(accountID: String) async throws -> [SmartMoneyRepresentativeEvidence] { [] }
 
-    func queryMrCollie(_ query: MrCollieQuery) async throws -> MrCollieResponse {
-        throw BSmartAPIError.mrCollieUnavailable
-    }
 }
 
 enum BSmartAPIError: LocalizedError {
@@ -54,7 +62,6 @@ enum BSmartAPIError: LocalizedError {
     case httpStatus(Int)
     case secureStorage(Int32)
     case unverifiedSmartMoney(String)
-    case mrCollieUnavailable
     case tradeStatisticsUnavailable
 
     var errorDescription: String? {
@@ -64,7 +71,6 @@ enum BSmartAPIError: LocalizedError {
         case let .httpStatus(status): "bSmart request failed with status \(status)."
         case .secureStorage: "bSmart could not access the secure installation session."
         case let .unverifiedSmartMoney(reason): "bSmart rejected unverified Smart Money data: \(reason)"
-        case .mrCollieUnavailable: "Mr Collie is unavailable for this data source."
         case .tradeStatisticsUnavailable: "Real trade statistics are not available yet."
         }
     }
@@ -179,16 +185,6 @@ final class HTTPBSmartAPIClient: BSmartAPIClient, BSmartRemoteSyncing, BSmartDat
             if case .httpStatus(404) = error { return nil }
             throw error
         }
-    }
-
-    func queryMrCollie(_ query: MrCollieQuery) async throws -> MrCollieResponse {
-        let data = try await request(
-            "v1/mr-collie/query",
-            method: "POST",
-            body: try Self.makeEncoder().encode(query),
-            timeoutInterval: 50
-        )
-        return try decoder.decode(MrCollieResponse.self, from: data)
     }
 
     func fetchLegacyEvents() async throws -> [InvestmentEvent] {
@@ -374,58 +370,61 @@ final class HTTPBSmartAPIClient: BSmartAPIClient, BSmartRemoteSyncing, BSmartDat
 
 final class BundleBSmartAPIClient: BSmartAPIClient {
     private let bundle: Bundle
-    private let decoder = HTTPBSmartAPIClient.makeDecoder()
 
     init(bundle: Bundle = .main) {
         self.bundle = bundle
     }
 
     func fetchPortfolio() async throws -> [PortfolioPosition] {
-        try decode("portfolio")
+        try await decode("portfolio")
     }
 
     func fetchPortfolioHistory() async throws -> [PortfolioValuePoint] {
-        try decode("portfolio-history")
+        try await decode("portfolio-history")
     }
 
     func fetchSignals() async throws -> [PortfolioSignal] {
-        try decode("portfolio-signals")
+        try await decode("portfolio-signals")
     }
 
     func fetchSmartAccountUpdates() async throws -> [SmartAccountUpdate] {
-        try decode("smart-account-updates")
+        try await decode("smart-account-updates")
     }
 
     func fetchSmartMoneyMovements() async throws -> [SmartMoneyMovement] {
-        try decode("smart-money-movements")
+        try await decode("smart-money-movements")
     }
 
     func fetchTickerIntelligence() async throws -> [TickerIntelligence] {
-        try decode("ticker-intelligence")
+        try await decode("ticker-intelligence")
     }
 
     func fetchSmartAccounts() async throws -> [SmartAccountProfile] {
-        try decode("smart-accounts")
+        try await decode("smart-accounts")
     }
 
     func fetchSmartAccountEvidence(accountID: String) async throws -> [SmartAccountUpdate] {
-        let evidence: [SmartAccountUpdate] = try decode("smart-account-evidence")
+        let evidence: [SmartAccountUpdate] = try await decode("smart-account-evidence")
         return evidence.filter { $0.authorId == accountID }
     }
 
     func fetchSmartMoney() async throws -> [SmartMoneySignal] {
-        try decode("smart-money")
+        try await decode("smart-money")
     }
 
     func fetchSmartMoneyEvidence(accountID: String) async throws -> [SmartMoneyRepresentativeEvidence] {
-        let evidence: [SmartMoneyRepresentativeEvidence] = try decode("smart-money-evidence")
+        let evidence: [SmartMoneyRepresentativeEvidence] = try await decode("smart-money-evidence")
         return evidence.filter { $0.accountId == accountID }
     }
 
-    private func decode<Response: Decodable>(_ name: String) throws -> Response {
+    private func decode<Response: Decodable>(_ name: String) async throws -> Response {
         guard let url = bundle.url(forResource: name, withExtension: "json") else {
             throw BSmartAPIError.missingFixture(name)
         }
-        return try decoder.decode(Response.self, from: Data(contentsOf: url))
+        guard let value = await BSmartContentIO.shared.read(Response.self, from: url, maximumBytes: 67_108_864,
+                                                           iso8601Dates: true) else {
+            throw BSmartAPIError.invalidResponse
+        }
+        return value
     }
 }

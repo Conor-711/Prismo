@@ -13,12 +13,15 @@ struct TodayInvestorDiscovery {
     init(accounts: [SmartAccountProfile]) {
         var seen = Set<String>()
         investors = accounts.filter {
+            if $0.platform == "bsmart" { return $0.nativePerformance != nil }
             guard let percentile = $0.platformPercentile,
                   percentile.isFinite, (0...0.25).contains(percentile) else { return false }
             return $0.resolvedPlatformRank > 0 && $0.score.isFinite
         }.map { Investor(account: $0) }.sorted {
-            if $0.account.resolvedPlatformPercentile != $1.account.resolvedPlatformPercentile {
-                return $0.account.resolvedPlatformPercentile < $1.account.resolvedPlatformPercentile
+            let left = $0.account.platformPercentile ?? 2
+            let right = $1.account.platformPercentile ?? 2
+            if left != right {
+                return left < right
             }
             if $0.account.resolvedPlatformRank != $1.account.resolvedPlatformRank {
                 return $0.account.resolvedPlatformRank < $1.account.resolvedPlatformRank
@@ -63,10 +66,13 @@ struct TodayInvestorDiscovery {
 }
 
 /// Snapshot the current sector/search cohort so browsing cannot drift on refresh.
-struct TodayInvestorDiscoverySession: Identifiable {
+struct TodayInvestorDiscoverySession: Identifiable, Hashable {
     let id = UUID()
     let investors: [TodayInvestorDiscovery.Investor]
     private(set) var index: Int
+
+    static func == (lhs: Self, rhs: Self) -> Bool { lhs.id == rhs.id && lhs.index == rhs.index }
+    func hash(into hasher: inout Hasher) { hasher.combine(id); hasher.combine(index) }
 
     init(investors: [TodayInvestorDiscovery.Investor], selectedID: String) {
         self.investors = investors

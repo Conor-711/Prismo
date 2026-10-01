@@ -8,8 +8,9 @@ import shutil
 import tempfile
 from pathlib import Path
 
-from ...domain.smart_voice.x_delivery_scope import frozen_x_authors
+from ...domain.smart_voice.x_delivery_scope import frozen_x_authors, ranked_expanded_cohorts
 from ...platforms.x.daily_package import stage_package
+from ...platforms.x.expanded_roster import read_expanded_roster
 from ..x_daily import write_json
 from . import ROOT
 
@@ -40,6 +41,8 @@ def prepare(package: Path, snapshot_path: Path, output_root: Path, *, chunk_rows
     if not package.is_file():
         raise ValueError('Expected an unchanged source package')
     ids, handles = frozen_x_authors(snapshot_path)
+    cohorts = ranked_expanded_cohorts(read_expanded_roster(package))
+    cohort_by_id = {author_id: group for group, authors in cohorts.items() for author_id in authors}
     ranking_hash = hashlib.sha256(snapshot_path.read_bytes()).hexdigest()
     output_root.mkdir(parents=True, exist_ok=True)
     before = package.stat()
@@ -60,6 +63,7 @@ def prepare(package: Path, snapshot_path: Path, output_root: Path, *, chunk_rows
             return saved
 
         selected = 0
+        counts = {'english_stock': 0, 'chinese_stock': 0, 'crypto': 0}
         seen = set()
         parts = []
         output = None
@@ -74,7 +78,9 @@ def prepare(package: Path, snapshot_path: Path, output_root: Path, *, chunk_rows
                         post = json.loads(line)
                         author_id = str(post.get('author_id') or '')
                         handle = str(post.get('author_handle') or '').casefold().lstrip('@')
-                        if author_id not in ids and (author_id or handle not in handles):
+                        cohort = ('english_stock' if author_id in ids or (not author_id and handle in handles)
+                                  else {'stock': 'chinese_stock', 'crypto': 'crypto'}.get(cohort_by_id.get(author_id)))
+                        if not cohort:
                             continue
                         tweet_id = str(post['tweet_id'])
                         if tweet_id in seen:
@@ -89,6 +95,7 @@ def prepare(package: Path, snapshot_path: Path, output_root: Path, *, chunk_rows
                         output.write(line if line.endswith(b'\n') else line + b'\n')
                         parts[-1]['rows'] += 1
                         selected += 1
+                        counts[cohort] += 1
         finally:
             if output:
                 output.close()
@@ -96,6 +103,9 @@ def prepare(package: Path, snapshot_path: Path, output_root: Path, *, chunk_rows
             part['sha256'] = hashlib.sha256((prepared / part['name']).read_bytes()).hexdigest()
         manifest = {'source': str(package), 'sourceHash': info['packageHash'],
                     'sourceRows': info['rows'], 'selectedRows': selected,
+                    'selectedRowsByCohort': counts,
+                    'rankedAuthorsByCohort': {'english_stock': len(ids),
+                                              'chinese_stock': len(cohorts['stock']), 'crypto': len(cohorts['crypto'])},
                     'rankingHash': ranking_hash, 'rankedAuthors': len(ids), 'parts': parts}
         write_json(prepared / 'manifest.json', manifest)
         prepared.replace(target)

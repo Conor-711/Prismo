@@ -27,7 +27,7 @@ struct TradeLeveragePicker: View {
                                 .frame(width: 64, height: 58)
                                 .contentShape(Rectangle())
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.bSmartPlain)
                             .id(multiple)
                             .accessibilityAddTraits(value == multiple ? .isSelected : [])
                             .accessibilityIdentifier("trade.leverage.\(multiple)")
