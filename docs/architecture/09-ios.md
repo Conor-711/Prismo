@@ -1711,6 +1711,13 @@ history remain unknown. Original theory and source snapshot are not rewritten.
 See `docs/contracts/supabase_trade_feed.md` for the settlement and history bounds.
 60 focused simulator tests and 46 Edge tests pass; contract fixtures and deployed
 import-graph readback pass. No schema migration or exchange write is involved.
+Connected-device validation passed 25 data/model tests and the read-only original
+AAPL-card UI test after adding a proper contained accessibility group. The live
+card retains opening amount $11.97 and entry $332.48, adds exit $331.85 and net
+realized -$0.024832, aligns entry/exit columns, and retains the synchronization
+button. The debug build was installed and normally relaunched; no trade, transfer
+or theory publication was performed. Backend v48 is active. Whole-repository
+checks still have nine prior boundary violations and one bundled terminology issue.
 
 ### Editor recovery and quote preview (2026-10-01)
 

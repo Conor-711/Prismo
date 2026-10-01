@@ -23,6 +23,12 @@ Fill reads extend to an anchored current time, with a bounded three-page/6,000-f
 history budget per wallet. Incomplete reads fail closed. No SQL migration, exchange
 write, signing or existing performance aggregate change is required.
 
+Rollout: Edge v48 deployed from downloaded production sources plus only this
+enrichment/module change and read back identically. 46 Edge and 60 simulator
+regressions passed; 25 connected-device model tests and the existing AAPL-card UI
+test passed. No production record was modified. App Debug was installed under
+the user's explicit permission; TestFlight was not uploaded.
+
 ## Trade theses, 2026-09-22 (pending rollout)
 
 See `trade_thesis.md`. Native Feed now uses the viewer-aware social projection
